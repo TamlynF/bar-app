@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useMemo, useState } from "react";
 import {
-  Plus, Loader2, ChevronDown, Save, Pencil, Trash2,
-  Hash, AlertCircle, AlertTriangle, ImageIcon, Upload,
+  Plus,
+  Loader2,
+  Trash2,
+  Check,
+  X,
+  SearchX,
+  AlertTriangle,
+  Image as ImageIcon,
+  Film,
+  Upload,
 } from "lucide-react";
 import { saveGalleryImageAction, deleteGalleryImageAction } from "./actions";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
 import {
   gradeGalleryMedia,
   LIGHTBOX_IDEAL_EDGE,
@@ -20,11 +25,19 @@ import {
   type MediaKind,
   type QualityLevel,
 } from "@/lib/gallery-media-quality";
-
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
 
 export type GalleryImage = {
   id: number;
@@ -40,7 +53,18 @@ export type GalleryImage = {
   updated_by?: number | null;
 };
 
+export type EmployeeOption = { id: number; full_name: string };
+
 type MeasuredMedia = { width: number; height: number; level: QualityLevel };
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
+
+function kindOf(mediaType: string): MediaKind {
+  return mediaType === "video" ? "video" : "image";
+}
 
 function measureMedia(file: File, kind: MediaKind): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
@@ -68,20 +92,33 @@ function measureMedia(file: File, kind: MediaKind): Promise<{ width: number; hei
   });
 }
 
-export default function GalleryClient({ initialImages = [] }: { initialImages: GalleryImage[] }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<GalleryImage | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+export default function GalleryClient({
+  initialImages = [],
+  employees = [],
+}: {
+  initialImages: GalleryImage[];
+  employees?: EmployeeOption[];
+}) {
+  const sheet = useRecordSheet<GalleryImage>({
+    records: initialImages,
+    getId: (record) => record.id,
+  });
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [mediaType, setMediaType] = useState<MediaKind>("image");
   const [mediaWarning, setMediaWarning] = useState<string | null>(null);
   const [mediaSizes, setMediaSizes] = useState<Record<number, MeasuredMedia>>({});
 
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
+
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
+
+  // Thumbnails load the real file, so the row that shows a record is also what
+  // measures it. Nothing else has the dimensions until then.
   const recordMediaSize = (id: number, width: number, height: number, kind: MediaKind) => {
     if (!width || !height) return;
     setMediaSizes((prev) => {
@@ -94,34 +131,41 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
     });
   };
 
-  const isSheetOpen = !!selected || isAdding;
-  const showForm = isAdding || isEditing;
-  const formDefault = isEditing ? selected : null;
-
-  const openView = (img: GalleryImage) => {
-    setFormError(null);
-    setIsEditing(false);
-    setIsAdding(false);
-    setSelected(img);
-  };
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialImages;
+    return initialImages.filter((img) =>
+      [img.title, img.description ?? "", img.media_type].some((field) =>
+        field.toLowerCase().includes(needle),
+      ),
+    );
+  }, [initialImages, query]);
 
   const openAdd = () => {
-    setFormError(null);
-    setMediaWarning(null);
-    setIsEditing(false);
-    setSelected(null);
     setImageUrl("");
     setMediaType("image");
-    setIsAdding(true);
+    setMediaWarning(null);
+    sheet.openAdd();
+  };
+
+  const startEdit = () => {
+    if (!selected) return;
+    setImageUrl(selected.image_url);
+    setMediaType(kindOf(selected.media_type));
+    setMediaWarning(null);
+    sheet.startEdit();
   };
 
   const closeSheet = () => {
-    setSelected(null);
-    setIsAdding(false);
-    setIsEditing(false);
-    setFormError(null);
-    setMediaWarning(null);
     setImageUrl("");
+    setMediaWarning(null);
+    sheet.close();
+  };
+
+  const cancel = () => {
+    setMediaWarning(null);
+    if (mode === "add") closeSheet();
+    else if (selected) sheet.openView(selected);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +174,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
     if (!file) return;
 
     setUploadingImage(true);
-    setFormError(null);
+    sheet.setFormError(null);
     setMediaWarning(null);
 
     const kind: MediaKind = file.type.startsWith("video/") ? "video" : "image";
@@ -138,7 +182,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
     const quality = gradeGalleryMedia({ width, height, kind });
 
     if (quality.level === "reject") {
-      setFormError(quality.message);
+      sheet.setFormError(quality.message);
       setUploadingImage(false);
       input.value = "";
       return;
@@ -146,6 +190,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
 
     if (quality.level === "warn") setMediaWarning(quality.message);
 
+    const supabase = createClient();
     const ext = file.name.split(".").pop();
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
@@ -154,7 +199,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
     if (error) {
-      setFormError(`Upload failed: ${error.message}`);
+      sheet.setFormError(`Upload failed: ${error.message}`);
       setMediaWarning(null);
       setUploadingImage(false);
       input.value = "";
@@ -168,367 +213,421 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
     input.value = "";
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    setFormError(null);
-    startTransition(async () => {
-      const result = await saveGalleryImageAction(formData);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
+  const handleDelete = () => {
+    if (!selected) return;
+    sheet.confirmDelete({
+      title: "Delete image",
+      description: "Are you sure you want to delete this image? This cannot be undone.",
+      action: () => deleteGalleryImageAction(selected.id),
     });
   };
 
-  const handleDelete = async () => {
-    if (!selected) return;
-    const ok = await confirm({
-      title: "Delete image",
-      description: "Are you sure? This cannot be undone.",
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deleteGalleryImageAction(selected.id);
-      if (result?.error) setFormError(result.error);
-      else closeSheet();
-    });
-  };
+  const title =
+    mode === "add" ? "New image" : mode === "edit" ? "Edit image" : "View image";
+
+  const selectedSize = selected ? mediaSizes[selected.id] : undefined;
 
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialImages.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <ImageIcon className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="font-black text-sm text-[#20231A]">No gallery images yet</p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">Upload your first image to get started</p>
-          <button type="button" onClick={openAdd} className="mt-4 h-8 rounded-lg bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]">
-            <Plus className="mr-1 inline h-3.5 w-3.5" /> Upload Image
-          </button>
-        </div>
+        <EmptyState
+          icon={ImageIcon}
+          title="No gallery images yet"
+          description="Upload your first image to get started"
+          action={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Upload image
+            </button>
+          }
+        />
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-          <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
-            <button type="button" onClick={() => setIsCollapsed(!isCollapsed)} className="min-w-0 flex-1 text-left">
-              <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
-                Gallery Images <span className="text-[#5E6654]">({initialImages.length})</span>
+        <RecordList
+          variant="panel"
+          title="Gallery images"
+          count={shown.length}
+          onAdd={openAdd}
+          addLabel="Upload"
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search gallery images"
+              placeholder="Search by title, description or type"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
               </p>
-            </button>
-            <button type="button" onClick={openAdd} className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5" title="Add Image">
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">Upload</span>
-            </button>
-            <button type="button" onClick={() => setIsCollapsed(!isCollapsed)} className="shrink-0" title="Toggle">
-              <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", !isCollapsed && "rotate-180")} />
-            </button>
-          </div>
-
-          {!isCollapsed && (
-            <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
-              {initialImages.map((img) => (
-                <button
-                  key={img.id}
-                  type="button"
-                  onClick={() => openView(img)}
-                  className="group relative aspect-square overflow-hidden rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] transition-all hover:border-[#34451F]"
-                >
-                  {img.media_type === "video" ? (
-                    <video
-                      src={img.image_url}
-                      className="h-full w-full object-cover"
-                      muted
-                      preload="metadata"
-                      onLoadedMetadata={(e) => recordMediaSize(img.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight, "video")}
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={img.image_url}
-                      alt={img.title}
-                      className="h-full w-full object-cover"
-                      onLoad={(e) => recordMediaSize(img.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, "image")}
-                    />
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent p-2 pt-6">
-                    <p className="truncate font-black text-[10px] tracking-tight text-white uppercase">{img.title}</p>
-                  </div>
-                  <QualityBadge measured={mediaSizes[img.id]} />
-                  {!img.is_active && (
-                    <div className="absolute top-1.5 right-1.5 rounded bg-red-500/80 px-1.5 py-0.5 font-black text-[8px] text-white uppercase">Hidden</div>
-                  )}
-                </button>
-              ))}
             </div>
+          ) : (
+            shown.map((img) => {
+              const kind = kindOf(img.media_type);
+              const measured = mediaSizes[img.id];
+              return (
+                <ListRow
+                  key={img.id}
+                  onClick={() => sheet.openView(img)}
+                  status={
+                    <StatusPill
+                      tone={img.is_active ? "success" : "error"}
+                      icon={
+                        img.is_active ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )
+                      }
+                      className="sm:w-24 sm:justify-center"
+                    >
+                      {img.is_active ? "Active" : "Hidden"}
+                    </StatusPill>
+                  }
+                >
+                  <span
+                    className="w-6 shrink-0 text-center text-xs font-semibold text-admin-muted tabular-nums opacity-60"
+                    title={`Order ${img.display_order}`}
+                  >
+                    {img.display_order}
+                  </span>
+
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
+                    {kind === "video" ? (
+                      <video
+                        src={img.image_url}
+                        className="h-full w-full object-cover"
+                        muted
+                        preload="metadata"
+                        onLoadedMetadata={(e) =>
+                          recordMediaSize(
+                            img.id,
+                            e.currentTarget.videoWidth,
+                            e.currentTarget.videoHeight,
+                            "video",
+                          )
+                        }
+                      />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={img.image_url}
+                        alt={img.title}
+                        className="h-full w-full object-cover"
+                        onLoad={(e) =>
+                          recordMediaSize(
+                            img.id,
+                            e.currentTarget.naturalWidth,
+                            e.currentTarget.naturalHeight,
+                            "image",
+                          )
+                        }
+                      />
+                    )}
+                  </div>
+
+                  {/* Fixed tracks rather than content-sized ones, so the type of
+                      every row starts in the same place. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_9rem_minmax(0,1.4fr)] sm:items-center sm:gap-3">
+                    <p
+                      className={cn(
+                        "min-w-0 truncate text-sm leading-snug font-semibold",
+                        img.is_active ? "text-admin-ink" : "text-admin-muted",
+                      )}
+                    >
+                      {img.title}
+                    </p>
+
+                    <div className="mt-0.5 flex items-center gap-1.5 sm:mt-0">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-admin-muted sm:text-[12px]">
+                        {kind === "video" ? (
+                          <Film className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                        ) : (
+                          <ImageIcon
+                            className="h-3.5 w-3.5 shrink-0 opacity-60"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {kind === "video" ? "Video" : "Image"}
+                      </span>
+                      {measured && measured.level !== "good" && (
+                        <StatusPill
+                          tone={measured.level === "reject" ? "error" : "warning"}
+                          className="hidden sm:inline-flex"
+                        >
+                          {QUALITY_BADGE[measured.level]}
+                        </StatusPill>
+                      )}
+                    </div>
+
+                    <p className="hidden truncate text-[11px] font-medium text-admin-muted sm:block">
+                      {img.description || "No description"}
+                    </p>
+                  </div>
+                </ListRow>
+              );
+            })
           )}
-        </section>
+        </RecordList>
       )}
 
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
-                  {isAdding ? "Upload Image" : isEditing ? "Edit Image" : "View Image"}
-                </SheetTitle>
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">ID: {selected.id}</span>
-                  </div>
-                )}
+      <RecordSheet
+        open={sheet.open}
+        onClose={closeSheet}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="gallery-form"
+        isPending={sheet.isPending}
+        saveDisabled={uploadingImage}
+        onEdit={startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Hidden"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard className="p-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <ImageIcon className="h-3 w-3 text-admin-muted" />
+                <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                  Preview
+                </span>
               </div>
-            </div>
-          </div>
+              {kindOf(selected.media_type) === "video" ? (
+                <video
+                  src={selected.image_url}
+                  className="h-48 w-full rounded-xl object-contain sm:h-auto sm:max-h-75"
+                  controls
+                  muted
+                  onLoadedMetadata={(e) =>
+                    recordMediaSize(
+                      selected.id,
+                      e.currentTarget.videoWidth,
+                      e.currentTarget.videoHeight,
+                      "video",
+                    )
+                  }
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={selected.image_url}
+                  alt={selected.title}
+                  className="h-48 w-full rounded-xl object-contain sm:h-auto sm:max-h-75"
+                  onLoad={(e) =>
+                    recordMediaSize(
+                      selected.id,
+                      e.currentTarget.naturalWidth,
+                      e.currentTarget.naturalHeight,
+                      "image",
+                    )
+                  }
+                />
+              )}
+            </DetailCard>
 
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {!showForm && selected && (
-              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                <div className="overflow-hidden rounded-2xl border-2 border-[#D8D5C8]">
-                  {selected.media_type === "video" ? (
+            {selectedSize?.level === "reject" && (
+              <WarningBox
+                message={`Only ${selectedSize.width} x ${selectedSize.height} - this looks blurry when opened fullscreen on the public gallery. Replace it with a file of at least ${LIGHTBOX_MIN_EDGE[kindOf(selected.media_type)]}px on the longest side.`}
+              />
+            )}
+
+            <DetailCard>
+              <DetailCell dense label="Title" value={selected.title} />
+              <DetailCell dense label="Description" value={selected.description || "-"} />
+              <DetailCell
+                dense
+                label="Type"
+                value={kindOf(selected.media_type) === "video" ? "Video" : "Image"}
+              />
+              <DetailCell dense label="Order" value={String(selected.display_order)} />
+              {selectedSize && (
+                <DetailCell
+                  dense
+                  label="Size"
+                  value={`${selectedSize.width} x ${selectedSize.height} - ${QUALITY_SUMMARY[selectedSize.level]}`}
+                />
+              )}
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </div>
+        )}
+
+        {showForm && (
+          <form
+            id="gallery-form"
+            action={sheet.submit(saveGalleryImageAction)}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
+            <input type="hidden" name="image_url" value={imageUrl} />
+            <input type="hidden" name="media_type" value={mediaType} />
+
+            <DetailCard className="space-y-3 p-4">
+              <div className="flex items-center gap-1.5">
+                <ImageIcon className="h-3 w-3 text-admin-muted" />
+                <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                  Media
+                </span>
+              </div>
+
+              {imageUrl ? (
+                <div className="relative overflow-hidden rounded-xl">
+                  {mediaType === "video" ? (
                     <video
-                      src={selected.image_url}
-                      className="max-h-75 w-full object-cover"
+                      src={imageUrl}
+                      className="h-48 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
                       controls
                       muted
-                      onLoadedMetadata={(e) => recordMediaSize(selected.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight, "video")}
                     />
                   ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={selected.image_url}
-                      alt={selected.title}
-                      className="max-h-75 w-full object-cover"
-                      onLoad={(e) => recordMediaSize(selected.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, "image")}
+                      src={imageUrl}
+                      alt="Preview"
+                      className="h-48 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
                     />
                   )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageUrl("");
+                      setMediaWarning(null);
+                    }}
+                    className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
+                    aria-label="Remove media"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-
-                {mediaSizes[selected.id]?.level === "reject" && (
-                  <WarningBox
-                    message={`Only ${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} - this looks blurry when opened fullscreen on the public gallery. Replace it with a file of at least ${LIGHTBOX_MIN_EDGE[selected.media_type === "video" ? "video" : "image"]}px on the longest side.`}
-                  />
-                )}
-                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <DetailCell label="Title" value={selected.title} />
-                  <DetailCell label="Description" value={selected.description || "-"} />
-                  <DetailCell label="Status" value={selected.is_active ? "Active" : "Hidden"} />
-                  <DetailCell label="Order" value={String(selected.display_order)} />
-                  {mediaSizes[selected.id] && (
-                    <DetailCell
-                      label="Size"
-                      value={`${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} - ${QUALITY_SUMMARY[mediaSizes[selected.id].level]}`}
-                    />
-                  )}
-                  {selected.created_at && (
-                    <DetailCell label="Created" value={new Date(selected.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} />
-                  )}
-                </div>
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
-
-            {showForm && (
-              <form id="gallery-form" onSubmit={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
-                <input type="hidden" name="image_url" value={imageUrl || formDefault?.image_url || ""} />
-                <input type="hidden" name="media_type" value={mediaType} />
-
-                <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
-                  {(imageUrl || formDefault?.image_url) ? (
-                    <div className="relative overflow-hidden rounded-xl">
-                      {mediaType === "video" ? (
-                        <video src={imageUrl || formDefault?.image_url || ""} className="max-h-50 w-full rounded-xl object-cover" controls muted />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageUrl || formDefault?.image_url || ""} alt="Preview" className="max-h-50 w-full rounded-xl object-cover" />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => { setImageUrl(""); setMediaWarning(null); }}
-                        className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-                        title="Delete image"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+              ) : (
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-admin-line py-8 transition-colors hover:border-admin-primary hover:bg-admin-surface">
+                  {uploadingImage ? (
+                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-admin-muted" />
                   ) : (
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D8D5C8] py-8 transition-colors hover:border-[#34451F] hover:bg-[#F4F1E8]">
-                      {uploadingImage ? (
-                        <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#5E6654]" />
-                      ) : (
-                        <Upload className="mb-2 h-8 w-8 text-[#5E6654] opacity-40" />
-                      )}
-                      <span className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
-                        {uploadingImage ? "Uploading..." : "Click to upload"}
-                      </span>
-                      <span className="mt-1 text-[9px] text-[#5E6654] opacity-60">Images or videos up to 50MB</span>
-                      <span className="mt-1 text-[9px] text-[#5E6654] opacity-60">
-                        Longest side {LIGHTBOX_MIN_EDGE.image}px minimum, {LIGHTBOX_IDEAL_EDGE}px ideal - the gallery opens fullscreen
-                      </span>
-                      <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploadingImage} />
-                    </label>
+                    <Upload className="mb-2 h-8 w-8 text-admin-muted opacity-40" />
                   )}
+                  <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                    {uploadingImage ? "Uploading..." : "Click to upload"}
+                  </span>
+                  <span className="mt-1 text-[10px] text-admin-muted opacity-60">
+                    Images or videos up to 50MB
+                  </span>
+                  <span className="mt-1 text-[10px] text-admin-muted opacity-60">
+                    Longest side {LIGHTBOX_MIN_EDGE.image}px minimum, {LIGHTBOX_IDEAL_EDGE}px
+                    ideal - the gallery opens fullscreen
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    aria-label="Upload gallery media"
+                    className="hidden"
+                    onChange={handleUpload}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              )}
 
-                  {mediaWarning && <WarningBox message={mediaWarning} />}
-                </div>
+              {mediaWarning && <WarningBox message={mediaWarning} />}
+            </DetailCard>
 
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Title" required>
-                    <input
-                      name="title"
-                      required
-                      placeholder="e.g. Friday Night Vibes"
-                      defaultValue={formDefault?.title ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Title" required>
+                <input
+                  name="title"
+                  required
+                  aria-label="Title"
+                  placeholder="e.g. Friday Night Vibes"
+                  defaultValue={formDefault?.title ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-                  <FormRow label="Description">
-                    <input
-                      name="description"
-                      placeholder="e.g. Great night at the bar"
-                      defaultValue={formDefault?.description ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Description">
+                <input
+                  name="description"
+                  aria-label="Description"
+                  placeholder="e.g. Great night at the bar"
+                  defaultValue={formDefault?.description ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-                  <FormRow label="Status">
-                    <select
-                      title="Status"
-                      name="is_active"
-                      defaultValue={formDefault?.is_active === false ? "false" : "true"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    >
-                      <option value="true" className="dir-ltr">Active</option>
-                      <option value="false" className="dir-ltr">Hidden</option>
-                    </select>
-                  </FormRow>
+              <FormRow label="Status">
+                <select
+                  name="is_active"
+                  aria-label="Status"
+                  defaultValue={formDefault?.is_active === false ? "false" : "true"}
+                  className={FIELD_SELECT}
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Hidden</option>
+                </select>
+              </FormRow>
 
-                  <FormRow label="Order">
-                    <input
-                      title="Order"
-                      name="display_order"
-                      type="number"
-                      min="0"
-                      defaultValue={formDefault?.display_order ?? 0}
-                      className="w-16 flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
-                </div>
+              <FormRow label="Order">
+                <input
+                  name="display_order"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  aria-label="Display order"
+                  defaultValue={formDefault?.display_order ?? 0}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
+            </DetailCard>
 
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-            <div className="h-4" />
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
-            {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
-                </Button>
-                <Button onClick={() => { setFormError(null); setImageUrl(selected.image_url); setMediaType(selected.media_type === "video" ? "video" : "image"); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95">
-                  <Pencil className="mr-2 h-4 w-4" /> Edit
-                </Button>
-              </div>
-            )}
-
-            {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline"
-                  onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
-                  Cancel
-                </Button>
-                <Button type="button" disabled={isPending || uploadingImage}
-                  onClick={() => {
-                    const form = document.getElementById('gallery-form') as HTMLFormElement | null;
-                    if (form) form.requestSubmit();
-                  }}
-                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95">
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
-                </Button>
-              </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-
-function FormRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
-        {required && <span className="text-[10px] font-bold text-red-500">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
-      </div>
-      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#20231A] sm:text-sm">{value}</span>
-    </div>
-  );
-}
-
-function QualityBadge({ measured }: { measured?: MeasuredMedia }) {
-  if (!measured || measured.level === "good") return null;
-
-  return (
-    <div
-      title={`${measured.width} x ${measured.height} - ${QUALITY_SUMMARY[measured.level]}`}
-      className={cn(
-        "absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 font-black text-[8px] text-white uppercase",
-        measured.level === "reject" ? "bg-red-500/85" : "bg-[#9A5B00]/85"
-      )}
-    >
-      {QUALITY_BADGE[measured.level]}
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }
 
 function WarningBox({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#34451F]" />
-      <p className="text-[11px] leading-snug font-bold text-[#34451F]">{message}</p>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
+    <div className="flex items-start gap-3 rounded-2xl border border-admin-warning/30 bg-admin-warning-bg p-3">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-admin-warning" />
+      <p className="text-[11px] leading-snug font-semibold text-admin-warning">{message}</p>
     </div>
   );
 }
