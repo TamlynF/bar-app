@@ -46,7 +46,11 @@ export async function saveMerchandiseAction(formData: FormData) {
     return { error: "Name is required." };
   }
 
-  if (price !== null && (!Number.isFinite(price) || price < 0)) {
+  if (price === null) {
+    return { error: "Price is required." };
+  }
+
+  if (!Number.isFinite(price) || price < 0) {
     return { error: "Price must be a positive number." };
   }
 

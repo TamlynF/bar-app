@@ -84,12 +84,14 @@ export function useRecordSheet<T>(options?: {
     async (opts: {
       title: string;
       description?: string;
+      content?: React.ReactNode;
       confirmLabel?: string;
       action: () => Promise<ActionResult>;
     }) => {
       const ok = await confirm({
         title: opts.title,
         description: opts.description,
+        content: opts.content,
         confirmLabel: opts.confirmLabel ?? "Delete",
         variant: "destructive",
       });

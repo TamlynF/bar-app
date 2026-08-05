@@ -1,25 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useMemo, useState } from "react";
 import {
   Plus,
   Loader2,
-  ChevronRight,
-  ChevronDown,
-  Save,
-  Pencil,
   Trash2,
-  Hash,
-  AlertCircle,
+  Check,
+  X,
+  SearchX,
   ShoppingBag,
   Image as ImageIcon,
   Upload,
 } from "lucide-react";
 import { saveMerchandiseAction, deleteMerchandiseAction } from "./actions";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
 import { createClient } from "@/lib/supabase/client";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextContent } from "@/components/rich-text-content";
@@ -32,6 +26,19 @@ import {
   type ChangeDescription,
   type OrderRow,
 } from "@/lib/merchandise-order";
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
 
 export type MerchandiseRecord = {
   id: number;
@@ -47,26 +54,50 @@ export type MerchandiseRecord = {
   updated_by?: number | null;
 };
 
+export type EmployeeOption = { id: number; full_name: string };
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
+
 function priceLabel(price: number | null): string {
   if (price === null || price === undefined) return "No price";
   return formatGBP(Number(price));
 }
 
+// The description is rich text, so the list row needs it flattened before it can
+// be truncated to a single line or matched against a search.
+function plainText(html: string | null): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function MerchandiseClient({
   initialMerchandise = [],
+  employees = [],
 }: {
   initialMerchandise: MerchandiseRecord[];
+  employees?: EmployeeOption[];
 }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<MerchandiseRecord | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const sheet = useRecordSheet<MerchandiseRecord>({
+    records: initialMerchandise,
+    getId: (record) => record.id,
+  });
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false);
   const [position, setPosition] = useState(1);
 
   const orderRows: OrderRow[] = initialMerchandise.map((item) => ({
@@ -77,9 +108,8 @@ export default function MerchandiseClient({
   }));
 
   const activeCount = orderRows.filter((row) => row.is_active).length;
-  const isSheetOpen = !!selected || isAdding;
-  const showForm = isAdding || isEditing;
-  const formDefault = isEditing ? selected : null;
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
   const wasActive = formDefault?.is_active ?? false;
   const canChoosePosition = !!formDefault && wasActive && isActive;
 
@@ -90,38 +120,44 @@ export default function MerchandiseClient({
   });
   const affected = describeChanges(orderRows, plan.changes);
 
-  const openView = (item: MerchandiseRecord) => {
-    setFormError(null);
-    setIsEditing(false);
-    setIsAdding(false);
-    setSelected(item);
-  };
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
 
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialMerchandise;
+    return initialMerchandise.filter((item) =>
+      [item.name, plainText(item.description), priceLabel(item.price)].some((field) =>
+        field.toLowerCase().includes(needle),
+      ),
+    );
+  }, [initialMerchandise, query]);
+
+  // A new item starts inactive, so nothing reaches the homepage before somebody
+  // has looked at it. It goes live from the edit screen.
   const openAdd = () => {
-    setFormError(null);
-    setIsEditing(false);
-    setSelected(null);
     setImageUrl("");
-    setIsActive(true);
+    setIsActive(false);
     setPosition(nextPosition(orderRows));
-    setIsAdding(true);
+    sheet.openAdd();
   };
 
-  const openEdit = () => {
+  const startEdit = () => {
     if (!selected) return;
-    setFormError(null);
-    setImageUrl(selected.image_url || "");
+    setImageUrl(selected.image_url ?? "");
     setIsActive(selected.is_active);
-    setPosition(selected.display_order);
-    setIsEditing(true);
+    setPosition(selected.display_order || nextPosition(orderRows));
+    sheet.startEdit();
   };
 
   const closeSheet = () => {
-    setSelected(null);
-    setIsAdding(false);
-    setIsEditing(false);
-    setFormError(null);
     setImageUrl("");
+    sheet.close();
+  };
+
+  const cancel = () => {
+    if (mode === "add") closeSheet();
+    else if (selected) sheet.openView(selected);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +165,7 @@ export default function MerchandiseClient({
     if (!file) return;
 
     setUploadingImage(true);
-    setFormError(null);
+    sheet.setFormError(null);
 
     const supabase = createClient();
     const ext = file.name.split(".").pop();
@@ -140,14 +176,13 @@ export default function MerchandiseClient({
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
     if (error) {
-      setFormError(`Upload failed: ${error.message}`);
+      sheet.setFormError(`Upload failed: ${error.message}`);
       setUploadingImage(false);
       return;
     }
 
-    const publicUrl = supabase.storage
-      .from("gallery")
-      .getPublicUrl(data.path).data.publicUrl;
+    const publicUrl = supabase.storage.from("gallery").getPublicUrl(data.path).data
+      .publicUrl;
     setImageUrl(publicUrl);
     setUploadingImage(false);
   };
@@ -162,138 +197,121 @@ export default function MerchandiseClient({
     return `Moving "${name}" to position ${plan.position} will also update:`;
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  // Submitted by hand rather than as a form action, so the reorder confirmation
+  // can be answered before anything is written.
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    setFormError(null);
-
-    const name = formData.get("name")?.toString().trim() || "this item";
-
-    const submit = () =>
-      startTransition(async () => {
-        const result = await saveMerchandiseAction(formData);
-        if (result?.error) {
-          setFormError(result.error);
-        } else {
-          closeSheet();
-        }
-      });
+    const submit = sheet.submit(saveMerchandiseAction);
 
     if (affected.length === 0) {
-      submit();
+      submit(formData);
       return;
     }
 
-    void (async () => {
-      const ok = await confirm({
-        title: "Reorder merchandise",
-        description: reorderPrompt(name),
-        content: <ChangeList changes={affected} />,
-        confirmLabel: "Update order",
-      });
-      if (ok) submit();
-    })();
+    const ok = await sheet.confirm({
+      title: "Reorder merchandise",
+      description: reorderPrompt(formData.get("name")?.toString().trim() || "this item"),
+      content: <ChangeList changes={affected} />,
+      confirmLabel: "Update order",
+    });
+    if (ok) submit(formData);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selected) return;
-    const cascade = describeChanges(
-      orderRows,
-      planDelete(orderRows, selected.id)
-    );
-    const ok = await confirm({
+    const cascade = describeChanges(orderRows, planDelete(orderRows, selected.id));
+    sheet.confirmDelete({
       title: "Delete merchandise item",
       description:
         cascade.length > 0
           ? "Are you sure you want to delete this item? This cannot be undone. These positions will shift up:"
           : "Are you sure you want to delete this item? This cannot be undone.",
       content: cascade.length > 0 ? <ChangeList changes={cascade} /> : undefined,
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deleteMerchandiseAction(selected.id);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
+      action: () => deleteMerchandiseAction(selected.id),
     });
   };
 
+  const title =
+    mode === "add" ? "New item" : mode === "edit" ? "Edit item" : "View item";
+
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialMerchandise.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <ShoppingBag className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="font-black text-sm text-[#20231A]">No merchandise yet</p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">
-            Add your first item to display on the homepage
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="mt-4 h-8 rounded-lg bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]"
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            Create Item
-          </button>
-        </div>
-      ) : (
-        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-          <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="min-w-0 flex-1 text-left"
-            >
-              <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
-                Merchandise{" "}
-                <span className="text-[#5E6654]">
-                  ({initialMerchandise.length})
-                </span>
-              </p>
-            </button>
+        <EmptyState
+          icon={ShoppingBag}
+          title="No merchandise yet"
+          description="Add your first item to display on the homepage"
+          action={
             <button
               type="button"
               onClick={openAdd}
-              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
-              title="Add merchandise item"
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
             >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">
-                Create
-              </span>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Create item
             </button>
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="shrink-0"
-              title="Toggle group"
-            >
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-[#5E6654] transition-transform duration-200",
-                  !isCollapsed && "rotate-180"
-                )}
-              />
-            </button>
-          </div>
-
-          {!isCollapsed && (
-            <div className="divide-y divide-[#D8D5C8]/50">
-              {initialMerchandise.map((item) => (
-                <div
+          }
+        />
+      ) : (
+        <RecordList
+          variant="panel"
+          title="Merchandise"
+          count={shown.length}
+          onAdd={openAdd}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search merchandise"
+              placeholder="Search by name, description or price"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((item) => {
+              const inactive = !item.is_active;
+              const summary = plainText(item.description);
+              return (
+                <ListRow
                   key={item.id}
-                  onClick={() => openView(item)}
-                  className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:px-4"
+                  onClick={() => sheet.openView(item)}
+                  status={
+                    <StatusPill
+                      tone={item.is_active ? "success" : "error"}
+                      icon={
+                        item.is_active ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )
+                      }
+                      className="sm:w-24 sm:justify-center"
+                    >
+                      {item.is_active ? "Active" : "Inactive"}
+                    </StatusPill>
+                  }
                 >
-                  <span className="w-6 shrink-0 text-center font-black text-xs text-[#5E6654] tabular-nums opacity-60">
-                    {item.display_order}
+                  <span
+                    className="w-6 shrink-0 text-center text-xs font-semibold text-admin-muted tabular-nums opacity-60"
+                    title={
+                      item.is_active
+                        ? `Position ${item.display_order}`
+                        : "Inactive items have no position"
+                    }
+                  >
+                    {item.is_active ? item.display_order : "-"}
                   </span>
 
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#D8D5C8] bg-[#F4F1E8]">
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
                     {item.image_url ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -303,454 +321,306 @@ export default function MerchandiseClient({
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">
-                        <ShoppingBag className="h-4 w-4 text-[#5E6654] opacity-30" />
+                        <ShoppingBag className="h-4 w-4 text-admin-muted opacity-30" />
                       </div>
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={cn(
-                          "min-w-0 flex-1 truncate font-black text-sm leading-snug",
-                          item.is_active ? "text-[#20231A]" : "text-[#5E6654]"
-                        )}
-                      >
-                        {item.name}
-                      </p>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
-                          item.is_active
-                            ? "border-green-200 bg-green-50 text-green-700"
-                            : "border-red-200 bg-red-50 text-red-500"
-                        )}
-                      >
-                        {item.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 truncate text-[10px] font-medium text-[#5E6654] tabular-nums">
+                  {/* Fixed tracks rather than content-sized ones, so the price of
+                      every row starts in the same place. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1.6fr)] sm:items-center sm:gap-3">
+                    <p
+                      className={cn(
+                        "min-w-0 truncate text-sm leading-snug font-semibold",
+                        inactive ? "text-admin-muted" : "text-admin-ink",
+                      )}
+                    >
+                      {item.name}
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted tabular-nums sm:mt-0 sm:text-[12px]">
                       {priceLabel(item.price)}
                     </p>
-                  </div>
 
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
-                </div>
-              ))}
-            </div>
+                    <p className="hidden truncate text-[11px] font-medium text-admin-muted sm:block">
+                      {summary || "No description"}
+                    </p>
+                  </div>
+                </ListRow>
+              );
+            })
           )}
-        </section>
+        </RecordList>
       )}
 
-      <Sheet
-        open={isSheetOpen}
-        onOpenChange={(open) => {
-          if (!open) closeSheet();
-        }}
+      <RecordSheet
+        open={sheet.open}
+        onClose={closeSheet}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="merchandise-form"
+        isPending={sheet.isPending}
+        saveDisabled={uploadingImage}
+        onEdit={startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Inactive"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
       >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
-                  {isAdding
-                    ? "New Item"
-                    : isEditing
-                    ? "Edit Item"
-                    : "View Item"}
-                </SheetTitle>
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">
-                      ID: {selected.id}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell dense label="Name" value={selected.name} />
+              <DetailCell dense label="Price" value={priceLabel(selected.price)} />
+              <DetailCell
+                dense
+                label="Position"
+                value={
+                  selected.is_active
+                    ? String(selected.display_order)
+                    : "0 (inactive)"
+                }
+              />
+              {selected.description ? (
+                <div className="border-b border-admin-line px-4 py-3 last:border-0 sm:px-5">
+                  <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
+                    Description
+                  </p>
+                  <RichTextContent html={selected.description} variant="admin" />
+                </div>
+              ) : (
+                <DetailCell dense label="Description" value="-" />
+              )}
+            </DetailCard>
 
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {!showForm && selected && (
-              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <DetailCell label="Name" value={selected.name} />
-                  {selected.description ? (
-                    <div className="border-b border-[#D8D5C8] px-4 py-3 sm:px-5">
-                      <p className="mb-1.5 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">
-                        Description
-                      </p>
-                      <RichTextContent
-                        html={selected.description}
-                        variant="admin"
-                      />
-                    </div>
-                  ) : (
-                    <DetailCell label="Description" value="-" />
-                  )}
-                  <DetailCell label="Price" value={priceLabel(selected.price)} />
-                  <DetailCell
-                    label="Status"
-                    value={selected.is_active ? "Active" : "Inactive"}
+            {selected.image_url && (
+              <DetailCard className="p-3">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <ImageIcon className="h-3 w-3 text-admin-muted" />
+                  <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                    Preview
+                  </span>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selected.image_url}
+                  alt={selected.name}
+                  className="h-32 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
+                />
+              </DetailCard>
+            )}
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </div>
+        )}
+
+        {showForm && (
+          <form
+            id="merchandise-form"
+            onSubmit={handleSubmit}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
+            <input type="hidden" name="image_url" value={imageUrl} />
+
+            <DetailCard className="space-y-3 p-4">
+              <div className="flex items-center gap-1.5">
+                <ImageIcon className="h-3 w-3 text-admin-muted" />
+                <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                  Image
+                </span>
+              </div>
+
+              {imageUrl ? (
+                <div className="relative overflow-hidden rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
+                    className="h-32 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
                   />
-                  <DetailCell
-                    label="Position"
-                    value={
-                      selected.is_active
-                        ? String(selected.display_order)
-                        : "0 (inactive)"
-                    }
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("")}
+                    className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
+                    aria-label="Remove image"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-admin-line py-8 transition-colors hover:border-admin-primary hover:bg-admin-surface">
+                  {uploadingImage ? (
+                    <Loader2 className="mb-2 h-8 w-8 animate-spin text-admin-muted" />
+                  ) : (
+                    <Upload className="mb-2 h-8 w-8 text-admin-muted opacity-40" />
+                  )}
+                  <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                    {uploadingImage ? "Uploading..." : "Click to upload"}
+                  </span>
+                  <span className="mt-1 text-[10px] text-admin-muted opacity-60">
+                    JPG, PNG up to 10MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    aria-label="Upload merchandise image"
+                    className="hidden"
+                    onChange={handleUpload}
+                    disabled={uploadingImage}
                   />
-                </div>
+                </label>
+              )}
+            </DetailCard>
 
-                {selected.image_url && (
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-3">
-                    <div className="mb-2 flex items-center gap-1.5">
-                      <ImageIcon className="h-3 w-3 text-[#5E6654]" />
-                      <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
-                        Preview
-                      </span>
-                    </div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={selected.image_url}
-                      alt={selected.name}
-                      className="h-40 w-full rounded-xl object-cover"
-                    />
-                  </div>
-                )}
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Name" required>
+                <input
+                  name="name"
+                  required
+                  aria-label="Name"
+                  placeholder="e.g. Bar Tee"
+                  defaultValue={formDefault?.name ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
+              <FormRow label="Price" required>
+                <input
+                  name="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  inputMode="decimal"
+                  aria-label="Price in pounds"
+                  placeholder="e.g. 25.00"
+                  defaultValue={formDefault?.price ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-            {showForm && (
-              <form
-                id="merchandise-form"
-                onSubmit={handleSubmit}
-                className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
-              >
-                {formDefault && (
-                  <input type="hidden" name="id" value={formDefault.id} />
-                )}
-                <input type="hidden" name="image_url" value={imageUrl} />
-
-                <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
-                  <div className="flex items-center gap-1.5">
-                    <ImageIcon className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
-                      Image
+              <FormRow label="Status">
+                {mode === "add" ? (
+                  <>
+                    <input type="hidden" name="is_active" value="false" />
+                    <span className="flex-1 text-right text-sm font-semibold text-admin-muted">
+                      Inactive
                     </span>
-                  </div>
+                  </>
+                ) : (
+                  <select
+                    name="is_active"
+                    aria-label="Status"
+                    value={isActive ? "true" : "false"}
+                    onChange={(e) => setIsActive(e.target.value === "true")}
+                    className={FIELD_SELECT}
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                )}
+              </FormRow>
 
-                  {imageUrl ? (
-                    <div className="relative overflow-hidden rounded-xl">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={imageUrl}
-                        alt="Preview"
-                        className="max-h-50 w-full rounded-xl object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setImageUrl("")}
-                        className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-                        aria-label="Remove image"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D8D5C8] py-8 transition-colors hover:border-[#34451F] hover:bg-[#F4F1E8]">
-                      {uploadingImage ? (
-                        <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#5E6654]" />
-                      ) : (
-                        <Upload className="mb-2 h-8 w-8 text-[#5E6654] opacity-40" />
-                      )}
-                      <span className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
-                        {uploadingImage ? "Uploading..." : "Click to upload"}
-                      </span>
-                      <span className="mt-1 text-[9px] text-[#5E6654] opacity-60">
-                        JPG, PNG up to 10MB
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        aria-label="Upload merchandise image"
-                        className="hidden"
-                        onChange={handleUpload}
-                        disabled={uploadingImage}
-                      />
-                    </label>
-                  )}
-                </div>
+              <FormRow label="Position">
+                {canChoosePosition ? (
+                  <input
+                    name="display_order"
+                    type="number"
+                    min={1}
+                    max={activeCount}
+                    inputMode="numeric"
+                    aria-label="Position on the homepage"
+                    value={position}
+                    onChange={(e) => setPosition(Number(e.target.value))}
+                    className={cn(FIELD_INPUT, "tabular-nums")}
+                  />
+                ) : (
+                  <input
+                    name="display_order"
+                    type="number"
+                    readOnly
+                    aria-label="Position on the homepage"
+                    value={plan.position}
+                    className="flex-1 cursor-not-allowed bg-transparent text-right text-sm font-semibold text-admin-muted opacity-60 outline-none tabular-nums"
+                  />
+                )}
+              </FormRow>
 
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Name" required>
-                    <input
-                      name="name"
-                      required
-                      aria-label="Name"
-                      placeholder="e.g. Bar Tee"
-                      defaultValue={formDefault?.name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <div className="px-4 py-3 sm:px-5">
-                    <p className="mb-2 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">
-                      Description
-                    </p>
-                    <RichTextEditor
-                      name="description"
-                      defaultValue={formDefault?.description ?? ""}
-                    />
-                  </div>
-
-                  <FormRow label="Price">
-                    <input
-                      name="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      inputMode="decimal"
-                      aria-label="Price in pounds"
-                      placeholder="e.g. 25.00"
-                      defaultValue={formDefault?.price ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Status">
-                    <select
-                      name="is_active"
-                      aria-label="Status"
-                      value={isActive ? "true" : "false"}
-                      onChange={(e) => setIsActive(e.target.value === "true")}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    >
-                      <option value="true" className="dir-ltr">
-                        Active
-                      </option>
-                      <option value="false" className="dir-ltr">
-                        Inactive
-                      </option>
-                    </select>
-                  </FormRow>
-
-                  <FormRow label="Position">
-                    {canChoosePosition ? (
-                      <input
-                        name="display_order"
-                        type="number"
-                        min={1}
-                        max={activeCount}
-                        inputMode="numeric"
-                        aria-label="Position on the homepage"
-                        value={position}
-                        onChange={(e) => setPosition(Number(e.target.value))}
-                        className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none tabular-nums sm:text-sm"
-                      />
-                    ) : (
-                      <input
-                        name="display_order"
-                        type="number"
-                        readOnly
-                        aria-label="Position on the homepage"
-                        value={plan.position}
-                        className="flex-1 cursor-not-allowed bg-transparent text-right font-black text-base text-[#5E6654] outline-none tabular-nums opacity-60 sm:text-sm"
-                      />
-                    )}
-                  </FormRow>
-
-                  <div className="px-4 pt-0 pb-3 sm:px-5">
-                    <p className="text-[10px] font-medium text-[#5E6654] opacity-60">
-                      {isActive
-                        ? canChoosePosition
-                          ? `Positions run 1 to ${activeCount}. Changing this reorders the others.`
-                          : "New items are added to the end of the list."
-                        : "Inactive items have no position and are hidden from the homepage."}
-                    </p>
-                  </div>
-                </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-
-            <div className="h-4" />
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
-            {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
-                <Button
-                  onClick={openEdit}
-                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
+              <div className="px-4 pt-0 pb-3 sm:px-5">
+                <p className="text-[11px] font-medium text-admin-muted opacity-70">
+                  {mode === "add"
+                    ? "New items start inactive. Activate it from the edit screen once it is ready for the homepage."
+                    : isActive
+                      ? canChoosePosition
+                        ? `Positions run 1 to ${activeCount}. Changing this reorders the others.`
+                        : "Newly activated items are added to the end of the list."
+                      : "Inactive items have no position and are hidden from the homepage."}
+                </p>
               </div>
-            )}
 
-            {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormError(null);
-                    if (isAdding) closeSheet();
-                    else setIsEditing(false);
-                  }}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isPending || uploadingImage}
-                  onClick={() => {
-                    const form = document.getElementById(
-                      "merchandise-form"
-                    ) as HTMLFormElement | null;
-                    if (form) form.requestSubmit();
-                  }}
-                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
+              <div className="px-4 py-3 sm:px-5">
+                <p className="mb-2 text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
+                  Description
+                </p>
+                <RichTextEditor
+                  name="description"
+                  defaultValue={formDefault?.description ?? ""}
+                />
               </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }
 
 function ChangeList({ changes }: { changes: ChangeDescription[] }) {
   return (
-    <ul className="divide-y divide-[#D8D5C8] overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+    <ul className="divide-y divide-admin-line overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
       {changes.map((change) => (
         <li
           key={change.id}
           className="flex items-center justify-between gap-3 px-3 py-2"
         >
-          <span className="min-w-0 flex-1 truncate font-black text-xs text-[#20231A]">
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-admin-ink">
             {change.name}
           </span>
-          <span className="shrink-0 font-black text-[11px] text-[#5E6654] tabular-nums">
+          <span className="shrink-0 text-[11px] font-semibold text-admin-muted tabular-nums">
             {change.from} → {change.to}
           </span>
         </li>
       ))}
     </ul>
-  );
-}
-
-function FormRow({
-  label,
-  required,
-  align = "center",
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  align?: "center" | "start";
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4",
-        align === "start" ? "items-start" : "items-center"
-      )}
-    >
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-        {required && (
-          <span className="text-[10px] font-bold text-red-500">*</span>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DetailCell({
-  label,
-  value,
-  multiline,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4",
-        multiline ? "items-start" : "items-center"
-      )}
-    >
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-      </div>
-      <span
-        className={cn(
-          "flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#20231A] sm:text-sm",
-          multiline && "text-left whitespace-pre-line"
-        )}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
-    </div>
   );
 }
