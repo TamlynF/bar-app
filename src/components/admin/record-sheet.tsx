@@ -20,9 +20,15 @@ export type SheetMode = "closed" | "add" | "view" | "edit";
 
 type ActionResult = { error?: string } | void | null | undefined;
 
-export function useRecordSheet<T>() {
+export function useRecordSheet<T>(options?: {
+  // Pass the live list and an id reader to keep the open record in step with the
+  // server. Without them the sheet holds the snapshot it opened with, which goes
+  // stale the moment a save revalidates the page.
+  records?: T[];
+  getId?: (record: T) => number | string;
+}) {
   const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<T | null>(null);
+  const [held, setSelected] = useState<T | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -54,17 +60,24 @@ export function useRecordSheet<T>() {
     setFormError(null);
   }, []);
 
+  // Saving an edit drops back to the record rather than dismissing the sheet -
+  // you asked to change it, not to leave. A new record has nothing to fall back
+  // to, so that one closes.
   const submit = useCallback(
     (action: (formData: FormData) => Promise<ActionResult>) =>
       (formData: FormData) => {
         setFormError(null);
         startTransition(async () => {
           const result = await action(formData);
-          if (result?.error) setFormError(result.error);
-          else close();
+          if (result?.error) {
+            setFormError(result.error);
+            return;
+          }
+          if (isAdding) close();
+          else setIsEditing(false);
         });
       },
-    [close],
+    [close, isAdding],
   );
 
   const confirmDelete = useCallback(
@@ -89,6 +102,12 @@ export function useRecordSheet<T>() {
     },
     [confirm, close],
   );
+
+  const { records, getId } = options ?? {};
+  const selected =
+    held && records && getId
+      ? (records.find((record) => getId(record) === getId(held)) ?? held)
+      : held;
 
   const mode: SheetMode = isAdding
     ? "add"
@@ -364,8 +383,8 @@ export function RecordSheet({
         className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
           bg-admin-surface p-0 shadow-2xl outline-none
           sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:h-auto
-          sm:max-h-[92vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-          sm:border-2 sm:border-admin-line"
+          sm:max-h-[92vh] sm:w-180 sm:max-w-[calc(100vw-3rem)] sm:-translate-x-1/2
+          sm:rounded-4xl sm:border-2 sm:border-admin-line"
       >
         {panel}
         {confirmUI}

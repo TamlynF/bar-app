@@ -229,7 +229,10 @@ export default function SystemUsersClient({
 }: {
   initialUsers: SystemUserRecord[];
 }) {
-  const sheet = useRecordSheet<SystemUserRecord>();
+  const sheet = useRecordSheet<SystemUserRecord>({
+    records: initialUsers,
+    getId: (record) => record.id,
+  });
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
   const [formStatus, setFormStatus] = useState("active");
@@ -723,7 +726,9 @@ export default function SystemUsersClient({
                     name="country_code"
                     aria-label="Country code"
                     defaultValue={formDefault?.country_code ?? "+44"}
-                    className="w-auto cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none"
+                    // The native option list takes its width from the control, so
+                    // a shrink-to-fit select clipped the dialling codes.
+                    className="w-28 cursor-pointer appearance-none bg-transparent text-right text-[12px] font-semibold text-admin-ink outline-none"
                   >
                     {COUNTRY_CODES.map((c) => (
                       <option key={c.iso + c.code} value={c.code}>

@@ -12,12 +12,16 @@ import {
   Guitar,
   PartyPopper,
   Clock,
+  UserPlus,
   ChevronRight,
+  ExternalLink,
   Trophy,
   Check,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { COUNTRY_CODES } from "@/lib/country-codes";
 import { saveContactAction, deleteContactAction } from "./actions";
 import {
   activityTotal,
@@ -52,6 +56,7 @@ export type ContactRecord = {
   phone_no: string | null;
   birthday: string | null;
   marketing_opt_in?: boolean;
+  first_interaction_date?: string | null;
   last_interaction_date?: string | null;
   created_at?: string;
   updated_at?: string | null;
@@ -65,6 +70,13 @@ const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 
 const INDENT = ["pl-4 sm:pl-5", "pl-9 sm:pl-10", "pl-14 sm:pl-15"];
+
+// A count worth reading stands forward; a zero stays out of the way.
+function countTone(value: number): string {
+  return value > 0
+    ? "border-admin-primary/40 bg-admin-primary-soft text-admin-primary"
+    : "border-admin-line bg-admin-surface text-admin-muted";
+}
 
 function toTitleCase(str?: string | null) {
   if (!str) return "";
@@ -119,6 +131,31 @@ function groupBy<T>(items: T[], key: (item: T) => string): [string, T[]][] {
     map.set(k, [...(map.get(k) ?? []), item]);
   });
   return [...map.entries()].sort((a, z) => z[1].length - a[1].length || a[0].localeCompare(z[0]));
+}
+
+// The two dates sit side by side, so each one says which it is rather than
+// relying on column position.
+function InteractionCell({
+  label,
+  icon,
+  value,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value?: string | null;
+}) {
+  return (
+    <p
+      className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex"
+      title={value ? `${label} interaction ${formatDate(value)}` : "No activity on record"}
+    >
+      {icon}
+      <span className="shrink-0 text-[11px] font-semibold tracking-wide uppercase opacity-60">
+        {label}
+      </span>
+      <span className="truncate tabular-nums">{value ? formatDate(value) : "Never"}</span>
+    </p>
+  );
 }
 
 function BirthdayMarker() {
@@ -224,12 +261,60 @@ function TreeRow({
           </span>
         )}
         {count != null && (
-          <span className="shrink-0 rounded-lg border border-admin-line bg-admin-surface px-2 py-0.5 text-[11px] font-semibold text-admin-muted tabular-nums">
+          <span
+            className={cn(
+              "shrink-0 rounded-lg border px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+              countTone(count),
+            )}
+          >
             {count}
           </span>
         )}
       </button>
       {open && children}
+    </div>
+  );
+}
+
+function LeafRow({
+  title,
+  date,
+  tags,
+  href,
+  linkTitle = "View event",
+}: {
+  title: string;
+  date: string | null;
+  tags: string[];
+  href: string | null;
+  linkTitle?: string;
+}) {
+  const detail = tags.filter(Boolean).join(" · ");
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 border-b border-admin-line py-2 pr-4 last:border-0 sm:pr-5",
+        INDENT[2],
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12px] font-medium text-admin-ink">{title}</p>
+        {detail && <p className="mt-0.5 truncate text-[11px] text-admin-muted">{detail}</p>}
+      </div>
+      <span className="shrink-0 text-[11px] font-medium text-admin-muted tabular-nums">
+        {formatDate(date)}
+      </span>
+      {href && (
+        <Link
+          href={href}
+          aria-label={`${linkTitle}: ${title}`}
+          title={linkTitle}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-primary transition-colors hover:bg-admin-primary-soft"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -244,29 +329,44 @@ function ActivityTree({ activity }: { activity: ContactActivity }) {
           groupBy(bookings, (b) => b.subtype).map(([subtype, rows]) => (
             <TreeRow key={subtype} label={subtype} count={rows.length} depth={1}>
               {rows.map((booking) => (
-                <TreeRow
+                <LeafRow
                   key={booking.id}
-                  label={booking.title}
-                  meta={formatDate(booking.date)}
-                  depth={2}
+                  title={booking.title}
+                  date={booking.date}
+                  tags={[booking.groupName ?? "", toTitleCase(booking.status)]}
+                  // Bookings live under the event they were made against, so
+                  // that page is where you go to see this one.
+                  href={
+                    booking.eventId != null
+                      ? `/event-bookings/event/${booking.eventId}`
+                      : null
+                  }
+                  linkTitle="View booking"
                 />
               ))}
             </TreeRow>
           ))}
       </TreeRow>
 
+      {/* Act first, then what they play as - one person can bring in more than
+          one act, and that is the split worth seeing before anything else. */}
       <TreeRow label="Band requests" count={bandRequests.length} depth={0}>
         {bandRequests.length > 0 &&
-          groupBy(bandRequests, (r) => toTitleCase(r.type)).map(([type, byType]) => (
-            <TreeRow key={type} label={type} count={byType.length} depth={1}>
-              {groupBy(byType, (r) => toTitleCase(r.genre)).map(([genre, rows]) => (
-                <TreeRow key={genre} label={genre} count={rows.length} depth={2}>
+          groupBy(bandRequests, (r) => r.actName).map(([actName, byAct]) => (
+            <TreeRow key={actName} label={actName} count={byAct.length} depth={1}>
+              {groupBy(byAct, (r) => toTitleCase(r.type)).map(([type, rows]) => (
+                <TreeRow key={type} label={type} count={rows.length} depth={2}>
                   {rows.map((request) => (
-                    <TreeRow
+                    <LeafRow
                       key={request.id}
-                      label={toTitleCase(request.status)}
-                      meta={formatDate(request.date)}
-                      depth={2}
+                      title={request.title}
+                      date={request.date}
+                      tags={[toTitleCase(request.genre), toTitleCase(request.status)]}
+                      href={
+                        request.eventId != null
+                          ? `/event-setups/events/${request.eventId}`
+                          : null
+                      }
                     />
                   ))}
                 </TreeRow>
@@ -277,14 +377,19 @@ function ActivityTree({ activity }: { activity: ContactActivity }) {
 
       <TreeRow label="Private hire" count={privateHires.length} depth={0}>
         {privateHires.length > 0 &&
-          groupBy(privateHires, (h) => toTitleCase(h.reason)).map(([reason, rows]) => (
-            <TreeRow key={reason} label={reason} count={rows.length} depth={1}>
+          groupBy(privateHires, (h) => h.subtype).map(([subtype, rows]) => (
+            <TreeRow key={subtype} label={subtype} count={rows.length} depth={1}>
               {rows.map((hire) => (
-                <TreeRow
+                <LeafRow
                   key={hire.id}
-                  label={`${hire.guests} guest${hire.guests === 1 ? "" : "s"}`}
-                  meta={formatDate(hire.date)}
-                  depth={2}
+                  title={hire.title}
+                  date={hire.date}
+                  tags={[
+                    toTitleCase(hire.reason),
+                    toTitleCase(hire.status),
+                    `${hire.guests} guest${hire.guests === 1 ? "" : "s"}`,
+                  ]}
+                  href={hire.eventId != null ? `/event-setups/events/${hire.eventId}` : null}
                 />
               ))}
             </TreeRow>
@@ -303,7 +408,10 @@ export default function CustomersClient({
   employees?: EmployeeOption[];
   activity?: ActivityByContact;
 }) {
-  const sheet = useRecordSheet<ContactRecord>();
+  const sheet = useRecordSheet<ContactRecord>({
+    records: initialContacts,
+    getId: (record) => record.id,
+  });
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -418,46 +526,55 @@ export default function CustomersClient({
                     {initialsOf(contact.full_name)}
                   </span>
 
-                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1.7fr)_15rem_9rem] sm:items-center sm:gap-3">
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                  {/* Fixed tracks so the email, the two dates and the counts each
+                      hold one column all the way down the list. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_11rem_11rem_13rem] sm:items-center sm:gap-3">
+                    <div className="flex min-w-0 items-center gap-1.5">
                       <p className="min-w-0 truncate text-sm leading-snug font-semibold text-admin-ink">
                         {contact.full_name}
                       </p>
                       {hasBirthdayThisMonth(contact.birthday) && <BirthdayMarker />}
-                      <span className="min-w-0 truncate text-[11px] font-medium text-admin-muted sm:text-[12px]">
+                    </div>
+
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1 sm:mt-0">
+                      <span className="truncate text-[11px] font-medium text-admin-muted sm:text-[12px]">
                         {contact.email}
                       </span>
                       <ContactActions contact={contact} />
                     </div>
 
+                    <InteractionCell
+                      label="First"
+                      icon={<UserPlus className="h-3.5 w-3.5 shrink-0 opacity-60" />}
+                      value={contact.first_interaction_date}
+                    />
+
+                    <InteractionCell
+                      label="Last"
+                      icon={<Clock className="h-3.5 w-3.5 shrink-0 opacity-60" />}
+                      value={contact.last_interaction_date}
+                    />
+
                     <div className="hidden items-center gap-1.5 sm:flex">
-                      <InfoBadge icon={<Ticket className="h-3 w-3" />}>
+                      <InfoBadge
+                        icon={<Ticket className="h-3 w-3" />}
+                        className={countTone(counts.bookings.length)}
+                      >
                         {counts.bookings.length}
                       </InfoBadge>
-                      <InfoBadge icon={<Guitar className="h-3 w-3" />}>
+                      <InfoBadge
+                        icon={<Guitar className="h-3 w-3" />}
+                        className={countTone(counts.bandRequests.length)}
+                      >
                         {counts.bandRequests.length}
                       </InfoBadge>
-                      <InfoBadge icon={<PartyPopper className="h-3 w-3" />}>
+                      <InfoBadge
+                        icon={<PartyPopper className="h-3 w-3" />}
+                        className={countTone(counts.privateHires.length)}
+                      >
                         {counts.privateHires.length}
                       </InfoBadge>
                     </div>
-
-                    <p
-                      className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex"
-                      title={
-                        contact.last_interaction_date
-                          ? `Last seen ${formatDate(contact.last_interaction_date)}`
-                          : "No activity on record"
-                      }
-                    >
-                      <Clock className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
-                      <span className="sr-only">Last seen</span>
-                      <span className="truncate tabular-nums">
-                        {contact.last_interaction_date
-                          ? formatDate(contact.last_interaction_date)
-                          : "Never"}
-                      </span>
-                    </p>
                   </div>
                 </ListRow>
               );
@@ -546,11 +663,11 @@ export default function CustomersClient({
                   </span>
                 }
               />
-              <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
-              <DetailCell
-                label="Marketing opt-in"
-                value={selected.marketing_opt_in ? "Yes" : "No"}
-              />
+              {/* Marketing sits in the header pill; birthday only earns a row
+                  when there is one on record. */}
+              {selected.birthday && (
+                <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
+              )}
             </DetailCard>
 
             <DetailCard>
@@ -567,6 +684,14 @@ export default function CustomersClient({
 
               <ActivityTree activity={selectedActivity} />
 
+              <DetailCell
+                label="First seen"
+                value={
+                  selected.first_interaction_date
+                    ? formatDate(selected.first_interaction_date)
+                    : "Never"
+                }
+              />
               <DetailCell
                 label="Last seen"
                 value={
@@ -632,14 +757,20 @@ export default function CustomersClient({
 
               <FormRow label="Phone">
                 <div className="flex flex-1 items-center justify-end gap-1.5">
-                  <input
+                  <select
                     name="country_code"
-                    size={5}
                     aria-label="Country code"
-                    placeholder="+44"
-                    defaultValue={formDefault?.country_code ?? ""}
-                    className="w-auto bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40"
-                  />
+                    defaultValue={formDefault?.country_code ?? "+44"}
+                    // The native option list takes its width from the control, so
+                    // a shrink-to-fit select clipped the dialling codes.
+                    className="w-28 cursor-pointer appearance-none bg-transparent text-right text-[12px] font-semibold text-admin-ink outline-none"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.iso + c.code} value={c.code}>
+                        {c.iso} {c.code}
+                      </option>
+                    ))}
+                  </select>
                   <span className="text-xs text-admin-muted/50">|</span>
                   <input
                     name="phone_no"
