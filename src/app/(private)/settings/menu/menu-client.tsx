@@ -485,8 +485,8 @@ export default function MenuClient({
         title="Menu print frame"
       />
 
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-center justify-end gap-2 sm:justify-between">
+        <div className="hidden min-w-0 sm:block">
           <p className="text-[11px] font-medium text-[#5E6654]">
             {initialCategories.length} categories &middot;{" "}
             {initialCategories.reduce(
@@ -518,7 +518,7 @@ export default function MenuClient({
             onClick={handleBackfillServes}
             disabled={isFilling}
             title="Read serves from existing prices"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:h-9 sm:w-9"
+            className="hidden h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex sm:h-9 sm:w-9"
           >
             <ListOrdered className="h-4 w-4 text-[#5E6654]" />
           </button>
@@ -527,7 +527,7 @@ export default function MenuClient({
             onClick={handleAutoFill}
             disabled={isFilling}
             title="Auto-fill price comparison rounds"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:h-9 sm:w-9"
+            className="hidden h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex sm:h-9 sm:w-9"
           >
             {isFilling ? (
               <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" />
