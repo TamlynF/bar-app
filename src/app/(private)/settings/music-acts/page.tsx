@@ -6,22 +6,24 @@ export const dynamic = "force-dynamic";
 export default async function MusicActsPage() {
   const supabase = await createClient();
 
-  const [{ data: acts, error }, { data: bookings }, { data: subtypes }] = await Promise.all([
-    supabase
-      .from("music_acts")
-      .select("*, contact:contacts(id, full_name, email, phone_no)")
-      .order("is_favorite", { ascending: false })
-      .order("group_name", { ascending: true }),
-    supabase
-      .from("band_booking_requests")
-      .select("music_acts_id, linked_event:events!band_booking_requests_event_id_fkey(date)")
-      .eq("status", "booked"),
-    supabase
-      .from("event_subtypes")
-      .select("name")
-      .eq("behavior", "music_act")
-      .order("name", { ascending: true }),
-  ]);
+  const [{ data: acts, error }, { data: bookings }, { data: subtypes }, { data: employees }] =
+    await Promise.all([
+      supabase
+        .from("music_acts")
+        .select("*, contact:contacts(id, full_name, email, phone_no)")
+        .order("is_favorite", { ascending: false })
+        .order("group_name", { ascending: true }),
+      supabase
+        .from("band_booking_requests")
+        .select("music_acts_id, linked_event:events!band_booking_requests_event_id_fkey(date)")
+        .eq("status", "booked"),
+      supabase
+        .from("event_subtypes")
+        .select("name")
+        .eq("behavior", "music_act")
+        .order("name", { ascending: true }),
+      supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
+    ]);
 
   if (error) console.error("Error fetching music acts:", error);
 
@@ -47,6 +49,7 @@ export default async function MusicActsPage() {
       initialActs={(acts as MusicActWithContact[]) || []}
       counts={counts}
       typeOptions={typeOptions}
+      employees={employees ?? []}
     />
   );
 }

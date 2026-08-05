@@ -189,6 +189,7 @@ export function ListRow({
   variant = "panel",
   selected = false,
   status,
+  actions,
   className,
   children,
 }: {
@@ -198,6 +199,9 @@ export function ListRow({
   // A status pill belongs in one place on every list: hard right, just inside
   // the chevron. Passing it here rather than as a child is what guarantees that.
   status?: React.ReactNode;
+  // Per-row controls, outside the pill so the row still reads status-first.
+  // They stop their own clicks; the rest of the row opens the record.
+  actions?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -219,6 +223,7 @@ export function ListRow({
     >
       {children}
       {status && <div className="shrink-0">{status}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-0.5">{actions}</div>}
       <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted opacity-40" />
     </div>
   );

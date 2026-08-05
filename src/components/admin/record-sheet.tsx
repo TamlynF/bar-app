@@ -228,6 +228,7 @@ export function RecordSheet({
   confirmUI,
   systemInfo,
   status,
+  actions,
   layout = "sheet",
   emptyState,
   children,
@@ -251,6 +252,9 @@ export function RecordSheet({
   // Status pills, shown under the title so the state of the record reads the
   // same whether you are looking at it or editing it. Hidden while adding.
   status?: React.ReactNode;
+  // Record-level controls that sit beside the "i" button - things you toggle
+  // rather than fill in, so they read the same in view and edit.
+  actions?: React.ReactNode;
   // "split" keeps the bottom sheet on phones and tablets but shows the record
   // beside the list from 1280px up.
   layout?: "sheet" | "split";
@@ -276,8 +280,13 @@ export function RecordSheet({
               </span>
             )}
           </TitleTag>
-          {systemInfo && mode !== "add" && (
-            <SystemInfoPopover recordId={recordId} info={systemInfo} />
+          {(actions || (systemInfo && mode !== "add")) && (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {actions}
+              {systemInfo && mode !== "add" && (
+                <SystemInfoPopover recordId={recordId} info={systemInfo} />
+              )}
+            </div>
           )}
         </div>
         {status && mode !== "add" && (

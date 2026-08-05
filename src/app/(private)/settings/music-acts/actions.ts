@@ -113,6 +113,35 @@ export async function saveMusicActAction(
   }
 }
 
+async function patchMusicAct(
+  id: string,
+  patch: Record<string, unknown>
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const empId = await currentEmployeeId(supabase);
+
+  const { error } = await supabase
+    .from("music_acts")
+    .update({ ...patch, updated_at: new Date().toISOString(), updated_by: empId })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error updating music act:", error);
+    return { error: error.message };
+  }
+
+  revalidatePath("/settings/music-acts");
+  return { success: true };
+}
+
+export async function setMusicActFavoriteAction(id: string, isFavorite: boolean) {
+  return patchMusicAct(id, { is_favorite: isFavorite });
+}
+
+export async function setMusicActNotesAction(id: string, notes: string) {
+  return patchMusicAct(id, { internal_notes: notes.trim() || null });
+}
+
 export async function deleteMusicActAction(
   id: string
 ): Promise<{ success: true } | { error: string }> {
