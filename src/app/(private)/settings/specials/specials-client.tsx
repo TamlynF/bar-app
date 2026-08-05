@@ -19,6 +19,14 @@ import { createClient } from "@/lib/supabase/client";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { RichTextContent } from "@/components/rich-text-content";
 import {
+  planSave,
+  planDelete,
+  describeChanges,
+  nextPosition,
+  type ChangeDescription,
+  type OrderRow,
+} from "@/lib/merchandise-order";
+import {
   useRecordSheet,
   RecordSheet,
   RecordList,
@@ -102,6 +110,23 @@ function plainText(html: string | null): string {
     .trim();
 }
 
+function ChangeList({ changes }: { changes: ChangeDescription[] }) {
+  return (
+    <ul className="divide-y divide-admin-line overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
+      {changes.map((change) => (
+        <li key={change.id} className="flex items-center justify-between gap-3 px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-admin-ink">
+            {change.name}
+          </span>
+          <span className="shrink-0 text-[11px] font-semibold text-admin-muted tabular-nums">
+            {change.from} → {change.to}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function SpecialsClient({
   initialSpecials = [],
   employees = [],
@@ -119,6 +144,21 @@ export default function SpecialsClient({
   const [imageUrl, setImageUrl] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [position, setPosition] = useState(1);
+
+  const orderRows: OrderRow[] = useMemo(
+    () =>
+      initialSpecials.map((special) => ({
+        id: special.id,
+        name: special.title,
+        display_order: special.display_order,
+        is_active: special.is_active,
+      })),
+    [initialSpecials],
+  );
+
+  const activeCount = orderRows.filter((row) => row.is_active).length;
 
   const employeeName = (id?: number | null) =>
     employees.find((employee) => employee.id === id)?.full_name ?? "-";
@@ -141,6 +181,8 @@ export default function SpecialsClient({
     setImageUrl(record?.image_url ?? "");
     setStartDate(toDateInput(record?.start_date));
     setEndDate(toDateInput(record?.end_date));
+    setIsActive(record?.is_active ?? true);
+    setPosition(record?.display_order || nextPosition(orderRows));
   };
 
   const openAdd = () => {
@@ -165,10 +207,14 @@ export default function SpecialsClient({
 
   const handleDelete = () => {
     if (!selected) return;
+    const cascade = describeChanges(orderRows, planDelete(orderRows, selected.id));
     sheet.confirmDelete({
       title: "Delete special",
       description:
-        "Are you sure you want to delete this special? This cannot be undone.",
+        cascade.length > 0
+          ? "Are you sure you want to delete this special? This cannot be undone. These positions will shift up:"
+          : "Are you sure you want to delete this special? This cannot be undone.",
+      content: cascade.length > 0 ? <ChangeList changes={cascade} /> : undefined,
       action: () => deleteSpecialAction(selected.id),
     });
   };
@@ -203,6 +249,47 @@ export default function SpecialsClient({
 
   const showForm = mode === "add" || mode === "edit";
   const formDefault = mode === "edit" ? selected : null;
+  const wasActive = formDefault?.is_active ?? false;
+  const canChoosePosition = !!formDefault && wasActive && isActive;
+
+  const plan = planSave(orderRows, {
+    id: formDefault?.id ?? null,
+    isActive,
+    targetPosition: canChoosePosition ? position : null,
+  });
+  const affected = describeChanges(orderRows, plan.changes);
+
+  const reorderPrompt = (name: string) => {
+    if (wasActive && !isActive) {
+      return `Making "${name}" inactive will move it to position 0 and update:`;
+    }
+    if (!wasActive && isActive) {
+      return `Making "${name}" active will place it at position ${plan.position} and update:`;
+    }
+    return `Moving "${name}" to position ${plan.position} will also update:`;
+  };
+
+  // Submitted by hand rather than as a form action, so the reorder warning can be
+  // answered before anything is written.
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const submit = sheet.submit(saveSpecialAction);
+
+    if (affected.length === 0) {
+      submit(formData);
+      return;
+    }
+
+    const ok = await sheet.confirm({
+      title: "Reorder specials",
+      description: reorderPrompt(formData.get("title")?.toString().trim() || "this special"),
+      content: <ChangeList changes={affected} />,
+      confirmLabel: "Update order",
+    });
+    if (ok) submit(formData);
+  };
+
   const title =
     mode === "add"
       ? "New special"
@@ -277,9 +364,13 @@ export default function SpecialsClient({
                 >
                   <span
                     className="w-6 shrink-0 text-center text-xs font-semibold text-admin-muted tabular-nums opacity-60"
-                    title={`Order ${special.display_order}`}
+                    title={
+                      special.is_active
+                        ? `Position ${special.display_order}`
+                        : "Inactive specials have no position"
+                    }
                   >
-                    {special.display_order}
+                    {special.is_active ? special.display_order : "-"}
                   </span>
 
                   <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
@@ -427,8 +518,8 @@ export default function SpecialsClient({
               <DetailCell dense label="Days" value={formatDays(selected.days_of_week)} />
               <DetailCell
                 dense
-                label="Order"
-                value={String(selected.display_order)}
+                label="Position"
+                value={selected.is_active ? String(selected.display_order) : "0 (inactive)"}
               />
             </DetailCard>
 
@@ -456,7 +547,7 @@ export default function SpecialsClient({
         {showForm && (
           <form
             id="special-form"
-            action={sheet.submit(saveSpecialAction)}
+            onSubmit={handleSubmit}
             className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
           >
             {formDefault && (
@@ -601,7 +692,8 @@ export default function SpecialsClient({
                 <select
                   name="is_active"
                   aria-label="Status"
-                  defaultValue={formDefault?.is_active === false ? "false" : "true"}
+                  value={isActive ? "true" : "false"}
+                  onChange={(e) => setIsActive(e.target.value === "true")}
                   className={FIELD_SELECT}
                 >
                   <option value="true">Active</option>
@@ -609,17 +701,40 @@ export default function SpecialsClient({
                 </select>
               </FormRow>
 
-              <FormRow label="Order">
-                <input
-                  name="display_order"
-                  type="number"
-                  min="0"
-                  inputMode="numeric"
-                  aria-label="Display order"
-                  defaultValue={formDefault?.display_order ?? 0}
-                  className={cn(FIELD_INPUT, "tabular-nums")}
-                />
+              <FormRow label="Position">
+                {canChoosePosition ? (
+                  <input
+                    name="display_order"
+                    type="number"
+                    min={1}
+                    max={activeCount}
+                    inputMode="numeric"
+                    aria-label="Position on the homepage"
+                    value={position}
+                    onChange={(e) => setPosition(Number(e.target.value))}
+                    className={cn(FIELD_INPUT, "tabular-nums")}
+                  />
+                ) : (
+                  <input
+                    name="display_order"
+                    type="number"
+                    readOnly
+                    aria-label="Position on the homepage"
+                    value={plan.position}
+                    className="flex-1 cursor-not-allowed bg-transparent text-right text-sm font-semibold text-admin-muted opacity-60 outline-none tabular-nums"
+                  />
+                )}
               </FormRow>
+
+              <div className="px-4 pt-0 pb-3 sm:px-5">
+                <p className="text-[11px] font-medium text-admin-muted opacity-70">
+                  {!isActive
+                    ? "Inactive specials have no position and are hidden from the homepage."
+                    : canChoosePosition
+                      ? `Positions run 1 to ${activeCount}. Changing this reorders the others.`
+                      : "New specials are added to the end of the list."}
+                </p>
+              </div>
             </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}

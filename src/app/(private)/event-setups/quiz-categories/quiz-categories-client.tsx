@@ -18,6 +18,14 @@ import {
 } from "./actions";
 import { cn } from "@/lib/utils";
 import {
+  planSave,
+  planDelete,
+  describeChanges,
+  nextPosition,
+  type ChangeDescription,
+  type OrderRow,
+} from "@/lib/merchandise-order";
+import {
   useRecordSheet,
   RecordSheet,
   RecordList,
@@ -55,6 +63,8 @@ export default function QuizCategoriesClient({
   });
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [position, setPosition] = useState(1);
 
   const employeeName = (id?: number | null) =>
     employees.find((employee) => employee.id === id)?.full_name ?? "-";
@@ -72,16 +82,86 @@ export default function QuizCategoriesClient({
   const showForm = mode === "add" || mode === "edit";
   const formDefault = mode === "edit" ? selected : null;
 
+  // Rounds run 1..N across the active categories; an inactive one has no round
+  // and sits at 0. The number is worked out from that rather than typed in.
+  const orderRows: OrderRow[] = initialConfigs.map((config) => ({
+    id: config.id ?? 0,
+    name: config.category_name,
+    display_order: config.order_no,
+    is_active: config.is_active,
+  }));
+  const activeCount = orderRows.filter((row) => row.is_active).length;
+  const wasActive = formDefault?.is_active ?? false;
+  const canChoosePosition = !!formDefault && wasActive && isActive;
+
+  const plan = planSave(orderRows, {
+    id: formDefault?.id ?? null,
+    isActive,
+    targetPosition: canChoosePosition ? position : null,
+  });
+  const affected = describeChanges(orderRows, plan.changes);
+
+  const openAdd = () => {
+    setIsActive(true);
+    setPosition(nextPosition(orderRows));
+    sheet.openAdd();
+  };
+
+  const startEdit = () => {
+    if (!selected) return;
+    setIsActive(selected.is_active);
+    setPosition(selected.order_no || nextPosition(orderRows));
+    sheet.startEdit();
+  };
+
   const cancel = () => {
     if (mode === "add") sheet.close();
     else if (selected) sheet.openView(selected);
   };
 
+  const reorderPrompt = (name: string) => {
+    if (wasActive && !isActive) {
+      return `Making "${name}" inactive will move it to round 0 and update:`;
+    }
+    if (!wasActive && isActive) {
+      return `Making "${name}" active will place it at round ${plan.position} and update:`;
+    }
+    return `Moving "${name}" to round ${plan.position} will also update:`;
+  };
+
+  // Submitted by hand rather than as a form action, so the rounds that shift
+  // can be shown and agreed to before anything is written.
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const submit = sheet.submit(saveQuizCategoryAction);
+
+    if (affected.length === 0) {
+      submit(formData);
+      return;
+    }
+
+    const ok = await sheet.confirm({
+      title: "Reorder quiz categories",
+      description: reorderPrompt(
+        formData.get("category_name")?.toString().trim() || "this category",
+      ),
+      content: <ChangeList changes={affected} />,
+      confirmLabel: "Update rounds",
+    });
+    if (ok) submit(formData);
+  };
+
   const handleDelete = () => {
     if (!selected?.id) return;
+    const cascade = describeChanges(orderRows, planDelete(orderRows, selected.id));
     sheet.confirmDelete({
       title: "Delete category",
-      description: "Delete this quiz category? This cannot be undone.",
+      description:
+        cascade.length > 0
+          ? "Delete this quiz category? This cannot be undone. These rounds will shift up:"
+          : "Delete this quiz category? This cannot be undone.",
+      content: cascade.length > 0 ? <ChangeList changes={cascade} /> : undefined,
       action: () => deleteQuizCategoryAction(selected.id as number),
     });
   };
@@ -103,7 +183,7 @@ export default function QuizCategoriesClient({
           action={
             <button
               type="button"
-              onClick={sheet.openAdd}
+              onClick={openAdd}
               className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
@@ -116,7 +196,7 @@ export default function QuizCategoriesClient({
           variant="panel"
           title="Quiz categories"
           count={shown.length}
-          onAdd={sheet.openAdd}
+          onAdd={openAdd}
           toolbar={
             <ListSearchInput
               value={query}
@@ -228,7 +308,7 @@ export default function QuizCategoriesClient({
         recordId={selected?.id}
         formId="category-form"
         isPending={sheet.isPending}
-        onEdit={sheet.startEdit}
+        onEdit={startEdit}
         onDelete={handleDelete}
         onCancel={cancel}
         confirmUI={sheet.ConfirmDialogUI}
@@ -265,7 +345,11 @@ export default function QuizCategoriesClient({
             <DetailCard>
               <DetailCell dense label="Category" value={selected.category_name} />
               <DetailCell dense label="Short name" value={selected.short_name || "-"} />
-              <DetailCell dense label="Round order" value={String(selected.order_no)} />
+              <DetailCell
+                dense
+                label="Round order"
+                value={selected.is_active ? String(selected.order_no) : "0 (inactive)"}
+              />
               <DetailCell dense label="Questions" value={String(selected.question_count)} />
               <DetailCell
                 dense
@@ -296,7 +380,7 @@ export default function QuizCategoriesClient({
         {showForm && (
           <form
             id="category-form"
-            action={sheet.submit(saveQuizCategoryAction)}
+            onSubmit={handleSubmit}
             className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
           >
             {formDefault?.id && (
@@ -326,16 +410,29 @@ export default function QuizCategoriesClient({
                 />
               </FormRow>
 
-              <FormRow label="Round order" required>
-                <input
-                  name="order_no"
-                  type="number"
-                  min="1"
-                  required
-                  aria-label="Round order"
-                  defaultValue={formDefault?.order_no ?? ""}
-                  className={cn(FIELD_INPUT, "tabular-nums")}
-                />
+              <FormRow label="Round order">
+                {canChoosePosition ? (
+                  <input
+                    name="order_no"
+                    type="number"
+                    min={1}
+                    max={activeCount}
+                    inputMode="numeric"
+                    aria-label="Round order"
+                    value={position}
+                    onChange={(e) => setPosition(Number(e.target.value))}
+                    className={cn(FIELD_INPUT, "tabular-nums")}
+                  />
+                ) : (
+                  <input
+                    name="order_no"
+                    type="number"
+                    readOnly
+                    aria-label="Round order"
+                    value={plan.position}
+                    className="flex-1 cursor-not-allowed bg-transparent text-right text-sm font-semibold text-admin-muted opacity-60 outline-none tabular-nums"
+                  />
+                )}
               </FormRow>
 
               <FormRow label="Questions">
@@ -404,10 +501,21 @@ export default function QuizCategoriesClient({
                   name="is_active"
                   type="checkbox"
                   aria-label="Active"
-                  defaultChecked={formDefault?.is_active ?? true}
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
                   className={CHECKBOX}
                 />
               </FormRow>
+
+              <div className="px-4 pt-0 pb-3 sm:px-5">
+                <p className="text-[11px] font-medium text-admin-muted opacity-70">
+                  {isActive
+                    ? canChoosePosition
+                      ? `Rounds run 1 to ${activeCount}. Changing this reorders the others.`
+                      : `Added to the end of the running order at round ${plan.position}.`
+                    : "Inactive categories have round 0 and are left out of the quiz."}
+                </p>
+              </div>
             </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}
@@ -415,5 +523,25 @@ export default function QuizCategoriesClient({
         )}
       </RecordSheet>
     </div>
+  );
+}
+
+function ChangeList({ changes }: { changes: ChangeDescription[] }) {
+  return (
+    <ul className="divide-y divide-admin-line overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
+      {changes.map((change) => (
+        <li
+          key={change.id}
+          className="flex items-center justify-between gap-3 px-3 py-2"
+        >
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-admin-ink">
+            {change.name}
+          </span>
+          <span className="shrink-0 text-[11px] font-semibold text-admin-muted tabular-nums">
+            {change.from} → {change.to}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

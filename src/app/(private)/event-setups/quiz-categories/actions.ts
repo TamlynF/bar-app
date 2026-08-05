@@ -3,6 +3,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
+import { planSave, planDelete, type OrderChange, type OrderRow } from "@/lib/merchandise-order";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Rounds run 1..N across the active categories and an inactive one sits at 0,
+// so the numbering is derived rather than typed in and can never collide.
+async function loadOrderRows(supabase: SupabaseClient): Promise<OrderRow[]> {
+  const { data, error } = await supabase
+    .from("quiz_category_configs")
+    .select("id, category_name, order_no, is_active");
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as number,
+    name: (row.category_name as string) ?? "",
+    display_order: (row.order_no as number) ?? 0,
+    is_active: !!row.is_active,
+  }));
+}
+
+async function applyChanges(supabase: SupabaseClient, changes: OrderChange[]) {
+  for (const change of changes) {
+    const { error } = await supabase
+      .from("quiz_category_configs")
+      .update({ order_no: change.display_order })
+      .eq("id", change.id);
+    if (error) throw error;
+  }
+}
 
 export type QuizCategoryConfig = {
   id?: number;
@@ -29,7 +56,8 @@ export async function saveQuizCategoryAction(formData: FormData) {
   const include_spotify = formData.get("include_spotify") === "on";
   const is_picture = formData.get("is_picture") === "on";
   const is_higher_lower = formData.get("is_higher_lower") === "on";
-  const order_no = parseInt(formData.get("order_no")?.toString() || "1", 10);
+  const targetRaw = formData.get("order_no")?.toString().trim() ?? "";
+  const targetPosition = targetRaw === "" ? null : Number(targetRaw);
   const category_name = formData.get("category_name")?.toString() || "";
   const short_name_raw = formData.get("short_name")?.toString() || "";
   const short_name = short_name_raw || category_name.substring(0, 3).toUpperCase();
@@ -38,35 +66,29 @@ export async function saveQuizCategoryAction(formData: FormData) {
     return { error: "Category name is required." };
   }
 
-  if (is_active) {
-    let dupQuery = supabase
-      .from("quiz_category_configs")
-      .select("id")
-      .eq("order_no", order_no)
-      .eq("is_active", true);
-    if (id) dupQuery = dupQuery.neq("id", id);
-    const { data: dup } = await dupQuery.maybeSingle();
-    if (dup) {
-      return { error: `Order number ${order_no} is already used by another active category.` };
-    }
-  }
-
-  const payload = {
-    category_name,
-    question_count: parseInt(formData.get("question_count")?.toString() || "10", 10),
-    points_per_question: parseInt(formData.get("points_per_question")?.toString() || "1", 10),
-    is_active,
-    order_no,
-    include_spotify,
-    short_name,
-    is_picture,
-    is_higher_lower,
-  };
-
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
 
   try {
+    const rows = await loadOrderRows(supabase);
+    const plan = planSave(rows, {
+      id: id ? Number(id) : null,
+      isActive: is_active,
+      targetPosition,
+    });
+
+    const payload = {
+      category_name,
+      question_count: parseInt(formData.get("question_count")?.toString() || "10", 10),
+      points_per_question: parseInt(formData.get("points_per_question")?.toString() || "1", 10),
+      is_active,
+      order_no: plan.position,
+      include_spotify,
+      short_name,
+      is_picture,
+      is_higher_lower,
+    };
+
     if (id) {
       const { error } = await supabase
         .from("quiz_category_configs")
@@ -74,14 +96,6 @@ export async function saveQuizCategoryAction(formData: FormData) {
         .eq("id", id);
       if (error) throw error;
     } else {
-      const { data: maxRow } = await supabase
-        .from("quiz_category_configs")
-        .select("order_no")
-        .order("order_no", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      payload.order_no = (maxRow?.order_no ?? 0) + 1;
-
       const { error } = await supabase.from("quiz_category_configs").insert({
         ...payload,
         created_at: now,
@@ -91,6 +105,8 @@ export async function saveQuizCategoryAction(formData: FormData) {
       });
       if (error) throw error;
     }
+
+    await applyChanges(supabase, plan.changes);
 
     revalidatePath("/event-setups/quiz-categories");
     return { success: true };
@@ -103,11 +119,15 @@ export async function saveQuizCategoryAction(formData: FormData) {
 export async function deleteQuizCategoryAction(id: number) {
   const supabase = await createClient();
   try {
+    const rows = await loadOrderRows(supabase);
+
     const { error } = await supabase
       .from("quiz_category_configs")
       .delete()
       .eq("id", id);
     if (error) throw error;
+
+    await applyChanges(supabase, planDelete(rows, id));
 
     revalidatePath("/event-setups/quiz-categories");
     return { success: true };
