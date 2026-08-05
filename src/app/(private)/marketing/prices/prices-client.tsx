@@ -23,6 +23,74 @@ function formatWhen(iso: string | null): string {
   return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short" });
 }
 
+/* The numbers behind a verdict: the median it was measured against, then the
+   spread and the mean that the median deliberately ignores. */
+function RoundDetail({
+  row,
+  breakdown,
+  className,
+}: {
+  row: BenchmarkComparison;
+  breakdown: { venue: string; price: number }[];
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="mb-1.5 text-[11.5px] leading-snug text-[#5E6654]">
+        Typical <span className="font-semibold text-[#20231A] tabular-nums">{formatGbp(row.competitorMedian)}</span>
+        {row.competitorMin != null && row.competitorMax != null && (
+          <>
+            {" "}
+            · range{" "}
+            <span className="tabular-nums">
+              {formatGbp(row.competitorMin)}–{formatGbp(row.competitorMax)}
+            </span>
+          </>
+        )}
+        {row.competitorAvg != null && (
+          <>
+            {" "}
+            · avg <span className="tabular-nums">{formatGbp(row.competitorAvg)}</span>
+          </>
+        )}{" "}
+        <span className="text-[#5E6654]/70">
+          from {row.sampleCount} {row.sampleCount === 1 ? "price" : "prices"}
+        </span>
+      </p>
+      <p className="mb-1.5 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
+        The breakdown — venue by venue
+      </p>
+      {breakdown.length === 0 ? (
+        <p className="py-1 text-[12px] text-[#5E6654]/70">No venue prices matched this round yet.</p>
+      ) : (
+        breakdown.map((b) => {
+          const under = row.ownPrice != null && row.ownPrice < b.price;
+          return (
+            <div
+              key={b.venue}
+              className="grid grid-cols-[minmax(0,1fr)_58px] items-baseline gap-2 border-t border-[#D8D5C8]/60 py-1.5"
+            >
+              <span className="min-w-0 text-[12.5px] leading-tight font-semibold text-[#20231A]">
+                {b.venue}{" "}
+                {row.ownPrice != null && (
+                  <span className={cn("text-[10.5px] font-normal", under ? "text-[#22613F]" : "text-[#B33A32]")}>
+                    {under
+                      ? `you're ${formatGbp(b.price - row.ownPrice)} under`
+                      : `they're ${formatGbp(row.ownPrice - b.price)} under`}
+                  </span>
+                )}
+              </span>
+              <span className="text-right font-semibold text-[12.5px] text-[#5E6654] tabular-nums">
+                {formatGbp(b.price)}
+              </span>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 export default function PricesClient({
   area,
   radius,
@@ -552,38 +620,58 @@ export default function PricesClient({
               shownComparison.map((c) => {
                 const hasData = c.sampleCount > 0 && c.competitorMedian != null;
                 const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorMedian as number);
+                const open = openRowKey === rowKey(c);
                 return (
                   <div
                     key={rowKey(c)}
-                    className="flex items-center gap-3 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
+                    className={cn("border-b border-[#D8D5C8]/60 last:border-b-0", open && "bg-[#F4F1E8]")}
                   >
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-bold text-[14px] text-[#20231A]">
-                        {c.label} {winning && <span aria-hidden="true">🏆</span>}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
-                        {subLabel(c)}
-                      </span>
-                    </span>
-                    <span
-                      className={cn(
-                        "w-20 text-right font-bold text-[15px] tabular-nums",
-                        winning ? "text-[#22613F]" : "text-[#20231A]",
-                      )}
+                    <button
+                      type="button"
+                      onClick={() => setOpenRowKey(open ? null : rowKey(c))}
+                      disabled={!hasData}
+                      aria-expanded={open}
+                      className="flex w-full items-center gap-3 px-5 py-3 text-left disabled:cursor-default"
                     >
-                      {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
-                    </span>
-                    <span className="w-24 text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
-                      {hasData ? `vs ${formatGbp(c.competitorMedian)}` : "—"}
-                    </span>
-                    <span
-                      className={cn(
-                        "w-28 text-right font-semibold text-[12.5px]",
-                        winning ? "text-[#22613F]" : "text-[#8A8D7A]",
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-[14px] text-[#20231A]">
+                          {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
+                          {subLabel(c)}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "w-20 text-right font-bold text-[15px] tabular-nums",
+                          winning ? "text-[#22613F]" : "text-[#20231A]",
+                        )}
+                      >
+                        {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
+                      </span>
+                      <span className="w-24 text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
+                        {hasData ? `vs ${formatGbp(c.competitorMedian)}` : "—"}
+                      </span>
+                      <span
+                        className={cn(
+                          "w-28 text-right font-semibold text-[12.5px]",
+                          winning ? "text-[#22613F]" : "text-[#8A8D7A]",
+                        )}
+                      >
+                        {winning ? "You win 🏆" : hasData ? "They win" : "No match yet"}
+                      </span>
+                      {hasData ? (
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 shrink-0 text-[#5E6654] transition-transform",
+                            open && "rotate-180 text-[#34451F]",
+                          )}
+                        />
+                      ) : (
+                        <span className="w-4 shrink-0" />
                       )}
-                    >
-                      {winning ? "You win 🏆" : hasData ? "They win" : "No match yet"}
-                    </span>
+                    </button>
+                    {open && <RoundDetail row={c} breakdown={breakdownFor(c.key)} className="px-5 pb-3" />}
                   </div>
                 );
               })
@@ -643,61 +731,17 @@ export default function PricesClient({
                     )}
                   </button>
 
-                  {open && (
-                    <div className="px-3.5 pb-3">
-                      <p className="mb-1.5 text-[11.5px] leading-snug text-[#5E6654]">
-                        Typical <span className="font-semibold text-[#20231A] tabular-nums">{formatGbp(c.competitorMedian)}</span>
-                        {c.competitorMin != null && c.competitorMax != null && (
-                          <> · range <span className="tabular-nums">{formatGbp(c.competitorMin)}–{formatGbp(c.competitorMax)}</span></>
-                        )}
-                        {c.competitorAvg != null && (
-                          <> · avg <span className="tabular-nums">{formatGbp(c.competitorAvg)}</span></>
-                        )}
-                        {" "}
-                        <span className="text-[#5E6654]/70">
-                          from {c.sampleCount} {c.sampleCount === 1 ? "price" : "prices"}
-                        </span>
-                      </p>
-                      <p className="mb-1.5 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
-                        The breakdown — venue by venue
-                      </p>
-                      {breakdown.length === 0 ? (
-                        <p className="py-1 text-[12px] text-[#5E6654]/70">No venue prices matched this round yet.</p>
-                      ) : (
-                        breakdown.map((b) => {
-                          const under = c.ownPrice != null && c.ownPrice < b.price;
-                          return (
-                            <div
-                              key={b.venue}
-                              className="grid grid-cols-[minmax(0,1fr)_58px] items-baseline gap-2 border-t border-[#D8D5C8]/60 py-1.5"
-                            >
-                              <span className="min-w-0 text-[12.5px] leading-tight font-semibold text-[#20231A]">
-                                {b.venue}{" "}
-                                {c.ownPrice != null && (
-                                  <span className={cn("text-[10.5px] font-normal", under ? "text-[#22613F]" : "text-[#B33A32]")}>
-                                    {under
-                                      ? `you're ${formatGbp(b.price - c.ownPrice)} under`
-                                      : `they're ${formatGbp(c.ownPrice - b.price)} under`}
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-right font-semibold text-[12.5px] text-[#5E6654] tabular-nums">
-                                {formatGbp(b.price)}
-                              </span>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  )}
+                  {open && <RoundDetail row={c} breakdown={breakdown} className="px-3.5 pb-3" />}
                 </div>
               );
             })}
           </section>
 
-          <p className="text-center text-[11px] text-[#5E6654]/60 sm:hidden">
-            Tap any row for the venue-by-venue breakdown.
-          </p>
+          {view !== "byVenue" && (
+            <p className="text-center text-[11px] text-[#5E6654]/60">
+              Tap any row for the spread and the venue-by-venue breakdown.
+            </p>
+          )}
         </>
       )}
 

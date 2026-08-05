@@ -6,13 +6,8 @@ type Benchmark = {
   label: string;
   keywords: string[];
   exclude?: string[];
-  // Menu categories that serve this round properly - preferred when picking
-  // which of your items represents it.
   categories?: string[];
-  // Serves that carry the right name but the wrong measure (a Baby Guinness is
-  // not a pint of stout), so they never set your price for the round.
   wrongServe?: string[];
-  // The round includes a mixer, so an item's surcharge is part of its price.
   addsMixer?: boolean;
 };
 
