@@ -10,7 +10,7 @@ export default async function EventsPage({
   const { filter, from, to, quick } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }, { data: actCovers }, { data: bandLinks }, { data: privateLinks }] = await Promise.all([
+  const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }, { data: actCovers }, { data: bandLinks }, { data: privateLinks }, { data: winnerRows }] = await Promise.all([
     supabase.from("events").select("*").order("date", { ascending: false }),
     supabase.from("event_types").select("id, name, color, booking_grouping, is_bookable, booking_config").order("name"),
     supabase.from("event_subtypes").select("id, event_types_id, name, color, default_event_title, tagline, behavior, host_required, seating_required, is_bookable, payment_required, default_payment_amount, booking_config, default_image_url").order("name"),
@@ -26,6 +26,7 @@ export default async function EventsPage({
       .order("created_at", { ascending: true }),
     supabase.from("band_booking_requests").select("id, event_id").not("event_id", "is", null),
     supabase.from("private_hire_requests").select("id, event_id").not("event_id", "is", null),
+    supabase.from("booking_scores").select("booking_id, event_id").eq("is_winner", true),
   ]);
 
   const venueCapacity = await getVenueMaxCapacity(supabase);
@@ -38,6 +39,11 @@ export default async function EventsPage({
     }
   }
 
+  const winnerByEvent: Record<number, number> = {};
+  for (const row of winnerRows ?? []) {
+    if (row.event_id != null && row.booking_id != null) winnerByEvent[row.event_id] = row.booking_id;
+  }
+
   const linkedRequestByEvent: Record<number, LinkedRequest> = {};
   for (const row of bandLinks ?? []) {
     if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "band", id: row.id };
@@ -46,5 +52,5 @@ export default async function EventsPage({
     if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "private", id: row.id };
   }
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} venueCapacity={venueCapacity} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} winnerByEvent={winnerByEvent} venueCapacity={venueCapacity} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
 }

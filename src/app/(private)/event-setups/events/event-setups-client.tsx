@@ -42,6 +42,7 @@ import {
   Undo2,
   MoreVertical,
   Ban,
+  Trophy,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,11 +50,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction } from "./actions";
+import { setEventWinner } from "../quiz-leaderboards/actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
@@ -275,6 +280,7 @@ export default function EventsClient({
   bookings = [],
   actCoverByEvent = {},
   linkedRequestByEvent = {},
+  winnerByEvent = {},
   venueCapacity = null,
   filter,
   initialFrom,
@@ -290,6 +296,8 @@ export default function EventsClient({
   bookings: BookingRecord[];
   actCoverByEvent?: Record<number, string>;
   linkedRequestByEvent?: Record<number, LinkedRequest>;
+  /** Winning booking per event, from the recorded quiz results. */
+  winnerByEvent?: Record<number, number>;
   /** Venue-wide seat count from company_information; null when it isn't configured. */
   venueCapacity?: number | null;
   filter?: string;
@@ -833,6 +841,32 @@ export default function EventsClient({
     return total < target;
   };
 
+  // A quiz can only have a winner once it has been played, so tonight's quiz is
+  // pickable but not yet overdue.
+  const isPlayedQuiz = (e: EventRecord) =>
+    subtypeById.get(e.event_subtypes_id)?.behavior === "quiz" && !!e.date && e.date <= todayStr;
+
+  const needsWinner = (e: EventRecord) =>
+    isPlayedQuiz(e) && !!e.date && e.date < todayStr && !winnerByEvent[e.id];
+
+  const confirmedTeams = (eventId: number) =>
+    bookings.filter((b) => b.event_id === eventId && b.status === "confirmed");
+
+  const teamLabel = (bookingId: number) =>
+    bookings.find((b) => b.id === bookingId)?.group_name?.trim() || `#${bookingId}`;
+
+  const chooseWinner = (event: EventRecord, bookingId: number | null) => {
+    startTransition(async () => {
+      const result = await setEventWinner(String(event.id), bookingId ? String(bookingId) : null);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(bookingId ? "Winner saved" : "Winner cleared");
+      router.refresh();
+    });
+  };
+
   const missingInfo = (e: EventRecord) => {
     const sub = subtypeById.get(e.event_subtypes_id);
     if (!e.title?.trim()) return true;
@@ -850,6 +884,7 @@ export default function EventsClient({
     { key: "bookings", label: "Has bookings", test: (e) => getBookingStats(e.id, bookings).confirmedPeople > 0 },
     { key: "under-10", label: "< 10 bookings", test: (e) => e.is_bookable === true && getBookingStats(e.id, bookings).confirmedPeople < 10 },
     { key: "quiz", label: "Needs quiz", test: needsQuiz },
+    { key: "needs-winner", label: "Needs winner", test: needsWinner },
     { key: "active", label: "Active only", test: (e) => e.is_active !== false },
     { key: "fully-booked", label: "Fully booked", test: (e) => e.is_fully_booked === true },
     { key: "missing-info", label: "Missing info", test: missingInfo },
@@ -996,6 +1031,9 @@ export default function EventsClient({
     const host = employees.find((emp) => emp.id === event.host_employee_id);
     const isQuiz = sub?.behavior === "quiz";
     const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
+    const canPickWinner = isPlayedQuiz(event);
+    const winnerBookingId = winnerByEvent[event.id] ?? null;
+    const eventTeams = canPickWinner ? confirmedTeams(event.id) : [];
     const bStats = getBookingStats(event.id, bookings);
     const inactive = event.is_active === false;
     const hasPricing = !!event.payment_amount && event.payment_amount > 0;
@@ -1035,6 +1073,24 @@ export default function EventsClient({
           >
             {quizStat.someExist ? <AlertTriangle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
             Quiz
+          </span>
+        )}
+        {needsWinner(event) && (
+          <span
+            title="No winning team recorded for this quiz"
+            className="inline-flex items-center gap-1 rounded bg-admin-warning-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-warning"
+          >
+            <Trophy className="h-3 w-3" />
+            Needs winner
+          </span>
+        )}
+        {canPickWinner && winnerBookingId && (
+          <span
+            title={`Winner: ${teamLabel(winnerBookingId)}`}
+            className="inline-flex max-w-40 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
+          >
+            <Trophy className="h-3 w-3 shrink-0" />
+            <span className="truncate">{teamLabel(winnerBookingId)}</span>
           </span>
         )}
       </>
@@ -1140,6 +1196,46 @@ export default function EventsClient({
                     <Brain className="h-4 w-4" />
                     View quiz
                   </DropdownMenuItem>
+                )}
+                {canPickWinner && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Trophy className="h-4 w-4" />
+                      {winnerBookingId ? "Change winner" : "Set winner"}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-h-80 w-56 overflow-y-auto">
+                      {eventTeams.length === 0 ? (
+                        <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
+                      ) : (
+                        eventTeams.map((team) => (
+                          <DropdownMenuItem
+                            key={team.id}
+                            disabled={isPending}
+                            onClick={() => chooseWinner(event, team.id)}
+                          >
+                            {team.id === winnerBookingId ? (
+                              <Check className="h-4 w-4 shrink-0" />
+                            ) : (
+                              <span className="h-4 w-4 shrink-0" aria-hidden="true" />
+                            )}
+                            <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                      {winnerBookingId && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            disabled={isPending}
+                            onClick={() => chooseWinner(event, null)}
+                          >
+                            <X className="h-4 w-4" />
+                            Clear winner
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                 )}
                 {event.is_bookable && (
                   <DropdownMenuItem onClick={() => navigateFromRow(event, bookingsHrefFor(event, "list"))}>

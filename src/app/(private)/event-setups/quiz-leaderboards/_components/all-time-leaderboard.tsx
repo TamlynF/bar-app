@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Trophy, Medal, Award, Crown, Target, SearchX } from "lucide-react";
+import { Trophy, Medal, Award, Crown, Target, Percent, SearchX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useRecordSheet,
@@ -30,11 +30,9 @@ const PODIUM: Record<
   3: { chip: "border-[#C8956D]/40 bg-[#F3E2D3] text-[#8A5A30]", Icon: Award },
 };
 
-const fmtScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-
-function averageScore(team: AllTimeTeam): string {
+function winRate(team: AllTimeTeam): string {
   if (!team.quizzes_attended) return "-";
-  return fmtScore(team.total_score / team.quizzes_attended);
+  return `${Math.round((team.wins / team.quizzes_attended) * 100)}%`;
 }
 
 function quizzesLabel(count: number): string {
@@ -70,8 +68,8 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
     return (
       <EmptyState
         icon={Target}
-        title="No quiz scores yet"
-        description="Team scores will appear here after quiz events."
+        title="No quiz results yet"
+        description="Teams appear here once a quiz event has been booked."
       />
     );
   }
@@ -107,8 +105,12 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
                 key={team.team_name}
                 onClick={() => sheet.openView(team)}
                 status={
-                  <StatusPill tone="neutral" className="sm:w-24 sm:justify-center">
-                    <span className="tabular-nums">{fmtScore(team.total_score)}</span> pts
+                  <StatusPill
+                    tone={team.wins > 0 ? "success" : "neutral"}
+                    icon={team.wins > 0 ? <Trophy className="h-3 w-3" /> : undefined}
+                    className="sm:w-24 sm:justify-center"
+                  >
+                    {team.wins > 0 ? winsLabel(team.wins) : "No wins"}
                   </StatusPill>
                 }
               >
@@ -136,15 +138,9 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
                   </p>
 
                   <div className="hidden items-center sm:flex">
-                    {team.wins > 0 ? (
-                      <InfoBadge icon={<Trophy className="h-3 w-3" />}>
-                        {winsLabel(team.wins)}
-                      </InfoBadge>
-                    ) : (
-                      <span className="text-[11px] font-medium text-admin-muted opacity-60">
-                        No wins
-                      </span>
-                    )}
+                    <InfoBadge icon={<Percent className="h-3 w-3" />}>
+                      {winRate(team)} won
+                    </InfoBadge>
                   </div>
                 </div>
               </ListRow>
@@ -163,8 +159,12 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
         confirmUI={sheet.ConfirmDialogUI}
         status={
           selected && (
-            <StatusPill tone="neutral" showLabelOnMobile>
-              Rank {selected.rank} of {ranked.length}
+            <StatusPill
+              tone={selected.wins > 0 ? "success" : "neutral"}
+              icon={selected.wins > 0 ? <Trophy className="h-3 w-3" /> : undefined}
+              showLabelOnMobile
+            >
+              {selected.wins > 0 ? winsLabel(selected.wins) : "No wins yet"}
             </StatusPill>
           )
         }
@@ -180,16 +180,7 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
                 label="Quizzes"
                 value={quizzesLabel(selected.quizzes_attended)}
               />
-              <DetailCell
-                dense
-                label="Total score"
-                value={`${fmtScore(selected.total_score)} pts`}
-              />
-              <DetailCell
-                dense
-                label="Average"
-                value={`${averageScore(selected)} pts per quiz`}
-              />
+              <DetailCell dense label="Win rate" value={winRate(selected)} />
             </DetailCard>
           </div>
         )}

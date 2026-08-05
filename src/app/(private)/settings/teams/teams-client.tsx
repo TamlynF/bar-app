@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
 import {
   Trophy,
   Medal,
@@ -36,7 +37,7 @@ export type RawQuizBooking = {
   created_at: string;
   contacts: Related<{ id: number; full_name: string | null; email: string | null }>;
   events: Related<{ id: number; title: string | null; date: string | null }>;
-  booking_scores: Related<{ id: number; score: number | null; is_winner: boolean | null }>;
+  booking_scores: Related<{ id: number; is_winner: boolean | null }>;
 };
 
 export type TeamBooking = {
@@ -44,7 +45,6 @@ export type TeamBooking = {
   eventTitle: string;
   eventDate: string | null;
   status: string;
-  score: number | null;
   isWinner: boolean;
 };
 
@@ -55,7 +55,6 @@ export type TeamStats = {
   contact_name: string | null;
   contact_email: string | null;
   quizzes_attended: number;
-  total_score: number;
   wins: number;
   history: TeamBooking[];
 };
@@ -79,9 +78,9 @@ function formatEventDate(date?: string | null) {
   });
 }
 
-function averageScore(team: TeamStats): string {
+function winRate(team: TeamStats): string {
   if (team.quizzes_attended === 0) return "-";
-  return (team.total_score / team.quizzes_attended).toFixed(1);
+  return `${Math.round((team.wins / team.quizzes_attended) * 100)}%`;
 }
 
 function statusTone(status: string): "success" | "warning" | "error" | "neutral" {
@@ -106,6 +105,7 @@ export default function TeamsClient({
   // by two different people is two different teams.
   const teamLeaderboard = useMemo(() => {
     const statsMap = new Map<string, TeamStats>();
+    const todayStr = format(new Date(), "yyyy-MM-dd");
 
     initialBookings.forEach((booking) => {
       const contact = one(booking.contacts);
@@ -125,7 +125,6 @@ export default function TeamsClient({
           contact_name: contact?.full_name?.trim() || null,
           contact_email: contact?.email?.trim() || null,
           quizzes_attended: 0,
-          total_score: 0,
           wins: 0,
           history: [],
         };
@@ -133,17 +132,14 @@ export default function TeamsClient({
       }
 
       const status = booking.status?.trim().toLowerCase() || "confirmed";
-      const score = scores.reduce<number | null>(
-        (sum, row) => (row.score == null ? sum : (sum ?? 0) + row.score),
-        null,
-      );
       const isWinner = scores.some((row) => row.is_winner);
+      const notPlayedYet = !!event?.date && event.date > todayStr;
 
-      // A cancelled booking is not a quiz they turned up to, so it stays in the
-      // history without counting towards the totals.
-      if (status !== "cancelled") {
+      // A cancelled booking, or one on a quiz that has not been played yet, is
+      // not a quiz they turned up to. It stays in the history without counting
+      // towards the totals.
+      if (status !== "cancelled" && !notPlayedYet) {
         team.quizzes_attended += 1;
-        team.total_score += score ?? 0;
         if (isWinner) team.wins += 1;
       }
 
@@ -152,14 +148,15 @@ export default function TeamsClient({
         eventTitle: event?.title?.trim() || "Unnamed event",
         eventDate: event?.date ?? null,
         status,
-        score,
         isWinner,
       });
     });
 
     return [...statsMap.values()].sort((a, b) => {
-      if (b.total_score !== a.total_score) return b.total_score - a.total_score;
       if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.quizzes_attended !== a.quizzes_attended) {
+        return b.quizzes_attended - a.quizzes_attended;
+      }
       return a.team_name.localeCompare(b.team_name);
     });
   }, [initialBookings]);
@@ -277,14 +274,11 @@ export default function TeamsClient({
                         {team.quizzes_attended}{" "}
                         {team.quizzes_attended === 1 ? "quiz" : "quizzes"}
                       </InfoBadge>
-                      <InfoBadge icon={<Target className="h-3 w-3" />}>
-                        {team.total_score} pts
-                      </InfoBadge>
                     </div>
 
                     <p className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex">
-                      <span className="sr-only">Average score</span>
-                      <span className="tabular-nums">{averageScore(team)} avg</span>
+                      <span className="sr-only">Win rate</span>
+                      <span className="tabular-nums">{winRate(team)} won</span>
                     </p>
                   </div>
                 </ListRow>
@@ -360,15 +354,14 @@ export default function TeamsClient({
                 icon={<Hash className="h-3.5 w-3.5" />}
               />
               <DetailCell
-                label="Total score"
-                value={`${selected.total_score} pts`}
-                icon={<Target className="h-3.5 w-3.5" />}
-              />
-              <DetailCell label="Average score" value={averageScore(selected)} />
-              <DetailCell
                 label="Wins"
                 value={selected.wins}
                 icon={<Medal className="h-3.5 w-3.5" />}
+              />
+              <DetailCell
+                label="Win rate"
+                value={winRate(selected)}
+                icon={<Target className="h-3.5 w-3.5" />}
               />
             </DetailCard>
 
@@ -379,7 +372,7 @@ export default function TeamsClient({
 
               {sortedHistory.map((entry) => (
                 <DetailCard key={entry.bookingId}>
-                  <div className="flex items-start justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5 sm:py-3">
+                  <div className="flex items-start justify-between gap-3 px-4 py-2.5 sm:px-5 sm:py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-admin-ink">
                         {entry.eventTitle}
@@ -404,11 +397,6 @@ export default function TeamsClient({
                       )}
                     </div>
                   </div>
-                  <DetailCell
-                    label="Score"
-                    value={entry.score == null ? "Not scored" : `${entry.score} pts`}
-                    dense
-                  />
                 </DetailCard>
               ))}
             </div>

@@ -24,7 +24,6 @@ const BOOKING_SELECT = `
   ),
   booking_scores (
     id,
-    score,
     is_winner
   )
 `;
