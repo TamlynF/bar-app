@@ -236,7 +236,10 @@ export default function MerchandiseClient({
     mode === "add" ? "New item" : mode === "edit" ? "Edit item" : "View item";
 
   return (
-    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    // Flush to the edge on a phone: the row carries a thumbnail the other
+    // settings lists do not, so every pixel of gutter is a pixel the item
+    // name loses.
+    <div className="mx-auto w-full space-y-3 px-0 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialMerchandise.length === 0 ? (
         <EmptyState
           icon={ShoppingBag}
@@ -311,7 +314,7 @@ export default function MerchandiseClient({
                     {item.is_active ? item.display_order : "-"}
                   </span>
 
-                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface sm:h-9 sm:w-9">
                     {item.image_url ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
