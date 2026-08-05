@@ -1,481 +1,419 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useMemo, useState } from "react";
 import {
   Plus,
-  Loader2,
-  Save,
-  Pencil,
-  Trash2,
-  ChevronRight,
-  AlertCircle,
+  Check,
+  X,
+  SearchX,
   Music,
   Hash,
   ImageIcon,
   ArrowUpDown,
 } from "lucide-react";
-import { saveQuizCategoryAction, deleteQuizCategoryAction, QuizCategoryConfig } from "./actions";
+import {
+  saveQuizCategoryAction,
+  deleteQuizCategoryAction,
+  QuizCategoryConfig,
+} from "./actions";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  InfoBadge,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
+
+export type EmployeeOption = { id: number; full_name: string };
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const CHECKBOX = "h-5 w-5 cursor-pointer rounded accent-admin-primary";
+
+function roundLabel(config: QuizCategoryConfig): string {
+  return `${config.question_count} Q · ${config.points_per_question} pt`;
+}
 
 export default function QuizCategoriesClient({
   initialConfigs = [],
+  employees = [],
 }: {
   initialConfigs: QuizCategoryConfig[];
+  employees?: EmployeeOption[];
 }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<QuizCategoryConfig | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
+  const sheet = useRecordSheet<QuizCategoryConfig>({
+    records: initialConfigs,
+    getId: (record) => record.id ?? -1,
+  });
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
 
-  const isSheetOpen = !!selected || isAdding;
-  const showForm = isAdding || isEditing;
-  const formDefault = isEditing ? selected : null;
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
 
-  const openView = (config: QuizCategoryConfig) => {
-    setFormError(null);
-    setIsEditing(false);
-    setIsAdding(false);
-    setSelected(config);
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialConfigs;
+    return initialConfigs.filter((config) =>
+      [config.category_name, config.short_name, `round ${config.order_no}`].some((field) =>
+        field?.toLowerCase().includes(needle),
+      ),
+    );
+  }, [initialConfigs, query]);
+
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
+
+  const cancel = () => {
+    if (mode === "add") sheet.close();
+    else if (selected) sheet.openView(selected);
   };
 
-  const openAdd = () => {
-    setFormError(null);
-    setIsEditing(false);
-    setSelected(null);
-    setIsAdding(true);
-  };
-
-  const closeSheet = () => {
-    setSelected(null);
-    setIsAdding(false);
-    setIsEditing(false);
-    setFormError(null);
-  };
-
-  const handleSubmit = (formData: FormData) => {
-    setFormError(null);
-    startTransition(async () => {
-      const result = await saveQuizCategoryAction(formData);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
-    });
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selected?.id) return;
-    const ok = await confirm({
+    sheet.confirmDelete({
       title: "Delete category",
       description: "Delete this quiz category? This cannot be undone.",
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deleteQuizCategoryAction(selected.id!);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
+      action: () => deleteQuizCategoryAction(selected.id as number),
     });
   };
 
+  const title =
+    mode === "add"
+      ? "New category"
+      : mode === "edit"
+        ? "Edit category"
+        : "View category";
+
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-
-      <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-        <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
-          <p className="flex-1 truncate font-black text-[11px] tracking-wide text-[#34451F] uppercase">
-            Quiz Categories <span className="text-[#5E6654]">({initialConfigs.length})</span>
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
-            title="Add category"
-          >
-            <Plus className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">Create</span>
-          </button>
-        </div>
-
-        {initialConfigs.length === 0 ? (
-          <div className="py-14 text-center">
-            <Hash className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-            <p className="font-black text-sm text-[#20231A]">No categories yet</p>
-            <p className="mt-1 text-[11px] text-[#5E6654]">Add your first quiz category to get started</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-[#D8D5C8]/50">
-            {initialConfigs.map((config) => {
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+      {initialConfigs.length === 0 ? (
+        <EmptyState
+          icon={Hash}
+          title="No categories yet"
+          description="Add your first quiz category to get started"
+          action={
+            <button
+              type="button"
+              onClick={sheet.openAdd}
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Create category
+            </button>
+          }
+        />
+      ) : (
+        <RecordList
+          variant="panel"
+          title="Quiz categories"
+          count={shown.length}
+          onAdd={sheet.openAdd}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search quiz categories"
+              placeholder="Search by name, short name or round"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((config) => {
               const inactive = !config.is_active;
-              const muted = "text-[#5E6654]";
               return (
-                <div
+                <ListRow
                   key={config.id}
-                  onClick={() => openView(config)}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
+                  onClick={() => sheet.openView(config)}
+                  status={
+                    <StatusPill
+                      tone={config.is_active ? "success" : "error"}
+                      icon={
+                        config.is_active ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )
+                      }
+                      className="sm:w-24 sm:justify-center"
+                    >
+                      {config.is_active ? "Active" : "Inactive"}
+                    </StatusPill>
+                  }
                 >
-                  <div className="min-w-0 flex-1 sm:hidden">
-                    <div className="flex items-center gap-2">
-                      <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#20231A]")}>
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-line bg-admin-surface text-[11px] font-semibold tabular-nums",
+                      inactive ? "text-admin-muted" : "text-admin-primary",
+                    )}
+                    title={`Round ${config.order_no}`}
+                  >
+                    {config.order_no}
+                  </span>
+
+                  {/* Fixed tracks rather than content-sized ones, so the counts of
+                      every row line up down the list. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_6rem_8rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p
+                        className={cn(
+                          "min-w-0 truncate text-sm leading-snug font-semibold",
+                          inactive ? "text-admin-muted" : "text-admin-ink",
+                        )}
+                      >
                         {config.category_name}
                       </p>
-                      <span className={cn(
-                        "shrink-0 font-black text-[10px]",
-                        config.is_active ? "text-green-600" : "text-red-500"
-                      )}>
-                        {config.is_active ? "Active" : "Inactive"}
-                      </span>
                     </div>
-                    <div className="mt-0.5 flex items-center gap-1">
-                      <span className={cn("text-[10px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
-                        Round {config.order_no}
+
+                    <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]">
+                      Round {config.order_no}
+                    </p>
+
+                    <p className="hidden text-[12px] font-medium text-admin-muted tabular-nums sm:block">
+                      {roundLabel(config)}
+                    </p>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-0">
+                      <span className="text-[11px] font-medium text-admin-muted tabular-nums sm:hidden">
+                        {roundLabel(config)}
                       </span>
-                      <span className="flex-1" />
-                      <span className={cn("w-10 text-right font-black text-[10px] tabular-nums", muted)}>
-                        {config.question_count}Q
-                      </span>
-                      <span className={cn("w-10 text-right font-black text-[10px] tabular-nums", muted)}>
-                        {config.points_per_question}pt
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1">
-                        {config.include_spotify && (
-                          <Music className={cn("h-3.5 w-3.5", inactive ? muted : "text-green-600")} />
-                        )}
-                        {config.is_higher_lower && (
-                          <ArrowUpDown className={cn("h-3.5 w-3.5", inactive ? muted : "text-amber-600")} />
-                        )}
-                        {config.is_picture && (
-                          <ImageIcon className={cn("h-3.5 w-3.5", inactive ? muted : "text-blue-600")} />
-                        )}
-                      </span>
+                      {config.short_name && (
+                        <InfoBadge icon={null}>{config.short_name}</InfoBadge>
+                      )}
+                      {config.include_spotify && (
+                        <InfoBadge icon={<Music className="h-3 w-3" />}>
+                          <span className="hidden sm:inline">Spotify</span>
+                        </InfoBadge>
+                      )}
+                      {config.is_higher_lower && (
+                        <InfoBadge icon={<ArrowUpDown className="h-3 w-3" />}>
+                          <span className="hidden sm:inline">Higher/Lower</span>
+                        </InfoBadge>
+                      )}
+                      {config.is_picture && (
+                        <InfoBadge icon={<ImageIcon className="h-3 w-3" />}>
+                          <span className="hidden sm:inline">Picture</span>
+                        </InfoBadge>
+                      )}
                     </div>
                   </div>
-
-                  <div className="hidden min-w-0 flex-1 sm:block">
-                    <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#20231A]")}>
-                      {config.category_name}
-                    </p>
-                    <p className={cn("mt-0.5 text-[11px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
-                      Round {config.order_no} · {config.question_count} questions · {config.points_per_question} pts each
-                      {config.include_spotify && " · Spotify"}
-                    </p>
-                  </div>
-
-                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                    {config.include_spotify && (
-                      <span className={cn("flex items-center gap-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 font-black text-[11px]", inactive ? muted : "text-green-700")}>
-                        <Music className="h-3 w-3" /> Spotify
-                      </span>
-                    )}
-                    {config.is_higher_lower && (
-                      <span className={cn("flex items-center gap-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 font-black text-[11px]", inactive ? muted : "text-amber-700")}>
-                        <ArrowUpDown className="h-3 w-3" /> Higher/Lower
-                      </span>
-                    )}
-                    {config.is_picture && (
-                      <span className={cn("flex items-center gap-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 font-black text-[11px]", inactive ? muted : "text-blue-700")}>
-                        <ImageIcon className="h-3 w-3" /> Picture
-                      </span>
-                    )}
-                    <span className={cn(
-                      "rounded-lg border px-2 py-1 font-black text-[11px]",
-                      config.is_active
-                        ? "border-green-200 bg-green-50 text-green-700"
-                        : "border-red-200 bg-red-50 text-red-500"
-                    )}>
-                      {config.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
-                </div>
+                </ListRow>
               );
-            })}
+            })
+          )}
+        </RecordList>
+      )}
+
+      <RecordSheet
+        open={sheet.open}
+        onClose={sheet.close}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="category-form"
+        isPending={sheet.isPending}
+        onEdit={sheet.startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Inactive"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell dense label="Category" value={selected.category_name} />
+              <DetailCell dense label="Short name" value={selected.short_name || "-"} />
+              <DetailCell dense label="Round order" value={String(selected.order_no)} />
+              <DetailCell dense label="Questions" value={String(selected.question_count)} />
+              <DetailCell
+                dense
+                label="Points / Q"
+                value={String(selected.points_per_question)}
+              />
+              <DetailCell
+                dense
+                label="Spotify"
+                value={selected.include_spotify ? "Yes" : "No"}
+              />
+              <DetailCell
+                dense
+                label="Higher / Lower"
+                value={selected.is_higher_lower ? "Yes" : "No"}
+              />
+              <DetailCell
+                dense
+                label="Picture round"
+                value={selected.is_picture ? "Yes" : "No"}
+              />
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>
         )}
-      </section>
 
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
-                  {isAdding ? "New Category" : isEditing ? "Edit Category" : "View Category"}
-                </SheetTitle>
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5E6654]" />
-                    <span className="font-black text-xs tracking-wide text-[#5E6654] uppercase tabular-nums">
-                      ID: {selected.id}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {selected && !isAdding && (
-                <span className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 font-black text-[10px]",
-                  selected.is_active
-                    ? "border-green-300 bg-green-100 text-green-700"
-                    : "border-red-300 bg-red-100 text-red-600"
-                )}>
-                  {selected.is_active ? "Active" : "Inactive"}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-
-            {!showForm && selected && (
-              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <DetailCell label="Category" value={selected.category_name} />
-                  <DetailCell label="Short Name" value={selected.short_name || "-"} />
-                  <DetailCell label="Round Order" value={String(selected.order_no)} />
-                  <DetailCell label="Questions" value={String(selected.question_count)} />
-                  <DetailCell label="Points / Q" value={String(selected.points_per_question)} />
-                  <DetailCell label="Spotify" value={selected.include_spotify ? "Yes" : "No"} />
-                  <DetailCell label="Higher / Lower" value={selected.is_higher_lower ? "Yes" : "No"} />
-                  <DetailCell label="Picture Round" value={selected.is_picture ? "Yes" : "No"} />
-                </div>
-                {formError && <ErrorBox message={formError} />}
-              </div>
+        {showForm && (
+          <form
+            id="category-form"
+            action={sheet.submit(saveQuizCategoryAction)}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault?.id && (
+              <input type="hidden" name="id" value={formDefault.id} />
             )}
 
-            {showForm && (
-              <form id="category-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                {formDefault?.id && <input type="hidden" name="id" value={formDefault.id} />}
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Name" required>
+                <input
+                  name="category_name"
+                  required
+                  aria-label="Category name"
+                  placeholder="e.g. Movies"
+                  defaultValue={formDefault?.category_name ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Name" required>
-                    <input
-                      name="category_name"
-                      required
-                      placeholder="e.g. Movies"
-                      defaultValue={formDefault?.category_name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Short name">
+                <input
+                  name="short_name"
+                  aria-label="Short name"
+                  placeholder="e.g. MOV"
+                  maxLength={5}
+                  defaultValue={formDefault?.short_name ?? ""}
+                  className={cn(FIELD_INPUT, "uppercase")}
+                />
+              </FormRow>
 
-                  <FormRow label="Short Name">
-                    <input
-                      name="short_name"
-                      placeholder="e.g. MOV"
-                      maxLength={5}
-                      defaultValue={formDefault?.short_name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#20231A] uppercase outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Round order" required>
+                <input
+                  name="order_no"
+                  type="number"
+                  min="1"
+                  required
+                  aria-label="Round order"
+                  defaultValue={formDefault?.order_no ?? ""}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
 
-                  <FormRow label="Round Order" required>
-                    <input
-                      title="Round Order"
-                      name="order_no"
-                      type="number"
-                      min="1"
-                      required
-                      defaultValue={formDefault?.order_no ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Questions">
+                <input
+                  name="question_count"
+                  type="number"
+                  min="1"
+                  max="50"
+                  aria-label="Questions"
+                  defaultValue={formDefault?.question_count ?? 10}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
 
-                  <FormRow label="Questions">
-                    <input
-                      title="Questions"
-                      name="question_count"
-                      type="number"
-                      min="1"
-                      max="50"
-                      defaultValue={formDefault?.question_count ?? 10}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Points / Q">
+                <input
+                  name="points_per_question"
+                  type="number"
+                  min="1"
+                  aria-label="Points per question"
+                  defaultValue={formDefault?.points_per_question ?? 1}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
 
-                  <FormRow label="Points / Q">
-                    <input
-                      title="Points per question"
-                      name="points_per_question"
-                      type="number"
-                      min="1"
-                      defaultValue={formDefault?.points_per_question ?? 1}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
+              <FormRow label="Spotify">
+                <span className="flex-1" />
+                <input
+                  id="include_spotify"
+                  name="include_spotify"
+                  type="checkbox"
+                  aria-label="Include Spotify"
+                  defaultChecked={formDefault?.include_spotify ?? false}
+                  className={CHECKBOX}
+                />
+              </FormRow>
 
-                  <FormRow label="Spotify">
-                    <span className="flex-1" />
-                    <input
-                      title="Include Spotify"
-                      id="include_spotify"
-                      name="include_spotify"
-                      type="checkbox"
-                      defaultChecked={formDefault?.include_spotify ?? false}
-                      className="h-5 w-5 cursor-pointer rounded accent-[#34451F]"
-                    />
-                  </FormRow>
+              <FormRow label="Higher / Lower">
+                <span className="flex-1" />
+                <input
+                  id="is_higher_lower"
+                  name="is_higher_lower"
+                  type="checkbox"
+                  aria-label="Higher / Lower round"
+                  defaultChecked={formDefault?.is_higher_lower ?? false}
+                  className={CHECKBOX}
+                />
+              </FormRow>
 
-                  <FormRow label="Higher / Lower">
-                    <span className="flex-1" />
-                    <input
-                      title="Higher / Lower round"
-                      id="is_higher_lower"
-                      name="is_higher_lower"
-                      type="checkbox"
-                      defaultChecked={formDefault?.is_higher_lower ?? false}
-                      className="h-5 w-5 cursor-pointer rounded accent-[#34451F]"
-                    />
-                  </FormRow>
+              <FormRow label="Picture round">
+                <span className="flex-1" />
+                <input
+                  id="is_picture"
+                  name="is_picture"
+                  type="checkbox"
+                  aria-label="Picture round"
+                  defaultChecked={formDefault?.is_picture ?? false}
+                  className={CHECKBOX}
+                />
+              </FormRow>
 
-                  <FormRow label="Picture Round">
-                    <span className="flex-1" />
-                    <input
-                      title="Picture Round"
-                      id="is_picture"
-                      name="is_picture"
-                      type="checkbox"
-                      defaultChecked={formDefault?.is_picture ?? false}
-                      className="h-5 w-5 cursor-pointer rounded accent-[#34451F]"
-                    />
-                  </FormRow>
+              <FormRow label="Active">
+                <span className="flex-1" />
+                <input
+                  id="is_active"
+                  name="is_active"
+                  type="checkbox"
+                  aria-label="Active"
+                  defaultChecked={formDefault?.is_active ?? true}
+                  className={CHECKBOX}
+                />
+              </FormRow>
+            </DetailCard>
 
-                  <FormRow label="Active">
-                    <span className="flex-1" />
-                    <input
-                      title="Active"
-                      id="is_active"
-                      name="is_active"
-                      type="checkbox"
-                      defaultChecked={formDefault?.is_active ?? true}
-                      className="h-5 w-5 cursor-pointer rounded accent-[#34451F]"
-                    />
-                  </FormRow>
-                </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-
-            <div className="h-4" />
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
-            {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
-                </Button>
-                <Button
-                  onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />Edit
-                </Button>
-              </div>
-            )}
-
-            {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormError(null);
-                    if (isAdding) closeSheet();
-                    else setIsEditing(false);
-                  }}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="category-form"
-                  disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><Save className="mr-2 h-4 w-4" />Save</>}
-                </Button>
-              </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-
-function FormRow({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-        {required && <span className="font-black text-[10px] text-red-500">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-      </div>
-      <span className="flex-1 text-right font-black text-xs leading-snug text-[#20231A] sm:text-sm">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }

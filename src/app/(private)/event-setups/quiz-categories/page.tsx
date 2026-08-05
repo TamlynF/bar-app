@@ -5,10 +5,13 @@ import { QuizCategoryConfig } from "./actions";
 export default async function QuizCategoriesPage() {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("quiz_category_configs")
-    .select("*")
-    .order("order_no", { ascending: true });
+  const [{ data, error }, { data: employees }] = await Promise.all([
+    supabase
+      .from("quiz_category_configs")
+      .select("*")
+      .order("order_no", { ascending: true }),
+    supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
+  ]);
 
   if (error) {
     console.error("Error fetching quiz category configs:", error);
@@ -16,5 +19,7 @@ export default async function QuizCategoriesPage() {
 
   const configs = (data as QuizCategoryConfig[]) || [];
 
-  return <QuizCategoriesClient initialConfigs={configs} />;
+  return (
+    <QuizCategoriesClient initialConfigs={configs} employees={employees ?? []} />
+  );
 }

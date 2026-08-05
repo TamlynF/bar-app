@@ -198,7 +198,7 @@ export default function PrivateLayoutClient({
 
             const quizMap: Record<string, string> = {
                 "quiz-history": "Quiz history",
-                "quiz-categories": "Quiz rules",
+                "quiz-categories": "Quiz categories",
                 "quiz-leaderboards": "Leaderboard",
             }
             if (quizMap[segment]) {

@@ -56,7 +56,7 @@ export const QUIZ_NAV_ITEMS: AdminNavItem[] = [
     description: "Past rounds and questions",
   },
   {
-    label: "Quiz rules",
+    label: "Quiz categories",
     href: "/event-setups/quiz-categories",
     icon: Dices,
     description: "Category round configurations",

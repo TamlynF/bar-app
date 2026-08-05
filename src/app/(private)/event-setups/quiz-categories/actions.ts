@@ -15,6 +15,10 @@ export type QuizCategoryConfig = {
   short_name: string;
   is_picture: boolean;
   is_higher_lower: boolean;
+  created_at?: string;
+  updated_at?: string | null;
+  created_by?: number | null;
+  updated_by?: number | null;
 };
 
 export async function saveQuizCategoryAction(formData: FormData) {
