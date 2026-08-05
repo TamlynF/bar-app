@@ -1,27 +1,44 @@
-"use client";
+﻿"use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useMemo, useState } from "react";
 import {
   Plus,
-  Loader2,
   Mail,
   KeyRound,
   Users,
-  ChevronRight,
-  ChevronDown,
-  Save,
-  Pencil,
-  Trash2,
-  Hash,
-  AlertCircle,
+  Check,
+  X,
+  Clock,
+  Hourglass,
+  Cake,
+  SearchX,
+  Briefcase,
+  CalendarPlus,
+  CalendarDays,
+  Phone,
 } from "lucide-react";
+import { format } from "date-fns";
 import { saveEmployeeAction, deleteEmployeeAction, sendPasswordResetAction } from "./actions";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+import { COUNTRY_CODES } from "@/lib/country-codes";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  InfoBadge,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
 
-export type EmployeeRecord = {
+export type SystemUserRecord = {
   id: number;
   full_name: string;
   birthday: string | null;
@@ -44,22 +61,35 @@ export type EmployeeRecord = {
   password_reset_sent_at?: string | null;
 };
 
+// Labels match how the view sheet renders the same values, so nothing appears to
+// change wording between reading and editing.
 const EMPLOYMENT_TYPES = [
-  { value: "full-time", label: "Full-time" },
-  { value: "part-time", label: "Part-time" },
+  { value: "full-time", label: "Full Time" },
+  { value: "part-time", label: "Part Time" },
   { value: "contract", label: "Contract" },
   { value: "probationary", label: "Probationary" },
   { value: "seasonal", label: "Seasonal" },
   { value: "casual", label: "Casual" },
 ];
 
+// The stored value stays "inactive"; only what a human reads changes.
 const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
   { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "leave", label: "On Leave" },
+  { value: "inactive", label: "Terminated" },
+  { value: "leave", label: "On leave" },
 ];
 
-import { COUNTRY_CODES } from "@/lib/country-codes";
+// Terminated and on-leave are decisions somebody made, so the dates never
+// overrule them. Pending and active are just a reading of the calendar.
+const MANUAL_STATUSES = ["inactive", "leave"];
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+// text-right rather than the old dir-rtl, which right-aligned by reversing the
+// writing direction and dragged punctuation around with it.
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
 
 function toTitleCase(str?: string | null) {
   if (!str) return "";
@@ -75,547 +105,748 @@ function formatDate(dateStr: string | null) {
   });
 }
 
-export default function EmployeesClient({ initialEmployees = [] }: { initialEmployees: EmployeeRecord[] }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<EmployeeRecord | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+function toDateInput(value?: string | null) {
+  return value ? new Date(value).toISOString().split("T")[0] : "";
+}
 
-  const isSheetOpen = !!selected || isAdding;
+// Dates come back as plain YYYY-MM-DD, which parses as UTC midnight and can slip
+// a day west of Greenwich. Anchoring to local midnight keeps the month right.
+function parseDbDate(value: string): Date {
+  return new Date(value.includes("T") ? value : `${value}T00:00:00`);
+}
 
-  const openView = (employee: EmployeeRecord) => {
-    setFormError(null);
-    setIsEditing(false);
-    setIsAdding(false);
-    setSelected(employee);
+// How long they have been employed. A leaving date that has passed stops the
+// clock at that date; one still in the future has not happened yet, so the
+// count keeps running to today.
+function tenure(user: SystemUserRecord): { months: number; hasLeft: boolean } | null {
+  if (!user.start_date) return null;
+  const start = parseDbDate(user.start_date);
+  if (Number.isNaN(start.getTime())) return null;
+
+  const today = new Date();
+  const end = user.end_date ? parseDbDate(user.end_date) : null;
+  const hasLeft = !!end && !Number.isNaN(end.getTime()) && end <= today;
+  const until = hasLeft && end ? end : today;
+
+  const months =
+    (until.getFullYear() - start.getFullYear()) * 12 +
+    (until.getMonth() - start.getMonth()) -
+    (until.getDate() < start.getDate() ? 1 : 0);
+
+  return months < 0 ? null : { months, hasLeft };
+}
+
+function formatMonths(months: number): string {
+  if (months < 12) return `${months} mo`;
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  return rest ? `${years}y ${rest}m` : `${years}y`;
+}
+
+function hasBirthdayThisMonth(birthday: string | null): boolean {
+  if (!birthday) return false;
+  const date = parseDbDate(birthday);
+  return !Number.isNaN(date.getTime()) && date.getMonth() === new Date().getMonth();
+}
+
+function statusOf(user: SystemUserRecord) {
+  const status = user.status?.toLowerCase();
+  if (status === "active") return { tone: "success" as const, label: "Active" };
+  if (status === "leave") return { tone: "warning" as const, label: "On leave" };
+  if (status === "pending") return { tone: "info" as const, label: "Pending" };
+  return { tone: "error" as const, label: "Terminated" };
+}
+
+function statusIcon(tone: "success" | "warning" | "error" | "info") {
+  if (tone === "success") return <Check className="h-3 w-3" />;
+  if (tone === "warning") return <Clock className="h-3 w-3" />;
+  if (tone === "info") return <Hourglass className="h-3 w-3" />;
+  return <X className="h-3 w-3" />;
+}
+
+// Not yet started stays pending; started and not yet finished is active. A
+// status somebody chose by hand is left where they put it.
+function statusFromDates(current: string, start: string, end: string): string {
+  if (MANUAL_STATUSES.includes(current)) return current;
+  if (!start) return current;
+
+  const startsOn = parseDbDate(start);
+  if (Number.isNaN(startsOn.getTime())) return current;
+
+  const now = new Date();
+  if (startsOn > now) return "pending";
+
+  const endsOn = end ? parseDbDate(end) : null;
+  const stillOn = !endsOn || Number.isNaN(endsOn.getTime()) || endsOn > now;
+  return stillOn ? "active" : current;
+}
+
+// The trunk zero belongs to dialling from inside the country; with a code in
+// front of it, it is wrong. "07845 025877" from the UK is "(+44) 7845025877".
+function localNumber(user: SystemUserRecord): string {
+  return (user.phone_no ?? "").trim().replace(/^0+/, "");
+}
+
+function displayPhone(user: SystemUserRecord): string {
+  const local = localNumber(user);
+  if (!local) return "-";
+  return user.country_code ? `(${user.country_code}) ${local}` : local;
+}
+
+function telHref(user: SystemUserRecord): string | null {
+  const local = localNumber(user);
+  if (!local) return null;
+  const cleaned = `${user.country_code ?? ""}${local}`.replace(/[^\d+]/g, "");
+  return cleaned.length > 3 ? `tel:${cleaned}` : null;
+}
+
+// Live inside a row that opens the sheet, so every click has to stop there.
+function ContactActions({ user }: { user: SystemUserRecord }) {
+  const phone = telHref(user);
+  if (!user.email && !phone) return null;
+
+  return (
+    <span className="hidden shrink-0 items-center gap-1 sm:flex">
+      {user.email && (
+        <a
+          href={`mailto:${user.email}`}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Email ${user.full_name}`}
+          title={`Email ${user.email}`}
+          className="flex h-6 w-6 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+        >
+          <Mail className="h-3.5 w-3.5" />
+        </a>
+      )}
+      {phone && (
+        <a
+          href={phone}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Call ${user.full_name}`}
+          title={`Call ${displayPhone(user)}`}
+          className="flex h-6 w-6 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+        >
+          <Phone className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </span>
+  );
+}
+
+// A native date input renders the browser's own locale format and ignores
+// text-align, so the form would read 26/07/2025 hard left while the view reads
+// 26 Jul 2025 hard right. This keeps both sides identical.
+function DateField({
+  name,
+  label,
+  value,
+  onChange,
+  clearable = true,
+}: {
+  name: string;
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  clearable?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex flex-1 justify-end">
+      <input type="hidden" name={name} value={value} />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={label}
+            className="flex cursor-pointer items-center gap-2 bg-transparent text-sm transition-colors hover:text-admin-primary"
+          >
+            {/* An empty date reads as a prompt, not a value - same weight and
+                colour as the record id in the header. */}
+            <span
+              className={cn(
+                value ? "font-semibold text-admin-ink" : "font-normal text-admin-muted",
+              )}
+            >
+              {value ? formatDate(value) : "Pick a date"}
+            </span>
+            <CalendarDays className="h-4 w-4 shrink-0 text-admin-muted/60" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="w-auto overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
+        >
+          <Calendar
+            mode="single"
+            selected={value ? parseDbDate(value) : undefined}
+            onSelect={(picked) => {
+              onChange(picked ? format(picked, "yyyy-MM-dd") : "");
+              setOpen(false);
+            }}
+            autoFocus
+          />
+          {clearable && value && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+              className="w-full border-t border-admin-line px-4 py-2.5 text-[12px] font-semibold text-admin-error hover:bg-admin-error-bg"
+            >
+              Clear date
+            </button>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function initialsOf(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+export default function SystemUsersClient({
+  initialUsers = [],
+}: {
+  initialUsers: SystemUserRecord[];
+}) {
+  const sheet = useRecordSheet<SystemUserRecord>();
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
+  const [formStatus, setFormStatus] = useState("active");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [birthday, setBirthday] = useState("");
+
+  // A brand new user starts pending and stays there until a date says otherwise.
+  const loadForm = (record: SystemUserRecord | null) => {
+    setFormStatus(record?.status ?? "pending");
+    setStartDate(toDateInput(record?.start_date) || format(new Date(), "yyyy-MM-dd"));
+    setEndDate(toDateInput(record?.end_date));
+    setBirthday(toDateInput(record?.birthday));
+  };
+
+  const changeStartDate = (next: string) => {
+    setStartDate(next);
+    setFormStatus((current) => statusFromDates(current, next, endDate));
+  };
+
+  const changeEndDate = (next: string) => {
+    setEndDate(next);
+    setFormStatus((current) => statusFromDates(current, startDate, next));
   };
 
   const openAdd = () => {
-    setFormError(null);
-    setIsEditing(false);
-    setSelected(null);
-    setIsAdding(true);
+    loadForm(null);
+    sheet.openAdd();
   };
 
-  const closeSheet = () => {
-    setSelected(null);
-    setIsAdding(false);
-    setIsEditing(false);
-    setFormError(null);
+  const startEdit = () => {
+    loadForm(selected);
+    sheet.startEdit();
   };
 
-  const handleSubmit = (formData: FormData) => {
-    setFormError(null);
-    startTransition(async () => {
-      const result = await saveEmployeeAction(formData);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
-    });
+  // Marking someone terminated dates the departure to the moment you said so,
+  // unless a leaving date is already on record.
+  const changeStatus = (next: string) => {
+    setFormStatus(next);
+    if (next === "inactive" && !endDate) setEndDate(format(new Date(), "yyyy-MM-dd"));
   };
 
-  const handleDelete = async () => {
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialUsers;
+    return initialUsers.filter((user) =>
+      [user.full_name, user.email, user.role, user.employment_type].some((field) =>
+        field?.toLowerCase().includes(needle),
+      ),
+    );
+  }, [initialUsers, query]);
+
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
+
+  const cancel = () => {
+    if (mode === "add") sheet.close();
+    else if (selected) sheet.openView(selected);
+  };
+
+  const handleDelete = () => {
     if (!selected) return;
-    const ok = await confirm({
-      title: "Remove employee",
+    sheet.confirmDelete({
+      title: "Remove user",
       description: "Are you sure you want to remove this system user? This cannot be undone.",
       confirmLabel: "Remove",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deleteEmployeeAction(selected.id);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
+      action: () => deleteEmployeeAction(selected.id),
     });
   };
 
   const handlePasswordReset = async (email: string) => {
-    const ok = await confirm({
+    const ok = await sheet.confirm({
       title: "Reset password",
       description: `Send a password reset email to ${email}?`,
       confirmLabel: "Send email",
-      variant: "default",
     });
     if (!ok) return;
-    startTransition(async () => {
-      const result = await sendPasswordResetAction(email);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        setFormError(null);
-      }
-    });
+    const result = await sendPasswordResetAction(email);
+    sheet.setFormError(result?.error ?? null);
   };
 
-  const showForm = isAdding || isEditing;
-  const formDefault = isEditing ? selected : null;
+  const title = mode === "add" ? "New user" : mode === "edit" ? "Edit user" : "View user";
 
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-
-      {initialEmployees.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <Users className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="font-black text-sm text-[#20231A]">No employees yet</p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">Add your first employee to get started</p>
-        </div>
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+      {initialUsers.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No system users yet"
+          description="Add your first user to get started"
+          action={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Create user
+            </button>
+          }
+        />
       ) : (
-        <div className="space-y-2">
-          <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-            <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
-                  Employees <span className="text-[#5E6654]">({initialEmployees.length})</span>
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={openAdd}
-                className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
-                title="Add Employee"
-              >
-                <Plus className="h-3.5 w-3.5 shrink-0" />
-                <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">Create</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="shrink-0"
-                title="Toggle group"
-              >
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-[#5E6654] transition-transform duration-200",
-                  !isCollapsed && "rotate-180"
-                )} />
-              </button>
+        <RecordList
+          variant="panel"
+          title="System users"
+          count={shown.length}
+          onAdd={openAdd}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search system users"
+              placeholder="Search by name, email, role or contract"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
             </div>
-
-            {!isCollapsed && <div className="divide-y divide-[#D8D5C8]/50">
-              {initialEmployees.map((employee) => {
-                const empStatus = employee.status?.toLowerCase();
-                const isActive = empStatus === "active";
-                const isLeave = empStatus === "leave";
-                const inactive = !isActive;
-                const muted = "text-[#5E6654]";
-                const initials = employee.full_name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .slice(0, 2);
+          ) : (
+            shown.map((user) => {
+                const status = statusOf(user);
+                const inactive = status.tone !== "success";
                 return (
-                  <div
-                    key={employee.id}
-                    onClick={() => openView(employee)}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
+                  <ListRow
+                    key={user.id}
+                    onClick={() => sheet.openView(user)}
+                    status={
+                      // Fixed width, so "On leave" cannot narrow that row's grid
+                      // and knock its email out of line with the rest.
+                      <StatusPill
+                        tone={status.tone}
+                        icon={statusIcon(status.tone)}
+                        className="sm:w-24 sm:justify-center"
+                      >
+                        {status.label}
+                      </StatusPill>
+                    }
                   >
-                    <div className="min-w-0 flex-1 sm:hidden">
-                      <div className="flex items-center gap-2">
-                        <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#20231A]")}>
-                          {employee.full_name}
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-line bg-admin-surface text-[11px] font-semibold",
+                        inactive ? "text-admin-muted" : "text-admin-primary",
+                      )}
+                    >
+                      {initialsOf(user.full_name)}
+                    </span>
+
+                    {/* Fixed tracks, not content-sized ones - an "auto" column
+                        takes its width from that row's own badges, which is what
+                        left every email starting somewhere different. */}
+                    <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_14rem_11.5rem_6.5rem] sm:items-center sm:gap-3">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p
+                          className={cn(
+                            "min-w-0 truncate text-sm leading-snug font-semibold",
+                            inactive ? "text-admin-muted" : "text-admin-ink",
+                          )}
+                        >
+                          {user.full_name}
                         </p>
-                        <span className={cn(
-                          "w-14 shrink-0 text-right text-[10px] font-bold",
-                          isActive ? "text-green-600" : isLeave ? "text-amber-600" : "text-red-500"
-                        )}>
-                          {isActive ? "Active" : isLeave ? "Leave" : "Inactive"}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1">
-                        <p className={cn("min-w-0 flex-1 truncate text-[10px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
-                          {toTitleCase(employee.role) || "No role"}
-                        </p>
-                        <span className={cn("shrink-0 text-[10px] font-bold", muted)}>
-                          {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
-                        </span>
-                        <span className="flex w-6 shrink-0 items-center justify-center">
-                          <span className={cn("flex h-6 w-6 items-center justify-center rounded-full border border-[#D8D5C8] bg-[#F4F1E8] text-[10px] font-bold", muted)}>
-                            {initials}
+                        {hasBirthdayThisMonth(user.birthday) && (
+                          // One element can only run one animation, so the halo,
+                          // the wiggle and the colour cycle each get their own.
+                          <span
+                            role="img"
+                            aria-label="Birthday this month"
+                            title="Birthday this month"
+                            className="relative flex h-5 w-5 shrink-0 items-center justify-center"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="birthday-glow absolute inset-0 rounded-full"
+                            />
+                            <span className="birthday-wiggle relative flex items-center justify-center">
+                              <Cake className="birthday-party h-3.5 w-3.5" />
+                            </span>
                           </span>
-                        </span>
+                        )}
                       </div>
-                    </div>
 
-                    <div className="hidden min-w-0 flex-1 sm:block">
-                      <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#20231A]")}>
-                        {employee.full_name}
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1 sm:mt-0">
+                        <span className="truncate text-[11px] font-medium text-admin-muted sm:text-[12px]">
+                          {user.email}
+                        </span>
+                        <ContactActions user={user} />
+                      </div>
+
+                      <div className="hidden items-center gap-2 sm:flex">
+                        <InfoBadge icon={null}>
+                          {toTitleCase(user.role) || "No role"}
+                        </InfoBadge>
+                        <InfoBadge icon={null}>
+                          {toTitleCase(user.employment_type?.replace("-", " ")) || "-"}
+                        </InfoBadge>
+                      </div>
+
+                      <p
+                        className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex"
+                        title={
+                          user.end_date
+                            ? `Started ${formatDate(user.start_date)}, left ${formatDate(user.end_date)}`
+                            : `Started ${formatDate(user.start_date)}`
+                        }
+                      >
+                        <CalendarPlus
+                          className="h-3.5 w-3.5 shrink-0 opacity-60"
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">
+                          {user.end_date ? "Employed from" : "Started"}
+                        </span>
+                        <span className="truncate tabular-nums">
+                          {user.end_date
+                            ? `${formatDate(user.start_date)} - ${formatDate(user.end_date)}`
+                            : formatDate(user.start_date)}
+                        </span>
                       </p>
-                      <p className={cn("mt-0.5 truncate text-[11px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
-                        {employee.email}
-                      </p>
-                    </div>
 
-                    <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                      <span className="rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 text-[11px] font-bold text-[#5E6654]">
-                        {toTitleCase(employee.role) || "No role"}
-                      </span>
-                      <span className="rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 text-[11px] font-bold text-[#5E6654]">
-                        {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
-                      </span>
-                      <span className={cn(
-                        "rounded-lg border px-2 py-1 text-[11px] font-bold",
-                        isActive
-                          ? "border-green-200 bg-green-50 text-green-700"
-                          : isLeave
-                          ? "border-amber-200 bg-amber-50 text-amber-700"
-                          : "border-red-200 bg-red-50 text-red-500"
-                      )}>
-                        {isActive ? "Active" : isLeave ? "On Leave" : "Inactive"}
-                      </span>
+                      {(() => {
+                        const served = tenure(user);
+                        const value = served ? formatMonths(served.months) : "-";
+                        return (
+                          <p
+                            className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex"
+                            title={
+                              served
+                                ? served.hasLeft
+                                  ? `Was employed for ${value}`
+                                  : `Employed for ${value}`
+                                : "No start date on record"
+                            }
+                          >
+                            <Briefcase className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                            <span className="sr-only">
+                              {served?.hasLeft ? "Was employed for" : "Employed for"}
+                            </span>
+                            <span className="tabular-nums">{value}</span>
+                          </p>
+                        );
+                      })()}
                     </div>
-
-                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
-                  </div>
+                  </ListRow>
                 );
-              })}
-            </div>}
-          </section>
-        </div>
+            })
+          )}
+        </RecordList>
       )}
 
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
-                  {isAdding ? "New Employee" : isEditing ? "Edit Employee" : "View Employee"}
-                </SheetTitle>
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">
-                      ID: {selected.id}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {selected && !isAdding && (
-                <span className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-bold",
-                  selected.status?.toLowerCase() === "active"
-                    ? "border-green-300 bg-green-100 text-green-700"
-                    : selected.status?.toLowerCase() === "leave"
-                    ? "border-amber-300 bg-amber-100 text-amber-700"
-                    : "border-red-300 bg-red-100 text-red-600"
-                )}>
-                  {selected.status?.toLowerCase() === "active" ? "Active" : selected.status?.toLowerCase() === "leave" ? "On Leave" : "Inactive"}
-                </span>
+      <RecordSheet
+        open={sheet.open}
+        onClose={sheet.close}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="user-form"
+        isPending={sheet.isPending}
+        onEdit={startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={statusOf(selected).tone}
+              icon={statusIcon(statusOf(selected).tone)}
+              showLabelOnMobile
+            >
+              {statusOf(selected).label}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: selected.created_by_employee?.full_name,
+                updatedAt: selected.updated_at,
+                updatedBy: selected.updated_by_employee?.full_name,
+                rows: [
+                  {
+                    label: "Invite accepted",
+                    value: selected.invite_accepted_at
+                      ? formatDate(selected.invite_accepted_at)
+                      : selected.invite_sent_at
+                        ? "Pending"
+                        : "Not invited",
+                  },
+                ],
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell label="Full name" value={selected.full_name} />
+              <DetailCell label="Role" value={toTitleCase(selected.role) || "-"} />
+              <DetailCell
+                label="Contract"
+                value={toTitleCase(selected.employment_type?.replace("-", " ")) || "-"}
+              />
+              <DetailCell
+                label="Email"
+                value={
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="break-all">{selected.email}</span>
+                    {selected.email && (
+                      <a
+                        href={`mailto:${selected.email}`}
+                        aria-label={`Email ${selected.full_name}`}
+                        title={`Email ${selected.email}`}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </span>
+                }
+              />
+              <DetailCell
+                label="Phone"
+                value={
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{displayPhone(selected)}</span>
+                    {telHref(selected) && (
+                      <a
+                        href={telHref(selected) as string}
+                        aria-label={`Call ${selected.full_name}`}
+                        title="Call this number"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                  </span>
+                }
+              />
+              <DetailCell label="Start date" value={formatDate(selected.start_date)} />
+              {selected.end_date && (
+                <DetailCell label="End date" value={formatDate(selected.end_date)} />
               )}
-            </div>
-          </div>
+              <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
+            </DetailCard>
 
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-
-            {!showForm && selected && (() => {
-              const phone = [selected.country_code, selected.phone_no].filter(Boolean).join(" ");
-              return (
-                <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                    <DetailCell label="Full Name" value={selected.full_name} />
-                    <DetailCell label="Role" value={toTitleCase(selected.role) || "-"} />
-                    <DetailCell label="Contract" value={toTitleCase(selected.employment_type?.replace("-", " ")) || "-"} />
-                    <DetailCell label="Email" value={selected.email} />
-                    <DetailCell label="Phone" value={phone || "-"} />
-                    <DetailCell label="Started" value={formatDate(selected.start_date)} />
-                    <DetailCell label="Left" value={formatDate(selected.end_date)} />
-                    <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
-                  </div>
-
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2 sm:px-5 sm:py-3">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-[#34451F] uppercase">
-                        <Mail className="h-3 w-3" />
-                        Account Access
-                      </span>
-                      <span className="flex-1" />
-                      <button
-                        type="button"
-                        onClick={() => handlePasswordReset(selected.email)}
-                        disabled={isPending}
-                        className="flex h-7 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-2.5 text-white transition-colors hover:bg-[#283719]"
-                        title="Send password reset email"
-                      >
-                        <KeyRound className="h-3.5 w-3.5" />
-                        <span className="text-[10px] font-bold tracking-wide uppercase">Reset Password</span>
-                      </button>
-                    </div>
-                    <DetailCell
-                      label="Invite Sent"
-                      value={selected.invite_sent_at ? formatDate(selected.invite_sent_at) : "Not sent"}
-                    />
-                    <DetailCell
-                      label="Invite Accepted"
-                      value={selected.invite_accepted_at ? formatDate(selected.invite_accepted_at) : selected.invite_sent_at ? "Pending" : "-"}
-                    />
-                    <DetailCell
-                      label="Password Reset Sent"
-                      value={selected.password_reset_sent_at ? formatDate(selected.password_reset_sent_at) : "-"}
-                    />
-                  </div>
-
-                  {formError && <ErrorBox message={formError} />}
-                </div>
-              );
-            })()}
-
-            {showForm && (
-              <form id="employee-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
-
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Full Name" required>
-                    <input
-                      name="full_name"
-                      required
-                      placeholder="e.g. John Smith"
-                      defaultValue={formDefault?.full_name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Status">
-                    <select
-                      title="Status"
-                      name="status"
-                      defaultValue={formDefault?.status ?? "active"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    >
-                      {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value} className="dir-ltr">{s.label}</option>)}
-                    </select>
-                  </FormRow>
-
-                  <FormRow label="Role">
-                    <input
-                      name="role"
-                      placeholder="e.g. Manager"
-                      defaultValue={formDefault?.role ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Contract">
-                    <select
-                      title="Employment Type"
-                      name="employment_type"
-                      defaultValue={formDefault?.employment_type ?? "full-time"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    >
-                      {EMPLOYMENT_TYPES.map(t => <option key={t.value} value={t.value} className="dir-ltr">{t.label}</option>)}
-                    </select>
-                  </FormRow>
-
-                  <FormRow label="Started" required>
-                    <input
-                      title="Start Date"
-                      name="start_date"
-                      type="date"
-                      required
-                      defaultValue={
-                        formDefault?.start_date
-                          ? new Date(formDefault.start_date).toISOString().split("T")[0]
-                          : new Date().toISOString().split("T")[0]
-                      }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Left">
-                    <input
-                      title="End Date"
-                      name="end_date"
-                      type="date"
-                      defaultValue={
-                        formDefault?.end_date
-                          ? new Date(formDefault.end_date).toISOString().split("T")[0]
-                          : ""
-                      }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Email" required>
-                    <input
-                      name="email"
-                      type="email"
-                      placeholder="e.g. john@company.com"
-                      required
-                      defaultValue={formDefault?.email ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Phone">
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <select
-                        title="Country Code"
-                        name="country_code"
-                        defaultValue={formDefault?.country_code ?? "+44"}
-                        className="w-18 cursor-pointer appearance-none bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                      >
-                        {COUNTRY_CODES.map((c) => (
-                          <option key={c.iso + c.code} value={c.code}>{c.iso} {c.code}</option>
-                        ))}
-                      </select>
-                      <span className="text-xs text-[#5E6654]/50">|</span>
-                      <input
-                        name="phone_no"
-                        type="tel"
-                        placeholder="7123 456789"
-                        defaultValue={formDefault?.phone_no ?? ""}
-                        className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                      />
-                    </div>
-                  </FormRow>
-
-                  <FormRow label="Birthday">
-                    <input
-                      title="Birthday"
-                      name="birthday"
-                      type="date"
-                      defaultValue={
-                        formDefault?.birthday
-                          ? new Date(formDefault.birthday).toISOString().split("T")[0]
-                          : ""
-                      }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
-                </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-
-            <div className="h-4" />
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
-            {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
-                </Button>
-                <Button
-                  onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />Edit
-                </Button>
-              </div>
-            )}
-
-            {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
+            <DetailCard>
+              <div className="flex items-center gap-2 border-b border-admin-line px-4 py-2 sm:px-5 sm:py-3">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-admin-primary">
+                  <Mail className="h-3.5 w-3.5" />
+                  Account access
+                </span>
+                <span className="flex-1" />
+                <button
                   type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormError(null);
-                    if (isAdding) closeSheet();
-                    else setIsEditing(false);
-                  }}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
+                  onClick={() => handlePasswordReset(selected.email)}
+                  disabled={sheet.isPending}
+                  className="flex h-8 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-white transition-colors hover:bg-admin-primary-hover disabled:opacity-50"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="employee-form"
-                  disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <><Save className="mr-2 h-4 w-4" />Save</>}
-                </Button>
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-semibold">Reset password</span>
+                </button>
               </div>
-            )}
+              <DetailCell
+                label="Invite sent"
+                value={selected.invite_sent_at ? formatDate(selected.invite_sent_at) : "Not sent"}
+              />
+              <DetailCell
+                label="Invite accepted"
+                value={
+                  selected.invite_accepted_at
+                    ? formatDate(selected.invite_accepted_at)
+                    : selected.invite_sent_at
+                      ? "Pending"
+                      : "-"
+                }
+              />
+              <DetailCell
+                label="Password reset sent"
+                value={
+                  selected.password_reset_sent_at
+                    ? formatDate(selected.password_reset_sent_at)
+                    : "-"
+                }
+              />
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
+        )}
 
-function FormRow({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-        {required && <span className="text-[10px] font-bold text-red-500">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
+        {showForm && (
+          <form
+            id="user-form"
+            action={sheet.submit(saveEmployeeAction)}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
-function DetailCell({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-      </div>
-      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#20231A] sm:text-sm">
-        {value}
-      </span>
-    </div>
-  );
-}
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Full name" required>
+                <input
+                  name="full_name"
+                  required
+                  aria-label="Full name"
+                  placeholder="e.g. John Smith"
+                  defaultValue={formDefault?.full_name ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
+              <FormRow label="Status">
+                <select
+                  name="status"
+                  aria-label="Status"
+                  value={formStatus}
+                  onChange={(e) => changeStatus(e.target.value)}
+                  className={FIELD_SELECT}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </FormRow>
+
+              <FormRow label="Role">
+                <input
+                  name="role"
+                  aria-label="Role"
+                  placeholder="e.g. Manager"
+                  defaultValue={formDefault?.role ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <FormRow label="Contract">
+                <select
+                  name="employment_type"
+                  aria-label="Employment type"
+                  defaultValue={formDefault?.employment_type ?? "full-time"}
+                  className={FIELD_SELECT}
+                >
+                  {EMPLOYMENT_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </FormRow>
+
+              <FormRow label="Start date" required>
+                <DateField
+                  name="start_date"
+                  label="Start date"
+                  value={startDate}
+                  onChange={changeStartDate}
+                  clearable={false}
+                />
+              </FormRow>
+
+              <FormRow label="End date">
+                <DateField
+                  name="end_date"
+                  label="End date"
+                  value={endDate}
+                  onChange={changeEndDate}
+                />
+              </FormRow>
+
+              <FormRow label="Email" required>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  aria-label="Email"
+                  placeholder="e.g. john@company.com"
+                  defaultValue={formDefault?.email ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <FormRow label="Phone">
+                <div className="flex flex-1 items-center justify-end gap-1.5">
+                  <select
+                    name="country_code"
+                    aria-label="Country code"
+                    defaultValue={formDefault?.country_code ?? "+44"}
+                    className="w-auto cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.iso + c.code} value={c.code}>
+                        {c.iso} {c.code}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-admin-muted/50">|</span>
+                  <input
+                    name="phone_no"
+                    type="tel"
+                    size={11}
+                    aria-label="Phone number"
+                    placeholder="7123 456789"
+                    defaultValue={formDefault?.phone_no ?? ""}
+                    className="w-auto bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40"
+                  />
+                </div>
+              </FormRow>
+
+              <FormRow label="Birthday">
+                <DateField
+                  name="birthday"
+                  label="Birthday"
+                  value={birthday}
+                  onChange={setBirthday}
+                />
+              </FormRow>
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }

@@ -38,6 +38,7 @@ import {
     isQuizPath,
     isSchedulePath,
     isSettingsPath,
+    isWidePath,
 } from "@/lib/admin-nav"
 
 type Crumb = { label: string; href?: string | null };
@@ -71,7 +72,6 @@ const REQUEST_PATHS = [
     "/event-bookings/private-bookings",
 ]
 
-const WIDE_PATHS = ["/event-bookings/music-bookings", "/event-bookings/private-bookings", "/marketing/trends"]
 
 export default function PrivateLayoutClient({
     children,
@@ -99,7 +99,7 @@ export default function PrivateLayoutClient({
     const isRequestPath = (path: string): boolean =>
         REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
 
-    const isWidePath = WIDE_PATHS.includes(pathname ?? "")
+    const widePath = isWidePath(pathname)
 
     const [collapsed, setCollapsed] = useState(false)
     const [moreOpen, setMoreOpen] = useState(false)
@@ -665,7 +665,7 @@ export default function PrivateLayoutClient({
 
                 <main className={cn(
                     "mx-auto w-full flex-1 p-1 pb-20 sm:min-h-0 sm:py-6 sm:pb-8",
-                    isWidePath ? "max-w-none" : "max-w-7xl sm:px-6"
+                    widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}
                 </main>

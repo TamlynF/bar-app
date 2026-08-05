@@ -122,23 +122,31 @@ export function RecordList({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
-      <div className="flex items-center gap-2 bg-admin-surface px-4 py-3 sm:px-5">
+    <section className="mx-auto w-full overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
+      {/* A toolbar fills the gap the title leaves on a wide table. It drops to
+          its own line on phones, where there is no gap to fill. */}
+      <div className="flex flex-wrap items-center gap-2 bg-admin-surface px-4 py-3 sm:flex-nowrap sm:px-5">
         <button
           type="button"
           onClick={() => collapsible && setCollapsed((c) => !c)}
-          className="min-w-0 flex-1 text-left"
+          className={cn(
+            "order-1 min-w-0 text-left",
+            toolbar ? "flex-1 sm:flex-none" : "flex-1",
+          )}
         >
           <p className="truncate text-[11px] font-semibold tracking-wide text-admin-primary">
             {title}{" "}
             {count != null && <span className="text-admin-muted">({count})</span>}
           </p>
         </button>
+        {toolbar && (
+          <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1">{toolbar}</div>
+        )}
         <button
           type="button"
           onClick={onAdd}
           title={title ? `Add ${title}` : addLabel}
-          className="flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-admin-primary text-white transition-colors hover:bg-admin-primary-hover sm:h-8 sm:w-auto sm:px-3"
+          className="order-2 flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-admin-primary text-white transition-colors hover:bg-admin-primary-hover sm:order-3 sm:h-8 sm:w-auto sm:px-3"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
           <span className="hidden text-[11px] font-semibold sm:inline">
@@ -149,7 +157,7 @@ export function RecordList({
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="shrink-0"
+            className="order-2 shrink-0 sm:order-4"
             title="Toggle group"
           >
             <ChevronDown
@@ -173,12 +181,16 @@ export function ListRow({
   onClick,
   variant = "panel",
   selected = false,
+  status,
   className,
   children,
 }: {
   onClick: () => void;
   variant?: "panel" | "card";
   selected?: boolean;
+  // A status pill belongs in one place on every list: hard right, just inside
+  // the chevron. Passing it here rather than as a child is what guarantees that.
+  status?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -199,6 +211,7 @@ export function ListRow({
       )}
     >
       {children}
+      {status && <div className="shrink-0">{status}</div>}
       <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted opacity-40" />
     </div>
   );
@@ -301,16 +314,20 @@ export function StatusPill({
   icon,
   children,
   className,
+  showLabelOnMobile = false,
 }: {
   tone: keyof typeof STATUS_TONES;
   icon?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  // Set where there is room for the word - a sheet header rather than a list row.
+  showLabelOnMobile?: boolean;
 }) {
   // Success and error read from the icon and colour alone, so on a phone the
   // label steps aside for the row's own content. It stays in the accessibility
   // tree rather than being removed.
-  const iconOnlyOnMobile = !!icon && (tone === "success" || tone === "error");
+  const iconOnlyOnMobile =
+    !showLabelOnMobile && !!icon && (tone === "success" || tone === "error");
 
   return (
     <span

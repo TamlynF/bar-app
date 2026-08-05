@@ -6,6 +6,7 @@ export {
   FormRow,
   ErrorBox,
   type SheetMode,
+  type SystemInfo,
 } from "./record-sheet";
 
 export {

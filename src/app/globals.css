@@ -423,6 +423,65 @@ body {
   }
 }
 
+/* Party colours for the birthday marker on the admin lists. Deliberately outside
+   the semantic palette - this is decoration, not a status, so it must not be
+   read as success/info/warning. */
+@keyframes birthday-party {
+  0%,
+  100% {
+    color: #d64545;
+  }
+  33% {
+    color: #2f6fb0;
+  }
+  66% {
+    color: #e0a81e;
+  }
+}
+
+@utility birthday-party {
+  animation: birthday-party 1.5s ease-in-out infinite;
+}
+
+/* The halo runs the same three colours a step out of phase with the icon, so two
+   of them are on screen at any moment rather than one. */
+@keyframes birthday-glow {
+  0%,
+  100% {
+    background-color: rgb(47 111 176 / 0.25);
+  }
+  33% {
+    background-color: rgb(224 168 30 / 0.3);
+  }
+  66% {
+    background-color: rgb(214 69 69 / 0.25);
+  }
+}
+
+@utility birthday-glow {
+  animation: birthday-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes birthday-wiggle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-9deg) scale(1);
+  }
+  25% {
+    transform: translateY(-2.5px) rotate(7deg) scale(1.15);
+  }
+  50% {
+    transform: translateY(0) rotate(-5deg) scale(1);
+  }
+  75% {
+    transform: translateY(-1.5px) rotate(9deg) scale(1.1);
+  }
+}
+
+@utility birthday-wiggle {
+  animation: birthday-wiggle 1.2s ease-in-out infinite;
+}
+
 /* Gold-on-dark scrollbar for the public horizontal rails */
 @utility rail-scrollbar {
   scrollbar-width: thin;

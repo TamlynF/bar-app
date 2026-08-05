@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { isWidePath } from "@/lib/admin-nav";
 
 export default function SettingsLayout({
   children,
@@ -11,10 +12,14 @@ export default function SettingsLayout({
 }) {
   const pathname = usePathname();
   const isSettingsRoot = pathname === "/settings";
+  // The private shell has already released the width; capping again here would
+  // put the frame straight back on.
+  const wide = isWidePath(pathname);
 
   return (
     <div className={cn(
-      "mx-auto flex w-full max-w-7xl flex-col bg-background px-4 pb-4 transition-all duration-500 sm:pt-0 md:px-8 md:pb-8 lg:flex-row lg:space-x-12",
+      "mx-auto flex w-full flex-col bg-background px-4 pb-4 transition-all duration-500 sm:pt-0 md:px-8 md:pb-8 lg:flex-row lg:space-x-12",
+      wide ? "max-w-none" : "max-w-7xl",
       isSettingsRoot ? "min-h-screen pt-4" : "h-full min-h-0 pt-0",
     )}>
       <div className="flex min-h-0 flex-1 flex-col">

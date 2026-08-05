@@ -166,6 +166,20 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
+/* Routes whose content fills the window instead of sitting inside the standard
+   7xl page frame. Both the private shell and the settings frame read this, so a
+   wide route has to be released by one list rather than two. */
+export const WIDE_PATHS: string[] = [
+  "/event-bookings/music-bookings",
+  "/event-bookings/private-bookings",
+  "/marketing/trends",
+  "/settings/users",
+];
+
+export function isWidePath(pathname: string | null | undefined): boolean {
+  return WIDE_PATHS.includes(pathname ?? "");
+}
+
 export const SETTINGS_NAV_ITEMS: AdminNavItem[] = SETTINGS_NAV_GROUPS.flatMap((group) => group.items);
 
 export const WEBSITE_NAV_ITEMS: AdminNavItem[] =

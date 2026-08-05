@@ -3,6 +3,7 @@
 import React, { useCallback, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -12,6 +13,7 @@ import {
   Pencil,
   Trash2,
   AlertCircle,
+  Info,
 } from "lucide-react";
 
 export type SheetMode = "closed" | "add" | "view" | "edit";
@@ -108,12 +110,87 @@ export function useRecordSheet<T>() {
     startEdit,
     close,
     submit,
+    confirm,
     confirmDelete,
     ConfirmDialogUI,
   };
 }
 
 const SPLIT_QUERY = "(min-width: 1280px)";
+
+export type SystemInfo = {
+  createdAt?: string | null;
+  createdBy?: React.ReactNode;
+  updatedAt?: string | null;
+  updatedBy?: React.ReactNode;
+  // Anything the record wants on top of the audit trail. These sit directly
+  // under the ID, above Created, so the shared rows stay in a fixed order.
+  rows?: { label: string; value: React.ReactNode }[];
+};
+
+function formatSystemDate(iso?: string | null) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function SystemInfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-admin-line px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 text-[12px] font-semibold text-admin-muted">{label}</span>
+      <span className="text-right text-[13px] font-semibold text-admin-ink">{value || "-"}</span>
+    </div>
+  );
+}
+
+function SystemInfoPopover({
+  recordId,
+  info,
+}: {
+  recordId?: number | string;
+  info: SystemInfo;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="System information"
+          title="Creation and modification details"
+          className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-2.5 text-admin-ink transition-colors hover:bg-admin-line sm:px-3"
+        >
+          <Info className="h-4.5 w-4.5 shrink-0" />
+          <span className="hidden text-[13px] font-semibold sm:inline">System</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-80 overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
+      >
+        <span className="block border-b border-admin-line bg-admin-line px-4 py-2.5 text-[12px] font-semibold text-admin-primary">
+          System information
+        </span>
+        {recordId != null && (
+          <SystemInfoRow label="ID" value={<span className="tabular-nums">#{recordId}</span>} />
+        )}
+        {(info.rows ?? []).map((row) => (
+          <SystemInfoRow key={row.label} label={row.label} value={row.value} />
+        ))}
+        <SystemInfoRow label="Created" value={formatSystemDate(info.createdAt)} />
+        <SystemInfoRow label="Created by" value={info.createdBy} />
+        <SystemInfoRow label="Last modified" value={formatSystemDate(info.updatedAt)} />
+        <SystemInfoRow label="Modified by" value={info.updatedBy} />
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export function RecordSheet({
   open,
@@ -128,6 +205,8 @@ export function RecordSheet({
   onDelete,
   onCancel,
   confirmUI,
+  systemInfo,
+  status,
   layout = "sheet",
   emptyState,
   children,
@@ -144,6 +223,12 @@ export function RecordSheet({
   onDelete: () => void;
   onCancel: () => void;
   confirmUI?: React.ReactNode;
+  // Audit trail behind an "i" in the header. Hidden while adding, since a
+  // record that does not exist yet has nothing to report.
+  systemInfo?: SystemInfo;
+  // Status pills, shown under the title so the state of the record reads the
+  // same whether you are looking at it or editing it. Hidden while adding.
+  status?: React.ReactNode;
   // "split" keeps the bottom sheet on phones and tablets but shows the record
   // beside the list from 1280px up.
   layout?: "sheet" | "split";
@@ -158,14 +243,22 @@ export function RecordSheet({
   const panel = (
     <>
       <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 px-4 py-3 backdrop-blur-md sm:rounded-t-4xl">
-        <TitleTag className="flex items-baseline gap-2 text-xl leading-tight font-bold tracking-tight text-admin-ink">
-          <span className="truncate">{title}</span>
-          {recordId != null && (
-            <span className="shrink-0 text-[13px] font-semibold text-admin-muted italic tabular-nums">
-              (#ID: {recordId})
-            </span>
+        <div className="flex items-center justify-between gap-3">
+          <TitleTag className="flex min-w-0 items-baseline gap-2 text-xl leading-tight font-bold tracking-tight text-admin-ink">
+            <span className="truncate">{title}</span>
+            {recordId != null && (
+              <span className="shrink-0 text-[13px] font-semibold text-admin-muted italic tabular-nums">
+                (#ID: {recordId})
+              </span>
+            )}
+          </TitleTag>
+          {systemInfo && mode !== "add" && (
+            <SystemInfoPopover recordId={recordId} info={systemInfo} />
           )}
-        </TitleTag>
+        </div>
+        {status && mode !== "add" && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">{status}</div>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
@@ -174,9 +267,14 @@ export function RecordSheet({
       </div>
 
       <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
+        {/* The two footers are keyed apart so React tears one down and builds the
+            other. Reconciled in place, the button under the pointer would turn
+            into Save mid-click and the browser would submit the form it now
+            points at. */}
         {mode === "view" ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div key="view-actions" className="grid grid-cols-2 gap-3">
             <Button
+              type="button"
               variant="ghost"
               onClick={onDelete}
               disabled={isPending}
@@ -190,6 +288,7 @@ export function RecordSheet({
               Delete
             </Button>
             <Button
+              type="button"
               variant="ghost"
               onClick={onEdit}
               className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
@@ -200,13 +299,15 @@ export function RecordSheet({
           </div>
         ) : (
           showForm && (
-            <div className="grid grid-cols-2 gap-3">
+            <div key="form-actions" className="grid grid-cols-2 gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onCancel}
                 disabled={isPending}
-                className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card text-[13px] font-semibold text-admin-muted hover:bg-admin-surface"
+                // The footer is admin-line, so an admin-line border on it is
+                // invisible. Needs its own edge and a lift off the background.
+                className="h-14 rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
               >
                 Cancel
               </Button>
@@ -260,10 +361,10 @@ export function RecordSheet({
         side="bottom"
         showCloseButton={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
+        className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
           bg-admin-surface p-0 shadow-2xl outline-none
-          sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-          sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
+          sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:h-auto
+          sm:max-h-[92vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
           sm:border-2 sm:border-admin-line"
       >
         {panel}
