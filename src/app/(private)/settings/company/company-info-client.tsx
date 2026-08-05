@@ -2,24 +2,34 @@
 
 import React, { useState, useTransition } from "react";
 import {
-  Building2, MapPin, Mail, Phone, Users,
-  Loader2, Pencil, Save, X, Upload, Trash2, Clock, Quote, Highlighter,
+  Building2,
+  MapPin,
+  Mail,
+  Phone,
+  Users,
+  Loader2,
+  Pencil,
+  Upload,
+  Trash2,
+  Clock,
+  Quote,
+  Highlighter,
+  Share2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import { updateCompanyInfo } from "./actions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import Link from "next/link";
-import { createBrowserClient } from "@supabase/ssr";
-
-const supabaseBrowser = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import {
+  RecordSheet,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+  EmptyState,
+} from "@/components/admin";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -48,84 +58,130 @@ interface CompanyInfo {
   youtube: string | null;
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
+  created_at?: string;
+  updated_at?: string | null;
+  updated_by?: number | null;
 }
 
-const sectionLabel = "text-[10px] font-bold uppercase tracking-[0.2em] text-[#5E6654] opacity-40 px-1 mb-3";
-const fieldLabel = "text-[10px] font-bold uppercase tracking-wide text-[#5E6654] ml-1";
-const inputClasses = "h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#34451F]/10 focus:border-[#34451F]";
+export type EmployeeOption = { id: number; full_name: string };
 
-function InfoRow({ icon, label, value, href }: {
-  icon: React.ReactNode; label: string; value: string | null; href?: string;
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const AREA_INPUT =
+  "min-h-20 w-full resize-none rounded-2xl border border-admin-line bg-admin-surface p-3 text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40 focus:border-admin-primary";
+const TIME_INPUT =
+  "h-10 flex-1 rounded-xl border border-admin-line bg-admin-surface px-3 text-sm font-semibold text-admin-ink outline-none focus:border-admin-primary";
+const HINT = "text-[11px] font-medium text-admin-muted opacity-70";
+
+function SectionCard({
+  icon,
+  title,
+  className,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  className?: string;
+  children: React.ReactNode;
 }) {
-  const display = value || "-";
   return (
-    <div className="flex items-center gap-3 border-b border-[#D8D5C8] px-5 py-4 last:border-0">
-      <div className="flex shrink-0 items-center gap-2 text-[#5E6654] opacity-60">
-        {icon}
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
-      </div>
-      {href && value ? (
-        <Link href={href} target="_blank" className="flex-1 text-right font-black text-sm text-[#34451F] underline underline-offset-2 transition-opacity hover:opacity-70">
-          {display}
-        </Link>
-      ) : (
-        <span className={cn("flex-1 text-right font-black text-sm", value ? "text-[#20231A]" : "text-[#5E6654] opacity-40")}>
-          {display}
+    <DetailCard className={className}>
+      <div className="flex items-center gap-2 border-b border-admin-line px-4 py-2 sm:px-5 sm:py-3">
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-admin-primary">
+          {icon}
+          {title}
         </span>
-      )}
-    </div>
+      </div>
+      {children}
+    </DetailCard>
   );
 }
 
-export default function CompanyInfoClient({ initialData }: { initialData: CompanyInfo | null }) {
+function linkValue(value: string | null, href?: string) {
+  if (!value) return "-";
+  if (!href) return value;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="break-all text-admin-primary underline underline-offset-2 hover:opacity-70"
+    >
+      {value}
+    </a>
+  );
+}
+
+function socialHref(value: string | null, base: string) {
+  if (!value) return undefined;
+  if (value.startsWith("http")) return value;
+  return `${base}${value.replace("@", "")}`;
+}
+
+export default function CompanyInfoClient({
+  initialData,
+  employees = [],
+}: {
+  initialData: CompanyInfo | null;
+  employees?: EmployeeOption[];
+}) {
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [data, setData] = useState<CompanyInfo | null>(initialData);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const [form, setForm] = useState({
-    name: data?.name ?? "",
-    logo_url: data?.logo_url ?? "",
-    address: data?.address ?? "",
-    email: data?.email ?? "",
-    phone: data?.phone ?? "",
-    tagline: data?.tagline ?? "",
-    tagline_accent: data?.tagline_accent ?? "",
-    description: data?.description ?? "",
-    opening_hours: (data?.opening_hours ?? {}) as OpeningHours,
-    instagram: data?.instagram ?? "",
-    facebook: data?.facebook ?? "",
-    twitter: data?.twitter ?? "",
-    tiktok: data?.tiktok ?? "",
-    youtube: data?.youtube ?? "",
-    max_capacity: data?.max_capacity?.toString() ?? "",
-    private_hire_min_capacity: data?.private_hire_min_capacity?.toString() ?? "",
+  const emptyForm = (record: CompanyInfo | null) => ({
+    name: record?.name ?? "",
+    logo_url: record?.logo_url ?? "",
+    address: record?.address ?? "",
+    email: record?.email ?? "",
+    phone: record?.phone ?? "",
+    tagline: record?.tagline ?? "",
+    tagline_accent: record?.tagline_accent ?? "",
+    description: record?.description ?? "",
+    opening_hours: (record?.opening_hours ?? {}) as OpeningHours,
+    instagram: record?.instagram ?? "",
+    facebook: record?.facebook ?? "",
+    twitter: record?.twitter ?? "",
+    tiktok: record?.tiktok ?? "",
+    youtube: record?.youtube ?? "",
+    max_capacity: record?.max_capacity?.toString() ?? "",
+    private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
   });
 
-  const handleEdit = () => {
-    setForm({
-      name: data?.name ?? "",
-      logo_url: data?.logo_url ?? "",
-      address: data?.address ?? "",
-      email: data?.email ?? "",
-      phone: data?.phone ?? "",
-      tagline: data?.tagline ?? "",
-      tagline_accent: data?.tagline_accent ?? "",
-      description: data?.description ?? "",
-      opening_hours: (data?.opening_hours ?? {}) as OpeningHours,
-      instagram: data?.instagram ?? "",
-      facebook: data?.facebook ?? "",
-      twitter: data?.twitter ?? "",
-      tiktok: data?.tiktok ?? "",
-      youtube: data?.youtube ?? "",
-      max_capacity: data?.max_capacity?.toString() ?? "",
-      private_hire_min_capacity: data?.private_hire_min_capacity?.toString() ?? "",
-    });
+  const [form, setForm] = useState(() => emptyForm(initialData));
+
+  const update = (field: string, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const updateHours = (day: string, field: "open" | "close", value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      opening_hours: {
+        ...prev.opening_hours,
+        [day]: { ...(prev.opening_hours[day] || { open: "", close: "" }), [field]: value },
+      },
+    }));
+  };
+
+  const openEdit = () => {
+    setForm(emptyForm(data));
+    setFormError(null);
     setIsEditing(true);
   };
 
-  const handleSave = () => {
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
+
+  const accentMissing =
+    form.tagline_accent.trim().length > 0 &&
+    !form.tagline.toLowerCase().includes(form.tagline_accent.trim().toLowerCase());
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!data?.id) return;
+
     const fd = new FormData();
     fd.set("id", String(data.id));
     fd.set("name", form.name);
@@ -145,6 +201,7 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
     fd.set("max_capacity", form.max_capacity);
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
 
+    setFormError(null);
     startTransition(async () => {
       const res = await updateCompanyInfo(fd);
       if (res.success) {
@@ -157,275 +214,483 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
         setIsEditing(false);
         toast.success("Company information saved");
       } else {
+        setFormError(res.error ?? "Failed to save");
         toast.error(res.error ?? "Failed to save");
       }
     });
   };
 
-  const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
-
-  const accentMissing =
-    form.tagline_accent.trim().length > 0 &&
-    !form.tagline.toLowerCase().includes(form.tagline_accent.trim().toLowerCase());
-
-  const updateHours = (day: string, field: "open" | "close", value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      opening_hours: {
-        ...prev.opening_hours,
-        [day]: { ...(prev.opening_hours[day] || { open: "", close: "" }), [field]: value },
-      },
-    }));
-  };
-
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setUploadingLogo(true);
+    setFormError(null);
+
+    const supabase = createClient();
     const ext = file.name.split(".").pop();
     const path = `logo-${Date.now()}.${ext}`;
-    const { data: uploaded, error } = await supabaseBrowser.storage
+
+    const { data: uploaded, error } = await supabase.storage
       .from("gallery")
       .upload(path, file, { cacheControl: "3600", upsert: false });
+
     if (error) {
-      toast.error(`Upload failed: ${error.message}`);
+      setFormError(`Upload failed: ${error.message}`);
       setUploadingLogo(false);
       return;
     }
-    const publicUrl = supabaseBrowser.storage.from("gallery").getPublicUrl(uploaded.path).data.publicUrl;
+
+    const publicUrl = supabase.storage.from("gallery").getPublicUrl(uploaded.path).data
+      .publicUrl;
     setForm((prev) => ({ ...prev, logo_url: publicUrl }));
     setUploadingLogo(false);
   };
 
   if (!data) {
     return (
-      <div className="p-8 text-center text-[#5E6654]">
-        <p className="text-sm font-bold">No company information found.</p>
+      <div className="px-4 py-4 sm:px-8 sm:py-0">
+        <EmptyState
+          icon={Building2}
+          title="No company information found"
+          description="Add a company_information record to configure your venue"
+        />
       </div>
     );
   }
 
   const openingHours = (data.opening_hours ?? {}) as OpeningHours;
+  const listedDays = DAYS.filter((day) => {
+    const hours = openingHours[day];
+    return hours?.open || hours?.close;
+  });
 
   return (
-    <div className="animate-in space-y-6 px-4 py-4 duration-500 fade-in sm:px-8 sm:py-0">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-black text-2xl tracking-tighter text-[#20231A] uppercase">Company Info</h1>
-          <p className="mt-1 text-xs font-bold tracking-wider text-[#5E6654] uppercase opacity-60">Business details and social links</p>
-        </div>
-        {!isEditing ? (
-          <Button onClick={handleEdit} className="h-12 rounded-2xl border border-[#34451F] px-6 font-black text-[10px] tracking-widest text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8] active:scale-95">
-            <Pencil className="mr-2 h-4 w-4" /> Edit
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={isPending} className="h-12 rounded-2xl bg-[#34451F] px-6 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-transform hover:bg-[#283719] active:scale-95">
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save</>}
-            </Button>
-            <Button variant="outline" onClick={() => setIsEditing(false)} className="h-12 rounded-2xl border-2 border-[#D8D5C8] text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+    <div className="animate-in space-y-4 px-4 py-4 duration-500 fade-in sm:px-8 sm:py-0">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold tracking-tight text-admin-ink">Company info</h2>
+        <button
+          type="button"
+          onClick={openEdit}
+          className="inline-flex h-9 items-center rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft active:scale-95"
+        >
+          <Pencil className="mr-2 h-3.5 w-3.5" />
+          Edit
+        </button>
       </div>
 
-      {isEditing ? (
-        <div className="animate-in space-y-8 duration-300 fade-in slide-in-from-bottom-2">
-          <div>
-            <h3 className={sectionLabel}>Logo</h3>
-            <div className="rounded-3xl border-2 border-[#D8D5C8] bg-white p-6 shadow-sm">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <SectionCard icon={<Building2 className="h-3.5 w-3.5" />} title="Business details">
+          {data.logo_url && (
+            <div className="flex items-center gap-3 border-b border-admin-line px-4 py-3 sm:px-5">
+              <span className="shrink-0 text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
+                Logo
+              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={data.logo_url}
+                alt="Company logo"
+                className="ml-auto h-12 w-auto max-w-40 rounded-xl object-contain"
+              />
+            </div>
+          )}
+          <DetailCell dense icon={<Building2 className="h-3.5 w-3.5" />} label="Name" value={data.name || "-"} />
+          <DetailCell dense icon={<Quote className="h-3.5 w-3.5" />} label="Tagline" value={data.tagline || "-"} />
+          <DetailCell
+            dense
+            icon={<Highlighter className="h-3.5 w-3.5" />}
+            label="Accent word"
+            value={data.tagline_accent || "-"}
+          />
+          <DetailCell
+            icon={<Building2 className="h-3.5 w-3.5" />}
+            label="Description"
+            value={data.description || "-"}
+            multiline
+          />
+          <DetailCell
+            icon={<MapPin className="h-3.5 w-3.5" />}
+            label="Address"
+            value={data.address || "-"}
+            multiline
+          />
+          <DetailCell
+            dense
+            icon={<Mail className="h-3.5 w-3.5" />}
+            label="Email"
+            value={linkValue(data.email, data.email ? `mailto:${data.email}` : undefined)}
+          />
+          <DetailCell
+            dense
+            icon={<Phone className="h-3.5 w-3.5" />}
+            label="Phone"
+            value={linkValue(data.phone, data.phone ? `tel:${data.phone}` : undefined)}
+          />
+        </SectionCard>
+
+        <div className="space-y-4">
+          <SectionCard icon={<Clock className="h-3.5 w-3.5" />} title="Opening hours">
+            {listedDays.length === 0 ? (
+              <p className="px-4 py-4 text-[13px] font-medium text-admin-muted sm:px-5">
+                No opening hours set.
+              </p>
+            ) : (
+              listedDays.map((day) => {
+                const hours = openingHours[day];
+                return (
+                  <DetailCell
+                    key={day}
+                    dense
+                    icon={<Clock className="h-3.5 w-3.5" />}
+                    label={DAY_LABELS[day]}
+                    value={`${hours?.open || "-"} - ${hours?.close || "-"}`}
+                    valueClassName="tabular-nums"
+                  />
+                );
+              })
+            )}
+          </SectionCard>
+
+          <SectionCard icon={<Share2 className="h-3.5 w-3.5" />} title="Social media">
+            <DetailCell
+              dense
+              icon={<SiInstagram className="h-3.5 w-3.5" />}
+              label="Instagram"
+              value={linkValue(data.instagram, socialHref(data.instagram, "https://instagram.com/"))}
+            />
+            <DetailCell
+              dense
+              icon={<SiFacebook className="h-3.5 w-3.5" />}
+              label="Facebook"
+              value={linkValue(data.facebook, socialHref(data.facebook, "https://facebook.com/"))}
+            />
+            <DetailCell
+              dense
+              icon={<SiX className="h-3.5 w-3.5" />}
+              label="Twitter / X"
+              value={linkValue(data.twitter, socialHref(data.twitter, "https://x.com/"))}
+            />
+            <DetailCell
+              dense
+              icon={<SiTiktok className="h-3.5 w-3.5" />}
+              label="TikTok"
+              value={linkValue(data.tiktok, socialHref(data.tiktok, "https://tiktok.com/@"))}
+            />
+            <DetailCell
+              dense
+              icon={<SiYoutube className="h-3.5 w-3.5" />}
+              label="YouTube"
+              value={linkValue(data.youtube, socialHref(data.youtube, "https://youtube.com/"))}
+            />
+          </SectionCard>
+
+          <SectionCard icon={<Users className="h-3.5 w-3.5" />} title="Capacity">
+            <DetailCell
+              dense
+              icon={<Users className="h-3.5 w-3.5" />}
+              label="Max capacity"
+              value={data.max_capacity ? `${data.max_capacity} people` : "-"}
+            />
+            <DetailCell
+              dense
+              icon={<Users className="h-3.5 w-3.5" />}
+              label="Private hire min"
+              value={
+                data.private_hire_min_capacity
+                  ? `${data.private_hire_min_capacity} people`
+                  : "-"
+              }
+            />
+          </SectionCard>
+        </div>
+      </div>
+
+      <RecordSheet
+        open={isEditing}
+        onClose={() => setIsEditing(false)}
+        mode="edit"
+        title="Edit company info"
+        recordId={data.id}
+        formId="company-form"
+        isPending={isPending}
+        saveDisabled={uploadingLogo}
+        onCancel={() => setIsEditing(false)}
+        systemInfo={{
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          updatedBy: employeeName(data.updated_by),
+        }}
+      >
+        <form
+          id="company-form"
+          onSubmit={handleSubmit}
+          className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+        >
+          <SectionCard icon={<ImageIcon className="h-3.5 w-3.5" />} title="Logo">
+            <div className="p-4 sm:p-5">
               {form.logo_url ? (
                 <div className="flex items-center gap-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={form.logo_url} alt="Logo" className="h-16 w-auto rounded-xl border border-[#D8D5C8] object-contain" />
-                  <Button variant="outline" onClick={() => update("logo_url", "")} className="h-9 rounded-xl border-[#D8D5C8] text-[10px] font-bold text-[#5E6654] uppercase">
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove
-                  </Button>
+                  <img
+                    src={form.logo_url}
+                    alt="Logo preview"
+                    className="h-16 w-auto max-w-50 rounded-xl border border-admin-line object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => update("logo_url", "")}
+                    className="inline-flex h-9 items-center rounded-xl border border-admin-line px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface"
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Remove
+                  </button>
                 </div>
               ) : (
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D8D5C8] py-6 transition-colors hover:border-[#34451F] hover:bg-[#F4F1E8]">
-                  {uploadingLogo ? <Loader2 className="mb-1 h-6 w-6 animate-spin text-[#5E6654]" /> : <Upload className="mb-1 h-6 w-6 text-[#5E6654] opacity-40" />}
-                  <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{uploadingLogo ? "Uploading..." : "Upload Logo"}</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-admin-line py-6 transition-colors hover:border-admin-primary hover:bg-admin-surface">
+                  {uploadingLogo ? (
+                    <Loader2 className="mb-1 h-6 w-6 animate-spin text-admin-muted" />
+                  ) : (
+                    <Upload className="mb-1 h-6 w-6 text-admin-muted opacity-40" />
+                  )}
+                  <span className="text-[13px] font-semibold text-admin-muted">
+                    {uploadingLogo ? "Uploading..." : "Upload logo"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    aria-label="Upload company logo"
+                    className="hidden"
+                    onChange={handleLogoUpload}
+                    disabled={uploadingLogo}
+                  />
                 </label>
               )}
             </div>
-          </div>
+          </SectionCard>
 
-          <div>
-            <h3 className={sectionLabel}>Business Details</h3>
-            <div className="space-y-5 rounded-3xl border-2 border-[#D8D5C8] bg-white p-6 shadow-sm">
-              <div className="space-y-2">
-                <Label className={fieldLabel}>Business Name</Label>
-                <Input value={form.name} onChange={(e) => update("name", e.target.value)} className={inputClasses} placeholder="e.g. Don Fenticas" />
-              </div>
-              <div className="space-y-2">
-                <Label className={fieldLabel} htmlFor="company-tagline">Tagline</Label>
-                <Input id="company-tagline" value={form.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputClasses} placeholder="e.g. Live music, indie & rock, DJs and karaoke" />
-                <p className="ml-1 text-[10px] font-bold text-[#5E6654] opacity-60">Shown as the main headline on the public home page.</p>
-              </div>
-              <div className="space-y-2">
-                <Label className={fieldLabel} htmlFor="company-tagline-accent">Tagline Accent Word</Label>
-                <Input id="company-tagline-accent" value={form.tagline_accent} onChange={(e) => update("tagline_accent", e.target.value)} className={inputClasses} placeholder="e.g. karaoke" />
-                {accentMissing ? (
-                  <p className="ml-1 text-[10px] font-bold text-[#34451F]">
-                    &ldquo;{form.tagline_accent}&rdquo; isn&apos;t in the tagline above, so no word will be outlined.
-                  </p>
-                ) : (
-                  <p className="ml-1 text-[10px] font-bold text-[#5E6654] opacity-60">One word from the tagline to draw as outlined text. Leave blank for a plain headline.</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className={fieldLabel}>Description</Label>
-                <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} className="min-h-20 resize-none rounded-2xl border-2 border-[#D8D5C8] bg-white p-4 text-sm font-bold focus:border-[#34451F] focus:ring-2 focus:ring-[#34451F]/10" placeholder="A short description of your venue" />
-              </div>
-              <div className="space-y-2">
-                <Label className={fieldLabel}>Address</Label>
-                <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} className="min-h-20 resize-none rounded-2xl border-2 border-[#D8D5C8] bg-white p-4 text-sm font-bold focus:border-[#34451F] focus:ring-2 focus:ring-[#34451F]/10" placeholder="Full address" />
-              </div>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className={fieldLabel}>Email</Label>
-                  <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} className={inputClasses} placeholder="hello@example.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label className={fieldLabel}>Phone</Label>
-                  <Input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} className={inputClasses} placeholder="+44 ..." />
-                </div>
-              </div>
+          <SectionCard
+            icon={<Building2 className="h-3.5 w-3.5" />}
+            title="Business details"
+            className="divide-y divide-admin-line/50"
+          >
+            <FormRow label="Business name">
+              <input
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                aria-label="Business name"
+                placeholder="e.g. Don Fenticas"
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+
+            <div>
+              <FormRow label="Tagline">
+                <input
+                  value={form.tagline}
+                  onChange={(e) => update("tagline", e.target.value)}
+                  aria-label="Tagline"
+                  placeholder="e.g. Live music, indie & rock, DJs and karaoke"
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+              <p className={cn(HINT, "px-4 pb-3 sm:px-5")}>
+                Shown as the main headline on the public home page.
+              </p>
             </div>
-          </div>
 
-          <div>
-            <h3 className={sectionLabel}>Opening Hours</h3>
-            <div className="space-y-3 rounded-3xl border-2 border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-6">
+            <div>
+              <FormRow label="Accent word">
+                <input
+                  value={form.tagline_accent}
+                  onChange={(e) => update("tagline_accent", e.target.value)}
+                  aria-label="Tagline accent word"
+                  placeholder="e.g. karaoke"
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+              <p
+                className={cn(
+                  "px-4 pb-3 sm:px-5",
+                  accentMissing
+                    ? "text-[11px] font-semibold text-admin-warning"
+                    : HINT,
+                )}
+              >
+                {accentMissing
+                  ? `"${form.tagline_accent}" isn't in the tagline above, so no word will be outlined.`
+                  : "One word from the tagline to draw as outlined text. Leave blank for a plain headline."}
+              </p>
+            </div>
+
+            <div className="space-y-2 px-4 py-3 sm:px-5">
+              <label
+                htmlFor="company-description"
+                className="text-[11px] font-semibold tracking-wide text-admin-muted opacity-70"
+              >
+                Description
+              </label>
+              <textarea
+                id="company-description"
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+                placeholder="A short description of your venue"
+                className={AREA_INPUT}
+              />
+            </div>
+
+            <div className="space-y-2 px-4 py-3 sm:px-5">
+              <label
+                htmlFor="company-address"
+                className="text-[11px] font-semibold tracking-wide text-admin-muted opacity-70"
+              >
+                Address
+              </label>
+              <textarea
+                id="company-address"
+                value={form.address}
+                onChange={(e) => update("address", e.target.value)}
+                placeholder="Full address"
+                className={AREA_INPUT}
+              />
+            </div>
+
+            <FormRow label="Email">
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+                aria-label="Email"
+                placeholder="hello@example.com"
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+
+            <FormRow label="Phone">
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => update("phone", e.target.value)}
+                aria-label="Phone"
+                placeholder="+44 ..."
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+          </SectionCard>
+
+          <SectionCard icon={<Clock className="h-3.5 w-3.5" />} title="Opening hours">
+            <div className="space-y-3 p-4 sm:p-5">
               {DAYS.map((day) => {
                 const hours = form.opening_hours[day] || { open: "", close: "" };
                 return (
                   <div key={day} className="flex items-center gap-3">
-                    <span className="w-10 shrink-0 font-black text-[11px] tracking-wide text-[#5E6654] uppercase">{DAY_LABELS[day]}</span>
-                    <Input
+                    <span className="w-10 shrink-0 text-[11px] font-semibold tracking-wide text-admin-muted">
+                      {DAY_LABELS[day]}
+                    </span>
+                    <input
                       type="time"
                       value={hours.open}
                       onChange={(e) => updateHours(day, "open", e.target.value)}
-                      className="h-10 flex-1 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold"
-                      title={`${DAY_LABELS[day]} opening`}
+                      aria-label={`${DAY_LABELS[day]} opening time`}
+                      className={TIME_INPUT}
                     />
-                    <span className="text-xs font-bold text-[#5E6654]">–</span>
-                    <Input
+                    <span className="text-[13px] font-semibold text-admin-muted">-</span>
+                    <input
                       type="time"
                       value={hours.close}
                       onChange={(e) => updateHours(day, "close", e.target.value)}
-                      className="h-10 flex-1 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold"
-                      title={`${DAY_LABELS[day]} closing`}
+                      aria-label={`${DAY_LABELS[day]} closing time`}
+                      className={TIME_INPUT}
                     />
                   </div>
                 );
               })}
             </div>
-          </div>
+          </SectionCard>
 
-          <div>
-            <h3 className={sectionLabel}>Social Media</h3>
-            <div className="space-y-5 rounded-3xl border-2 border-[#D8D5C8] bg-white p-6 shadow-sm">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-2"><Label className={fieldLabel}>Instagram</Label><Input value={form.instagram} onChange={(e) => update("instagram", e.target.value)} className={inputClasses} placeholder="@donfenticas" /></div>
-                <div className="space-y-2"><Label className={fieldLabel}>Facebook</Label><Input value={form.facebook} onChange={(e) => update("facebook", e.target.value)} className={inputClasses} placeholder="facebook.com/..." /></div>
-                <div className="space-y-2"><Label className={fieldLabel}>Twitter / X</Label><Input value={form.twitter} onChange={(e) => update("twitter", e.target.value)} className={inputClasses} placeholder="@handle" /></div>
-                <div className="space-y-2"><Label className={fieldLabel}>TikTok</Label><Input value={form.tiktok} onChange={(e) => update("tiktok", e.target.value)} className={inputClasses} placeholder="@handle" /></div>
-              </div>
-              <div className="space-y-2"><Label className={fieldLabel}>YouTube</Label><Input value={form.youtube} onChange={(e) => update("youtube", e.target.value)} className={inputClasses} placeholder="youtube.com/..." /></div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className={sectionLabel}>Capacity</h3>
-            <div className="rounded-3xl border-2 border-[#D8D5C8] bg-white p-6 shadow-sm">
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div className="space-y-2"><Label className={fieldLabel}>Venue Max Capacity</Label><Input type="number" min={0} value={form.max_capacity} onChange={(e) => update("max_capacity", e.target.value)} className={inputClasses} placeholder="e.g. 200" /></div>
-                <div className="space-y-2"><Label className={fieldLabel}>Private Hire Min Capacity</Label><Input type="number" min={0} value={form.private_hire_min_capacity} onChange={(e) => update("private_hire_min_capacity", e.target.value)} className={inputClasses} placeholder="e.g. 30" /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="animate-in space-y-8 duration-300 fade-in">
-          {data.logo_url && (
-            <div>
-              <h3 className={sectionLabel}>Logo</h3>
-              <div className="rounded-3xl border-2 border-[#D8D5C8] bg-white p-5 shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={data.logo_url} alt="Logo" className="h-16 w-auto object-contain" />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <h3 className={sectionLabel}>Business Details</h3>
-            <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white shadow-sm">
-              <InfoRow icon={<Building2 className="h-4 w-4" />} label="Name" value={data.name} />
-              <InfoRow icon={<Quote className="h-4 w-4" />} label="Tagline" value={data.tagline} />
-              <InfoRow icon={<Highlighter className="h-4 w-4" />} label="Accent Word" value={data.tagline_accent} />
-              {data.description && <InfoRow icon={<Building2 className="h-4 w-4" />} label="Description" value={data.description} />}
-              <InfoRow icon={<MapPin className="h-4 w-4" />} label="Address" value={data.address} />
-              <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={data.email} href={data.email ? `mailto:${data.email}` : undefined} />
-              <InfoRow icon={<Phone className="h-4 w-4" />} label="Phone" value={data.phone} href={data.phone ? `tel:${data.phone}` : undefined} />
-            </div>
-          </div>
-
-          {Object.keys(openingHours).length > 0 && (
-            <div>
-              <h3 className={sectionLabel}>Opening Hours</h3>
-              <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white shadow-sm">
-                {DAYS.map((day) => {
-                  const hours = openingHours[day];
-                  if (!hours?.open && !hours?.close) return null;
-                  return (
-                    <div key={day} className="flex items-center gap-3 border-b border-[#D8D5C8] px-5 py-3 last:border-0">
-                      <div className="flex shrink-0 items-center gap-2 text-[#5E6654] opacity-60">
-                        <Clock className="h-4 w-4" />
-                        <span className="w-8 text-[10px] font-bold tracking-wide uppercase">{DAY_LABELS[day]}</span>
-                      </div>
-                      <span className="flex-1 text-right font-black text-sm text-[#20231A]">
-                        {hours.open || "-"} – {hours.close || "-"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <h3 className={sectionLabel}>Social Media</h3>
-            <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white shadow-sm">
-              <InfoRow icon={<SiInstagram className="h-4 w-4" />} label="Instagram" value={data.instagram} href={data.instagram ? `https://instagram.com/${data.instagram.replace("@", "")}` : undefined} />
-              <InfoRow icon={<SiFacebook className="h-4 w-4" />} label="Facebook" value={data.facebook} href={data.facebook?.startsWith("http") ? data.facebook : data.facebook ? `https://facebook.com/${data.facebook}` : undefined} />
-              <InfoRow
-                icon={<SiX className="h-4 w-4" />}
-                label="Twitter / X" value={data.twitter} href={data.twitter ? `https://x.com/${data.twitter.replace("@", "")}` : undefined}
+          <SectionCard
+            icon={<Share2 className="h-3.5 w-3.5" />}
+            title="Social media"
+            className="divide-y divide-admin-line/50"
+          >
+            <FormRow label="Instagram">
+              <input
+                value={form.instagram}
+                onChange={(e) => update("instagram", e.target.value)}
+                aria-label="Instagram"
+                placeholder="@donfenticas"
+                className={FIELD_INPUT}
               />
-              <InfoRow
-                icon={<SiTiktok className="h-4 w-4" />}
-                label="TikTok" value={data.tiktok} href={data.tiktok ? `https://tiktok.com/${data.tiktok.replace("@", "")}` : undefined}
+            </FormRow>
+            <FormRow label="Facebook">
+              <input
+                value={form.facebook}
+                onChange={(e) => update("facebook", e.target.value)}
+                aria-label="Facebook"
+                placeholder="facebook.com/..."
+                className={FIELD_INPUT}
               />
-              <InfoRow
-                icon={<SiYoutube className="h-4 w-4" />}
-                label="YouTube" value={data.youtube} href={data.youtube?.startsWith("http") ? data.youtube : data.youtube ? `https://youtube.com/${data.youtube}` : undefined}
+            </FormRow>
+            <FormRow label="Twitter / X">
+              <input
+                value={form.twitter}
+                onChange={(e) => update("twitter", e.target.value)}
+                aria-label="Twitter or X"
+                placeholder="@handle"
+                className={FIELD_INPUT}
               />
-            </div>
-          </div>
+            </FormRow>
+            <FormRow label="TikTok">
+              <input
+                value={form.tiktok}
+                onChange={(e) => update("tiktok", e.target.value)}
+                aria-label="TikTok"
+                placeholder="@handle"
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+            <FormRow label="YouTube">
+              <input
+                value={form.youtube}
+                onChange={(e) => update("youtube", e.target.value)}
+                aria-label="YouTube"
+                placeholder="youtube.com/..."
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+          </SectionCard>
 
-          <div>
-            <h3 className={sectionLabel}>Capacity</h3>
-            <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white shadow-sm">
-              <InfoRow icon={<Users className="h-4 w-4" />} label="Max Capacity" value={data.max_capacity ? `${data.max_capacity} people` : null} />
-              <InfoRow icon={<Users className="h-4 w-4" />} label="Private Hire Min" value={data.private_hire_min_capacity ? `${data.private_hire_min_capacity} people` : null} />
-            </div>
-          </div>
-        </div>
-      )}
+          <SectionCard
+            icon={<Users className="h-3.5 w-3.5" />}
+            title="Capacity"
+            className="divide-y divide-admin-line/50"
+          >
+            <FormRow label="Venue max capacity">
+              <input
+                type="number"
+                min={0}
+                value={form.max_capacity}
+                onChange={(e) => update("max_capacity", e.target.value)}
+                aria-label="Venue max capacity"
+                placeholder="e.g. 200"
+                className={cn(FIELD_INPUT, "tabular-nums")}
+              />
+            </FormRow>
+            <FormRow label="Private hire min capacity">
+              <input
+                type="number"
+                min={0}
+                value={form.private_hire_min_capacity}
+                onChange={(e) => update("private_hire_min_capacity", e.target.value)}
+                aria-label="Private hire minimum capacity"
+                placeholder="e.g. 30"
+                className={cn(FIELD_INPUT, "tabular-nums")}
+              />
+            </FormRow>
+          </SectionCard>
+
+          {formError && <ErrorBox message={formError} />}
+        </form>
+      </RecordSheet>
     </div>
   );
 }

@@ -6,11 +6,10 @@ import type { Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/t
 export default async function CompanyInfoPage() {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("company_information")
-    .select("*")
-    .limit(1)
-    .single();
+  const [{ data, error }, { data: employees }] = await Promise.all([
+    supabase.from("company_information").select("*").limit(1).single(),
+    supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
+  ]);
 
   if (error) {
     console.error("Error fetching company info:", error);
@@ -18,7 +17,7 @@ export default async function CompanyInfoPage() {
 
   return (
     <div className="space-y-4">
-      <CompanyInfoClient initialData={data} />
+      <CompanyInfoClient initialData={data} employees={employees ?? []} />
 
       <div className="mx-2 border-t border-[#D8D5C8] sm:mx-4" />
 
