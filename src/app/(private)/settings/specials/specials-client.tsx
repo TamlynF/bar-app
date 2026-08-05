@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Loader2,
   Plus,
   Trash2,
   Sparkles,
+  SearchX,
+  CalendarDays,
   Image as ImageIcon,
   Upload,
   Check,
@@ -21,12 +23,17 @@ import {
   RecordSheet,
   RecordList,
   ListRow,
+  ListSearchInput,
+  InfoBadge,
   StatusPill,
   EmptyState,
   DetailCard,
   DetailCell,
   FormRow,
   ErrorBox,
+  DateField,
+  formatRecordDate as formatDate,
+  toDateInputValue as toDateInput,
 } from "@/components/admin";
 
 export type SpecialRecord = {
@@ -46,6 +53,8 @@ export type SpecialRecord = {
   updated_by?: number | null;
 };
 
+export type EmployeeOption = { id: number; full_name: string };
+
 const WEEKDAYS: { value: number; label: string }[] = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -56,6 +65,11 @@ const WEEKDAYS: { value: number; label: string }[] = [
   { value: 7, label: "Sun" },
 ];
 
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
+
 function formatDays(days: number[] | null | undefined): string {
   if (!days || days.length === 0) return "Every day";
   return WEEKDAYS.filter((d) => days.includes(d.value))
@@ -63,27 +77,74 @@ function formatDays(days: number[] | null | undefined): string {
     .join(", ");
 }
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+function dateRangeLabel(special: SpecialRecord): string {
+  const from = special.start_date ? formatDate(special.start_date) : null;
+  const to = special.end_date ? formatDate(special.end_date) : null;
+  if (from && to) return `${from} - ${to}`;
+  if (from) return `From ${from}`;
+  if (to) return `Until ${to}`;
+  return "No dates set";
+}
+
+// The description is rich text, so the list row needs it flattened before it can
+// be truncated to a single line or matched against a search.
+function plainText(html: string | null): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export default function SpecialsClient({
   initialSpecials = [],
+  employees = [],
 }: {
   initialSpecials: SpecialRecord[];
+  employees?: EmployeeOption[];
 }) {
-  const sheet = useRecordSheet<SpecialRecord>();
+  const sheet = useRecordSheet<SpecialRecord>({
+    records: initialSpecials,
+    getId: (record) => record.id,
+  });
   const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
+
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialSpecials;
+    return initialSpecials.filter((special) =>
+      [
+        special.title,
+        plainText(special.description),
+        (special.badges ?? []).join(" "),
+        formatDays(special.days_of_week),
+        dateRangeLabel(special),
+      ].some((field) => field.toLowerCase().includes(needle)),
+    );
+  }, [initialSpecials, query]);
+
+  const loadForm = (record: SpecialRecord | null) => {
+    setImageUrl(record?.image_url ?? "");
+    setStartDate(toDateInput(record?.start_date));
+    setEndDate(toDateInput(record?.end_date));
+  };
 
   const openAdd = () => {
-    setImageUrl("");
+    loadForm(null);
     sheet.openAdd();
   };
 
@@ -93,7 +154,7 @@ export default function SpecialsClient({
   };
 
   const startEdit = () => {
-    setImageUrl(selected?.image_url ?? "");
+    loadForm(selected);
     sheet.startEdit();
   };
 
@@ -150,7 +211,7 @@ export default function SpecialsClient({
         : "View special";
 
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialSpecials.length === 0 ? (
         <EmptyState
           icon={Sparkles}
@@ -171,44 +232,34 @@ export default function SpecialsClient({
         <RecordList
           variant="panel"
           title="Specials"
-          count={initialSpecials.length}
+          count={shown.length}
           onAdd={openAdd}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search specials"
+              placeholder="Search by title, description, badge or day"
+            />
+          }
         >
-          {initialSpecials.map((special) => {
-            const inactive = !special.is_active;
-            const dateRange = [
-              special.start_date ? formatDate(special.start_date) : null,
-              special.end_date ? formatDate(special.end_date) : null,
-            ]
-              .filter(Boolean)
-              .join(" - ");
-            return (
-              <ListRow key={special.id} onClick={() => sheet.openView(special)}>
-                <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
-                  {special.image_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={special.image_url}
-                      alt={special.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Sparkles className="h-4 w-4 text-admin-muted opacity-30" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p
-                      className={cn(
-                        "min-w-0 flex-1 truncate text-sm leading-snug font-semibold",
-                        inactive ? "text-admin-muted" : "text-admin-ink",
-                      )}
-                    >
-                      {special.title}
-                    </p>
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((special) => {
+              const inactive = !special.is_active;
+              const badges = special.badges ?? [];
+              return (
+                <ListRow
+                  key={special.id}
+                  onClick={() => sheet.openView(special)}
+                  status={
                     <StatusPill
                       tone={special.is_active ? "success" : "error"}
                       icon={
@@ -218,17 +269,86 @@ export default function SpecialsClient({
                           <X className="h-3 w-3" />
                         )
                       }
+                      className="sm:w-24 sm:justify-center"
                     >
                       {special.is_active ? "Active" : "Inactive"}
                     </StatusPill>
+                  }
+                >
+                  <span
+                    className="w-6 shrink-0 text-center text-xs font-semibold text-admin-muted tabular-nums opacity-60"
+                    title={`Order ${special.display_order}`}
+                  >
+                    {special.display_order}
+                  </span>
+
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
+                    {special.image_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={special.image_url}
+                        alt={special.title}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-admin-muted opacity-30" />
+                      </div>
+                    )}
                   </div>
-                  <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted tabular-nums">
-                    {dateRange || "No dates set"}
-                  </p>
-                </div>
-              </ListRow>
-            );
-          })}
+
+                  {/* Fixed tracks rather than content-sized ones, so the dates of
+                      every row start in the same place. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem_9rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+                    <p
+                      className={cn(
+                        "min-w-0 truncate text-sm leading-snug font-semibold",
+                        inactive ? "text-admin-muted" : "text-admin-ink",
+                      )}
+                    >
+                      {special.title}
+                    </p>
+
+                    <p
+                      className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]"
+                      title={dateRangeLabel(special)}
+                    >
+                      <CalendarDays
+                        className="h-3.5 w-3.5 shrink-0 opacity-60"
+                        aria-hidden="true"
+                      />
+                      <span className="truncate tabular-nums">
+                        {dateRangeLabel(special)}
+                      </span>
+                    </p>
+
+                    <p className="hidden truncate text-[11px] font-medium text-admin-muted sm:block">
+                      {formatDays(special.days_of_week)}
+                    </p>
+
+                    <div className="hidden items-center gap-1.5 overflow-hidden sm:flex">
+                      {badges.length > 0 ? (
+                        badges.slice(0, 2).map((badge) => (
+                          <InfoBadge key={badge} icon={null}>
+                            {badge}
+                          </InfoBadge>
+                        ))
+                      ) : (
+                        <span className="text-[11px] font-medium text-admin-muted opacity-60">
+                          No badges
+                        </span>
+                      )}
+                      {badges.length > 2 && (
+                        <span className="text-[11px] font-medium text-admin-muted opacity-60 tabular-nums">
+                          +{badges.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </ListRow>
+              );
+            })
+          )}
         </RecordList>
       )}
 
@@ -245,11 +365,38 @@ export default function SpecialsClient({
         onDelete={handleDelete}
         onCancel={cancel}
         confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Inactive"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
       >
         {!showForm && selected && (
           <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
             <DetailCard>
-              <DetailCell label="Title" value={selected.title} />
+              <DetailCell dense label="Title" value={selected.title} />
               {selected.description ? (
                 <div className="border-b border-admin-line px-4 py-3 sm:px-5">
                   <p className="mb-1.5 text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
@@ -258,29 +405,29 @@ export default function SpecialsClient({
                   <RichTextContent html={selected.description} variant="admin" />
                 </div>
               ) : (
-                <DetailCell label="Description" value="-" />
+                <DetailCell dense label="Description" value="-" />
               )}
               <DetailCell
+                dense
                 label="Badges"
                 value={
                   selected.badges.length > 0 ? selected.badges.join(", ") : "-"
                 }
               />
               <DetailCell
+                dense
                 label="Start date"
                 value={formatDate(selected.start_date)}
               />
               <DetailCell
+                dense
                 label="End date"
                 value={formatDate(selected.end_date)}
               />
-              <DetailCell label="Days" value={formatDays(selected.days_of_week)} />
+              <DetailCell dense label="Days" value={formatDays(selected.days_of_week)} />
               <DetailCell
-                label="Status"
-                value={selected.is_active ? "Active" : "Inactive"}
-              />
-              <DetailCell
-                label="Display order"
+                dense
+                label="Order"
                 value={String(selected.display_order)}
               />
             </DetailCard>
@@ -337,7 +484,7 @@ export default function SpecialsClient({
                     type="button"
                     onClick={() => setImageUrl("")}
                     className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-                    title="Remove image"
+                    aria-label="Remove image"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -358,6 +505,7 @@ export default function SpecialsClient({
                   <input
                     type="file"
                     accept="image/*"
+                    aria-label="Upload special image"
                     className="hidden"
                     onChange={handleUpload}
                     disabled={uploadingImage}
@@ -371,9 +519,10 @@ export default function SpecialsClient({
                 <input
                   name="title"
                   required
+                  aria-label="Title"
                   placeholder="e.g. 2-for-1 Cocktails"
                   defaultValue={formDefault?.title ?? ""}
-                  className="flex-1 bg-transparent text-right text-base font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40 sm:text-sm"
+                  className={FIELD_INPUT}
                 />
               </FormRow>
 
@@ -390,37 +539,28 @@ export default function SpecialsClient({
               <FormRow label="Badges">
                 <input
                   name="badges"
+                  aria-label="Badges"
                   placeholder="e.g. NEW, FRIDAY (comma-separated)"
                   defaultValue={formDefault?.badges.join(", ") ?? ""}
-                  className="flex-1 bg-transparent text-right text-base font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40 sm:text-sm"
+                  className={FIELD_INPUT}
                 />
               </FormRow>
 
               <FormRow label="Start date">
-                <input
-                  title="Start date"
+                <DateField
                   name="start_date"
-                  type="date"
-                  defaultValue={
-                    formDefault?.start_date
-                      ? new Date(formDefault.start_date).toISOString().split("T")[0]
-                      : ""
-                  }
-                  className="flex-1 bg-transparent text-right text-base font-semibold text-admin-ink outline-none sm:text-sm"
+                  label="Start date"
+                  value={startDate}
+                  onChange={setStartDate}
                 />
               </FormRow>
 
               <FormRow label="End date">
-                <input
-                  title="End date"
+                <DateField
                   name="end_date"
-                  type="date"
-                  defaultValue={
-                    formDefault?.end_date
-                      ? new Date(formDefault.end_date).toISOString().split("T")[0]
-                      : ""
-                  }
-                  className="flex-1 bg-transparent text-right text-base font-semibold text-admin-ink outline-none sm:text-sm"
+                  label="End date"
+                  value={endDate}
+                  onChange={setEndDate}
                 />
               </FormRow>
 
@@ -459,28 +599,25 @@ export default function SpecialsClient({
 
               <FormRow label="Status">
                 <select
-                  title="Status"
                   name="is_active"
+                  aria-label="Status"
                   defaultValue={formDefault?.is_active === false ? "false" : "true"}
-                  className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent text-base font-semibold text-admin-ink outline-none sm:text-sm"
+                  className={FIELD_SELECT}
                 >
-                  <option value="true" className="dir-ltr">
-                    Active
-                  </option>
-                  <option value="false" className="dir-ltr">
-                    Inactive
-                  </option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
                 </select>
               </FormRow>
 
               <FormRow label="Order">
                 <input
-                  title="Order"
                   name="display_order"
                   type="number"
                   min="0"
+                  inputMode="numeric"
+                  aria-label="Display order"
                   defaultValue={formDefault?.display_order ?? 0}
-                  className="w-16 flex-1 bg-transparent text-right text-base font-semibold text-admin-ink outline-none sm:text-sm"
+                  className={cn(FIELD_INPUT, "tabular-nums")}
                 />
               </FormRow>
             </DetailCard>
