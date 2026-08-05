@@ -901,7 +901,9 @@ export default function BookingList({
 
   return (
     <>
-      <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white max-sm:-mx-3 sm:max-h-[calc(100svh-24rem)] sm:overflow-x-auto sm:overflow-y-auto">
+      {/* How much of the window the chrome above and below the table needs. The
+          section sets it, since only it knows whether the event picker is on. */}
+      <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white max-sm:-mx-3 sm:max-h-[calc(100svh-var(--booking-list-reserve,22rem))] sm:overflow-x-auto sm:overflow-y-auto">
         <table className="w-full border-collapse sm:min-w-175">
           <thead>
             <tr>

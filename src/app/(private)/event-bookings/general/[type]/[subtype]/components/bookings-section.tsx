@@ -86,7 +86,12 @@ export default function BookingsSection({
   ];
 
   return (
-    <div className="space-y-3.5">
+    <div
+      className="space-y-3.5"
+      style={
+        { "--booking-list-reserve": showEventPicker ? "22rem" : "19rem" } as React.CSSProperties
+      }
+    >
       <EventPickerBanner
         events={events}
         selectedEventId={selectedEventId}
