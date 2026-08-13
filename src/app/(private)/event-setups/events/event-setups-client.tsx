@@ -2102,7 +2102,9 @@ export default function EventsClient({
           )}
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-1.5 sm:gap-3">
+            {/* A phone puts the actions on their own line under the close icon -
+                on one line they eat the width the event title needs. */}
+            <div className="flex flex-wrap items-start justify-between gap-1.5 sm:flex-nowrap sm:gap-3">
               <div className="min-w-0">
                 {!showForm && selected ? (
                   <>
@@ -2143,7 +2145,7 @@ export default function EventsClient({
                 )}
               </div>
               {selected && !isAdding && (
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="order-last flex w-full shrink-0 items-center justify-end gap-2 sm:order-0 sm:w-auto sm:justify-start">
                   <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                     <PopoverTrigger asChild>
                       <button
