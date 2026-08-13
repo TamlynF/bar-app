@@ -463,6 +463,39 @@ async function renumberCategoryQuestions(
   }
 }
 
+/* A music round is played oldest-first, so its question numbers follow release
+   year rather than the order the batches happened to be added in. */
+async function renumberSongsChronologically(
+  supabase: SupabaseClient,
+  eventsId: number,
+  categoryConfigId: number
+) {
+  const { data: rows } = await supabase
+    .from('past_quiz_questions')
+    .select('id, question_no, release_year')
+    .eq('events_id', eventsId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('release_year', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
+  if (!rows?.length) return;
+
+  const moving = rows
+    .map((r, i) => ({ id: r.id, questionNo: i + 1, current: r.question_no }))
+    .filter((r) => r.current !== r.questionNo);
+
+  if (!moving.length) return;
+
+  /* (events_id, quiz_category_configs_id, question_no) is unique, so park every
+     mover on null before handing out the final numbers. */
+  await Promise.all(moving.map((r) =>
+    supabase.from('past_quiz_questions').update({ question_no: null }).eq('id', r.id)
+  ));
+  await Promise.all(moving.map((r) =>
+    supabase.from('past_quiz_questions').update({ question_no: r.questionNo }).eq('id', r.id)
+  ));
+}
+
 export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -827,7 +860,8 @@ export async function saveMusicSnippetsAction(
     .maybeSingle()
   const isHigherOrLower = config?.is_higher_lower ?? false
   const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
-  const insertData = songs.map((s, i) => {
+  const orderedSongs = [...songs].sort((a, b) => a.year - b.year)
+  const insertData = orderedSongs.map((s, i) => {
     const songIdentity = `${s.artist} - ${s.title}`
     if (isHigherOrLower && s.hint_year) {
       const dir = s.year > s.hint_year ? 'higher' : 'lower'
@@ -880,6 +914,8 @@ export async function saveMusicSnippetsAction(
     console.error('Database save error:', error)
     throw new Error('Failed to save music snippets.')
   }
+
+  await renumberSongsChronologically(supabase, eventId, categoryConfigId)
 
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')

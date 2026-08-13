@@ -143,6 +143,8 @@ const isSongDraft = (d: DraftItem): d is MusicSnippetCandidate => "artist" in d;
 const isPictureDraft = (d: DraftItem): d is PictureRoundItem => "imageUrl" in d;
 const isQuestionDraft = (d: DraftItem): d is QuizQuestion => "question" in d;
 
+const draftYear = (d: DraftItem): number => (isSongDraft(d) ? d.year : 0);
+
 const draftIdentity = (d: DraftItem): string => {
   if (isSongDraft(d)) return `${d.artist} - ${d.title}`;
   if (isQuestionDraft(d)) return d.question;
@@ -367,7 +369,27 @@ export default function QuizRoundSheet({
           return;
         }
 
-        setDrafts((prev) => prev.map((d, i) => (i === index ? replacement : d)));
+        const replaced = drafts.map((d, i) => (i === index ? replacement : d));
+
+        if (kind === "song") {
+          // A music round plays oldest-first, so the new song takes its place by
+          // release year - which moves the ticks that were already on the list.
+          const order = replaced
+            .map((_, i) => i)
+            .sort((a, b) => draftYear(replaced[a]) - draftYear(replaced[b]));
+          setDrafts(order.map((i) => replaced[i]));
+          setSelected(
+            new Set(
+              order.reduce<number[]>((acc, oldIndex, newIndex) => {
+                if (selected.has(oldIndex)) acc.push(newIndex);
+                return acc;
+              }, [])
+            )
+          );
+        } else {
+          setDrafts(replaced);
+        }
+
         setDraftedAnswers((prev) => [...prev, draftIdentity(replacement)]);
       } catch {
         toast.error(`Could not swap that ${noun}.`);
@@ -375,7 +397,7 @@ export default function QuizRoundSheet({
         setSwappingIndex(null);
       }
     },
-    [swappingIndex, requestDrafts, noun]
+    [swappingIndex, requestDrafts, noun, drafts, selected, kind]
   );
 
   const toggleDraft = useCallback(
