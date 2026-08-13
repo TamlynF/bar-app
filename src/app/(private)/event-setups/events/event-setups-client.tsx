@@ -1209,6 +1209,7 @@ export default function EventsClient({
     { key: "quiz", label: "Needs quiz", test: needsQuiz },
     { key: "needs-winner", label: "Needs winner", test: needsWinner },
     { key: "active", label: "Active only", test: (e) => e.is_active !== false },
+    { key: "inactive", label: "Inactive only", test: (e) => e.is_active === false },
     { key: "fully-booked", label: "Fully booked", test: (e) => e.is_fully_booked === true },
     { key: "missing-info", label: "Missing info", test: missingInfo },
     { key: "upcoming", label: "Upcoming", test: (e) => e.date >= todayStr },

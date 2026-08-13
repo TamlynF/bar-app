@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
+import { finishedEventOrFilter } from "@/lib/events-finished";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
@@ -175,12 +176,17 @@ export default async function DashboardPage() {
   const analytics = await analyticsPromise;
   const venueSales = await venueSalesPromise;
   
+  const finishedFilter = finishedEventOrFilter(new Date());
+
   const [
     { count: pendingPrivate },
     { count: pendingBands },
     { count: pendingEnquiries },
     { data: unpaidBookingsData },
     { data: upcomingQuizData },
+    { count: finishedInactive },
+    { data: finishedQuizData },
+    { data: winnerRows },
   ] = await Promise.all([
     supabase
       .from("private_hire_requests")
@@ -207,10 +213,32 @@ export default async function DashboardPage() {
       .lte("date", twelveMonthsStr)
       .eq("is_active", true)
       .eq("event_subtypes.behavior", "quiz"),
+    supabase
+      .from("events")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", false)
+      .or(finishedFilter),
+    supabase
+      .from("events")
+      .select("id, bookings!bookings_event_id_fkey(id, status), event_subtypes!inner(behavior)")
+      .neq("is_active", false)
+      .eq("event_subtypes.behavior", "quiz")
+      .or(finishedFilter),
+    supabase.from("booking_scores").select("event_id").eq("is_winner", true),
   ]);
 
   const unpaidCount = ((unpaidBookingsData ?? []) as { total_amount: number | null; paid_amount: number | null }[])
     .filter((b) => (b.paid_amount ?? 0) < (b.total_amount ?? 0)).length;
+
+  /* A quiz needs a winner once it has been played to teams. A cancelled quiz was
+     never played, and one nobody booked has nobody to crown. */
+  const eventsWithWinner = new Set((winnerRows ?? []).map((row) => Number(row.event_id)));
+  const quizzesMissingWinner = (
+    (finishedQuizData ?? []) as unknown as { id: number; bookings: { status: string }[] | null }[]
+  ).filter((ev) => {
+    const bookings = Array.isArray(ev.bookings) ? ev.bookings : [];
+    return bookings.some((b) => b.status !== "cancelled") && !eventsWithWinner.has(ev.id);
+  }).length;
 
   const { data: bandPreferredDates } = await supabase
     .from("band_booking_requests")
@@ -303,6 +331,8 @@ export default async function DashboardPage() {
   });
 
   const totalActions =
+    (finishedInactive ?? 0) +
+    quizzesMissingWinner +
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
     (pendingEnquiries ?? 0) +
@@ -465,6 +495,8 @@ export default async function DashboardPage() {
     .filter((b) => !!b.createdAt);
 
   const actionItems: ActionItem[] = [
+    { key: "finished-inactive", label: "Inactive past events", count: finishedInactive ?? 0, href: "/event-setups/events?quick=historic,inactive", color: "bg-slate-600" },
+    { key: "quiz-winner", label: "Missing quiz winner", count: quizzesMissingWinner, href: "/event-setups/quiz-leaderboards", color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=new,reviewing", color: "bg-purple-700" },
     { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
