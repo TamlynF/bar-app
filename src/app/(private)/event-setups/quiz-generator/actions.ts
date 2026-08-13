@@ -311,7 +311,11 @@ export async function updatePastQuestionAction(
   imageData?: { base64: string; mimeType: string; oldImageUrl: string | null } | null,
   newQuestionNo?: number | null,
   eventId?: number | null,
-  spotifyTrackId?: string | null
+  spotifyTrackId?: string | null,
+  /* undefined leaves the year alone; null clears it. On a Higher-or-Lower round
+     the year is what the whole chain is measured against, so changing one here
+     re-chains everything after it. */
+  releaseYear?: number | null
 ): Promise<{ success: true; image_url?: string | null }> {
   const supabase = await createClient()
   let currentEmployeeId: number | null = null;
@@ -371,6 +375,7 @@ export async function updatePastQuestionAction(
   if (newImageUrl !== undefined) updateFields.image_url = newImageUrl
   /* undefined leaves the track alone; null clears it. */
   if (spotifyTrackId !== undefined) updateFields.spotify_track_id = spotifyTrackId
+  if (releaseYear !== undefined) updateFields.release_year = releaseYear
 
   if (newQuestionNo != null) {
     const { data: currentQ } = await supabase
@@ -422,7 +427,7 @@ export async function updatePastQuestionAction(
       .eq('id', swapBack.id);
   }
 
-  if (newQuestionNo != null) {
+  if (newQuestionNo != null || releaseYear !== undefined) {
     const { data: moved } = await supabase
       .from('past_quiz_questions')
       .select('events_id, quiz_category_configs_id')

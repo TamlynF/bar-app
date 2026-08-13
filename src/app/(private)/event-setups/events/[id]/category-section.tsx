@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -273,7 +273,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       setSpotifyAccount(account || null);
     }
   }, [spotifyRefreshKey]);
-  const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1 });
+  const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1, releaseYear: "" });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -289,7 +289,12 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const startEditing = (q: Question) => {
     const idx = questions.findIndex(qq => qq.id === q.id);
     setEditingId(q.id);
-    setEditForm({ question: q.question_text, answer: q.answer_text, questionNo: q.question_no ?? idx + 1 });
+    setEditForm({
+      question: q.question_text,
+      answer: q.answer_text,
+      questionNo: q.question_no ?? idx + 1,
+      releaseYear: q.release_year != null ? String(q.release_year) : "",
+    });
     setNewImageFile(null);
     setNewImagePreview(null);
     setEditTrackId(q.spotify_track_id ?? null);
@@ -298,7 +303,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditForm({ question: "", answer: "", questionNo: 1 });
+    setEditForm({ question: "", answer: "", questionNo: 1, releaseYear: "" });
     if (newImagePreview) URL.revokeObjectURL(newImagePreview);
     setNewImageFile(null);
     setNewImagePreview(null);
@@ -358,6 +363,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       );
       return;
     }
+    if (includeSpotify && editForm.releaseYear.trim()) {
+      const year = parseInt(editForm.releaseYear, 10);
+      if (!Number.isFinite(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+        toast.error(`Release year must be between 1900 and ${new Date().getFullYear() + 1}.`);
+        return;
+      }
+    }
     const currentQ = questions.find((q) => q.id === id);
     const currentNo = currentQ?.question_no ?? 0;
     const numberChanged = editForm.questionNo !== currentNo;
@@ -390,6 +402,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
       }
       const trackChanged = !!includeSpotify && editTrackId !== (currentQ?.spotify_track_id ?? null);
+      const trimmedYear = editForm.releaseYear.trim();
+      const nextYear = trimmedYear === "" ? null : parseInt(trimmedYear, 10);
+      const yearChanged = !!includeSpotify && nextYear !== (currentQ?.release_year ?? null);
       const result = await updatePastQuestionAction(
         id,
         isPicture ? null : editForm.question,
@@ -397,7 +412,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         imageData,
         editForm.questionNo,
         eventId,
-        trackChanged ? editTrackId : undefined
+        trackChanged ? editTrackId : undefined,
+        yearChanged ? nextYear : undefined
       );
       const cacheBust = `?t=${Date.now()}`;
       setQuestions((prev) => {
@@ -407,6 +423,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           answer_text: editForm.answer,
           question_no: editForm.questionNo,
           ...(trackChanged ? { spotify_track_id: editTrackId } : {}),
+          ...(yearChanged ? { release_year: nextYear } : {}),
           ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
         } : q);
         if (!numberChanged) return updated;
@@ -430,6 +447,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       if (trackChanged && configId != null) {
         syncCategoryPlaylistAction(eventId, configId).catch(() => {});
       }
+      /* On a Higher-or-Lower round the year is what every later question is
+         measured against, so the server rebuilds the chain - pull it back. */
+      if (yearChanged && isHigherOrLower) router.refresh();
     } catch {
       toast.error("Update failed");
     } finally {
@@ -1022,6 +1042,36 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         {includeSpotify && (
                           <div className="space-y-1.5">
                             <label
+                              htmlFor={`release-year-${q.id}`}
+                              className="ml-1 text-[13px] font-medium text-admin-muted"
+                            >
+                              Release year
+                            </label>
+                            <input
+                              id={`release-year-${q.id}`}
+                              type="number"
+                              inputMode="numeric"
+                              min={1900}
+                              max={new Date().getFullYear() + 1}
+                              placeholder="e.g. 1982"
+                              value={editForm.releaseYear}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, releaseYear: e.target.value.replace(/\D/g, "") })
+                              }
+                              disabled={isPending}
+                              className="h-11 w-28 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base font-semibold text-admin-ink tabular-nums outline-none placeholder:font-normal placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
+                            />
+                            {isHigherOrLower && (
+                              <p className="text-[13px] text-admin-muted">
+                                This is the answer on a Higher or Lower round - changing it
+                                re-measures every question after this one.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {includeSpotify && (
+                          <div className="space-y-1.5">
+                            <label
                               htmlFor={`spotify-url-${q.id}`}
                               className="ml-1 text-[13px] font-medium text-admin-muted"
                             >
@@ -1201,9 +1251,20 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
-                                <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                <span className="text-center font-bold text-xs tracking-tight">{q.answer_text}</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
+                                  <Target className="h-3 w-3 shrink-0 text-white/50" />
+                                  <span className="text-center font-bold text-xs tracking-tight">{q.answer_text}</span>
+                                </div>
+                                {includeSpotify && q.release_year != null && (
+                                  <span
+                                    title="Release year"
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-admin-line bg-white px-3 py-2 font-bold text-xs text-admin-primary tabular-nums"
+                                  >
+                                    <CalendarDays className="h-3 w-3 shrink-0 text-admin-muted" />
+                                    {q.release_year}
+                                  </span>
+                                )}
                               </div>
                             </>
                           )}
