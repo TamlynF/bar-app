@@ -1153,31 +1153,37 @@ export default function EventsClient({
   const eventIssues = (e: EventRecord): string[] => {
     const sub = subtypeById.get(e.event_subtypes_id);
     const past = !!e.date && e.date < todayStr;
+    const inactive = e.is_active === false;
     const issues: string[] = [];
 
-    if (!e.title?.trim()) issues.push("No title has been set.");
-    if (!e.date) issues.push("No date has been set.");
-    if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
-    if (e.is_bookable && !e.booking_page_url?.trim()) {
-      issues.push(ISSUE_NO_BOOKING_URL);
-    }
-    if (sub?.payment_required && !(e.payment_amount != null && e.payment_amount > 0)) {
-      issues.push(ISSUE_NO_PAYMENT);
-    }
-    if (sub?.host_required && !e.host_employee_id) {
-      issues.push(ISSUE_NO_HOST);
-    }
-    if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) {
-      issues.push(ISSUE_NO_KARAOKE_LINK);
-    }
-    if (!past && needsQuiz(e)) {
-      const { total, target } = quizStatusFor(e.id);
-      issues.push(`${ISSUE_QUIZ_INCOMPLETE} - ${total} of ${target} written.`);
+    /* An event that has been switched off is never going to run, so nothing
+       about getting it ready is worth chasing. What a quiz that did run should
+       have recorded still is. */
+    if (!inactive) {
+      if (!e.title?.trim()) issues.push("No title has been set.");
+      if (!e.date) issues.push("No date has been set.");
+      if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
+      if (e.is_bookable && !e.booking_page_url?.trim()) {
+        issues.push(ISSUE_NO_BOOKING_URL);
+      }
+      if (sub?.payment_required && !(e.payment_amount != null && e.payment_amount > 0)) {
+        issues.push(ISSUE_NO_PAYMENT);
+      }
+      if (sub?.host_required && !e.host_employee_id) {
+        issues.push(ISSUE_NO_HOST);
+      }
+      if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) {
+        issues.push(ISSUE_NO_KARAOKE_LINK);
+      }
+      if (!past && needsQuiz(e)) {
+        const { total, target } = quizStatusFor(e.id);
+        issues.push(`${ISSUE_QUIZ_INCOMPLETE} - ${total} of ${target} written.`);
+      }
     }
     if (needsWinner(e)) {
       issues.push(ISSUE_NO_WINNER);
     }
-    if (past && e.is_active !== false) {
+    if (past && !inactive) {
       issues.push(ISSUE_PAST_BUT_ACTIVE);
     }
 
