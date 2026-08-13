@@ -1499,17 +1499,37 @@ export default function EventsClient({
       </span>
     );
 
+    const issues = eventIssues(event);
+    const issueLabel = `${issues.length} issue${issues.length === 1 ? "" : "s"}`;
+
+    /* The phone row has no menu of its own, so the count rides at the end of
+       the pills as a chip you can tap. It sits above the row-wide overlay
+       button, which is what makes it open the issues rather than the event. */
+    const issuePill = issues.length > 0 && (
+      <button
+        type="button"
+        onClick={() => setIssuesEvent(event)}
+        title={`${issueLabel} on this event`}
+        aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
+        className={cn(
+          PILL,
+          "pointer-events-auto relative z-2 bg-admin-error-bg text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98]"
+        )}
+      >
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+        <span className="tabular-nums">{issues.length}</span>
+      </button>
+    );
+
     const statusFlags = (
       <>
         {rowFlags}
         {activePill}
         {historicPill}
         {fullPill}
+        {issuePill}
       </>
     );
-
-    const issues = eventIssues(event);
-    const issueLabel = `${issues.length} issue${issues.length === 1 ? "" : "s"}`;
 
     const rowMenu = (
       <DropdownMenu>
