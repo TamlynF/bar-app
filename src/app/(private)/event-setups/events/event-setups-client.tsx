@@ -1074,14 +1074,14 @@ export default function EventsClient({
     return new Date(`${e.date}T${end}:00`).getTime() > Date.now();
   };
 
-  /* A quiz that hasn't been played yet opens on a phone with its rounds folded
-     away - the list is long, and the details above it are what you came for.
-     Once the night is over the rounds are the point, so they stay open. */
+  /* A quiz whose night is over opens on a phone with its rounds folded away -
+     there is nothing left to write, and the list is long enough to bury the
+     rest of the sheet. A quiz still to come keeps them open. */
   useEffect(() => {
     if (!selected) return;
     if (subtypeById.get(selected.event_subtypes_id)?.behavior !== "quiz") return;
     const onPhone = window.matchMedia("(max-width: 639px)").matches;
-    setQuizOpen(!(onPhone && endsAfterNow(selected)));
+    setQuizOpen(!(onPhone && !endsAfterNow(selected)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
