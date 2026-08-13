@@ -674,7 +674,7 @@ export default function PrivateLayoutClient({
                         )}
                     >
                         <LogOut className="h-4 w-4 shrink-0" />
-                        {!collapsed && (isPending ? "Signing outâ€¦" : "Sign out")}
+                        {!collapsed && (isPending ? "Signing out…" : "Sign out")}
                     </button>
                     {!collapsed && (
                         <p className="px-4 text-[11px] font-medium text-nav-muted/70">

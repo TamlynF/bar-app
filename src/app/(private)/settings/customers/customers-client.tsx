@@ -405,10 +405,10 @@ function LeafRow({
           {link}
         </div>
         <p className="mt-0.5 truncate text-[11px] text-admin-muted">
-          {[formatDate(date), middle].filter(Boolean).join(" Â· ")}
+          {[formatDate(date), middle].filter(Boolean).join(" · ")}
           {status && (
             <>
-              {" Â· "}
+              {" · "}
               <span className={cn("font-semibold", statusTone(status))}>{toTitleCase(status)}</span>
             </>
           )}
