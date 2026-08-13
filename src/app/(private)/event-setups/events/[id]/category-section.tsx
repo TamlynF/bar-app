@@ -18,6 +18,7 @@ import {
   updatePastQuestionAction,
   deletePastQuestionAction,
   syncCategoryPlaylistAction,
+  lookupSpotifyTrackAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
 import { describeStep, stepDirection, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
@@ -172,6 +173,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [editTrackId, setEditTrackId] = useState<string | null>(null);
+  const [editSpotifyUrl, setEditSpotifyUrl] = useState("");
+  const [isFindingTrack, setIsFindingTrack] = useState(false);
 
   const startEditing = (q: Question) => {
     const idx = questions.findIndex(qq => qq.id === q.id);
@@ -179,6 +183,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     setEditForm({ question: q.question_text, answer: q.answer_text, questionNo: q.question_no ?? idx + 1 });
     setNewImageFile(null);
     setNewImagePreview(null);
+    setEditTrackId(q.spotify_track_id ?? null);
+    setEditSpotifyUrl("");
   };
 
   const cancelEditing = () => {
@@ -187,6 +193,37 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     if (newImagePreview) URL.revokeObjectURL(newImagePreview);
     setNewImageFile(null);
     setNewImagePreview(null);
+    setEditTrackId(null);
+    setEditSpotifyUrl("");
+  };
+
+  /* The player below the field is the check: swap the link, hear what the round
+     will actually play, then save. */
+  const findEditTrack = async (q: Question) => {
+    if (isFindingTrack) return;
+    const fallbackQuery = q.answer_text_ext ?? editForm.answer ?? q.answer_text;
+    if (!editSpotifyUrl.trim() && !fallbackQuery.trim()) {
+      toast.error("Paste a Spotify link first.");
+      return;
+    }
+
+    setIsFindingTrack(true);
+    try {
+      const { track, error } = await lookupSpotifyTrackAction({
+        url: editSpotifyUrl,
+        title: editSpotifyUrl.trim() ? undefined : fallbackQuery,
+      });
+      if (error || !track) {
+        toast.error(error || "No match on Spotify.");
+        return;
+      }
+      setEditTrackId(track.trackId);
+      toast.success(`Found ${track.artist} - ${track.title}. Play it, then save.`);
+    } catch {
+      toast.error("Could not reach Spotify.");
+    } finally {
+      setIsFindingTrack(false);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,7 +280,16 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         const currentQ = questions.find((q) => q.id === id);
         imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
       }
-      const result = await updatePastQuestionAction(id, isPicture ? null : editForm.question, editForm.answer, imageData, editForm.questionNo, eventId);
+      const trackChanged = !!includeSpotify && editTrackId !== (currentQ?.spotify_track_id ?? null);
+      const result = await updatePastQuestionAction(
+        id,
+        isPicture ? null : editForm.question,
+        editForm.answer,
+        imageData,
+        editForm.questionNo,
+        eventId,
+        trackChanged ? editTrackId : undefined
+      );
       const cacheBust = `?t=${Date.now()}`;
       setQuestions((prev) => {
         const updated = prev.map((q) => q.id === id ? {
@@ -251,6 +297,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           ...(!isPicture ? { question_text: editForm.question } : {}),
           answer_text: editForm.answer,
           question_no: editForm.questionNo,
+          ...(trackChanged ? { spotify_track_id: editTrackId } : {}),
           ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
         } : q);
         if (!numberChanged) return updated;
@@ -269,6 +316,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       if (newImagePreview) URL.revokeObjectURL(newImagePreview);
       setNewImageFile(null);
       setNewImagePreview(null);
+      setEditTrackId(null);
+      setEditSpotifyUrl("");
+      if (trackChanged && configId != null) {
+        syncCategoryPlaylistAction(eventId, configId).catch(() => {});
+      }
     } catch {
       toast.error("Update failed");
     } finally {
@@ -659,6 +711,52 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             className="h-11 w-full rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 text-base font-semibold text-admin-primary outline-none focus:border-admin-primary sm:text-sm"
                           />
                         </div>
+                        {includeSpotify && (
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`spotify-url-${q.id}`}
+                              className="ml-1 text-[13px] font-medium text-admin-muted"
+                            >
+                              Spotify link
+                            </label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <input
+                                id={`spotify-url-${q.id}`}
+                                value={editSpotifyUrl}
+                                onChange={(e) => setEditSpotifyUrl(e.target.value)}
+                                placeholder="https://open.spotify.com/track/…"
+                                disabled={isPending || isFindingTrack}
+                                className="h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => findEditTrack(q)}
+                                disabled={isPending || isFindingTrack}
+                                className="h-11 shrink-0 rounded-xl border border-admin-primary bg-white px-4 text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
+                              >
+                                {isFindingTrack ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Music className="mr-2 h-4 w-4" />
+                                )}
+                                {isFindingTrack ? "Searching…" : "Find song"}
+                              </Button>
+                            </div>
+                            {editTrackId ? (
+                              <SpotifyPlayer
+                                trackId={editTrackId}
+                                title={editForm.answer || q.answer_text}
+                                compact
+                              />
+                            ) : (
+                              <p className="text-[13px] text-admin-muted">
+                                This question has no song yet - paste a link, or search on the
+                                answer above.
+                              </p>
+                            )}
+                          </div>
+                        )}
                         <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}

@@ -5,6 +5,8 @@ import { ArrowRight, BookOpen, Brain, CheckCircle2, Printer } from "lucide-react
 import CategorySection from "./category-section";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
 
+export const maxDuration = 300;
+
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {

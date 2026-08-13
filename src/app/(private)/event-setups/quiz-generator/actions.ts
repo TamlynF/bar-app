@@ -105,6 +105,14 @@ export type PictureRoundItem = {
   imageUrl: string | null;
 }
 
+/* Without a deadline a stalled Gemini call hangs until the platform kills the
+   whole request, which reaches the sheet as a rejected action rather than a
+   message it can show. */
+const AI_TIMEOUT_MS = 45_000
+
+const isTimeout = (error: unknown) =>
+  error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+
 export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -128,9 +136,8 @@ export async function generateQuizAction(
   eventId: number,
   categoryConfigId: number
 ): Promise<{ questions?: QuizQuestion[], error?: string }> {
-  const supabase = await createClient()
-
   try {
+  const supabase = await createClient()
   const [{ data: approved }, { data: generated }] = await Promise.all([
     supabase
       .from('past_quiz_questions')
@@ -198,7 +205,8 @@ export async function generateQuizAction(
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS)
     });
 
     if (!response.ok) {
@@ -230,7 +238,11 @@ export async function generateQuizAction(
 
   } catch (error: unknown) {
     console.error("AI Generation failed:", error);
-    return { error: "Connection lost or request timed out. Please try again." };
+    return {
+      error: isTimeout(error)
+        ? "The Quiz Master took too long. Try a smaller batch."
+        : "Connection lost or request timed out. Please try again.",
+    };
   }
 }
 
@@ -293,7 +305,8 @@ export async function updatePastQuestionAction(
   answer: string,
   imageData?: { base64: string; mimeType: string; oldImageUrl: string | null } | null,
   newQuestionNo?: number | null,
-  eventId?: number | null
+  eventId?: number | null,
+  spotifyTrackId?: string | null
 ): Promise<{ success: true; image_url?: string | null }> {
   const supabase = await createClient()
   let currentEmployeeId: number | null = null;
@@ -351,6 +364,8 @@ export async function updatePastQuestionAction(
   }
   if (question !== null) updateFields.question_text = question
   if (newImageUrl !== undefined) updateFields.image_url = newImageUrl
+  /* undefined leaves the track alone; null clears it. */
+  if (spotifyTrackId !== undefined) updateFields.spotify_track_id = spotifyTrackId
 
   if (newQuestionNo != null) {
     const { data: currentQ } = await supabase
@@ -742,6 +757,91 @@ async function searchSpotifyTrack(
   }
 }
 
+export type SpotifyTrackLookup = {
+  trackId: string
+  artist: string
+  title: string
+  year: number | null
+}
+
+type SpotifyTrackResponse = {
+  id?: string
+  name?: string
+  artists?: { name: string }[]
+  album?: { release_date?: string }
+}
+
+/* Track links arrive in several shapes - a share link with a tracking query, a
+   localised /intl-xx/ link, the spotify:track: URI, or the bare id. */
+function parseSpotifyTrackId(value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const uri = trimmed.match(/^spotify:track:([A-Za-z0-9]+)$/)
+  if (uri) return uri[1]
+
+  const url = trimmed.match(/open\.spotify\.com\/(?:[a-z-]+\/)?track\/([A-Za-z0-9]+)/)
+  if (url) return url[1]
+
+  if (/^[A-Za-z0-9]{22}$/.test(trimmed)) return trimmed
+  return null
+}
+
+function trackDetailsFrom(data: SpotifyTrackResponse | undefined): SpotifyTrackLookup | null {
+  if (!data?.id) return null
+  const year = parseInt(String(data.album?.release_date ?? '').slice(0, 4), 10)
+  return {
+    trackId: data.id,
+    artist: (data.artists ?? []).map((a) => a.name).join(', '),
+    title: data.name ?? '',
+    year: Number.isFinite(year) ? year : null,
+  }
+}
+
+export async function lookupSpotifyTrackAction(input: {
+  url?: string
+  artist?: string
+  title?: string
+}): Promise<{ track?: SpotifyTrackLookup; error?: string }> {
+  const token = await getSpotifyAccessToken()
+  if (!token) return { error: 'Spotify search is unavailable right now.' }
+
+  const pastedId = input.url?.trim() ? parseSpotifyTrackId(input.url) : null
+  if (input.url?.trim() && !pastedId) {
+    return { error: "That doesn't look like a Spotify track link." }
+  }
+
+  try {
+    if (pastedId) {
+      const res = await fetch(`https://api.spotify.com/v1/tracks/${pastedId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) return { error: 'Spotify has no track behind that link.' }
+      const track = trackDetailsFrom(await res.json())
+      return track ? { track } : { error: 'Spotify has no track behind that link.' }
+    }
+
+    const title = (input.title ?? '').trim()
+    if (!title) return { error: 'Type a title, or paste a Spotify link.' }
+
+    const artist = (input.artist ?? '').trim()
+    const query = artist ? `track:${title} artist:${artist}` : title
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (!res.ok) return { error: 'Spotify search failed. Try again.' }
+
+    const data = await res.json()
+    const track = trackDetailsFrom(data?.tracks?.items?.[0])
+    return track
+      ? { track }
+      : { error: 'No match on Spotify - try the full title, or paste a link.' }
+  } catch {
+    return { error: 'Could not reach Spotify.' }
+  }
+}
+
 function configYearRange(
   config: { min_years?: number | null; max_years?: number | null } | null | undefined
 ): YearRange {
@@ -759,9 +859,8 @@ export async function generateMusicSnippetsAction(
   categoryConfigId: number,
   seedYear?: number
 ): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
-  const supabase = await createClient()
-
   try {
+    const supabase = await createClient()
     const [{ data: approved }, { data: generated }, { data: config }, lastYear] = await Promise.all([
       supabase
         .from('past_quiz_questions')
@@ -881,6 +980,7 @@ ${difficultyLine}
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -941,7 +1041,11 @@ ${difficultyLine}
     return { songs }
   } catch (error: unknown) {
     console.error('Music snippet generation failed:', error)
-    return { error: 'Connection lost or request timed out. Please try again.' }
+    return {
+      error: isTimeout(error)
+        ? 'The Music Expert took too long. Try a smaller batch.'
+        : 'Connection lost or request timed out. Please try again.',
+    }
   }
 }
 
@@ -1147,6 +1251,9 @@ const IMAGE_ATTEMPTS = 2
 const IMAGE_RETRY_MS = 700
 const IMAGE_BATCH_SIZE = 3
 const IMAGE_BATCH_PAUSE_MS = 400
+/* Shorter than the text deadline because a picture round makes this call ten
+   times over, and a miss is retried rather than fatal. */
+const IMAGE_TIMEOUT_MS = 30_000
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -1174,6 +1281,7 @@ async function requestImage(prompt: string, label: string): Promise<string | nul
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
       }),
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
     })
     if (!res.ok) {
       const errBody = await res.text()
@@ -1294,6 +1402,7 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
           responseSchema: { type: 'ARRAY', items: { type: 'STRING' } },
         },
       }),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -1328,7 +1437,11 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
     return { items }
   } catch (err: unknown) {
     console.error('Picture round generation failed:', err)
-    return { error: 'Generation failed. Please try again.' }
+    return {
+      error: isTimeout(err)
+        ? 'The picture round took too long. Try a smaller batch.'
+        : 'Generation failed. Please try again.',
+    }
   }
 }
 

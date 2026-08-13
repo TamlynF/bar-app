@@ -89,6 +89,8 @@ import {
   findDuplicateIndices,
 } from "@/lib/quiz/round-stages";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
+import { roundKind, roundNoun } from "@/lib/quiz/round-kind";
+import ManualEntry from "./manual-entry";
 import {
   buildChain,
   chainHintYears,
@@ -121,7 +123,6 @@ type SavedQuestion = {
   hint_year?: number | null;
 };
 
-type RoundKind = "question" | "picture" | "song";
 type DraftItem = QuizQuestion | PictureRoundItem | MusicSnippetCandidate;
 
 type ApprovedSummary = {
@@ -246,9 +247,9 @@ export default function QuizRoundSheet({
 
   const topicRef = useRef<HTMLInputElement>(null);
 
-  const kind: RoundKind = isPicture ? "picture" : includeSpotify ? "song" : "question";
+  const kind = roundKind({ isPicture, includeSpotify });
   const isHigherOrLower = includeSpotify && isHigherLower;
-  const noun = kind === "picture" ? "picture" : kind === "song" ? "song" : "question";
+  const noun = roundNoun(kind);
 
   const savedCount = savedQuestions.length;
   const needed = questionsNeeded(savedCount, question_count);
@@ -444,7 +445,8 @@ export default function QuizRoundSheet({
           } or swap for a different subject.`
         );
       }
-    } catch {
+    } catch (err) {
+      console.error("Round generation failed:", err);
       toast.error("Could not reach the generator.");
     } finally {
       setIsGenerating(false);
@@ -512,7 +514,8 @@ export default function QuizRoundSheet({
         }
 
         setDraftedAnswers((prev) => [...prev, draftIdentity(replacement)]);
-      } catch {
+      } catch (err) {
+        console.error(`Swapping a ${noun} failed:`, err);
         toast.error(`Could not swap that ${noun}.`);
       } finally {
         setSwappingIndex(null);
@@ -543,7 +546,8 @@ export default function QuizRoundSheet({
         }
 
         setDrafts((prev) => prev.map((d, i) => (i === index ? { ...draft, imageUrl } : d)));
-      } catch {
+      } catch (err) {
+        console.error("Picture retry failed:", err);
         toast.error("Could not create that picture.");
       } finally {
         setRetryingIndex(null);
@@ -706,6 +710,7 @@ export default function QuizRoundSheet({
       onApproved?.();
       router.refresh();
     } catch (err) {
+      console.error(`Saving the ${noun} round failed:`, err);
       toast.error(err instanceof Error ? err.message : `Could not save those ${noun}s.`);
     } finally {
       setIsApproving(false);
@@ -730,6 +735,12 @@ export default function QuizRoundSheet({
     onPlaylistUrl,
     router,
   ]);
+
+  const handleManualSaved = useCallback(() => {
+    setApproved(null);
+    onApproved?.();
+    router.refresh();
+  }, [onApproved, router]);
 
   const closeSheet = useCallback(() => setOpen(false), []);
 
@@ -1286,6 +1297,25 @@ export default function QuizRoundSheet({
                       </button>
                     </div>
                   )}
+                </section>
+
+                {/* Straight to the round - no draft to curate, no pick step */}
+                <section className="mb-6">
+                  <ManualEntry
+                    kind={kind}
+                    isHigherOrLower={isHigherOrLower}
+                    eventId={eventId}
+                    categoryConfigId={categoryConfigId}
+                    categoryName={category_name}
+                    topic={effectiveTopic}
+                    imageNotes={imageNotes}
+                    difficulty={difficulty}
+                    chainStart={chainStart}
+                    gapRange={gapRange}
+                    disabled={isGenerating || isApproving}
+                    onSaved={handleManualSaved}
+                    onPlaylistUrl={onPlaylistUrl}
+                  />
                 </section>
 
                 {/* Step 2 - pick */}
