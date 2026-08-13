@@ -473,6 +473,7 @@ export default function EventsClient({
   const [bookingUrlManual, setBookingUrlManual] = useState(false);
   const [formKaraokeUrl, setFormKaraokeUrl] = useState<string>("");
   const [formSeating, setFormSeating] = useState<boolean>(true);
+  const activeTouchedRef = useRef(false);
   const [formActive, setFormActive] = useState<boolean>(true);
   const [formFullyBooked, setFormFullyBooked] = useState<boolean>(false);
   const [formDetailsOpen, setFormDetailsOpen] = useState(true);
@@ -727,9 +728,11 @@ export default function EventsClient({
     setIsEditing(false);
     setSelected(null);
     setCopySourceId(null);
+    /* Nothing is chosen for you. A type picked by default reads as an answer
+       rather than a question, and the first one in the list is rarely right. */
     const sub = subtypeId ? subtypeById.get(subtypeId) : undefined;
-    const ownerType = sub ? typeById.get(sub.event_types_id) : (eventTypes[0] ? typeById.get(eventTypes[0].id) : undefined);
-    setFormTypeId(sub ? String(sub.event_types_id) : (eventTypes[0]?.id ? String(eventTypes[0].id) : ""));
+    const ownerType = sub ? typeById.get(sub.event_types_id) : undefined;
+    setFormTypeId(sub ? String(sub.event_types_id) : "");
     setFormSubtypeId(sub ? String(sub.id) : "");
     setFormDate(date ?? "");
     setFormStartTime("");
@@ -746,7 +749,8 @@ export default function EventsClient({
     setFormCardBadge("");
     setFormImageUrl("");
     setFormExternalLink("");
-    setFormActive(true);
+    setFormActive(false);
+    activeTouchedRef.current = false;
     setFormFullyBooked(false);
     setFormDetailsOpen(true);
     setFormSettingsOpen(true);
@@ -792,7 +796,8 @@ export default function EventsClient({
     setFormKaraokeUrl("");
     setFormBookingId("");
     setFormGroupName("");
-    setFormActive(true);
+    setFormActive(false);
+    activeTouchedRef.current = false;
     setFormFullyBooked(false);
     setFormDetailsOpen(true);
     setFormSettingsOpen(true);
@@ -842,12 +847,13 @@ export default function EventsClient({
     setIsEditing(true);
   };
 
+  /* Picking a type opens the sub-type list rather than answering it - the first
+     sub-type of a type is no more likely to be the right one than the first
+     type was. */
   const onSelectType = (typeId: string) => {
     setFormTypeId(typeId);
-    const subs = subtypesByType.get(Number(typeId)) ?? [];
-    const first = subs[0];
-    setFormSubtypeId(first ? String(first.id) : "");
-    applySubtypeDefaults(first, typeById.get(Number(typeId)));
+    setFormSubtypeId("");
+    applySubtypeDefaults(undefined, typeById.get(Number(typeId)));
   };
 
   const onSelectSubtype = (subtypeId: string) => {
@@ -1842,6 +1848,27 @@ export default function EventsClient({
     }
   }
   const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+
+  /* An end time at or before the start belongs to the following morning, so the
+     slot has to be measured as an instant rather than as a time of day. */
+  const formSlotEndsInFuture = (() => {
+    if (!formDate || !formEndTime) return false;
+    const start = parseTimeToMinutes(formStartTime);
+    const end = parseTimeToMinutes(formEndTime);
+    if (end == null) return false;
+    const day = new Date(`${formDate}T00:00:00`);
+    if (Number.isNaN(day.getTime())) return false;
+    const minutes = start != null && end <= start ? end + 24 * 60 : end;
+    return day.getTime() + minutes * 60_000 > Date.now();
+  })();
+
+  /* A new event switches itself on as soon as it is complete and still ahead of
+     us - the old default, minus the window where it claimed to be active with
+     half its details missing. Touching the switch hands control back for good. */
+  useEffect(() => {
+    if (!isAdding || activeTouchedRef.current) return;
+    setFormActive(!hasFieldErrors && formSlotEndsInFuture);
+  }, [isAdding, hasFieldErrors, formSlotEndsInFuture]);
 
   const viewSubtype = !showForm && selected ? subtypeById.get(selected.event_subtypes_id) : undefined;
   const viewQuiz = !showForm && selected && viewSubtype?.behavior === "quiz"
@@ -2884,25 +2911,31 @@ export default function EventsClient({
                         onChange={(e) => onSelectType(e.target.value)}
                         className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                       >
+                        <option value="" disabled>Select a type...</option>
                         {eventTypes.map((t) => (
                           <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
                         ))}
                       </select>
                       <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
                       <span className="shrink-0 text-[#5E6654]/50">/</span>
+                      {/* The sub-types on offer belong to the type, so there is
+                          nothing to choose from until one is picked. */}
                       <select
                         title="Sub-Type"
                         name="event_subtypes_id"
                         value={formSubtypeId}
+                        disabled={!formTypeId}
                         onChange={(e) => onSelectSubtype(e.target.value)}
-                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
+                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none disabled:cursor-not-allowed disabled:text-[#5E6654]/50 [text-align-last:right]"
                       >
-                        <option value="" disabled>Select a sub-type...</option>
+                        <option value="" disabled>
+                          {formTypeId ? "Select a sub-type..." : "Choose a type first"}
+                        </option>
                         {formSubtypeOptions.map((s) => (
                           <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
+                      <ChevronDown className={cn("pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]", !formTypeId && "opacity-40")} />
                     </div>
                   </FormRow>
 
@@ -2986,11 +3019,29 @@ export default function EventsClient({
 
                 <div className="space-y-4 sm:space-y-5">
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
+                  {/* Seating comes from the sub-type, and an event with a
+                      missing detail cannot go live, so neither switch is worth
+                      offering until there is something to apply it to. */}
                   <FormRow label="Seating">
-                    <FormToggle label="Seating" on={formSeating} onToggle={() => setFormSeating((o) => !o)} />
+                    <FormToggle
+                      label="Seating"
+                      on={formSeating}
+                      disabled={!formSubtypeId}
+                      title={formSubtypeId ? undefined : "Choose a type and sub-type first"}
+                      onToggle={() => setFormSeating((o) => !o)}
+                    />
                   </FormRow>
                   <FormRow label="Active">
-                    <FormToggle label="Active" on={formActive} onToggle={() => setFormActive((o) => !o)} />
+                    <FormToggle
+                      label="Active"
+                      on={formActive}
+                      disabled={hasFieldErrors && !formActive}
+                      title={hasFieldErrors && !formActive ? "Fill in the required details before making this event active" : undefined}
+                      onToggle={() => {
+                        activeTouchedRef.current = true;
+                        setFormActive((o) => !o);
+                      }}
+                    />
                   </FormRow>
                 </FormSection>
 
@@ -3491,17 +3542,20 @@ function FormSection({ title, open, onToggle, children, className }: { title: st
   );
 }
 
-function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: () => void; danger?: boolean; label: string }) {
+function FormToggle({ on, onToggle, danger, label, disabled, title }: { on: boolean; onToggle: () => void; danger?: boolean; label: string; disabled?: boolean; title?: string }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
       aria-label={label}
+      title={title}
+      disabled={disabled}
       onClick={onToggle}
       className={cn(
         "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
-        on ? (danger ? "border-red-700 bg-red-600" : "border-green-600 bg-green-500") : "border-[#5E6654]/30 bg-[#5E6654]/20"
+        on ? (danger ? "border-red-700 bg-red-600" : "border-green-600 bg-green-500") : "border-[#5E6654]/30 bg-[#5E6654]/20",
+        disabled && "cursor-not-allowed opacity-40"
       )}
     >
       <span className={cn("absolute top-1/2 left-0 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />
