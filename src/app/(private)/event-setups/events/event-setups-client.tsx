@@ -988,6 +988,23 @@ export default function EventsClient({
   const needsWinner = (e: EventRecord) =>
     isPlayedQuiz(e) && !!e.date && e.date < todayStr && !winnerByEvent[e.id];
 
+  const endsAfterNow = (e: EventRecord) => {
+    if (!e.date) return false;
+    const end = (e.end_time ?? "23:59").slice(0, 5);
+    return new Date(`${e.date}T${end}:00`).getTime() > Date.now();
+  };
+
+  /* A quiz that hasn't been played yet opens on a phone with its rounds folded
+     away - the list is long, and the details above it are what you came for.
+     Once the night is over the rounds are the point, so they stay open. */
+  useEffect(() => {
+    if (!selected) return;
+    if (subtypeById.get(selected.event_subtypes_id)?.behavior !== "quiz") return;
+    const onPhone = window.matchMedia("(max-width: 639px)").matches;
+    setQuizOpen(!(onPhone && endsAfterNow(selected)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id]);
+
   const confirmedTeams = (eventId: number) =>
     bookings.filter((b) => b.event_id === eventId && b.status === "confirmed");
 
