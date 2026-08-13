@@ -48,6 +48,10 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+/* A song answer is "artist - title", which runs past the width of a phone. The
+   box grows with the answer rather than hiding the end of it. */
+const answerRows = (answer: string) => Math.min(4, Math.max(1, Math.ceil(answer.length / 30)));
+
 const notOwnerMessage = (owner?: string | null) =>
   `That playlist was made on ${owner ?? "another"}${owner ? "'s" : ""} Spotify account, so only they can change it. You can still open and play it.`;
 
@@ -819,13 +823,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               isHigherLower={isHigherLower}
               minYears={minYears}
               maxYears={maxYears}
-              playlistUrl={playlistUrl}
               spotifyConnected={spotifyConnected}
               spotifyAccount={spotifyAccount}
               spotifyReturnPath={spotifyReturnPath}
               autoOpen={openSheet}
               nextRound={nextRound}
               onApproved={() => setOpen(true)}
+              onSpotifyConnected={() => setSpotifyRefreshKey((k) => k + 1)}
               onPlaylistUrl={setPlaylistUrl}
             />
           )}
@@ -1062,36 +1066,47 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="ml-1 text-[13px] font-medium text-admin-muted">Answer</label>
-                          <input
+                          <label
+                            htmlFor={`answer-${q.id}`}
+                            className="ml-1 text-[13px] font-medium text-admin-muted"
+                          >
+                            Answer
+                          </label>
+                          <textarea
+                            id={`answer-${q.id}`}
                             title="Edit answer"
+                            rows={answerRows(editForm.answer)}
                             value={editForm.answer}
-                            onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="h-11 w-full rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 text-base font-semibold text-admin-primary outline-none focus:border-admin-primary sm:text-sm"
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, answer: e.target.value.replace(/\n/g, " ") })
+                            }
+                            className="min-h-11 w-full resize-none rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 py-2.5 text-sm leading-snug font-semibold text-admin-primary outline-none focus:border-admin-primary"
                           />
                         </div>
                         {includeSpotify && (
                           <div className="space-y-1.5">
-                            <label
-                              htmlFor={`release-year-${q.id}`}
-                              className="ml-1 text-[13px] font-medium text-admin-muted"
-                            >
-                              Release year
-                            </label>
-                            <input
-                              id={`release-year-${q.id}`}
-                              type="number"
-                              inputMode="numeric"
-                              min={1900}
-                              max={new Date().getFullYear() + 1}
-                              placeholder="e.g. 1982"
-                              value={editForm.releaseYear}
-                              onChange={(e) =>
-                                setEditForm({ ...editForm, releaseYear: e.target.value.replace(/\D/g, "") })
-                              }
-                              disabled={isPending}
-                              className="h-11 w-28 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base font-semibold text-admin-ink tabular-nums outline-none placeholder:font-normal placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
-                            />
+                            <div className="flex items-center gap-3">
+                              <label
+                                htmlFor={`release-year-${q.id}`}
+                                className="ml-1 shrink-0 text-[13px] font-medium text-admin-muted"
+                              >
+                                Release year
+                              </label>
+                              <input
+                                id={`release-year-${q.id}`}
+                                type="number"
+                                inputMode="numeric"
+                                min={1900}
+                                max={new Date().getFullYear() + 1}
+                                placeholder="e.g. 1982"
+                                value={editForm.releaseYear}
+                                onChange={(e) =>
+                                  setEditForm({ ...editForm, releaseYear: e.target.value.replace(/\D/g, "") })
+                                }
+                                disabled={isPending}
+                                className="h-11 w-28 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base font-semibold text-admin-ink tabular-nums outline-none placeholder:font-normal placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
+                              />
+                            </div>
                             {isHigherOrLower && (
                               <p className="text-[13px] text-admin-muted">
                                 This is the answer on a Higher or Lower round - changing it

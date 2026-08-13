@@ -30,7 +30,7 @@
 //   song     - generateMusicSnippetsAction / saveMusicSnippetsAction (saving
 //              also syncs the round's Spotify playlist)
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -47,8 +47,9 @@ import {
   ArrowRight,
   ImageIcon,
   Music,
-  ExternalLink,
 } from "lucide-react";
+
+import { SiSpotify } from "react-icons/si";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -147,7 +148,6 @@ interface QuizRoundSheetProps {
   // Defaults for the Higher-or-Lower year gap, set per round on /quiz-categories.
   minYears?: number;
   maxYears?: number;
-  playlistUrl?: string | null;
   spotifyConnected?: boolean;
   // The Spotify display name, so the banner can say which account songs land on.
   spotifyAccount?: string | null;
@@ -158,6 +158,8 @@ interface QuizRoundSheetProps {
   nextRound?: NextRoundSummary | null;
   // Fired after a successful approve, so the parent can refresh its list.
   onApproved?: () => void;
+  // Connecting happens in a popup, so the parent re-reads the Spotify cookies.
+  onSpotifyConnected?: () => void;
   // Saving songs syncs the playlist, so the parent can pick up a fresh URL.
   onPlaylistUrl?: (url: string) => void;
 }
@@ -200,13 +202,13 @@ export default function QuizRoundSheet({
   isHigherLower = false,
   minYears = DEFAULT_YEAR_RANGE.minYears,
   maxYears = DEFAULT_YEAR_RANGE.maxYears,
-  playlistUrl = null,
   spotifyConnected = false,
   spotifyAccount = null,
   spotifyReturnPath,
   autoOpen = false,
   nextRound = null,
   onApproved,
+  onSpotifyConnected,
   onPlaylistUrl,
 }: QuizRoundSheetProps) {
   const router = useRouter();
@@ -219,6 +221,15 @@ export default function QuizRoundSheet({
     setWasAutoOpen(autoOpen);
     if (autoOpen) setOpen(true);
   }
+
+  const [isConnectingSpotify, setIsConnectingSpotify] = useState(false);
+  const connectPollRef = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (connectPollRef.current) window.clearInterval(connectPollRef.current);
+    },
+    []
+  );
 
   const [topic, setTopic] = useState("");
   // Steers the generated picture only - it is never saved as question_text, so it
@@ -853,6 +864,37 @@ export default function QuizRoundSheet({
     spotifyReturnPath ?? `/event-setups/events/${eventId}?category=${encodeURIComponent(category_name)}`
   )}`;
 
+  /* Spotify's sign-in runs in a popup so this sheet - and everything picked in
+     it - survives the round trip. The account cookie appearing is the signal
+     that it worked; a blocked popup falls back to leaving the page. */
+  const connectSpotify = () => {
+    const popup = window.open(spotifyLoginHref, "spotify-connect", "width=520,height=720");
+    if (!popup) {
+      window.location.href = spotifyLoginHref;
+      return;
+    }
+
+    setIsConnectingSpotify(true);
+    const startedAt = Date.now();
+    connectPollRef.current = window.setInterval(() => {
+      const done = document.cookie.includes("spotify_account");
+      const givenUp = popup.closed || Date.now() - startedAt > 3 * 60 * 1000;
+      if (!done && !givenUp) return;
+
+      if (connectPollRef.current) window.clearInterval(connectPollRef.current);
+      connectPollRef.current = null;
+      setIsConnectingSpotify(false);
+      if (!done) return;
+
+      try {
+        popup.close();
+      } catch {
+      }
+      onSpotifyConnected?.();
+      toast.success("Spotify connected");
+    }, 500);
+  };
+
   return (
     <>
       {/* Trigger - fills the round row's fixed action slot */}
@@ -1047,53 +1089,30 @@ export default function QuizRoundSheet({
               <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-5 sm:px-6">
                 {/* Spotify - picking is never blocked on connecting */}
                 {kind === "song" && (
-                  <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-admin-success/25 bg-admin-success-bg px-4 py-3">
-                    <div className="min-w-50 flex-1">
-                      <p className="text-[13px] font-semibold text-admin-success">
-                        {spotifyConnected
-                          ? spotifyAccount
-                            ? `Spotify connected as ${spotifyAccount}`
-                            : "Spotify connected"
-                          : "Connect Spotify to build this round's playlist"}
-                      </p>
-                      <p className="mt-0.5 text-[13px] text-admin-success/80">
-                        {spotifyConnected
-                          ? "Songs you approve are added to this round's playlist automatically."
-                          : "You can still pick songs now - the playlist fills in once connected."}
-                      </p>
-                      {spotifyConnected && (
-                        <a
-                          href={`${spotifyLoginHref}&switch=1`}
-                          className="mt-1 inline-block text-[13px] font-semibold text-admin-success underline underline-offset-2"
-                        >
-                          Connected to the wrong Spotify account?
-                        </a>
-                      )}
-                    </div>
-
-                    {spotifyConnected ? (
-                      playlistUrl && (
-                        <a
-                          href={playlistUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ "--spotify": "#1DB954" } as React.CSSProperties}
-                          className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-(--spotify) bg-white px-4 text-[13px] font-semibold text-(--spotify) transition-colors hover:bg-admin-success-bg"
-                        >
-                          <Music className="h-4 w-4" />
-                          Open playlist
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )
-                    ) : (
-                      <a
-                        href={spotifyLoginHref}
+                  <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-admin-success/25 bg-admin-success-bg px-3 py-2">
+                    <SiSpotify className="h-4 w-4 shrink-0 text-admin-success" />
+                    <p className="min-w-0 flex-1 text-[13px] font-semibold wrap-break-word text-admin-success">
+                      {spotifyConnected
+                        ? spotifyAccount
+                          ? `Spotify connected as ${spotifyAccount}`
+                          : "Spotify connected"
+                        : "Connect Spotify to build this round's playlist"}
+                    </p>
+                    {!spotifyConnected && (
+                      <button
+                        type="button"
+                        onClick={connectSpotify}
+                        disabled={isConnectingSpotify}
                         style={{ "--spotify": "#1DB954" } as React.CSSProperties}
-                        className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-(--spotify) px-4 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+                        className="flex h-9 shrink-0 items-center gap-2 rounded-lg bg-(--spotify) px-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                       >
-                        <Music className="h-4 w-4" />
-                        Connect Spotify
-                      </a>
+                        {isConnectingSpotify ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <SiSpotify className="h-4 w-4" />
+                        )}
+                        {isConnectingSpotify ? "Waiting…" : "Connect Spotify"}
+                      </button>
                     )}
                   </div>
                 )}
