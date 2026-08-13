@@ -42,6 +42,8 @@ export type QuizCategoryConfig = {
   short_name: string;
   is_picture: boolean;
   is_higher_lower: boolean;
+  min_years: number;
+  max_years: number;
   created_at?: string;
   updated_at?: string | null;
   created_by?: number | null;
@@ -56,6 +58,11 @@ export async function saveQuizCategoryAction(formData: FormData) {
   const include_spotify = formData.get("include_spotify") === "on";
   const is_picture = formData.get("is_picture") === "on";
   const is_higher_lower = formData.get("is_higher_lower") === "on";
+  /* Guarded here as well as by a check constraint - a zero gap would leave a
+     question whose release year matches the year it is compared against, and
+     neither answer would be right. */
+  const min_years = Math.max(1, parseInt(formData.get("min_years")?.toString() || "3", 10) || 3);
+  const max_years = Math.max(min_years, parseInt(formData.get("max_years")?.toString() || "10", 10) || min_years);
   const targetRaw = formData.get("order_no")?.toString().trim() ?? "";
   const targetPosition = targetRaw === "" ? null : Number(targetRaw);
   const category_name = formData.get("category_name")?.toString() || "";
@@ -87,6 +94,8 @@ export async function saveQuizCategoryAction(formData: FormData) {
       short_name,
       is_picture,
       is_higher_lower,
+      min_years,
+      max_years,
     };
 
     if (id) {

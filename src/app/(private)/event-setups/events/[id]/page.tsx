@@ -23,6 +23,8 @@ type Category = {
   include_spotify: boolean;
   is_picture: boolean;
   is_higher_lower: boolean;
+  min_years: number;
+  max_years: number;
 };
 
 type Question = {
@@ -83,7 +85,7 @@ export default async function EventQuizQuestionsPage({
     supabase.from("events").select("id, title, date").eq("id", id).single(),
     supabase
       .from("quiz_category_configs")
-      .select("id, category_name, question_count, order_no, include_spotify, is_picture, is_higher_lower")
+      .select("id, category_name, question_count, order_no, include_spotify, is_picture, is_higher_lower, min_years, max_years")
       .eq("is_active", true)
       .order("order_no", { ascending: true }),
     supabase
@@ -243,6 +245,8 @@ export default async function EventQuizQuestionsPage({
             includeSpotify={cat.include_spotify}
             isPicture={cat.is_picture}
             isHigherLower={cat.is_higher_lower}
+            minYears={cat.min_years}
+            maxYears={cat.max_years}
             playlistUrl={playlistByCategory.get(cat.id) ?? null}
             autoOpen={focusCategory === cat.category_name}
             openSheet={openParam === "1" && focusCategory === cat.category_name}

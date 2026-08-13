@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PrintActions from "./print-actions";
+import { stepDirection } from "@/lib/quiz/higher-lower";
 
 type Category = {
   id: number;
@@ -190,8 +191,12 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
                         )}
                       </p>
                       <p className="mt-0.5 pl-5 text-[13px] leading-snug font-bold">
-                        A: {q.answer_text}
-                        {isHigherOrLower && q.release_year ? ` - released ${q.release_year}` : ""}
+                        {/* The host reads the direction, then the year - which is
+                            the year the next question compares against. */}
+                        A:{" "}
+                        {isHigherOrLower && q.hint_year && q.release_year
+                          ? `${stepDirection(q.release_year, q.hint_year)} - ${q.release_year}`
+                          : q.answer_text}
                       </p>
                     </li>
                   );

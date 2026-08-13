@@ -20,6 +20,7 @@ import {
   syncCategoryPlaylistAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
+import { describeStep, stepDirection, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
 
 type Question = {
   id: string;
@@ -53,6 +54,8 @@ type Props = {
   includeSpotify?: boolean;
   isPicture?: boolean;
   isHigherLower?: boolean;
+  minYears?: number;
+  maxYears?: number;
   playlistUrl?: string | null;
   autoOpen?: boolean;
   // Set by "Continue building quiz" - lands on the round with its sheet open.
@@ -87,7 +90,7 @@ const printStyles = `
   @page { size: A4; margin: 0; }
 `;
 
-export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen, openSheet, nextRound }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, autoOpen, openSheet, nextRound }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
 
@@ -103,6 +106,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   const isHigherOrLower = includeSpotify && !!isHigherLower;
   const hideQuestionText = !!includeSpotify && !isHigherLower;
+  const gapRange = {
+    minYears: minYears ?? DEFAULT_YEAR_RANGE.minYears,
+    maxYears: maxYears ?? DEFAULT_YEAR_RANGE.maxYears,
+  };
   const RoundIcon = isPicture ? ImageIcon : includeSpotify ? Music : Brain;
   const count = questions.length;
   const isComplete = count >= question_count;
@@ -436,6 +443,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               includeSpotify={includeSpotify}
               isPicture={isPicture}
               isHigherLower={isHigherLower}
+              minYears={minYears}
+              maxYears={maxYears}
               playlistUrl={playlistUrl}
               spotifyConnected={spotifyConnected}
               autoOpen={openSheet}
@@ -578,6 +587,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
             ) : (
               questions.map((q, idx) => {
                 const isEditing = editingId === q.id;
+                const chainWarning =
+                  isHigherOrLower && q.hint_year
+                    ? describeStep(q.release_year, q.hint_year, gapRange)
+                    : null;
                 return (
                   <div key={q.id} className={cn(
                     "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
@@ -710,10 +723,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm">
                                 <Target className="h-3 w-3 shrink-0 text-white/50" />
                                 <span className="text-center font-bold text-xs tracking-tight">
-                                  {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}
+                                  {stepDirection(q.release_year ?? 0, q.hint_year)}
                                 </span>
                                 <span className="shrink-0 font-bold text-xs text-white/50 tabular-nums">{q.release_year}</span>
                               </div>
+                              {/* Deleting a question re-links the chain but cannot
+                                  find a new song, so a gap can end up outside the
+                                  round's range. Say so rather than bend it. */}
+                              {chainWarning && (
+                                <p className="text-[13px] font-semibold text-admin-warning">
+                                  {chainWarning}
+                                </p>
+                              )}
                             </div>
                           ) : (
                             <>

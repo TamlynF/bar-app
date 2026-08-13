@@ -395,7 +395,6 @@ export default function QuizGeneratorPage() {
             title: s.title,
             year: s.year,
             spotify_track_id: s.spotify_track_id,
-            hint_year: s.hint_year,
           })),
           parseInt(selectedEventId),
           category,
@@ -975,19 +974,16 @@ export default function QuizGeneratorPage() {
                     }}
                   >
                     <div className="min-w-0 flex-1">
-                      {isHigherOrLower && song.hint_year ? (
+                      {isHigherOrLower ? (
                         <div className="space-y-2">
-                          <p className="text-sm leading-snug text-admin-ink">
-                            <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-admin-warning">{song.hint_year}</span>?
+                          <p className="truncate text-sm leading-tight font-bold tracking-tight text-admin-ink">
+                            {song.artist} - {song.title}
                           </p>
-                          <div className="rounded-md bg-admin-bg px-2.5 py-1.5 text-center">
-                            <p className="font-bold text-xs leading-tight text-admin-primary">
-                              {song.year > song.hint_year ? 'Higher' : 'Lower'} - <span className={cn(
-                                "font-bold italic",
-                                song.year > song.hint_year ? "text-admin-success" : "text-admin-error"
-                              )}>{song.year}</span>
-                            </p>
-                          </div>
+                          {/* The year each song is compared against comes from the
+                              song before it, so it is only settled on save. */}
+                          <p className="mt-0.5 text-xs leading-tight font-medium text-admin-muted">
+                            Released {song.year} - compared against whichever song comes before it.
+                          </p>
                         </div>
                       ) : (
                         <>

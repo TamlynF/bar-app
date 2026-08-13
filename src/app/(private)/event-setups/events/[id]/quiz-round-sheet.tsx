@@ -88,6 +88,16 @@ import {
   findDuplicateIndices,
 } from "@/lib/quiz/round-stages";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
+import {
+  buildChain,
+  chainHintYears,
+  describeStep,
+  isValidStep,
+  stepDirection,
+  DEFAULT_START_YEAR,
+  DEFAULT_YEAR_RANGE,
+  type YearRange,
+} from "@/lib/quiz/higher-lower";
 
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 type Difficulty = (typeof DIFFICULTIES)[number];
@@ -115,6 +125,9 @@ type DraftItem = QuizQuestion | PictureRoundItem | MusicSnippetCandidate;
 
 type ApprovedSummary = {
   added: DraftItem[];
+  // Parallel to `added` on a Higher-or-Lower round - the drafts are cleared on
+  // approve, so the chain has to travel with the summary.
+  hintYears?: number[];
   savedAfter: number;
   playlistSynced?: boolean;
 };
@@ -129,6 +142,9 @@ interface QuizRoundSheetProps {
   includeSpotify?: boolean;
   isPicture?: boolean;
   isHigherLower?: boolean;
+  // Defaults for the Higher-or-Lower year gap, set per round on /quiz-categories.
+  minYears?: number;
+  maxYears?: number;
   playlistUrl?: string | null;
   spotifyConnected?: boolean;
   autoOpen?: boolean;
@@ -152,13 +168,15 @@ const draftIdentity = (d: DraftItem): string => {
   return d.answer;
 };
 
-const higherOrLowerQuestion = (s: MusicSnippetCandidate) =>
-  `${s.artist} - ${s.title} is higher or lower than ${s.hint_year}?`;
-
-const higherOrLowerAnswer = (s: MusicSnippetCandidate) =>
-  s.year > (s.hint_year ?? 0) ? "Higher" : "Lower";
+const higherOrLowerQuestion = (s: MusicSnippetCandidate, hintYear: number) =>
+  `${s.artist} - ${s.title} is higher or lower than ${hintYear}?`;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const clampYear = (value: string, fallback: number) => {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
 
 export default function QuizRoundSheet({
   eventId,
@@ -170,6 +188,8 @@ export default function QuizRoundSheet({
   includeSpotify = false,
   isPicture = false,
   isHigherLower = false,
+  minYears = DEFAULT_YEAR_RANGE.minYears,
+  maxYears = DEFAULT_YEAR_RANGE.maxYears,
   playlistUrl = null,
   spotifyConnected = false,
   autoOpen = false,
@@ -192,6 +212,13 @@ export default function QuizRoundSheet({
   const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // In a Higher-or-Lower round the ticking order IS the chain, so index order
+  // cannot stand in for it - a song is compared against whichever song was
+  // ticked before it, not whichever sits above it in the list.
+  const [pickOrder, setPickOrder] = useState<number[]>([]);
+
+  const [startYear, setStartYear] = useState(DEFAULT_START_YEAR);
+  const [gapRange, setGapRange] = useState<YearRange>({ minYears, maxYears });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -218,7 +245,9 @@ export default function QuizRoundSheet({
   const needed = questionsNeeded(savedCount, question_count);
   const hasAny = savedCount > 0;
   const isComplete = question_count > 0 && savedCount >= question_count;
-  const batchSize = generationCount(savedCount, question_count);
+  // A Higher-or-Lower round throws away every candidate that cannot follow on
+  // from the song before it, so it needs a deeper pool to pick a chain out of.
+  const batchSize = generationCount(savedCount, question_count) * (isHigherOrLower ? 2 : 1);
 
   // Every row in a picture round shares one question_text, so the first saved
   // picture fixes the topic for the rest of the round.
@@ -227,6 +256,15 @@ export default function QuizRoundSheet({
     : "";
   const topicLocked = isPicture && lockedTopic.length > 0;
   const effectiveTopic = topicLocked ? lockedTopic : topic;
+
+  // Once the round has a question the seed is settled: the next song follows on
+  // from the last one saved, so the host's start year is history.
+  const lastSavedYear = isHigherOrLower
+    ? (savedQuestions[savedQuestions.length - 1]?.release_year ?? null)
+    : null;
+  const startYearLocked = lastSavedYear != null;
+  const chainStart = lastSavedYear ?? startYear;
+  const rangeInvalid = gapRange.minYears < 1 || gapRange.maxYears < gapRange.minYears;
 
   const previousIdentities = useMemo(
     () =>
@@ -250,12 +288,28 @@ export default function QuizRoundSheet({
   const selectionCap = needed > 0 ? needed : question_count;
   const atCap = selected.size >= selectionCap;
 
+  // The comparison year each ticked song would carry, in ticking order, plus
+  // the year the next tick has to follow on from.
+  const chain = useMemo(() => {
+    if (!isHigherOrLower) return { hintByDraft: new Map<number, number>(), nextYear: chainStart };
+
+    const years = pickOrder.map((i) => (isSongDraft(drafts[i]) ? (drafts[i] as MusicSnippetCandidate).year : 0));
+    const hints = chainHintYears(years, chainStart);
+    const hintByDraft = new Map<number, number>(pickOrder.map((draftIndex, i) => [draftIndex, hints[i]]));
+
+    return { hintByDraft, nextYear: years.length ? years[years.length - 1] : chainStart };
+  }, [isHigherOrLower, pickOrder, drafts, chainStart]);
+
   const savedListId = `round-saved-${categoryConfigId}`;
   const topicId = `round-topic-${categoryConfigId}`;
+  const startYearId = `round-start-year-${categoryConfigId}`;
+  const minYearsId = `round-min-years-${categoryConfigId}`;
+  const maxYearsId = `round-max-years-${categoryConfigId}`;
 
   const resetDrafts = useCallback(() => {
     setDrafts([]);
     setSelected(new Set());
+    setPickOrder([]);
     setAutoPickShown(false);
   }, []);
 
@@ -279,7 +333,8 @@ export default function QuizRoundSheet({
           effectiveTopic,
           difficulty,
           eventId,
-          categoryConfigId
+          categoryConfigId,
+          chainStart
         );
         return { items: result.songs, error: result.error };
       }
@@ -294,7 +349,7 @@ export default function QuizRoundSheet({
       );
       return { items: result.questions, error: result.error };
     },
-    [kind, effectiveTopic, difficulty, eventId, categoryConfigId, category_name, draftedAnswers]
+    [kind, effectiveTopic, difficulty, eventId, categoryConfigId, category_name, draftedAnswers, chainStart]
   );
 
   const handleGenerate = useCallback(async () => {
@@ -304,6 +359,12 @@ export default function QuizRoundSheet({
       setTopicMissing(true);
       setSetupOpen(true);
       topicRef.current?.focus();
+      return;
+    }
+
+    if (isHigherOrLower && rangeInvalid) {
+      setSetupOpen(true);
+      toast.error("Min years must be at least 1, and max years cannot be below it.");
       return;
     }
 
@@ -330,6 +391,30 @@ export default function QuizRoundSheet({
         previousIdentities
       );
       const cap = needed > 0 ? needed : question_count;
+
+      if (isHigherOrLower) {
+        // Each song has to follow on from the one before it, so the pre-tick is
+        // a chain rather than "the first few that aren't duplicates".
+        const pool = items
+          .map((item, index) => ({ item, index }))
+          .filter(({ item, index }) => !dupes.has(index) && isSongDraft(item))
+          .map(({ item, index }) => ({ index, year: (item as MusicSnippetCandidate).year }));
+
+        const { picked } = buildChain(pool, chainStart, gapRange, cap);
+        setSelected(new Set(picked.map((p) => p.index)));
+        setPickOrder(picked.map((p) => p.index));
+        setAutoPickShown(picked.length > 0);
+
+        if (picked.length < cap) {
+          toast.info(
+            picked.length === 0
+              ? `No song here can follow on from ${chainStart}. Try a wider year gap or create more.`
+              : `Only ${plural(picked.length, "song")} could follow on from each other - create more to fill the round.`
+          );
+        }
+        return;
+      }
+
       const preselect = new Set<number>();
       for (let i = 0; i < items.length; i++) {
         if (preselect.size >= cap) break;
@@ -337,6 +422,7 @@ export default function QuizRoundSheet({
         preselect.add(i);
       }
       setSelected(preselect);
+      setPickOrder([...preselect]);
       setAutoPickShown(preselect.size > 0);
     } catch {
       toast.error("Could not reach the generator.");
@@ -346,12 +432,16 @@ export default function QuizRoundSheet({
   }, [
     isGenerating,
     isPicture,
+    isHigherOrLower,
+    rangeInvalid,
     effectiveTopic,
     requestDrafts,
     batchSize,
     previousIdentities,
     needed,
     question_count,
+    chainStart,
+    gapRange,
   ]);
 
   // Replace one draft rather than binning the batch.
@@ -372,7 +462,10 @@ export default function QuizRoundSheet({
 
         const replaced = drafts.map((d, i) => (i === index ? replacement : d));
 
-        if (kind === "song") {
+        // A Higher-or-Lower round is ordered by the ticking, not by the list, so
+        // its pool stays put - re-sorting would shuffle cards mid-pick and
+        // invalidate the order the chain is built from.
+        if (kind === "song" && !isHigherOrLower) {
           // A music round plays oldest-first, so the new song takes its place by
           // release year - which moves the ticks that were already on the list.
           const order = replaced
@@ -389,6 +482,13 @@ export default function QuizRoundSheet({
           );
         } else {
           setDrafts(replaced);
+          // The song that was there is gone, so it cannot stay in the chain.
+          setSelected((prev) => {
+            const next = new Set(prev);
+            next.delete(index);
+            return next;
+          });
+          setPickOrder((prev) => prev.filter((i) => i !== index));
         }
 
         setDraftedAnswers((prev) => [...prev, draftIdentity(replacement)]);
@@ -398,29 +498,78 @@ export default function QuizRoundSheet({
         setSwappingIndex(null);
       }
     },
-    [swappingIndex, requestDrafts, noun, drafts, selected, kind]
+    [swappingIndex, requestDrafts, noun, drafts, selected, kind, isHigherOrLower]
+  );
+
+  // Unticking a song mid-chain can strand the ones after it, so the chain is
+  // walked again and anything that no longer follows on comes off with it.
+  const pruneChain = useCallback(
+    (order: number[]) => {
+      let comparisonYear = chainStart;
+      const kept: number[] = [];
+
+      for (const i of order) {
+        const draft = drafts[i];
+        const year = isSongDraft(draft) ? draft.year : null;
+        if (!isValidStep(year, comparisonYear, gapRange)) continue;
+        kept.push(i);
+        comparisonYear = year as number;
+      }
+
+      return kept;
+    },
+    [drafts, chainStart, gapRange]
   );
 
   const toggleDraft = useCallback(
     (index: number) => {
       setAutoPickShown(false);
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(index)) {
+
+      if (selected.has(index)) {
+        if (isHigherOrLower) {
+          const kept = pruneChain(pickOrder.filter((i) => i !== index));
+          const stranded = pickOrder.length - 1 - kept.length;
+          setPickOrder(kept);
+          setSelected(new Set(kept));
+          if (stranded > 0) {
+            toast.info(
+              `${plural(stranded, "song")} after it no longer followed on, so ${stranded === 1 ? "it came" : "they came"} off too.`
+            );
+          }
+          return;
+        }
+
+        setSelected((prev) => {
+          const next = new Set(prev);
           next.delete(index);
           return next;
+        });
+        setPickOrder((prev) => prev.filter((i) => i !== index));
+        return;
+      }
+
+      // Hard cap. A tick past the round size simply does not take - no error
+      // state, no disabled Add, nothing to go and resolve.
+      if (selected.size >= selectionCap) {
+        toast.info(`That's ${selectionCap} already - untick one first.`);
+        return;
+      }
+
+      // A song only joins the chain if it can follow the one ticked before it.
+      if (isHigherOrLower) {
+        const draft = drafts[index];
+        const year = isSongDraft(draft) ? draft.year : null;
+        const reason = describeStep(year, chain.nextYear, gapRange);
+        if (reason) {
+          toast.info(reason);
+          return;
         }
-        // Hard cap. A tick past the round size simply does not take - no error
-        // state, no disabled Add, nothing to go and resolve.
-        if (next.size >= selectionCap) {
-          toast.info(`That's ${selectionCap} already - untick one first.`);
-          return prev;
-        }
-        next.add(index);
-        return next;
-      });
+      }
+
+      setSelected((prev) => new Set(prev).add(index));
+      setPickOrder((prev) => [...prev, index]);
     },
-    [selectionCap]
+    [selected, selectionCap, isHigherOrLower, drafts, chain.nextYear, gapRange, pickOrder, pruneChain]
   );
 
   const handleApprove = useCallback(async () => {
@@ -428,10 +577,13 @@ export default function QuizRoundSheet({
     setIsApproving(true);
 
     try {
-      const chosen = [...selected]
-        .sort((a, b) => a - b)
-        .map((i) => drafts[i])
-        .filter(Boolean);
+      // The chain is ordered by the ticking; everything else reads down the list.
+      const chosenIndices = isHigherOrLower ? pickOrder : [...selected].sort((a, b) => a - b);
+      const chosen = chosenIndices.map((i) => drafts[i]).filter(Boolean);
+      const chosenHintYears = chainHintYears(
+        chosen.map((d) => (isSongDraft(d) ? d.year : 0)),
+        chainStart
+      );
 
       let playlistSynced: boolean | undefined;
 
@@ -451,16 +603,21 @@ export default function QuizRoundSheet({
             title: s.title,
             year: s.year,
             spotify_track_id: s.spotify_track_id,
-            hint_year: s.hint_year,
           })),
           eventId,
           category_name,
           categoryConfigId,
           effectiveTopic,
-          difficulty
+          difficulty,
+          chainStart
         );
         playlistSynced = !result?.needsConnect && !!result?.ok;
         if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
+        if (result?.skipped) {
+          toast.warning(
+            `${plural(result.skipped, "song")} did not follow on from the one before it and ${result.skipped === 1 ? "was" : "were"} left out.`
+          );
+        }
       } else {
         await saveQuizToDatabase(
           chosen
@@ -474,7 +631,12 @@ export default function QuizRoundSheet({
         );
       }
 
-      setApproved({ added: chosen, savedAfter: savedCount + chosen.length, playlistSynced });
+      setApproved({
+        added: chosen,
+        hintYears: chosenHintYears,
+        savedAfter: savedCount + chosen.length,
+        playlistSynced,
+      });
       resetDrafts();
       setSetupOpen(true);
       onApproved?.();
@@ -487,6 +649,9 @@ export default function QuizRoundSheet({
   }, [
     isApproving,
     selected,
+    pickOrder,
+    isHigherOrLower,
+    chainStart,
     drafts,
     kind,
     eventId,
@@ -681,7 +846,7 @@ export default function QuizRoundSheet({
                           <p className="shrink-0 text-[13px] font-semibold text-admin-primary">
                             {isSongDraft(d)
                               ? isHigherOrLower
-                                ? higherOrLowerAnswer(d)
+                                ? `${d.year} (${stepDirection(d.year, approved.hintYears?.[i] ?? d.year)})`
                                 : d.year
                               : isPictureDraft(d)
                                 ? d.answer
@@ -851,6 +1016,105 @@ export default function QuizRoundSheet({
                           )}
                         </div>
 
+                        {isHigherOrLower && (
+                          <div className="grid gap-4 sm:grid-cols-3">
+                            <div>
+                              <label
+                                htmlFor={startYearId}
+                                className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                              >
+                                Start year
+                              </label>
+                              <input
+                                id={startYearId}
+                                type="number"
+                                min={1900}
+                                max={new Date().getFullYear()}
+                                value={startYearLocked ? (lastSavedYear ?? startYear) : startYear}
+                                onChange={(e) => setStartYear(clampYear(e.target.value, startYear))}
+                                disabled={isGenerating || startYearLocked}
+                                className={cn(
+                                  "h-12 w-full rounded-xl border border-admin-line bg-white px-3.5 text-sm text-admin-ink outline-none focus:border-admin-primary",
+                                  startYearLocked &&
+                                    "disabled:bg-admin-primary-soft disabled:font-semibold disabled:text-admin-primary"
+                                )}
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor={minYearsId}
+                                className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                              >
+                                Min years apart
+                              </label>
+                              <input
+                                id={minYearsId}
+                                type="number"
+                                min={1}
+                                value={gapRange.minYears}
+                                onChange={(e) =>
+                                  setGapRange((prev) => ({
+                                    ...prev,
+                                    minYears: clampYear(e.target.value, prev.minYears),
+                                  }))
+                                }
+                                disabled={isGenerating}
+                                className={cn(
+                                  "h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-admin-ink outline-none focus:border-admin-primary",
+                                  rangeInvalid ? "border-admin-warning" : "border-admin-line"
+                                )}
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor={maxYearsId}
+                                className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                              >
+                                Max years apart
+                              </label>
+                              <input
+                                id={maxYearsId}
+                                type="number"
+                                min={1}
+                                value={gapRange.maxYears}
+                                onChange={(e) =>
+                                  setGapRange((prev) => ({
+                                    ...prev,
+                                    maxYears: clampYear(e.target.value, prev.maxYears),
+                                  }))
+                                }
+                                disabled={isGenerating}
+                                className={cn(
+                                  "h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-admin-ink outline-none focus:border-admin-primary",
+                                  rangeInvalid ? "border-admin-warning" : "border-admin-line"
+                                )}
+                              />
+                            </div>
+
+                            <p className="text-[13px] text-admin-muted sm:col-span-3">
+                              {rangeInvalid ? (
+                                <span className="font-semibold text-admin-warning">
+                                  Min years must be at least 1, and max years cannot be below it.
+                                </span>
+                              ) : startYearLocked ? (
+                                <span className="flex items-start gap-1.5 font-medium">
+                                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                  This round already runs to {lastSavedYear} - the next song is compared
+                                  against that year, then each song against the one before it.
+                                </span>
+                              ) : (
+                                <>
+                                  Question 1 asks whether the song is higher or lower than {startYear}.
+                                  After that each song is compared against the previous answer, always{" "}
+                                  {gapRange.minYears}-{gapRange.maxYears} years away from it.
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        )}
+
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                           <div className="sm:max-w-95 sm:flex-1">
                             <span className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase">
@@ -967,9 +1231,19 @@ export default function QuizRoundSheet({
                           const isSelected = selected.has(i);
                           const isDuplicate = duplicateIndices.has(i);
                           const isSwapping = swappingIndex === i;
-                          const lockedOut = !isSelected && atCap;
                           const song = isSongDraft(d) ? d : null;
                           const picture = isPictureDraft(d) ? d : null;
+
+                          // A ticked song already sits in the chain; an unticked
+                          // one is measured against wherever the chain has got to.
+                          const hintYear = isHigherOrLower
+                            ? (chain.hintByDraft.get(i) ?? chain.nextYear)
+                            : null;
+                          const chainReason =
+                            isHigherOrLower && !isSelected
+                              ? describeStep(song?.year, chain.nextYear, gapRange)
+                              : null;
+                          const lockedOut = !isSelected && (atCap || !!chainReason);
 
                           return (
                             <div
@@ -1044,10 +1318,14 @@ export default function QuizRoundSheet({
                                   </span>
                                   <div className="min-w-0 flex-1">
                                     <p className="text-sm leading-relaxed font-semibold text-admin-ink">
-                                      {isHigherOrLower ? higherOrLowerQuestion(song) : song.title}
+                                      {isHigherOrLower && isSelected
+                                        ? higherOrLowerQuestion(song, hintYear ?? 0)
+                                        : song.title}
                                     </p>
                                     <p className="mt-0.5 text-[13px] text-admin-muted">
-                                      {isHigherOrLower ? song.artist : `${song.artist} · ${song.year}`}
+                                      {isHigherOrLower && isSelected
+                                        ? song.artist
+                                        : `${song.artist} · ${song.year}`}
                                     </p>
                                   </div>
                                 </div>
@@ -1073,21 +1351,27 @@ export default function QuizRoundSheet({
                                 </p>
                               )}
 
+                              {chainReason && (
+                                <p className="mt-1.5 text-[13px] font-semibold text-admin-warning">
+                                  {chainReason}
+                                </p>
+                              )}
+
                               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                 <span className="flex flex-wrap items-center gap-2">
                                   {song ? (
                                     <>
                                       <span className="rounded-lg border border-admin-line bg-white px-3 py-1.5 text-[13px] font-semibold text-admin-muted tabular-nums">
-                                        {isHigherOrLower ? song.hint_year : song.year}
+                                        {isHigherOrLower && isSelected ? hintYear : song.year}
                                       </span>
-                                      {isHigherOrLower && (
+                                      {isHigherOrLower && isSelected && (
                                         <span
                                           className={cn(
                                             "rounded-lg px-3 py-1.5 text-[13px] font-semibold text-admin-primary",
                                             isSelected ? "bg-white" : "bg-admin-primary-soft"
                                           )}
                                         >
-                                          Answer: {higherOrLowerAnswer(song)}
+                                          Answer: {song.year} ({stepDirection(song.year, hintYear ?? 0)})
                                         </span>
                                       )}
                                     </>

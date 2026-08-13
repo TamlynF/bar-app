@@ -12,6 +12,12 @@ import {
   SpotifyScopeError,
   SpotifyNotConnectedError,
 } from '@/lib/spotify'
+import {
+  isValidStep,
+  DEFAULT_START_YEAR,
+  DEFAULT_YEAR_RANGE,
+  type YearRange,
+} from '@/lib/quiz/higher-lower'
 
 export type QuizQuestion = {
   question: string;
@@ -19,13 +25,15 @@ export type QuizQuestion = {
   category: string;
 }
 
+/* A draft carries no comparison year. In a Higher-or-Lower round the year a song
+   is measured against comes from the song picked before it, so it only exists
+   once the round has an order - see @/lib/quiz/higher-lower. */
 export type MusicSnippetCandidate = {
   artist: string
   title: string
   year: number
   intro_description: string
   spotify_track_id: string | null
-  hint_year?: number
 }
 
 export type SavedMusicSnippet = {
@@ -86,6 +94,8 @@ export type QuizCategoryConfig = {
   short_name: string;
   is_picture: boolean;
   is_higher_lower: boolean;
+  min_years: number;
+  max_years: number;
   order_no: number | null;
 }
 
@@ -391,6 +401,15 @@ export async function updatePastQuestionAction(
       .eq('id', swapBack.id);
   }
 
+  if (newQuestionNo != null) {
+    const { data: moved } = await supabase
+      .from('past_quiz_questions')
+      .select('events_id, quiz_category_configs_id')
+      .eq('id', id)
+      .maybeSingle();
+    await rechainHigherLowerQuestions(supabase, moved?.events_id, moved?.quiz_category_configs_id);
+  }
+
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true, image_url: newImageUrl };
 }
@@ -430,6 +449,7 @@ export async function deletePastQuestionAction(id: string) {
   }
 
   await renumberCategoryQuestions(supabase, row?.events_id, row?.quiz_category_configs_id);
+  await rechainHigherLowerQuestions(supabase, row?.events_id, row?.quiz_category_configs_id);
 
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true };
@@ -494,6 +514,74 @@ async function renumberSongsChronologically(
   await Promise.all(moving.map((r) =>
     supabase.from('past_quiz_questions').update({ question_no: r.questionNo }).eq('id', r.id)
   ));
+}
+
+/* The year the next song in a Higher-or-Lower round gets measured against. */
+async function lastChainYear(
+  supabase: SupabaseClient,
+  eventsId: number,
+  categoryConfigId: number
+): Promise<number | null> {
+  const { data } = await supabase
+    .from('past_quiz_questions')
+    .select('release_year')
+    .eq('events_id', eventsId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('question_no', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.release_year ?? null;
+}
+
+/* Deleting or reordering a question mid-round leaves everything after it
+   comparing against a year that is no longer its predecessor. Question 1 keeps
+   its hint year - that is the year the host set - and the rest follow on again.
+
+   This cannot conjure up a replacement song, so a repaired chain may now fall
+   outside the round's min/max range. The event page flags those rather than
+   quietly bending the numbers to fit. */
+async function rechainHigherLowerQuestions(
+  supabase: SupabaseClient,
+  eventsId: number | null | undefined,
+  categoryConfigId: number | null | undefined
+) {
+  if (eventsId == null || categoryConfigId == null) return;
+
+  const { data: config } = await supabase
+    .from('quiz_category_configs')
+    .select('include_spotify, is_higher_lower')
+    .eq('id', categoryConfigId)
+    .maybeSingle();
+
+  if (!config?.include_spotify || !config?.is_higher_lower) return;
+
+  const { data: rows } = await supabase
+    .from('past_quiz_questions')
+    .select('id, question_no, release_year, hint_year, answer_text, answer_text_ext')
+    .eq('events_id', eventsId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('question_no', { ascending: true, nullsFirst: false });
+
+  if (!rows?.length) return;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const hintYear = rows[i - 1].release_year;
+    const answerText = row.release_year == null ? row.answer_text : String(row.release_year);
+
+    if (row.hint_year === hintYear && row.answer_text === answerText) continue;
+
+    const updates: Record<string, unknown> = { hint_year: hintYear, answer_text: answerText };
+    if (row.answer_text_ext) {
+      updates.question_text = `${row.answer_text_ext} is higher or lower than ${hintYear}?`;
+    }
+
+    await supabase
+      .from('past_quiz_questions')
+      .update(updates)
+      .eq('id', row.id);
+  }
 }
 
 export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
@@ -653,17 +741,27 @@ async function searchSpotifyTrack(
   }
 }
 
+function configYearRange(
+  config: { min_years?: number | null; max_years?: number | null } | null | undefined
+): YearRange {
+  return {
+    minYears: config?.min_years ?? DEFAULT_YEAR_RANGE.minYears,
+    maxYears: config?.max_years ?? DEFAULT_YEAR_RANGE.maxYears,
+  }
+}
+
 export async function generateMusicSnippetsAction(
   numberOfSongs: number = 10,
   topic: string = '',
   difficulty: string = 'Medium',
   eventId: number,
-  categoryConfigId: number
+  categoryConfigId: number,
+  seedYear?: number
 ): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
   const supabase = await createClient()
 
   try {
-    const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
+    const [{ data: approved }, { data: generated }, { data: config }, lastYear] = await Promise.all([
       supabase
         .from('past_quiz_questions')
         .select('answer_text, answer_text_ext')
@@ -677,12 +775,17 @@ export async function generateMusicSnippetsAction(
         .eq('quiz_category_configs_id', categoryConfigId),
       supabase
         .from('quiz_category_configs')
-        .select('is_higher_lower')
+        .select('is_higher_lower, min_years, max_years')
         .eq('id', categoryConfigId)
         .maybeSingle(),
+      lastChainYear(supabase, eventId, categoryConfigId),
     ])
 
     const isHigherOrLower = config?.is_higher_lower ?? false
+    const range = configYearRange(config)
+    /* A part-built round continues from the last song's year, whatever the sheet
+       sent - the chain, not the caller, decides where the pool should sit. */
+    const chainYear = lastYear ?? seedYear ?? DEFAULT_START_YEAR
 
     const combinedExclusions = [
       ...(approved?.map((q) => (isHigherOrLower ? q.answer_text_ext : q.answer_text)) ?? []),
@@ -710,19 +813,24 @@ export async function generateMusicSnippetsAction(
         ? '- Song difficulty: Include obscure or lesser-known tracks that only music enthusiasts would recognise.'
         : '- Song difficulty: Mix of well-known hits and some lesser-known tracks.'
 
+    const currentYear = new Date().getFullYear()
+    const windowFrom = Math.max(1960, chainYear - range.maxYears * 3)
+    const windowTo = Math.min(currentYear, chainYear + range.maxYears * 3)
+
     const prompt = isHigherOrLower
       ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
-Generate exactly ${numberOfSongs} songs for an alternating "Higher or Lower" round. Each question states ONE true direction in the form "{artist} - {title} is higher than {hint_year}?" or "{artist} - {title} is lower than {hint_year}?", and the correct answers alternate Higher, Lower, Higher, Lower across the round.
+The round is a chain: the host reads out a year, the teams say whether the next song was released higher or lower than it, and that song's release year becomes the year the following song is measured against. It starts from ${chainYear}.
+Generate ${numberOfSongs} candidate songs to build that chain from.
 
 Requirements:
-- Songs from 1970 to present day.
+- Release years between ${windowFrom} and ${windowTo}, spread evenly both above and below ${chainYear}.
+- Every release year must be different from every other, and none may be ${chainYear}.
+- Consecutive songs get compared to each other, so near-identical years are useless - aim for gaps of ${range.minYears} to ${range.maxYears} years between the years you pick.
 - Well-known, recognizable songs that a British pub audience would know.
-- For each song, provide a hint_year that is within 3 to 5 years of the actual release year. It must NEVER equal the release year.
-- Pick songs that work well as an alternating round (a good mix of decades).
 ${topicLine}
 ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
-- Return a JSON array sorted by year ascending.`
+- Return a JSON array.`
       : `You are a music expert for a pub quiz at "Don Fenticas".
 Generate exactly ${numberOfSongs} songs that are famous for having distinctive instrumental intros where NO singing or vocals appear in at least the first 15 seconds.
 
@@ -743,11 +851,6 @@ ${difficultyLine}
       intro_description: { type: 'STRING' },
     }
     const requiredFields = ['artist', 'title', 'year', 'intro_description']
-
-    if (isHigherOrLower) {
-      schemaProperties.hint_year = { type: 'INTEGER' }
-      requiredFields.push('hint_year')
-    }
 
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
@@ -784,17 +887,12 @@ ${difficultyLine}
       return { error: 'The Music Expert returned an empty response.' }
     }
 
-    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string; hint_year?: number }[]
-    rawSongs.sort((a, b) => a.year - b.year)
+    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string }[]
 
-    if (isHigherOrLower) {
-      rawSongs.forEach((s, i) => {
-        const wantHigher = i % 2 === 0 // even → answer "Higher" (release > hint)
-        const aiGap = s.hint_year != null ? Math.abs(s.year - s.hint_year) : 0
-        const offset = Math.min(Math.max(aiGap || (3 + Math.floor(Math.random() * 3)), 3), 5)
-        s.hint_year = wantHigher ? s.year - offset : s.year + offset
-      })
-    }
+    /* A name-that-tune round plays oldest-first. A Higher-or-Lower round must not
+       be sorted - ascending years would make every answer after the first
+       "Higher", and the chain order is set by the picking anyway. */
+    if (!isHigherOrLower) rawSongs.sort((a, b) => a.year - b.year)
 
     const spotifyToken = await getSpotifyAccessToken()
     const songs: MusicSnippetCandidate[] = await Promise.all(
@@ -803,7 +901,7 @@ ${difficultyLine}
         if (spotifyToken) {
           spotifyId = await searchSpotifyTrack(s.artist, s.title, spotifyToken)
         }
-        return { ...s, spotify_track_id: spotifyId, hint_year: s.hint_year }
+        return { ...s, spotify_track_id: spotifyId }
       })
     )
 
@@ -826,12 +924,13 @@ ${difficultyLine}
 }
 
 export async function saveMusicSnippetsAction(
-  songs: { artist: string; title: string; year: number; spotify_track_id: string | null; hint_year?: number }[],
+  songs: { artist: string; title: string; year: number; spotify_track_id: string | null }[],
   eventId: number,
   categoryName: string,
   categoryConfigId: number,
   topic: string = '',
-  difficulty: string = ''
+  difficulty: string = '',
+  startYear?: number
 ) {
   const supabase = await createClient()
 
@@ -855,74 +954,91 @@ export async function saveMusicSnippetsAction(
   const now = new Date().toISOString()
   const { data: config } = await supabase
     .from('quiz_category_configs')
-    .select('is_higher_lower')
+    .select('is_higher_lower, min_years, max_years')
     .eq('id', categoryConfigId)
     .maybeSingle()
   const isHigherOrLower = config?.is_higher_lower ?? false
+  const range = configYearRange(config)
   const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
-  const orderedSongs = [...songs].sort((a, b) => a.year - b.year)
-  const insertData = orderedSongs.map((s, i) => {
+
+  /* A name-that-tune round plays oldest-first, so it is sorted before insert. A
+     Higher-or-Lower round keeps the order it was picked in, because that order
+     is the chain. */
+  const orderedSongs = isHigherOrLower ? songs : [...songs].sort((a, b) => a.year - b.year)
+
+  let comparisonYear = isHigherOrLower
+    ? (await lastChainYear(supabase, eventId, categoryConfigId)) ?? startYear ?? DEFAULT_START_YEAR
+    : 0
+  let skipped = 0
+
+  const insertData: Record<string, unknown>[] = []
+
+  orderedSongs.forEach((s) => {
     const songIdentity = `${s.artist} - ${s.title}`
-    if (isHigherOrLower && s.hint_year) {
-      const dir = s.year > s.hint_year ? 'higher' : 'lower'
-      return {
-        question_text: `${songIdentity} is higher or lower than ${s.hint_year}?`,
-        answer_text: dir === 'higher' ? 'Higher' : 'Lower',
-        answer_text_ext: songIdentity,
-        category: categoryName,
-        topic: topic.trim() || null,
-        difficulty: difficulty.trim() || null,
-        release_year: s.year,
-        spotify_track_id: s.spotify_track_id,
-        hint_year: s.hint_year,
-        asked_on: askedOn,
-        events_id: eventId,
-        quiz_category_configs_id: categoryConfigId,
-        question_no: baseNo + i + 1,
-        created_by: currentEmployeeId,
-        created_at: now,
-        updated_by: currentEmployeeId,
-        updated_at: now,
-      }
-    }
-    return {
-      question_text: `[${s.year}] Name the artist and song`,
-      answer_text: songIdentity,
-      answer_text_ext: null,
+    const shared = {
       category: categoryName,
       topic: topic.trim() || null,
       difficulty: difficulty.trim() || null,
       release_year: s.year,
       spotify_track_id: s.spotify_track_id,
-      hint_year: s.hint_year || null,
       asked_on: askedOn,
       events_id: eventId,
       quiz_category_configs_id: categoryConfigId,
-      question_no: baseNo + i + 1,
+      question_no: baseNo + insertData.length + 1,
       created_by: currentEmployeeId,
       created_at: now,
       updated_by: currentEmployeeId,
       updated_at: now,
     }
+
+    if (isHigherOrLower) {
+      /* The client keeps the chain valid as songs are ticked; this is the last
+         word on it, so a bad step is dropped rather than written. */
+      if (!isValidStep(s.year, comparisonYear, range)) {
+        skipped++
+        return
+      }
+      insertData.push({
+        ...shared,
+        question_text: `${songIdentity} is higher or lower than ${comparisonYear}?`,
+        answer_text: String(s.year),
+        answer_text_ext: songIdentity,
+        hint_year: comparisonYear,
+      })
+      comparisonYear = s.year
+      return
+    }
+
+    insertData.push({
+      ...shared,
+      question_text: `[${s.year}] Name the artist and song`,
+      answer_text: songIdentity,
+      answer_text_ext: null,
+      hint_year: null,
+    })
   })
 
-  const { error } = await supabase
-    .from('past_quiz_questions')
-    .insert(insertData)
+  if (insertData.length) {
+    const { error } = await supabase
+      .from('past_quiz_questions')
+      .insert(insertData)
 
-  if (error) {
-    console.error('Database save error:', error)
-    throw new Error('Failed to save music snippets.')
+    if (error) {
+      console.error('Database save error:', error)
+      throw new Error('Failed to save music snippets.')
+    }
   }
 
-  await renumberSongsChronologically(supabase, eventId, categoryConfigId)
+  if (!isHigherOrLower) {
+    await renumberSongsChronologically(supabase, eventId, categoryConfigId)
+  }
 
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
   revalidatePath(`/event-setups/events/${eventId}`)
 
   const playlist = await syncCategoryPlaylistAction(eventId, categoryConfigId)
-  return { success: true, ...playlist }
+  return { success: true, skipped, ...playlist }
 }
 
 export type PlaylistSyncResult = {

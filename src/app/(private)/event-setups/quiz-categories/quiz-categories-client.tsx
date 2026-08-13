@@ -64,6 +64,7 @@ export default function QuizCategoriesClient({
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [isHigherLower, setIsHigherLower] = useState(false);
   const [position, setPosition] = useState(1);
 
   const employeeName = (id?: number | null) =>
@@ -103,6 +104,7 @@ export default function QuizCategoriesClient({
 
   const openAdd = () => {
     setIsActive(true);
+    setIsHigherLower(false);
     setPosition(nextPosition(orderRows));
     sheet.openAdd();
   };
@@ -110,6 +112,7 @@ export default function QuizCategoriesClient({
   const startEdit = () => {
     if (!selected) return;
     setIsActive(selected.is_active);
+    setIsHigherLower(selected.is_higher_lower);
     setPosition(selected.order_no || nextPosition(orderRows));
     sheet.startEdit();
   };
@@ -477,10 +480,44 @@ export default function QuizCategoriesClient({
                   name="is_higher_lower"
                   type="checkbox"
                   aria-label="Higher / Lower round"
-                  defaultChecked={formDefault?.is_higher_lower ?? false}
+                  checked={isHigherLower}
+                  onChange={(e) => setIsHigherLower(e.target.checked)}
                   className={CHECKBOX}
                 />
               </FormRow>
+
+              {isHigherLower && (
+                <>
+                  <FormRow label="Min years apart">
+                    <input
+                      name="min_years"
+                      type="number"
+                      min="1"
+                      aria-label="Minimum years between a song and the year it is compared against"
+                      defaultValue={formDefault?.min_years ?? 3}
+                      className={cn(FIELD_INPUT, "tabular-nums")}
+                    />
+                  </FormRow>
+
+                  <FormRow label="Max years apart">
+                    <input
+                      name="max_years"
+                      type="number"
+                      min="1"
+                      aria-label="Maximum years between a song and the year it is compared against"
+                      defaultValue={formDefault?.max_years ?? 10}
+                      className={cn(FIELD_INPUT, "tabular-nums")}
+                    />
+                  </FormRow>
+
+                  <div className="px-4 pt-0 pb-3 sm:px-5">
+                    <p className="text-[11px] font-medium text-admin-muted opacity-70">
+                      Each song is compared against the previous question&apos;s answer, and must sit
+                      this far from it. It can never match that year exactly.
+                    </p>
+                  </div>
+                </>
+              )}
 
               <FormRow label="Picture round">
                 <span className="flex-1" />
