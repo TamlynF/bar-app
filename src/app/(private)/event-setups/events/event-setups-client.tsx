@@ -2217,8 +2217,31 @@ export default function EventsClient({
 
             {selected && !isAdding && (
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {/* A phone gets one pill for the whole state: live or not, and
+                    once it sells tickets, whether there are any left. */}
+                {(() => {
+                  const inactive = selected.is_active === false;
+                  const full = !inactive && !!selected.is_bookable && !!selected.is_fully_booked;
+                  return (
+                    <span className={cn(
+                      SHEET_PILL,
+                      "sm:hidden",
+                      inactive
+                        ? "border-admin-error/30 bg-admin-error-bg text-admin-error"
+                        : full
+                          ? "border-admin-success bg-admin-success text-white"
+                          : "border-admin-success/30 bg-admin-success-bg text-admin-success"
+                    )}>
+                      {inactive
+                        ? <X className="h-3.5 w-3.5 shrink-0" />
+                        : <Check className="h-3.5 w-3.5 shrink-0" />}
+                      {inactive ? "Inactive" : full ? "Full" : selected.is_bookable ? "Open" : "Active"}
+                    </span>
+                  );
+                })()}
                 <span className={cn(
                   SHEET_PILL,
+                  "hidden sm:inline-flex",
                   selected.is_active !== false
                     ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
                     : "border-admin-error/30 bg-admin-error-bg text-admin-error"
@@ -2231,38 +2254,14 @@ export default function EventsClient({
                 {selected.is_bookable && (
                   <span className={cn(
                     SHEET_PILL,
+                    "hidden sm:inline-flex",
                     selected.is_fully_booked
                       ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
                       : "border-admin-line bg-admin-surface text-admin-muted"
                   )}>
                     <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_fully_booked ? "bg-admin-success" : "bg-admin-muted/50")} />
-                    {/* "Not sold out" is the longest label on the row and the
-                        one saying nothing is wrong, so a phone gets the venue's
-                        own shorthand for the same two states. */}
-                    <span className="sm:hidden">{selected.is_fully_booked ? "Full" : "Open"}</span>
-                    <span className="hidden sm:inline">
-                      {selected.is_fully_booked ? "Sold out" : "Not sold out"}
-                    </span>
+                    {selected.is_fully_booked ? "Sold out" : "Not sold out"}
                   </span>
-                )}
-                {!showForm && viewQuiz && viewQuiz.target > 0 && (
-                  <Link
-                    href={quizHrefFor(selected, "sheet")}
-                    title="Go to the quiz questions"
-                    className={cn(
-                      SHEET_PILL,
-                      "pr-1.5 transition-colors active:scale-[0.98] sm:hidden",
-                      viewQuiz.allComplete
-                        ? "border-admin-success/30 bg-admin-success-bg text-admin-success hover:bg-admin-success/15"
-                        : "border-admin-warning/30 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
-                    )}
-                  >
-                    {viewQuiz.allComplete
-                      ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                      : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
-                    <span>Quiz</span>
-                    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                  </Link>
                 )}
                 {/* Rides the status row at every width - a chip like the quiz
                     one, pushed hard right once there is room for it. */}
@@ -2276,14 +2275,15 @@ export default function EventsClient({
                       title={`View ${issues.length} issue${issues.length === 1 ? "" : "s"} on this event`}
                       className={cn(
                         SHEET_PILL,
-                        "border-admin-error/30 bg-admin-error-bg pr-1.5 text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98] sm:ml-auto"
+                        "border-admin-error/30 bg-admin-error-bg text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98] sm:ml-auto sm:pr-1.5"
                       )}
                     >
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      <span>
+                      <span className="tabular-nums sm:hidden">{issues.length}</span>
+                      <span className="hidden sm:inline">
                         {issues.length} {issues.length === 1 ? "Issue" : "Issues"}
                       </span>
-                      <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 opacity-70 sm:block" />
                     </button>
                   );
                 })()}
