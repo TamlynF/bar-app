@@ -18,6 +18,7 @@ import {
   DEFAULT_YEAR_RANGE,
   type YearRange,
 } from '@/lib/quiz/higher-lower'
+import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
 
 export type QuizQuestion = {
   question: string;
@@ -807,6 +808,10 @@ export async function generateMusicSnippetsAction(
       ? `- Focus on this theme/genre: "${topic.trim()}".`
       : '- Provide a balanced variety across genres.'
 
+    const snippetTopicLine = topic.trim()
+      ? `- Every song must fit the topic "${topic.trim()}", and this is binding. Where the topic names a decade, a year or a year range, every release year must fall inside it - a song from outside that period is wrong however iconic its intro is. Return fewer than ${numberOfSongs} songs rather than including one that sits outside the topic.`
+      : '- Songs from 1960 to present day, spread across decades - include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.'
+
     const difficultyLine = difficulty === 'Easy'
       ? '- Song difficulty: All songs should be very well-known hits that almost everyone would recognise.'
       : difficulty === 'Hard'
@@ -841,11 +846,9 @@ The intro rule is absolute and overrides every other requirement below:
 - Begin intro_description with the length of the instrumental intro, e.g. "0:12 - rising organ line before the vocal".
 
 Requirements:
-- Songs from 1960 to present day, sorted chronologically by release year (ascending).
-- Spread across decades - include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.
+${snippetTopicLine}
 - Well-known, recognizable songs that a British pub audience would know.
 - The instrumental intro must be iconic and identifiable - think guitar riffs, piano intros, synth openings, drum patterns.
-${topicLine}
 ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
 - Return a JSON array sorted by year ascending.`
@@ -895,14 +898,27 @@ ${difficultyLine}
 
     const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string }[]
 
+    /* A Higher-or-Lower round needs years either side of the chain, so a period
+       topic is only binding on a name-that-tune round. */
+    const topicWindow = isHigherOrLower ? null : parseTopicYearWindow(topic)
+    const candidates = topicWindow
+      ? rawSongs.filter((s) => withinTopicYears(s.year, topicWindow))
+      : rawSongs
+
+    if (topicWindow && !candidates.length) {
+      return {
+        error: `Every suggestion fell outside ${topicWindow.from}-${topicWindow.to}. Try again, or widen the topic.`,
+      }
+    }
+
     /* A name-that-tune round plays oldest-first. A Higher-or-Lower round must not
        be sorted - ascending years would make every answer after the first
        "Higher", and the chain order is set by the picking anyway. */
-    if (!isHigherOrLower) rawSongs.sort((a, b) => a.year - b.year)
+    if (!isHigherOrLower) candidates.sort((a, b) => a.year - b.year)
 
     const spotifyToken = await getSpotifyAccessToken()
     const songs: MusicSnippetCandidate[] = await Promise.all(
-      rawSongs.map(async (s) => {
+      candidates.map(async (s) => {
         let spotifyId: string | null = null
         if (spotifyToken) {
           spotifyId = await searchSpotifyTrack(s.artist, s.title, spotifyToken)

@@ -118,6 +118,10 @@ async function connectPlayer(): Promise<string | null> {
 }
 
 
+export function stopSpotifyPlayback() {
+  globalPlayer?.pause().catch(() => {})
+}
+
 function playTrack(token: string, deviceId: string, trackId: string) {
   return fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
@@ -188,11 +192,27 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
   const [wasPlaying, setWasPlaying] = useState(isPlaying)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
   const activatedRef = useRef(false)
+  const isPlayingRef = useRef(false)
+  const isLoadingRef = useRef(false)
+  const mountedRef = useRef(true)
 
   if (isPlaying !== wasPlaying) {
     setWasPlaying(isPlaying)
     setProgress(0)
   }
+
+  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
+  useEffect(() => { isLoadingRef.current = isLoading }, [isLoading])
+
+  /* The player outlives this card - closing the sheet or leaving the page must
+     take the music with it, not leave it playing to an empty screen. */
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (isPlayingRef.current || isLoadingRef.current) stopSpotifyPlayback()
+    }
+  }, [])
 
   useEffect(() => {
     if (connected) preloadSdk()
@@ -303,6 +323,8 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
           setError('Play failed')
         }
         setIsLoading(false)
+      } else if (!mountedRef.current) {
+        stopSpotifyPlayback()
       }
     } catch (err) {
       console.error('Playback error:', err)
