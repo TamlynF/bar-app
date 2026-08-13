@@ -136,19 +136,32 @@ async function transferPlayback(token: string, deviceId: string) {
   } catch {}
 }
 
-async function describeForbidden(token: string): Promise<string> {
+function spotifyErrorMessage(body: string): string | null {
+  try {
+    return JSON.parse(body)?.error?.message ?? null
+  } catch {
+    return null
+  }
+}
+
+async function describeForbidden(token: string, body: string): Promise<string> {
+  const message = spotifyErrorMessage(body)
+  if (message && /scope/i.test(message)) return 'Reconnect Spotify - permission missing'
+
   try {
     const res = await fetch('https://api.spotify.com/v1/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (res.ok) {
-      const me = await res.json()
-      if (me?.product !== 'premium') {
-        return `${me?.display_name || me?.id || 'This account'} has no Premium`
-      }
+    if (!res.ok) return `Reconnect Spotify - account check failed (${res.status})`
+    const me = await res.json()
+    if (me?.product !== 'premium') {
+      return `${me?.display_name || me?.id || 'This account'} is ${me?.product || 'not Premium'}`
     }
-  } catch {}
-  return 'Spotify is busy on another device'
+  } catch {
+    return 'Could not reach Spotify'
+  }
+
+  return message ? `Spotify: ${message}` : 'Spotify refused playback'
 }
 
 
@@ -275,7 +288,7 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
       if (!playRes.ok) {
         const errText = await playRes.text()
         console.error('Play failed:', playRes.status, errText)
-        if (playRes.status === 403) setError(await describeForbidden(token))
+        if (playRes.status === 403) setError(await describeForbidden(token, errText))
         else if (playRes.status === 404) {
           setError('Reconnecting...')
           globalDeviceId = null

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   const tokens = await tokenRes.json()
 
-  const response = NextResponse.json({ access_token: tokens.access_token })
+  const response = NextResponse.json({ access_token: tokens.access_token, scope: tokens.scope })
 
   response.cookies.set('spotify_access_token', tokens.access_token, {
     httpOnly: false,
