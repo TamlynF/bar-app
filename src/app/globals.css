@@ -1985,6 +1985,15 @@ body {
     display: none;
   }
 
+  /* Fixed overlay chrome paints onto the printed page - a toast that happens to
+     be on screen lands on top of the first question. */
+  [data-sonner-toaster],
+  [data-nextjs-toast],
+  [data-next-badge-root],
+  vercel-live-feedback {
+    display: none !important;
+  }
+
   [data-admin-shell] {
     display: block;
     height: auto;
@@ -2003,9 +2012,19 @@ body {
     padding: 0;
   }
 
+  /* The inset is repeated on the sheet rather than left to @page alone, because
+     a print dialog set to "Margins: None" overrides @page and would otherwise
+     run the text into the paper edge. */
   [data-print-sheet] {
     max-width: none;
-    padding: 0;
+    padding: 8mm;
     color: #000;
+  }
+
+  /* Tailwind emits only the modern property; the legacy alias keeps the forced
+     break working on engines that still read that one. */
+  [data-round-break] {
+    break-before: page;
+    page-break-before: always;
   }
 }

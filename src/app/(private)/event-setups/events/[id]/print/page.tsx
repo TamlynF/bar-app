@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { cn } from "@/lib/utils";
 import PrintActions from "./print-actions";
 import { stepDirection } from "@/lib/quiz/higher-lower";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
@@ -136,8 +135,10 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
             key={round.id}
             /* Round 1 shares the header's page; the rest each start a new one.
                Keyed off the index because the section is never :first-child -
-               the toolbar and header sit above it. */
-            className={cn("mb-8", index > 0 && "break-before-page")}
+               the toolbar and header sit above it. The break itself is in the
+               print block in globals.css, which sets both spellings. */
+            data-round-break={index > 0 ? "" : undefined}
+            className="mb-8"
           >
             <div className="mb-3 flex items-baseline justify-between gap-4 break-after-avoid border-b border-admin-ink/40 pb-1.5">
               <h2 className="text-base font-bold tracking-tight">
