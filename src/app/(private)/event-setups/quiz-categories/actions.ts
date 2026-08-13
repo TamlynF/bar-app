@@ -42,6 +42,7 @@ export type QuizCategoryConfig = {
   short_name: string;
   is_picture: boolean;
   is_higher_lower: boolean;
+  number_by_release_year: boolean;
   min_years: number;
   max_years: number;
   created_at?: string;
@@ -58,6 +59,10 @@ export async function saveQuizCategoryAction(formData: FormData) {
   const include_spotify = formData.get("include_spotify") === "on";
   const is_picture = formData.get("is_picture") === "on";
   const is_higher_lower = formData.get("is_higher_lower") === "on";
+  /* A Higher-or-Lower round is numbered by the order it was picked in, because
+     that order is the chain, so it never gets the choice. */
+  const number_by_release_year =
+    !is_higher_lower && formData.get("number_by_release_year") !== "added";
   /* Guarded here as well as by a check constraint - a zero gap would leave a
      question whose release year matches the year it is compared against, and
      neither answer would be right. */
@@ -94,6 +99,7 @@ export async function saveQuizCategoryAction(formData: FormData) {
       short_name,
       is_picture,
       is_higher_lower,
+      number_by_release_year,
       min_years,
       max_years,
     };

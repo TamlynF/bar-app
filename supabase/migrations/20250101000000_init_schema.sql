@@ -361,7 +361,8 @@ CREATE TABLE public.quiz_category_configs (
   include_spotify boolean NOT NULL DEFAULT false,
   short_name text NOT NULL DEFAULT ''::text,
   is_picture boolean NOT NULL DEFAULT false,
-  is_higher_lower boolean NOT NULL DEFAULT false
+  is_higher_lower boolean NOT NULL DEFAULT false,
+  number_by_release_year boolean NOT NULL DEFAULT true
 );
 
 CREATE TABLE public.settings (

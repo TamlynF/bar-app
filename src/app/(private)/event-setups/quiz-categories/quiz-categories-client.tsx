@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   Plus,
   Check,
+  ChevronDown,
   X,
   SearchX,
   Music,
@@ -65,6 +66,7 @@ export default function QuizCategoriesClient({
   const [query, setQuery] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isHigherLower, setIsHigherLower] = useState(false);
+  const [includeSpotify, setIncludeSpotify] = useState(false);
   const [position, setPosition] = useState(1);
 
   const employeeName = (id?: number | null) =>
@@ -105,6 +107,7 @@ export default function QuizCategoriesClient({
   const openAdd = () => {
     setIsActive(true);
     setIsHigherLower(false);
+    setIncludeSpotify(false);
     setPosition(nextPosition(orderRows));
     sheet.openAdd();
   };
@@ -113,6 +116,7 @@ export default function QuizCategoriesClient({
     if (!selected) return;
     setIsActive(selected.is_active);
     setIsHigherLower(selected.is_higher_lower);
+    setIncludeSpotify(selected.include_spotify);
     setPosition(selected.order_no || nextPosition(orderRows));
     sheet.startEdit();
   };
@@ -369,6 +373,19 @@ export default function QuizCategoriesClient({
                 label="Higher / Lower"
                 value={selected.is_higher_lower ? "Yes" : "No"}
               />
+              {selected.include_spotify && (
+                <DetailCell
+                  dense
+                  label="Number songs by"
+                  value={
+                    selected.is_higher_lower
+                      ? "Order added (the chain)"
+                      : selected.number_by_release_year
+                        ? "Release year"
+                        : "Order added"
+                  }
+                />
+              )}
               <DetailCell
                 dense
                 label="Picture round"
@@ -468,7 +485,8 @@ export default function QuizCategoriesClient({
                   name="include_spotify"
                   type="checkbox"
                   aria-label="Include Spotify"
-                  defaultChecked={formDefault?.include_spotify ?? false}
+                  checked={includeSpotify}
+                  onChange={(e) => setIncludeSpotify(e.target.checked)}
                   className={CHECKBOX}
                 />
               </FormRow>
@@ -485,6 +503,36 @@ export default function QuizCategoriesClient({
                   className={CHECKBOX}
                 />
               </FormRow>
+
+              {includeSpotify && !isHigherLower && (
+                <>
+                  <FormRow label="Number songs by">
+                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                      <select
+                        id="number_by_release_year"
+                        name="number_by_release_year"
+                        aria-label="How the songs in this round are numbered"
+                        defaultValue={
+                          (formDefault?.number_by_release_year ?? true) ? "year" : "added"
+                        }
+                        className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none [text-align-last:right]"
+                      >
+                        <option value="year">Release year</option>
+                        <option value="added">Order added</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-admin-muted" />
+                    </div>
+                  </FormRow>
+
+                  <div className="px-4 pt-0 pb-3 sm:px-5">
+                    <p className="text-[11px] font-medium text-admin-muted opacity-70">
+                      Release year plays the round oldest-first and renumbers it every time songs
+                      are added. Order added keeps question 1 as the first song you picked, the way
+                      an ordinary round works.
+                    </p>
+                  </div>
+                </>
+              )}
 
               {isHigherLower && (
                 <>

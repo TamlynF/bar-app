@@ -95,6 +95,7 @@ export type QuizCategoryConfig = {
   short_name: string;
   is_picture: boolean;
   is_higher_lower: boolean;
+  number_by_release_year: boolean;
   min_years: number;
   max_years: number;
   order_no: number | null;
@@ -499,8 +500,9 @@ async function renumberCategoryQuestions(
   }
 }
 
-/* A music round is played oldest-first, so its question numbers follow release
-   year rather than the order the batches happened to be added in. */
+/* A music round set to number by release year is played oldest-first, so its
+   question numbers follow that year rather than the order the batches happened
+   to be added in. */
 async function renumberSongsChronologically(
   supabase: SupabaseClient,
   eventsId: number,
@@ -1080,17 +1082,19 @@ export async function saveMusicSnippetsAction(
   const now = new Date().toISOString()
   const { data: config } = await supabase
     .from('quiz_category_configs')
-    .select('is_higher_lower, min_years, max_years')
+    .select('is_higher_lower, min_years, max_years, number_by_release_year')
     .eq('id', categoryConfigId)
     .maybeSingle()
   const isHigherOrLower = config?.is_higher_lower ?? false
   const range = configYearRange(config)
   const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
 
-  /* A name-that-tune round plays oldest-first, so it is sorted before insert. A
-     Higher-or-Lower round keeps the order it was picked in, because that order
-     is the chain. */
-  const orderedSongs = isHigherOrLower ? songs : [...songs].sort((a, b) => a.year - b.year)
+  /* A round set to release year plays oldest-first, so it is sorted before
+     insert and renumbered afterwards. Everything else keeps the order it was
+     picked in - and a Higher-or-Lower round has no say, because that order is
+     the chain. */
+  const byReleaseYear = !isHigherOrLower && (config?.number_by_release_year ?? true)
+  const orderedSongs = byReleaseYear ? [...songs].sort((a, b) => a.year - b.year) : songs
 
   let comparisonYear = isHigherOrLower
     ? (await lastChainYear(supabase, eventId, categoryConfigId)) ?? startYear ?? DEFAULT_START_YEAR
@@ -1155,7 +1159,7 @@ export async function saveMusicSnippetsAction(
     }
   }
 
-  if (!isHigherOrLower) {
+  if (byReleaseYear) {
     await renumberSongsChronologically(supabase, eventId, categoryConfigId)
   }
 
