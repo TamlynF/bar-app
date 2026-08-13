@@ -92,13 +92,31 @@ export async function getCurrentUserId(): Promise<string> {
   return data.id as string;
 }
 
-export async function createPublicPlaylist(userId: string, name: string): Promise<{ id: string; url: string }> {
+/* Following is what files a playlist under Your Library > Playlists. Creating
+   one doesn't reliably do that on its own, so it's followed straight after -
+   and a failure here isn't worth losing a playlist that already exists over. */
+async function followPlaylist(playlistId: string): Promise<void> {
+  try {
+    await spotifyUserFetch(`/playlists/${playlistId}/followers`, {
+      method: "PUT",
+      body: JSON.stringify({ public: true }),
+    });
+  } catch {
+  }
+}
+
+export async function createPublicPlaylist(
+  userId: string,
+  name: string,
+  description?: string
+): Promise<{ id: string; url: string }> {
   const res = await spotifyUserFetch(`/users/${encodeURIComponent(userId)}/playlists`, {
     method: "POST",
-    body: JSON.stringify({ name, public: true }),
+    body: JSON.stringify({ name, public: true, ...(description ? { description } : {}) }),
   });
   if (!res.ok) throw new Error(`Spotify create playlist failed (${res.status})`);
   const data = await res.json();
+  await followPlaylist(data.id);
   return { id: data.id, url: data.external_urls?.spotify ?? `https://open.spotify.com/playlist/${data.id}` };
 }
 

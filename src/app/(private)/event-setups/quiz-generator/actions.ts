@@ -1315,6 +1315,8 @@ async function loadCategoryPlaylists(
   return (data as CategoryPlaylistRow[] | null) ?? []
 }
 
+const QUIZ_PLAYLIST_DESCRIPTION = 'Quiz Nights at Don Fenticas'
+
 function playlistTitle(
   eventDate: string | null | undefined,
   config: { order_no?: number | null; category_name?: string | null }
@@ -1386,7 +1388,11 @@ export async function copyCategoryPlaylistAction(
     if (employeeId == null) return { ok: false, error: 'no_employee_record' }
 
     const userId = await getCurrentUserId()
-    const created = await createPublicPlaylist(userId, playlistTitle(event?.date, config))
+    const created = await createPublicPlaylist(
+      userId,
+      playlistTitle(event?.date, config),
+      QUIZ_PLAYLIST_DESCRIPTION
+    )
     await replacePlaylistTracks(created.id, uris)
 
     await upsertMyPlaylistRow(supabase, eventId, categoryConfigId, employeeId, created)
@@ -1452,7 +1458,11 @@ export async function syncCategoryPlaylistAction(
 
     if (!playlistId) {
       const userId = await getCurrentUserId()
-      const created = await createPublicPlaylist(userId, playlistTitle(event?.date, config))
+      const created = await createPublicPlaylist(
+        userId,
+        playlistTitle(event?.date, config),
+        QUIZ_PLAYLIST_DESCRIPTION
+      )
       playlistId = created.id
       playlistUrl = created.url
       await upsertMyPlaylistRow(supabase, eventId, categoryConfigId, employeeId, created)

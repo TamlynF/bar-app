@@ -178,7 +178,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         setPlaylistUrl(result.playlistUrl);
         setPlaylistOwner(null);
         setIsMyPlaylist(true);
-        toast.success("Copied - this round now syncs to the playlist on your Spotify");
+        toast.success("Copied - the new playlist is in your Spotify library and this round now syncs to it");
       } else if (result.needsConnect) {
         toast.warning("Connect Spotify first, then copy the playlist.");
       } else if (result.error === "no_songs") {
@@ -207,10 +207,15 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       } else if (result.needsConnect) {
         toast.warning("Reconnect Spotify to build the playlist (new permission needed).");
       } else if (result.ok) {
+        const wasCreated = !playlistUrl;
         if (result.playlistUrl) setPlaylistUrl(result.playlistUrl);
         setPlaylistOwner(null);
         setIsMyPlaylist(true);
-        toast.success("Playlist synced");
+        toast.success(
+          wasCreated
+            ? "Playlist created - find it in your Spotify library under Playlists"
+            : "Playlist synced"
+        );
       } else {
         toast.error("Could not sync the playlist");
       }
