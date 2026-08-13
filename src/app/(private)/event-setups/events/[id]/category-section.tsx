@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -825,19 +826,19 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       {open && (
         <>
           {includeSpotify && (
-            <div className="space-y-2 px-5 pt-3">
+            <div className="space-y-2 px-3 pt-3 pb-3 sm:px-5">
               {spotifyConnected ? (
-                <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface px-3 py-2.5">
+                <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface px-2.5 py-2.5 sm:px-3">
                   <div className="flex items-center gap-2">
                     <span
                       style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-(--spotify-bg) text-white"
                     >
-                      <Music className="h-3.5 w-3.5" />
+                      <SiSpotify className="h-4 w-4" />
                     </span>
-                    <p className="min-w-0 flex-1 truncate text-[13px] text-admin-muted">
+                    <p className="min-w-0 flex-1 text-[13px] leading-snug text-admin-muted">
                       Connected as{" "}
-                      <span className="font-semibold text-admin-ink">
+                      <span className="font-semibold break-all text-admin-ink">
                         {spotifyAccount ?? "your Spotify account"}
                       </span>
                     </p>
@@ -846,14 +847,16 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       variant="outline"
                       onClick={handleDisconnectSpotify}
                       disabled={isDisconnecting}
-                      className="h-9 shrink-0 rounded-lg border border-admin-line bg-white px-3 text-[13px] font-semibold text-admin-muted hover:bg-admin-card hover:text-admin-ink"
+                      title="Disconnect Spotify"
+                      aria-label="Disconnect Spotify"
+                      className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white p-0 text-[13px] font-semibold text-admin-muted hover:bg-admin-card hover:text-admin-ink sm:w-auto sm:px-3"
                     >
                       {isDisconnecting ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1.5" />
                       ) : (
-                        <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                        <LogOut className="h-3.5 w-3.5 sm:mr-1.5" />
                       )}
-                      Disconnect
+                      <span className="hidden sm:inline">Disconnect</span>
                     </Button>
                   </div>
                   {playlistLinkRow ?? (
