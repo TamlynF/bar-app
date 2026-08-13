@@ -66,7 +66,9 @@ const printStyles = `
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000; }
-  .sheet { width: 100%; page-break-inside: avoid; }
+  /* The inset lives on the sheet, not on @page, so the grid keeps clear of the
+     paper edge even when the print dialog is set to "Margins: None". */
+  .sheet { width: 100%; padding: 14mm 12mm; page-break-inside: avoid; }
   .sheet > *:last-child { margin-bottom: 0; }
   .hdr { margin-bottom: 10px; font-weight: 600; }
   .hdr .fill { display: inline-block; min-width: 280px; border-bottom: 1px solid #000; }
@@ -76,13 +78,13 @@ const printStyles = `
   table.grid tr, table.grid td { page-break-inside: avoid; }
   table.grid td { width: 33.33%; vertical-align: top; padding: 6px 8px; }
   table.questions { margin-bottom: 22px; }
-  table.questions td { border: 1px solid #000; height: 140px; }
+  table.questions td { border: 1px solid #000; height: 132px; }
   table.answers td { border: none; height: 44px; }
   .qn { font-weight: 700; }
   .imgwrap { margin-top: 6px; text-align: center; }
-  .imgwrap img { max-width: 100%; max-height: 108px; object-fit: contain; }
+  .imgwrap img { max-width: 100%; max-height: 100px; object-fit: contain; }
   .answer { margin-top: 16px; height: 1.3em; border-bottom: 1px solid #000; }
-  @page { size: A4; margin: 1.2cm; }
+  @page { size: A4; margin: 0; }
 `;
 
 export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen, openSheet, nextRound }: Props) {
