@@ -422,7 +422,12 @@ export default function QuizGeneratorPage() {
     if (selectedData.length === 0) return
     setIsSaving(true)
     try {
-      await saveQuizToDatabase(selectedData, parseInt(selectedEventId), topic, difficulty)
+      await saveQuizToDatabase(
+        selectedData.map(q => ({ ...q, category })),
+        parseInt(selectedEventId),
+        topic,
+        difficulty
+      )
       setQuestions([])
       setSelectedIndices(new Set())
       await finishApproval(selectedData.length)
