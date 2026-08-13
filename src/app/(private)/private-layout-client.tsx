@@ -50,6 +50,9 @@ type PageInfo = {
     description?: string | null;
     // Set when a page needs more than the default "title > subtitle" pair.
     trail?: Crumb[];
+    /* The phone header has room for one line, so a page that belongs to a
+       specific record names it here rather than losing that in the trail. */
+    mobilePrefix?: string;
 };
 
 function internalHref(value: string | null): string | null {
@@ -248,6 +251,7 @@ export default function PrivateLayoutClient({
                         title: "Schedule",
                         subtitle: "Quiz questions",
                         backHref: eventHref,
+                        mobilePrefix: `#: ${eventId}`,
                         trail: [
                             { label: "Schedule", href: SCHEDULE_HREF },
                             { label: `#${eventId}`, href: eventHref },
@@ -374,7 +378,7 @@ export default function PrivateLayoutClient({
         return { title: "Venue manager", subtitle: null, backHref: null, description: null }
     }
 
-    const { title, subtitle, backHref, description = null, trail } = getPageInfo() as PageInfo
+    const { title, subtitle, backHref, description = null, trail, mobilePrefix } = getPageInfo() as PageInfo
     const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
 
     return (
@@ -697,6 +701,9 @@ export default function PrivateLayoutClient({
                             <span className="h-11 w-11 shrink-0" aria-hidden="true" />
                         )}
                         <h1 className="min-w-0 flex-1 truncate text-center text-[17px] leading-tight font-bold tracking-tight text-admin-ink">
+                            {mobilePrefix && (
+                                <span className="font-semibold text-admin-muted">{mobilePrefix} &gt; </span>
+                            )}
                             {subtitle ?? title}
                         </h1>
                         <span className="h-11 w-11 shrink-0" aria-hidden="true" />
