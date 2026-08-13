@@ -152,7 +152,10 @@ async function describeForbidden(token: string, body: string): Promise<string> {
     const res = await fetch('https://api.spotify.com/v1/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return `Reconnect Spotify - account check failed (${res.status})`
+    if (!res.ok) {
+      const meMessage = spotifyErrorMessage(await res.text())
+      return meMessage ? `Spotify: ${meMessage}` : `Account check failed (${res.status})`
+    }
     const me = await res.json()
     if (me?.product !== 'premium') {
       return `${me?.display_name || me?.id || 'This account'} is ${me?.product || 'not Premium'}`
