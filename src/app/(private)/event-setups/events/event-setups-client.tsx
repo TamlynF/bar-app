@@ -297,7 +297,7 @@ function fullDayLabel(dateStr: string, todayStr: string) {
   const dated = `${WEEKDAYS_LONG[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
   const relative = relativeDayOf(dateStr, todayStr);
   return relative === "Today" || relative === "Tomorrow" || relative === "Yesterday"
-    ? `${relative} Â· ${dated}`
+    ? `${relative} · ${dated}`
     : dated;
 }
 
@@ -1017,7 +1017,11 @@ export default function EventsClient({
     return `/event-bookings/event/${event.id}?${params.toString()}`;
   };
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  /* Local, not UTC. toISOString() rolls over at midnight UTC, so between
+     midnight and 1am British Summer Time it still reported yesterday - which
+     grouped tonight's events under "Today" and held back everything that keys
+     off the date having passed. */
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const employeeById = new Map(employees.map((e) => [e.id, e.full_name]));
   const activeEmployees = employees.filter((e) => (e.status ?? "active").toLowerCase() === "active");
 
@@ -1073,6 +1077,10 @@ export default function EventsClient({
     const end = (e.end_time ?? "23:59").slice(0, 5);
     return new Date(`${e.date}T${end}:00`).getTime() > Date.now();
   };
+
+  /* An event is over the moment its end time passes, not at the next midnight -
+     a quiz that finished at 21:00 reads as history for the rest of the night. */
+  const hasEnded = (e: EventRecord) => !!e.date && !endsAfterNow(e);
 
   /* A quiz whose night is over opens on a phone with its rounds folded away -
      there is nothing left to write, and the list is long enough to bury the
@@ -1160,7 +1168,7 @@ export default function EventsClient({
   // same list drives the row's warning icon, its count and the dialog.
   const eventIssues = (e: EventRecord): string[] => {
     const sub = subtypeById.get(e.event_subtypes_id);
-    const past = !!e.date && e.date < todayStr;
+    const past = hasEnded(e);
     const inactive = e.is_active === false;
     const issues: string[] = [];
 
@@ -1220,8 +1228,8 @@ export default function EventsClient({
     { key: "inactive", label: "Inactive only", test: (e) => e.is_active === false },
     { key: "fully-booked", label: "Fully booked", test: (e) => e.is_fully_booked === true },
     { key: "missing-info", label: "Missing info", test: missingInfo },
-    { key: "upcoming", label: "Upcoming", test: (e) => e.date >= todayStr },
-    { key: "historic", label: "Historic", test: (e) => e.date < todayStr },
+    { key: "upcoming", label: "Upcoming", test: (e) => !hasEnded(e) },
+    { key: "historic", label: "Historic", test: hasEnded },
   ];
 
   const passesQuick = (e: EventRecord) =>
@@ -1319,7 +1327,7 @@ export default function EventsClient({
     const last = weekCells[6];
     const sameMonth = first.slice(0, 7) === last.slice(0, 7);
     const head = `${dayNumOf(first)}${sameMonth ? "" : ` ${monthAbbrOf(first)}`}`;
-    return `${head} â€“ ${dayNumOf(last)} ${monthAbbrOf(last)} ${last.slice(0, 4)}`;
+    return `${head} – ${dayNumOf(last)} ${monthAbbrOf(last)} ${last.slice(0, 4)}`;
   })();
   const periodLabel = isWeekView ? weekLabel : calMonthLabel;
   const shiftMonth = (delta: number) => {
@@ -1393,9 +1401,9 @@ export default function EventsClient({
     const bStats = bookingStatsFor(event.id);
     const inactive = event.is_active === false;
     const hasPricing = !!event.payment_amount && event.payment_amount > 0;
-    const isTonight = event.date === todayStr && !inactive;
+    const isTonight = event.date === todayStr && !inactive && !hasEnded(event);
 
-    const timeLabel = `${formatTime(event.start_time)}${event.end_time ? `â€“${formatTime(event.end_time)}` : ""}`;
+    const timeLabel = `${formatTime(event.start_time)}${event.end_time ? `–${formatTime(event.end_time)}` : ""}`;
     const showBooked = event.is_bookable || bStats.confirmedPeople > 0;
     const bookedNode = venueCapacity ? (
       <>
@@ -1409,11 +1417,11 @@ export default function EventsClient({
     const bookedAria = venueCapacity
       ? `${bStats.confirmedPeople} of ${venueCapacity} booked`
       : `${bStats.confirmedPeople} booked`;
-    const priceLabel = hasPricing ? `Â£${event.payment_amount!.toFixed(2)}` : null;
+    const priceLabel = hasPricing ? `£${event.payment_amount!.toFixed(2)}` : null;
 
     // An event that has been and gone is a record, not a state to act on, so
     // its whole trailing group reads back in grey.
-    const isPast = event.date < todayStr;
+    const isPast = hasEnded(event);
     const PILL = "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold";
     const GREY = "bg-admin-surface text-admin-muted";
 
@@ -1639,9 +1647,9 @@ export default function EventsClient({
             <p className="mt-0.5 text-[12px] font-medium text-admin-muted tabular-nums">{timeLabel}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium text-admin-muted">
               {showBooked && <span className="tabular-nums" aria-label={bookedAria}>{bookedNode}</span>}
-              {showBooked && priceLabel && <span aria-hidden="true">Â·</span>}
+              {showBooked && priceLabel && <span aria-hidden="true">·</span>}
               {priceLabel && <span className="tabular-nums">{priceLabel}</span>}
-              {host && (showBooked || priceLabel) && <span aria-hidden="true">Â·</span>}
+              {host && (showBooked || priceLabel) && <span aria-hidden="true">·</span>}
               {host && <span>{shortHost(host.full_name)}</span>}
             </p>
           </div>
@@ -1734,7 +1742,7 @@ export default function EventsClient({
       <button
         type="button"
         onClick={() => openView(event)}
-        title={`${event.title || "Untitled Event"}${event.start_time ? ` Â· ${formatTime(event.start_time)}` : ""}`}
+        title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""}`}
         className={cn(
           "flex w-full min-w-0 items-center gap-1 overflow-hidden rounded border px-1 py-px text-left transition hover:brightness-95",
           badgeClass,
@@ -2055,7 +2063,7 @@ export default function EventsClient({
           event{filterSummaryCount === 1 ? "" : "s"}
           {filterSummaryParts.map((part) => (
             <span key={part.label} className="flex items-center gap-1.5">
-              <span aria-hidden="true" className="text-[#5E6654]/40">Â·</span>
+              <span aria-hidden="true" className="text-[#5E6654]/40">·</span>
               <span className="text-[#5E6654]">{part.prefix}</span>
               <span className="font-bold text-[#34451F]">{part.label}</span>
             </span>
@@ -2268,7 +2276,7 @@ export default function EventsClient({
                   <>
                     <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
                       {sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "Event"}
-                      <span className="normal-case tabular-nums"> Â· #{selected.id}</span>
+                      <span className="normal-case tabular-nums"> · #{selected.id}</span>
                     </p>
                     <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
                       {selected.title || "Untitled Event"}
@@ -2276,7 +2284,7 @@ export default function EventsClient({
                     <p className="mt-1 pr-22 text-[13px] leading-relaxed font-medium text-admin-muted sm:truncate sm:pr-0">
                       {formatDate(selected.date)}
                       {(selected.start_time || selected.end_time) && (
-                        <span className="tabular-nums"> Â· {formatTime(selected.start_time)} â€“ {formatTime(selected.end_time)}</span>
+                        <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
                       )}
                     </p>
                   </>
@@ -2616,7 +2624,7 @@ export default function EventsClient({
                                     "inline-flex min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums",
                                     done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
                                   )}>
-                                    {cat.count} / {cat.question_count} Â· {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
+                                    {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
                                   </span>
                                 </div>
                               );
@@ -2678,7 +2686,7 @@ export default function EventsClient({
                               <DetailCell
                                 className="sm:hidden"
                                 label="Date & Time"
-                                value={timeLabel ? `${formatDate(selected.date)} Â· ${timeLabel}` : formatDate(selected.date)}
+                                value={timeLabel ? `${formatDate(selected.date)} · ${timeLabel}` : formatDate(selected.date)}
                               />
                               <DetailCell className="hidden sm:flex" label="Date" value={formatDate(selected.date)} />
                               <DetailCell className="hidden sm:flex" label="Time" value={timeLabel ?? "-"} />
@@ -2687,7 +2695,7 @@ export default function EventsClient({
                         })()}
                         {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "-"} />}
                         {(sub?.payment_required || hasPricing) && (
-                          <DetailCell label="Payment" value={hasPricing ? `Â£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
+                          <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
                         )}
                         {(sub?.seating_required || selected.seating_required) && (
                           <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
@@ -2833,14 +2841,14 @@ export default function EventsClient({
                         </p>
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-3 transition-colors hover:border-[#34451F]">
                           {imageUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" /> : <Upload className="h-4 w-4 text-[#5E6654] opacity-50" />}
-                          <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploadingâ€¦" : "Use a different image"}</span>
+                          <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploading…" : "Use a different image"}</span>
                           <input type="file" accept="image/*" aria-label="Upload a different poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                         </label>
                       </div>
                     ) : (
                       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-7 transition-colors hover:border-[#34451F]">
                         {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5E6654]" /> : <Upload className="h-7 w-7 text-[#5E6654] opacity-50" />}
-                        <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploadingâ€¦" : "Upload"}</span>
+                        <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploading…" : "Upload"}</span>
                         <span className="text-[12px] text-[#5E6654]">Shown on the public What&apos;s On card</span>
                         <input type="file" accept="image/*" aria-label="Upload poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                       </label>
@@ -2936,7 +2944,7 @@ export default function EventsClient({
                     </FormRow>
                   )}
 
-                  <FormRow label="Payment (Â£)" warning={fieldWarnings.payment_amount}>
+                  <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
                     <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                   </FormRow>
 
@@ -3101,7 +3109,7 @@ export default function EventsClient({
                   </DialogTitle>
                   <DialogDescription className="text-[13px] font-medium text-admin-muted">
                     {issuesEvent.title || "Untitled Event"}
-                    {issuesEvent.date ? ` Â· ${formatDate(issuesEvent.date)}` : ""}
+                    {issuesEvent.date ? ` · ${formatDate(issuesEvent.date)}` : ""}
                   </DialogDescription>
                 </div>
                 <ul className="max-h-[50vh] divide-y divide-admin-line overflow-y-auto border-y border-admin-line bg-admin-card">
@@ -3204,7 +3212,7 @@ export default function EventsClient({
                                 title: "Add the Singa request link",
                                 description: "The link guests use to send their song requests on the night.",
                                 label: "Singa request link",
-                                placeholder: "https://â€¦",
+                                placeholder: "https://…",
                                 initialValue: issuesEvent.karaoke_request_url ?? "",
                                 confirmLabel: "Save link",
                               });
@@ -3224,7 +3232,7 @@ export default function EventsClient({
                               const entered = await promptForValue({
                                 title: "Set the payment amount",
                                 description: "What one ticket for this event costs.",
-                                label: "Amount (Â£)",
+                                label: "Amount (£)",
                                 placeholder: "e.g. 5.00",
                                 numeric: true,
                                 initialValue: issuesEvent.payment_amount ? String(issuesEvent.payment_amount) : "",
@@ -3254,7 +3262,7 @@ export default function EventsClient({
                                 description:
                                   "Paste the link you want guests to book on, or build the standard one for this event.",
                                 label: "Booking URL",
-                                placeholder: "https://â€¦",
+                                placeholder: "https://…",
                                 initialValue: issuesEvent.booking_page_url ?? "",
                                 suggestion: bookingUrlFor({
                                   typeId: issuesEvent.event_types_id,
@@ -3391,7 +3399,7 @@ function ExpandableValue({ text }: { text: string }) {
           aria-label={expanded ? "Show less" : "Show the full text"}
           className="shrink-0 font-bold text-[#34451F] underline underline-offset-2"
         >
-          {expanded ? "less" : "â€¦"}
+          {expanded ? "less" : "…"}
         </button>
       )}
     </span>
