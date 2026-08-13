@@ -2102,7 +2102,7 @@ export default function EventsClient({
           )}
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start justify-between gap-1.5 sm:gap-3">
               <div className="min-w-0">
                 {!showForm && selected ? (
                   <>
@@ -2209,9 +2209,9 @@ export default function EventsClient({
                 onClick={closeSheet}
                 aria-label="Close"
                 title="Close"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-card text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
+                className="-mt-1 -mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
               >
-                <X className="h-5 w-5 shrink-0" />
+                <X className="h-4 w-4 shrink-0" />
               </button>
             </div>
 
