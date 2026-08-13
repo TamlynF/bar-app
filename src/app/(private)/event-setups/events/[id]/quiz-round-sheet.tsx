@@ -87,6 +87,7 @@ import {
   questionsNeeded,
   findDuplicateIndices,
 } from "@/lib/quiz/round-stages";
+import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
 
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 type Difficulty = (typeof DIFFICULTIES)[number];
@@ -436,7 +437,7 @@ export default function QuizRoundSheet({
 
       if (kind === "picture") {
         await savePictureRoundAction(
-          chosen.filter(isPictureDraft),
+          await uploadPictureDrafts(chosen.filter(isPictureDraft), eventId),
           eventId,
           category_name,
           categoryConfigId,

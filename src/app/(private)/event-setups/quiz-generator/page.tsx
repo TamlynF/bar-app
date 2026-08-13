@@ -28,6 +28,8 @@ import type {
   PictureRoundItem,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
+import { uploadPictureDrafts } from '@/lib/quiz/picture-upload'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -368,7 +370,8 @@ export default function QuizGeneratorPage() {
       if (selectedData.length === 0) return
       setIsSaving(true)
       try {
-        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty)
+        const storedPictures = await uploadPictureDrafts(selectedData, parseInt(selectedEventId))
+        await savePictureRoundAction(storedPictures, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty)
         setPictureItems([])
         setSelectedPictureIndices(new Set())
         await finishApproval(selectedData.length)

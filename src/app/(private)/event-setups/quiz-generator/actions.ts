@@ -1200,6 +1200,8 @@ export async function savePictureRoundAction(
       } catch (err) {
         console.error('Image upload failed for', item.answer, err)
       }
+    } else if (item.imageUrl) {
+      storedImageUrl = item.imageUrl
     }
 
     return {
