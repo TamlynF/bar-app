@@ -338,6 +338,7 @@ export default function EventsClient({
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [loadedAtMs] = useState(() => Date.now());
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [returnHref, setReturnHref] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<number | null>(null);
@@ -466,29 +467,52 @@ export default function EventsClient({
     subtypesByType.get(s.event_types_id)!.push(s);
   }
 
+  /* Each id is applied once and then remembered, so a refresh of initialEvents -
+     which re-runs this - can't reopen a sheet you have since closed or drag the
+     highlight back onto a row you have moved on from. Dropping the id from the
+     URL forgets it again, which is what makes browser-back reopen the view. */
+  const appliedFocusRef = useRef<string | null>(null);
+  const appliedOpenRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const back = searchParams.get("back") || params.get("back");
-    if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/\\")) {
-      setReturnHref(back);
-    }
-    // "open" and "focus" stay in the URL for as long as they describe what you
-    // are looking at, so the browser's back button restores the same view.
-    const focusId = searchParams.get("focus") || params.get("focus");
-    if (focusId) {
-      const focusEvent = initialEvents.find((e) => String(e.id) === focusId);
-      if (focusEvent) setFocusedId(focusEvent.id);
-    }
-    const openId = searchParams.get("open") || params.get("open");
-    if (!openId) return;
-    const event = initialEvents.find((e) => String(e.id) === openId);
-    if (event) {
-      setSelected(event);
-      setIsEditing(false);
-      setIsAdding(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    const applyUrlIntent = () => {
+      // The live URL wins: a popstate fires with this effect's searchParams
+      // still describing the entry you just navigated away from.
+      const params = new URLSearchParams(window.location.search);
+      const back = params.get("back") || searchParams.get("back");
+      if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/\\")) {
+        setReturnHref(back);
+      }
+      // "open" and "focus" stay in the URL for as long as they describe what you
+      // are looking at, so the browser's back button restores the same view.
+      const focusId = params.get("focus") || searchParams.get("focus");
+      if (!focusId) {
+        appliedFocusRef.current = null;
+      } else if (appliedFocusRef.current !== focusId) {
+        const focusEvent = initialEvents.find((e) => String(e.id) === focusId);
+        if (focusEvent) {
+          appliedFocusRef.current = focusId;
+          setFocusedId(focusEvent.id);
+        }
+      }
+      const openId = params.get("open") || searchParams.get("open");
+      if (!openId) {
+        appliedOpenRef.current = null;
+        return;
+      }
+      if (appliedOpenRef.current === openId) return;
+      const event = initialEvents.find((e) => String(e.id) === openId);
+      if (event) {
+        appliedOpenRef.current = openId;
+        setSelected(event);
+        setIsEditing(false);
+        setIsAdding(false);
+      }
+    };
+    applyUrlIntent();
+    window.addEventListener("popstate", applyUrlIntent);
+    return () => window.removeEventListener("popstate", applyUrlIntent);
+  }, [searchParams, initialEvents]);
 
   useEffect(() => {
     if (focusedId == null) return;
@@ -496,6 +520,16 @@ export default function EventsClient({
       .querySelector(`[data-event-row="${focusedId}"]`)
       ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusedId]);
+
+  /* Row handlers must not read `selected` directly. Every row's menu closes over
+     the ones below, so a handler that named `selected` was rebuilt the moment a
+     sheet opened, and the whole list - dropdown per row - re-rendered before the
+     sheet could paint. The delete handler only needs the id at the time it
+     runs, which is what the ref carries. */
+  const selectedIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    selectedIdRef.current = selected?.id ?? null;
+  }, [selected]);
 
   // Dropping a category takes its subtypes with it, so a subtype can never be
   // left filtering for a category that is no longer chosen.
@@ -769,14 +803,19 @@ export default function EventsClient({
   const generateQr = async () => {
     if (!selected) return;
     setQrBusy(true);
-    try {
-      const dataUrl = await makeQrDataUrl(bookingUrlOf(selected));
-      const res = await setEventQr(selected.id, dataUrl);
-      if (res?.error) { setFormError(res.error); return; }
-      setSelected((cur) => (cur && cur.id === selected.id ? { ...cur, booking_qr_url: dataUrl } : cur));
-    } finally {
+    const dataUrl = await makeQrDataUrl(bookingUrlOf(selected)).catch(() => null);
+    if (!dataUrl) {
+      setFormError("Could not generate the QR code.");
       setQrBusy(false);
+      return;
     }
+    const res = await setEventQr(selected.id, dataUrl);
+    if (res.error) {
+      setFormError(res.error);
+    } else {
+      setSelected((cur) => (cur && cur.id === selected.id ? { ...cur, booking_qr_url: dataUrl } : cur));
+    }
+    setQrBusy(false);
   };
 
   const copyQr = async () => {
@@ -862,7 +901,7 @@ export default function EventsClient({
   const handleRowDelete = (event: EventRecord) =>
     void deleteEvent(event, (message) => toast.error(message), () => {
       toast.success("Event deleted");
-      if (selected?.id === event.id) closeSheet();
+      if (selectedIdRef.current === event.id) closeSheet();
     });
 
   const toggleEventActive = (event: EventRecord) => {
@@ -1059,7 +1098,8 @@ export default function EventsClient({
   const visibleEvents = baseEvents
     .filter((e) => matchesFilters(e) && passesQuick(e) && passesCat(e))
     .sort((a, b) => {
-      const cmp = (a.date ?? "").localeCompare(b.date ?? "") || (a.start_time ?? "").localeCompare(b.start_time ?? "");
+      const byDate = (a.date ?? "").localeCompare(b.date ?? "");
+      const cmp = byDate !== 0 ? byDate : (a.start_time ?? "").localeCompare(b.start_time ?? "");
       return sortSoon ? cmp : -cmp;
     });
 
@@ -2298,7 +2338,7 @@ export default function EventsClient({
               });
               const posterNote = imageSourceLabel(poster.source, sub?.name);
               const eventEndStamp = `${selected.date}T${(selected.end_time ?? selected.start_time ?? "23:59").slice(0, 5)}`;
-              const eventHasPassed = new Date(eventEndStamp).getTime() < Date.now();
+              const eventHasPassed = new Date(eventEndStamp).getTime() < loadedAtMs;
               const showWinningTeam = type?.name === "games" && (selected.booking_id != null || eventHasPassed);
               const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
               return (
