@@ -2235,6 +2235,7 @@ export default function EventsClient({
                       {selected.is_bookable && (
                         <ViewSection
                           title="Bookings"
+                          className="order-2 sm:order-none"
                           open={bookingsOpen}
                           onToggle={() => setBookingsOpen(o => !o)}
                           headerRight={
@@ -2287,9 +2288,27 @@ export default function EventsClient({
                         const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                         const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
                         const quizHref = quizHrefFor(selected, "sheet");
+                        const quizAction = quizIsComplete ? (
+                          <Link
+                            href={quizHref}
+                            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
+                          >
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            All rounds complete - review quiz
+                          </Link>
+                        ) : (
+                          <Link
+                            href={quizHref}
+                            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
+                          >
+                            <Brain className="h-4 w-4 shrink-0" />
+                            {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
+                          </Link>
+                        );
                         return (
                           <ViewSection
                             title="Quiz Rounds"
+                            className="order-1 sm:order-none"
                             open={quizOpen}
                             onToggle={() => setQuizOpen(o => !o)}
                             headerRight={
@@ -2301,6 +2320,10 @@ export default function EventsClient({
                               </span>
                             }
                           >
+                            {/* On a phone the rounds list is long enough to push
+                                the action off screen, so the button leads the
+                                section instead of closing it. */}
+                            <div className="border-b border-[#D8D5C8] p-3 sm:hidden">{quizAction}</div>
                             {categoryCounts.map(cat => {
                               const remaining = cat.question_count - cat.count;
                               const done = cat.count >= cat.question_count;
@@ -2316,25 +2339,7 @@ export default function EventsClient({
                                 </div>
                               );
                             })}
-                            <div className="p-3 sm:p-4">
-                              {quizIsComplete ? (
-                                <Link
-                                  href={quizHref}
-                                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
-                                >
-                                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                  All rounds complete - review quiz
-                                </Link>
-                              ) : (
-                                <Link
-                                  href={quizHref}
-                                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
-                                >
-                                  <Brain className="h-4 w-4 shrink-0" />
-                                  {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
-                                </Link>
-                              )}
-                            </div>
+                            <div className="hidden p-3 sm:block sm:p-4">{quizAction}</div>
                           </ViewSection>
                         );
                       })()}
