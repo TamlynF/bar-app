@@ -264,10 +264,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   }, [autoOpen]);
 
   /* The account cookie outlives the access token, so it - not the hour-long
-     token - is what says whether Spotify is still connected. */
+     token - is what says whether Spotify is still connected. The return trip's
+     flag is dropped from the URL once read, so a later disconnect isn't undone
+     by a stale query string. */
   useEffect(() => {
     const account = readCookie("spotify_account");
-    const justConnected = new URLSearchParams(window.location.search).get("spotify_connected") === "true";
+    const params = new URLSearchParams(window.location.search);
+    const justConnected = params.get("spotify_connected") === "true";
+    if (justConnected) {
+      params.delete("spotify_connected");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+    }
     if (account !== null || justConnected || document.cookie.includes("spotify_access_token")) {
       setSpotifyConnected(true);
       setSpotifyAccount(account || null);
@@ -668,6 +676,48 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     win.document.close();
   };
 
+  /* The playlist is public and the link is shared by the round, not by whoever
+     made it - so opening it never depends on having your own Spotify connected.
+     Only syncing does. */
+  const playlistLinkRow = playlistUrl ? (
+    <div className="flex items-center gap-2">
+      <a
+        href={playlistUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+        className="flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-(--spotify-bg) text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+      >
+        <Music className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">Open Spotify Playlist</span>
+        <ExternalLink className="h-3 w-3 shrink-0" />
+      </a>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleCopyPlaylist}
+        title="Copy playlist link"
+        aria-label="Copy playlist link"
+        className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white text-admin-primary hover:bg-admin-bg"
+      >
+        {playlistCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+      </Button>
+      {spotifyConnected && !someoneElsesPlaylist && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleSyncPlaylist}
+          disabled={isSyncing}
+          title="Sync playlist with saved songs"
+          aria-label="Sync playlist with saved songs"
+          className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white text-admin-primary hover:bg-admin-bg"
+        >
+          {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+        </Button>
+      )}
+    </div>
+  ) : null;
+
   return (
     <section ref={sectionRef} data-category-section className="overflow-hidden rounded-2xl border border-admin-line bg-white">
       {/* Four fixed rails, same order and width on every row: name + status,
@@ -775,136 +825,89 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       {open && (
         <>
           {includeSpotify && (
-            <div className="px-5 pt-3">
+            <div className="space-y-2 px-5 pt-3">
               {spotifyConnected ? (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-admin-line bg-admin-surface px-3 py-2.5">
-                  <span
-                    style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-(--spotify-bg) text-white"
-                  >
-                    <Music className="h-3.5 w-3.5" />
-                  </span>
-                  <p className="min-w-0 flex-1 text-[13px] text-admin-muted">
-                    Connected as{" "}
-                    <span className="font-semibold text-admin-ink">
-                      {spotifyAccount ?? "your Spotify account"}
-                    </span>
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDisconnectSpotify}
-                    disabled={isDisconnecting}
-                    className="h-9 shrink-0 rounded-lg border border-admin-line px-3 text-[13px] font-semibold text-admin-muted hover:bg-admin-card hover:text-admin-ink"
-                  >
-                    {isDisconnecting ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Disconnect
-                  </Button>
-                  <a
-                    href={`${spotifyLoginHref}&switch=1`}
-                    className="h-9 shrink-0 rounded-lg border border-admin-primary px-3 text-[13px] font-semibold leading-9 text-admin-primary transition-colors hover:bg-admin-primary-soft"
-                  >
-                    Switch account
-                  </a>
-                </div>
-              ) : (
-                <a
-                  href={spotifyLoginHref}
-                  style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
-                >
-                  <Music className="h-3.5 w-3.5" />
-                  Connect Spotify
-                </a>
-              )}
-            </div>
-          )}
-          {includeSpotify && (playlistUrl || spotifyConnected) && (
-            <div className="px-5 pt-3">
-              {playlistUrl ? (
-                <div className="space-y-1.5">
-                  {/* The playlist is public and the link is shared by the round,
-                      not by whoever made it - so opening it never depends on
-                      having your own Spotify connected. Only syncing does. */}
+                <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface px-3 py-2.5">
                   <div className="flex items-center gap-2">
-                    <a
-                      href={playlistUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <span
                       style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                      className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-(--spotify-bg) text-white"
                     >
                       <Music className="h-3.5 w-3.5" />
-                      Open Spotify Playlist
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
+                    </span>
+                    <p className="min-w-0 flex-1 truncate text-[13px] text-admin-muted">
+                      Connected as{" "}
+                      <span className="font-semibold text-admin-ink">
+                        {spotifyAccount ?? "your Spotify account"}
+                      </span>
+                    </p>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleCopyPlaylist}
-                      title="Copy playlist link"
-                      aria-label="Copy playlist link"
-                      className="h-10 w-10 shrink-0 rounded-xl border-2 border-admin-line text-admin-primary hover:bg-admin-bg"
+                      onClick={handleDisconnectSpotify}
+                      disabled={isDisconnecting}
+                      className="h-9 shrink-0 rounded-lg border border-admin-line bg-white px-3 text-[13px] font-semibold text-admin-muted hover:bg-admin-card hover:text-admin-ink"
                     >
-                      {playlistCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                    {spotifyConnected && !someoneElsesPlaylist && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleSyncPlaylist}
-                        disabled={isSyncing}
-                        title="Sync playlist with saved songs"
-                        aria-label="Sync playlist with saved songs"
-                        className="h-10 w-10 shrink-0 rounded-xl border-2 border-admin-line text-admin-primary hover:bg-admin-bg"
-                      >
-                        {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                      </Button>
-                    )}
-                  </div>
-                  {someoneElsesPlaylist && (
-                    <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface p-2.5">
-                      <p className="text-[13px] text-admin-muted">
-                        {playlistOwner
-                          ? `This is ${playlistOwner}'s playlist.`
-                          : "This playlist was made before everyone had their own."}{" "}
-                        You can open and play it, but only its owner can change it. Make your own
-                        copy to get one this round keeps in step for you - theirs stays as it is.
-                      </p>
-                      {spotifyConnected && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleCopyPlaylistToMine}
-                          disabled={isCopying}
-                          className="h-10 w-full rounded-xl border border-admin-primary text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
-                        >
-                          {isCopying ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Copy className="mr-2 h-4 w-4" />
-                          )}
-                          Make my own copy
-                        </Button>
+                      {isDisconnecting ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <LogOut className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                    </div>
+                      Disconnect
+                    </Button>
+                  </div>
+                  {playlistLinkRow ?? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSyncPlaylist}
+                      disabled={isSyncing || configId == null}
+                      className="h-9 w-full rounded-lg border border-admin-line bg-white text-[13px] font-semibold text-admin-primary hover:bg-admin-bg"
+                    >
+                      {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-3.5 w-3.5" />}
+                      Create Spotify Playlist
+                    </Button>
                   )}
                 </div>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSyncPlaylist}
-                  disabled={isSyncing || configId == null}
-                  className="h-10 w-full rounded-xl border-2 border-admin-line font-bold text-[12px] text-admin-primary hover:bg-admin-bg"
-                >
-                  {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-3.5 w-3.5" />}
-                  Create Spotify Playlist
-                </Button>
+                <>
+                  <a
+                    href={spotifyLoginHref}
+                    style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
+                  >
+                    <Music className="h-3.5 w-3.5" />
+                    Connect Spotify
+                  </a>
+                  {playlistLinkRow}
+                </>
+              )}
+              {someoneElsesPlaylist && (
+                <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface p-2.5">
+                  <p className="text-[13px] text-admin-muted">
+                    {playlistOwner
+                      ? `This is ${playlistOwner}'s playlist.`
+                      : "This playlist was made before everyone had their own."}{" "}
+                    You can open and play it, but only its owner can change it. Make your own
+                    copy to get one this round keeps in step for you - theirs stays as it is.
+                  </p>
+                  {spotifyConnected && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCopyPlaylistToMine}
+                      disabled={isCopying}
+                      className="h-10 w-full rounded-xl border border-admin-primary text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
+                    >
+                      {isCopying ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Copy className="mr-2 h-4 w-4" />
+                      )}
+                      Make my own copy
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
