@@ -832,7 +832,13 @@ ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
 - Return a JSON array.`
       : `You are a music expert for a pub quiz at "Don Fenticas".
-Generate exactly ${numberOfSongs} songs that are famous for having distinctive instrumental intros where NO singing or vocals appear in at least the first 15 seconds.
+Generate exactly ${numberOfSongs} songs whose studio recording opens with a purely instrumental intro.
+
+The intro rule is absolute and overrides every other requirement below:
+- The first 8 seconds must contain NO lead vocals, NO backing vocals, NO spoken word and NO wordless singing (no "ooh", "ahh", chanting or humming).
+- Judge the standard studio album or single version, timed from 0:00.
+- If you are not certain a song clears a full 8 seconds, leave it out and choose another. A famous intro whose singing starts at 0:05 does not qualify - "Good Vibrations" by The Beach Boys is exactly the kind of song to exclude.
+- Begin intro_description with the length of the instrumental intro, e.g. "0:12 - rising organ line before the vocal".
 
 Requirements:
 - Songs from 1960 to present day, sorted chronologically by release year (ascending).
