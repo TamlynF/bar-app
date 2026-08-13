@@ -88,6 +88,19 @@ export async function createPublicPlaylist(userId: string, name: string): Promis
   return { id: data.id, url: data.external_urls?.spotify ?? `https://open.spotify.com/playlist/${data.id}` };
 }
 
+/* Spotify answers 403 both for a missing scope and for "that playlist isn't
+   yours", so the owner is what tells those two apart. Reading a public playlist
+   needs no ownership, only a connected account. */
+export async function getPlaylistOwner(
+  playlistId: string
+): Promise<{ id: string; name: string } | null> {
+  const res = await spotifyUserFetch(`/playlists/${playlistId}?fields=owner(id,display_name)`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const owner = data?.owner;
+  return owner?.id ? { id: owner.id, name: owner.display_name || owner.id } : null;
+}
+
 export async function replacePlaylistTracks(playlistId: string, uris: string[]): Promise<void> {
   const res = await spotifyUserFetch(`/playlists/${playlistId}/tracks`, {
     method: "PUT",

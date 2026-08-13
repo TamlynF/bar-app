@@ -4,6 +4,12 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Brain, CheckCircle2, Printer } from "lucide-react";
 import CategorySection from "./category-section";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
+import {
+  pickCategoryPlaylist,
+  playlistOwnerName,
+  type CategoryPlaylistRow,
+} from "@/lib/quiz/category-playlist";
 
 export const maxDuration = 300;
 
@@ -98,7 +104,7 @@ export default async function EventQuizQuestionsPage({
       .order("created_at"),
     supabase
       .from("event_category_playlists")
-      .select("quiz_category_configs_id, playlist_url")
+      .select("quiz_category_configs_id, playlist_url, playlist_id, employee_id, employees(full_name)")
       .eq("events_id", id),
   ]);
 
@@ -106,9 +112,28 @@ export default async function EventQuizQuestionsPage({
 
   const cats: Category[] = categories ?? [];
   const qs: Question[] = questions ?? [];
-  const playlistByCategory = new Map<number, string>(
-    (playlists ?? []).map((p) => [p.quiz_category_configs_id, p.playlist_url])
-  );
+
+  /* Each employee keeps their own playlist for a round, so the page shows yours
+     when you have one and falls back to whatever else the round has - a legacy
+     shared playlist, or a colleague's - which you can open but not change. */
+  const myEmployeeId = await getCurrentEmployeeId(supabase);
+  const playlistRows = (playlists ?? []) as (CategoryPlaylistRow & {
+    quiz_category_configs_id: number;
+  })[];
+  const playlistByCategory = new Map<number, { url: string; isMine: boolean; ownerName: string | null }>();
+  for (const cat of cats) {
+    const picked = pickCategoryPlaylist(
+      playlistRows.filter((p) => p.quiz_category_configs_id === cat.id),
+      myEmployeeId
+    );
+    if (picked) {
+      playlistByCategory.set(cat.id, {
+        url: picked.row.playlist_url,
+        isMine: picked.isMine,
+        ownerName: picked.isMine ? null : playlistOwnerName(picked.row),
+      });
+    }
+  }
 
   const byCategory = cats.map((cat) => ({
     ...cat,
@@ -249,7 +274,9 @@ export default async function EventQuizQuestionsPage({
             isHigherLower={cat.is_higher_lower}
             minYears={cat.min_years}
             maxYears={cat.max_years}
-            playlistUrl={playlistByCategory.get(cat.id) ?? null}
+            playlistUrl={playlistByCategory.get(cat.id)?.url ?? null}
+            playlistIsMine={playlistByCategory.get(cat.id)?.isMine ?? false}
+            playlistOwnerName={playlistByCategory.get(cat.id)?.ownerName ?? null}
             autoOpen={focusCategory === cat.category_name}
             openSheet={openParam === "1" && focusCategory === cat.category_name}
             nextRound={cat.nextRound}

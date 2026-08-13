@@ -9,6 +9,7 @@ import {
   getCurrentUserId,
   createPublicPlaylist,
   replacePlaylistTracks,
+  getPlaylistOwner,
   SpotifyScopeError,
   SpotifyNotConnectedError,
 } from '@/lib/spotify'
@@ -19,6 +20,8 @@ import {
   type YearRange,
 } from '@/lib/quiz/higher-lower'
 import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
+import { getCurrentEmployeeId } from '@/lib/current-employee'
+import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 
 export type QuizQuestion = {
   question: string;
@@ -429,6 +432,102 @@ export async function updatePastQuestionAction(
 
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true, image_url: newImageUrl };
+}
+
+/* Drag-and-drop hands back the whole round in its new order. Anything the client
+   doesn't name keeps its place at the end, so a stale list can shuffle a round but
+   never drop a question out of it. */
+export async function reorderCategoryQuestionsAction(
+  eventId: number,
+  categoryConfigId: number,
+  orderedIds: string[]
+): Promise<{
+  success: boolean
+  order: { id: string; questionNo: number }[]
+  playlist?: PlaylistReorderResult
+}> {
+  const supabase = await createClient()
+
+  const { data: rows } = await supabase
+    .from('past_quiz_questions')
+    .select('id, question_no')
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('question_no', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true })
+
+  if (!rows?.length) return { success: true, order: [] }
+
+  const known = new Set(rows.map((r) => r.id))
+  const requested = orderedIds.filter((id) => known.has(id))
+  const untouched = rows.map((r) => r.id).filter((id) => !requested.includes(id))
+  const finalOrder = [...requested, ...untouched]
+
+  const currentNo = new Map(rows.map((r) => [r.id, r.question_no]))
+  const order = finalOrder.map((id, i) => ({ id, questionNo: i + 1 }))
+  const moving = order.filter((r) => currentNo.get(r.id) !== r.questionNo)
+
+  if (moving.length) {
+    /* (events_id, quiz_category_configs_id, question_no) is unique, so park every
+       mover on null before handing out the final numbers. */
+    await Promise.all(moving.map((r) =>
+      supabase.from('past_quiz_questions').update({ question_no: null }).eq('id', r.id)
+    ))
+    const results = await Promise.all(moving.map((r) =>
+      supabase.from('past_quiz_questions').update({ question_no: r.questionNo }).eq('id', r.id)
+    ))
+    const failed = results.find((r) => r.error)
+    if (failed?.error) {
+      console.error('Reorder error:', failed.error)
+      throw new Error('Failed to reorder the questions.')
+    }
+  }
+
+  await rechainHigherLowerQuestions(supabase, eventId, categoryConfigId)
+
+  const playlist = await resyncPlaylistOrder(supabase, eventId, categoryConfigId, moving.length > 0)
+
+  revalidatePath('/event-setups/events/[id]', 'page')
+  return { success: true, order, playlist }
+}
+
+export type PlaylistReorderResult =
+  | { status: 'not_a_music_round' | 'no_playlist' | 'unchanged' | 'synced' | 'needs_connect' | 'failed' }
+  | { status: 'not_owner'; ownerName?: string }
+
+/* The playlist is what gets played on the night, so its track order has to follow
+   the question numbers rather than the order the songs were added in. The sync
+   already reads the round in question_no order, so replaying it is enough.
+
+   Only an existing playlist is touched - reordering a round is no reason to
+   conjure one up, and it must never create one for a round with no songs. */
+async function resyncPlaylistOrder(
+  supabase: SupabaseClient,
+  eventId: number,
+  categoryConfigId: number,
+  anythingMoved: boolean
+): Promise<PlaylistReorderResult> {
+  const { data: config } = await supabase
+    .from('quiz_category_configs')
+    .select('include_spotify')
+    .eq('id', categoryConfigId)
+    .maybeSingle()
+
+  if (!config?.include_spotify) return { status: 'not_a_music_round' }
+  if (!anythingMoved) return { status: 'unchanged' }
+
+  const { count } = await supabase
+    .from('event_category_playlists')
+    .select('playlist_id', { count: 'exact', head: true })
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+
+  if (!count) return { status: 'no_playlist' }
+
+  const result = await syncCategoryPlaylistAction(eventId, categoryConfigId)
+  if (result.ok) return { status: 'synced' }
+  if (result.error === 'not_owner') return { status: 'not_owner', ownerName: result.ownerName }
+  return { status: result.needsConnect ? 'needs_connect' : 'failed' }
 }
 
 export async function deletePastQuestionAction(id: string) {
@@ -1176,6 +1275,115 @@ export type PlaylistSyncResult = {
   playlistUrl?: string
   needsConnect?: boolean
   error?: string
+  /* Set when the playlist belongs to a different Spotify account - reconnecting
+     will never help, so the UI has to say whose it is instead. */
+  ownerName?: string
+}
+
+export type PlaylistCopyResult = {
+  ok: boolean
+  playlistUrl?: string
+  needsConnect?: boolean
+  error?: string
+}
+
+async function loadCategoryPlaylists(
+  supabase: SupabaseClient,
+  eventId: number,
+  categoryConfigId: number
+): Promise<CategoryPlaylistRow[]> {
+  const { data } = await supabase
+    .from('event_category_playlists')
+    .select('playlist_id, playlist_url, employee_id, employees(full_name)')
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+  return (data as CategoryPlaylistRow[] | null) ?? []
+}
+
+function playlistTitle(
+  eventDate: string | null | undefined,
+  config: { order_no?: number | null; category_name?: string | null }
+): string {
+  const datePart = eventDate ? format(new Date(eventDate + 'T00:00:00'), 'd MMMM') : ''
+  const orderPart = config.order_no != null ? `${config.order_no}. ` : ''
+  return `${datePart} / ${orderPart}${(config.category_name ?? '').toUpperCase()}`.trim()
+}
+
+async function roundTrackUris(
+  supabase: SupabaseClient,
+  eventId: number,
+  categoryConfigId: number
+): Promise<string[]> {
+  const { data } = await supabase
+    .from('past_quiz_questions')
+    .select('spotify_track_id, question_no')
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('question_no', { ascending: true, nullsFirst: false })
+
+  return (data ?? [])
+    .map((s) => s.spotify_track_id)
+    .filter((id): id is string => !!id)
+    .map((id) => `spotify:track:${id}`)
+}
+
+async function upsertMyPlaylistRow(
+  supabase: SupabaseClient,
+  eventId: number,
+  categoryConfigId: number,
+  employeeId: number | null,
+  playlist: { id: string; url: string }
+) {
+  await supabase.from('event_category_playlists').upsert(
+    {
+      events_id: eventId,
+      quiz_category_configs_id: categoryConfigId,
+      employee_id: employeeId,
+      playlist_id: playlist.id,
+      playlist_url: playlist.url,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'events_id,quiz_category_configs_id,employee_id' }
+  )
+}
+
+/* Copies the round onto the signed-in account as a playlist of your own. Nobody
+   else's row is touched - theirs stays exactly where it was, and from here on
+   each of you syncs your own. */
+export async function copyCategoryPlaylistAction(
+  eventId: number,
+  categoryConfigId: number
+): Promise<PlaylistCopyResult> {
+  try {
+    if (!(await getUserSpotifyToken())) return { ok: false, needsConnect: true }
+
+    const supabase = await createClient()
+
+    const [{ data: event }, { data: config }, uris, employeeId] = await Promise.all([
+      supabase.from('events').select('date').eq('id', eventId).single(),
+      supabase.from('quiz_category_configs').select('order_no, category_name').eq('id', categoryConfigId).single(),
+      roundTrackUris(supabase, eventId, categoryConfigId),
+      getCurrentEmployeeId(supabase),
+    ])
+
+    if (!config) return { ok: false, error: 'category_not_found' }
+    if (!uris.length) return { ok: false, error: 'no_songs' }
+    if (employeeId == null) return { ok: false, error: 'no_employee_record' }
+
+    const userId = await getCurrentUserId()
+    const created = await createPublicPlaylist(userId, playlistTitle(event?.date, config))
+    await replacePlaylistTracks(created.id, uris)
+
+    await upsertMyPlaylistRow(supabase, eventId, categoryConfigId, employeeId, created)
+
+    revalidatePath('/event-setups/events/[id]', 'page')
+    return { ok: true, playlistUrl: created.url }
+  } catch (err) {
+    if (err instanceof SpotifyScopeError) return { ok: false, needsConnect: true, error: 'reconnect' }
+    if (err instanceof SpotifyNotConnectedError) return { ok: false, needsConnect: true }
+    console.error('Playlist copy failed:', err)
+    return { ok: false, error: 'copy_failed' }
+  }
 }
 
 export async function syncCategoryPlaylistAction(
@@ -1188,57 +1396,82 @@ export async function syncCategoryPlaylistAction(
 
     const supabase = await createClient()
 
-    const [{ data: event }, { data: config }, { data: snippets }] = await Promise.all([
+    const [{ data: event }, { data: config }, uris, employeeId, rows] = await Promise.all([
       supabase.from('events').select('date').eq('id', eventId).single(),
       supabase.from('quiz_category_configs').select('order_no, category_name').eq('id', categoryConfigId).single(),
-      supabase
-        .from('past_quiz_questions')
-        .select('spotify_track_id, question_no')
-        .eq('events_id', eventId)
-        .eq('quiz_category_configs_id', categoryConfigId)
-        .order('question_no', { ascending: true, nullsFirst: false }),
+      roundTrackUris(supabase, eventId, categoryConfigId),
+      getCurrentEmployeeId(supabase),
+      loadCategoryPlaylists(supabase, eventId, categoryConfigId),
     ])
 
     if (!config) return { ok: false, error: 'category_not_found' }
 
-    const { data: existing } = await supabase
-      .from('event_category_playlists')
-      .select('playlist_id, playlist_url')
-      .eq('events_id', eventId)
-      .eq('quiz_category_configs_id', categoryConfigId)
-      .maybeSingle()
+    const mine = employeeId != null ? rows.find((r) => r.employee_id === employeeId) : undefined
+    const legacy = rows.find((r) => r.employee_id == null)
 
-    let playlistId = existing?.playlist_id ?? null
-    let playlistUrl = existing?.playlist_url ?? null
+    let playlistId = mine?.playlist_id ?? null
+    let playlistUrl = mine?.playlist_url ?? null
+    let claimedLegacy = false
 
-    if (!playlistId) {
-      const datePart = event?.date ? format(new Date(event.date + 'T00:00:00'), 'd MMMM') : ''
-      const orderPart = config.order_no != null ? `${config.order_no}. ` : ''
-      const title = `${datePart} / ${orderPart}${(config.category_name ?? '').toUpperCase()}`.trim()
-
-      const userId = await getCurrentUserId()
-      const created = await createPublicPlaylist(userId, title)
-      playlistId = created.id
-      playlistUrl = created.url
-
-      await supabase.from('event_category_playlists').upsert(
-        {
-          events_id: eventId,
-          quiz_category_configs_id: categoryConfigId,
-          playlist_id: playlistId,
-          playlist_url: playlistUrl,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'events_id,quiz_category_configs_id' }
-      )
+    /* A round built before per-user playlists has an ownerless row. If it turns
+       out to be on this account, claim it rather than making a second copy of a
+       playlist this person already owns. */
+    if (!playlistId && legacy && employeeId != null) {
+      const [owner, me] = await Promise.all([
+        getPlaylistOwner(legacy.playlist_id).catch(() => null),
+        getCurrentUserId().catch(() => null),
+      ])
+      if (owner && me && owner.id === me) {
+        playlistId = legacy.playlist_id
+        playlistUrl = legacy.playlist_url
+        claimedLegacy = true
+      } else if (owner && me) {
+        return {
+          ok: false,
+          error: 'not_owner',
+          ownerName: playlistOwnerName(legacy) ?? owner.name,
+          playlistUrl: legacy.playlist_url,
+        }
+      }
     }
 
-    const uris = (snippets ?? [])
-      .map((s) => s.spotify_track_id)
-      .filter((id): id is string => !!id)
-      .map((id) => `spotify:track:${id}`)
+    if (!playlistId) {
+      const userId = await getCurrentUserId()
+      const created = await createPublicPlaylist(userId, playlistTitle(event?.date, config))
+      playlistId = created.id
+      playlistUrl = created.url
+      await upsertMyPlaylistRow(supabase, eventId, categoryConfigId, employeeId, created)
+    } else if (claimedLegacy && employeeId != null) {
+      await supabase
+        .from('event_category_playlists')
+        .update({ employee_id: employeeId, updated_at: new Date().toISOString() })
+        .eq('events_id', eventId)
+        .eq('quiz_category_configs_id', categoryConfigId)
+        .is('employee_id', null)
+    }
 
-    await replacePlaylistTracks(playlistId, uris)
+    try {
+      await replacePlaylistTracks(playlistId, uris)
+    } catch (err) {
+      /* Your own row can still go read-only if you reconnect as a different
+         Spotify account, so name the owner rather than send this person round
+         the reconnect loop forever. */
+      if (err instanceof SpotifyScopeError) {
+        const [owner, me] = await Promise.all([
+          getPlaylistOwner(playlistId).catch(() => null),
+          getCurrentUserId().catch(() => null),
+        ])
+        if (owner && me && owner.id !== me) {
+          return {
+            ok: false,
+            error: 'not_owner',
+            ownerName: owner.name,
+            playlistUrl: playlistUrl ?? undefined,
+          }
+        }
+      }
+      throw err
+    }
 
     revalidatePath('/event-setups/events/[id]', 'page')
     return { ok: true, playlistUrl: playlistUrl ?? undefined }

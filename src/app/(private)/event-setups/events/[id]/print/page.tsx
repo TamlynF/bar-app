@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PrintActions from "./print-actions";
 import { stepDirection } from "@/lib/quiz/higher-lower";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
+import { pickCategoryPlaylist, type CategoryPlaylistRow } from "@/lib/quiz/category-playlist";
 
 type Category = {
   id: number;
@@ -74,7 +76,7 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
       .order("created_at"),
     supabase
       .from("event_category_playlists")
-      .select("quiz_category_configs_id, playlist_url")
+      .select("quiz_category_configs_id, playlist_url, playlist_id, employee_id")
       .eq("events_id", id),
   ]);
 
@@ -82,9 +84,20 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
 
   const cats: Category[] = categories ?? [];
   const qs: Question[] = questions ?? [];
-  const playlistByCategory = new Map<number, string>(
-    (playlists ?? []).map((p) => [p.quiz_category_configs_id, p.playlist_url])
-  );
+
+  // The host copy prints whoever's playlist this user would actually play from.
+  const myEmployeeId = await getCurrentEmployeeId(supabase);
+  const playlistRows = (playlists ?? []) as (CategoryPlaylistRow & {
+    quiz_category_configs_id: number;
+  })[];
+  const playlistByCategory = new Map<number, string>();
+  for (const cat of cats) {
+    const picked = pickCategoryPlaylist(
+      playlistRows.filter((p) => p.quiz_category_configs_id === cat.id),
+      myEmployeeId
+    );
+    if (picked) playlistByCategory.set(cat.id, picked.row.playlist_url);
+  }
 
   const rounds = cats.map((cat) => ({
     ...cat,

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +20,12 @@ import {
   deletePastQuestionAction,
   syncCategoryPlaylistAction,
   lookupSpotifyTrackAction,
+  reorderCategoryQuestionsAction,
+  copyCategoryPlaylistAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
 import { describeStep, stepDirection, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
+import { moveQuestion, orderChanged, dropIndex } from "@/lib/quiz/question-order";
 
 type Question = {
   id: string;
@@ -36,6 +40,9 @@ type Question = {
   image_url?: string | null;
   difficulty?: string | null;
 };
+
+const notOwnerMessage = (owner?: string | null) =>
+  `That playlist was made on ${owner ?? "another"}${owner ? "'s" : ""} Spotify account, so only they can change it. You can still open and play it.`;
 
 const difficultyTone = (difficulty: string) => {
   const value = difficulty.toLowerCase();
@@ -58,6 +65,10 @@ type Props = {
   minYears?: number;
   maxYears?: number;
   playlistUrl?: string | null;
+  // False when the playlist shown is a colleague's, or a shared one from before
+  // per-user playlists - you can open it, but only its owner can change it.
+  playlistIsMine?: boolean;
+  playlistOwnerName?: string | null;
   autoOpen?: boolean;
   // Set by "Continue building quiz" - lands on the round with its sheet open.
   openSheet?: boolean;
@@ -91,7 +102,8 @@ const printStyles = `
   @page { size: A4; margin: 0; }
 `;
 
-export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, autoOpen, openSheet, nextRound }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, playlistIsMine = false, playlistOwnerName = null, autoOpen, openSheet, nextRound }: Props) {
+  const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
 
@@ -124,18 +136,70 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [playlistUrl, setPlaylistUrl] = useState<string | null>(initialPlaylistUrl ?? null);
   const [playlistCopied, setPlaylistCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  /* Whose playlist the round is currently showing. It starts from the server -
+     which knows from the employee_id on the row, no Spotify call needed - and
+     only changes once this person makes a copy of their own. */
+  const [isMyPlaylist, setIsMyPlaylist] = useState(playlistIsMine);
+  const [playlistOwner, setPlaylistOwner] = useState<string | null>(
+    playlistIsMine ? null : playlistOwnerName
+  );
 
   const configId = categoryConfigId ?? questions.find((q) => q.quiz_category_configs_id != null)?.quiz_category_configs_id ?? null;
+
+  const someoneElsesPlaylist = !!playlistUrl && !isMyPlaylist;
+
+  const handleCopyPlaylistToMine = async () => {
+    if (configId == null || isCopying) return;
+
+    const ok = await confirm({
+      title: "Make your own copy of this playlist?",
+      description: `A new playlist is created on your Spotify with ${category_name}'s songs in question order, and becomes the one you see and sync here. ${
+        playlistOwner ? `${playlistOwner}'s` : "The existing"
+      } playlist is left exactly as it is - they keep seeing and syncing theirs, and you keep yours.`,
+      confirmLabel: "Create my copy",
+    });
+    if (!ok) return;
+
+    setIsCopying(true);
+    try {
+      const result = await copyCategoryPlaylistAction(eventId, configId);
+      if (result.ok && result.playlistUrl) {
+        setPlaylistUrl(result.playlistUrl);
+        setPlaylistOwner(null);
+        setIsMyPlaylist(true);
+        toast.success("Copied - this round now syncs to the playlist on your Spotify");
+      } else if (result.needsConnect) {
+        toast.warning("Connect Spotify first, then copy the playlist.");
+      } else if (result.error === "no_songs") {
+        toast.error("This round has no songs to copy yet.");
+      } else if (result.error === "no_employee_record") {
+        toast.error("Your login isn't linked to a staff record, so the copy can't be saved to you.");
+      } else {
+        toast.error("Could not copy the playlist");
+      }
+    } catch {
+      toast.error("Could not copy the playlist");
+    } finally {
+      setIsCopying(false);
+    }
+  };
 
   const handleSyncPlaylist = async () => {
     if (configId == null) return;
     setIsSyncing(true);
     try {
       const result = await syncCategoryPlaylistAction(eventId, configId);
-      if (result.needsConnect) {
+      if (result.error === "not_owner") {
+        setPlaylistOwner(result.ownerName ?? null);
+        setIsMyPlaylist(false);
+        toast.warning(notOwnerMessage(result.ownerName));
+      } else if (result.needsConnect) {
         toast.warning("Reconnect Spotify to build the playlist (new permission needed).");
       } else if (result.ok) {
         if (result.playlistUrl) setPlaylistUrl(result.playlistUrl);
+        setPlaylistOwner(null);
+        setIsMyPlaylist(true);
         toast.success("Playlist synced");
       } else {
         toast.error("Could not sync the playlist");
@@ -173,6 +237,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  // The order as it stood when the drag began, so a failed save can put it back.
+  const dragSnapshot = useRef<Question[] | null>(null);
   const [editTrackId, setEditTrackId] = useState<string | null>(null);
   const [editSpotifyUrl, setEditSpotifyUrl] = useState("");
   const [isFindingTrack, setIsFindingTrack] = useState(false);
@@ -326,6 +395,123 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     } finally {
       setIsPending(false);
     }
+  };
+
+  /* Reordering rewrites question_no on every row that moved, and on a
+     Higher-or-Lower round it also rebuilds the chain of comparison years - so the
+     round is pulled back from the server once the write lands. */
+  const persistOrder = useCallback(async (ordered: Question[], snapshot: Question[]) => {
+    if (configId == null) {
+      setQuestions(snapshot);
+      toast.error("This round has no category set up, so it cannot be reordered.");
+      return;
+    }
+
+    setIsReordering(true);
+    try {
+      const { playlist } = await reorderCategoryQuestionsAction(
+        eventId,
+        configId,
+        ordered.map((q) => q.id)
+      );
+
+      if (playlist?.status === "synced") {
+        toast.success("Question order updated - the Spotify playlist now plays in the same order");
+      } else if (playlist?.status === "not_owner") {
+        setPlaylistOwner(playlist.ownerName ?? null);
+        toast.warning(`Question order updated. ${notOwnerMessage(playlist.ownerName)}`);
+      } else if (playlist?.status === "needs_connect") {
+        toast.warning("Question order updated. Connect Spotify to re-order the playlist to match.");
+      } else if (playlist?.status === "failed") {
+        toast.warning("Question order updated, but the Spotify playlist could not be re-ordered.");
+      } else {
+        toast.success("Question order updated");
+      }
+
+      if (isHigherOrLower) router.refresh();
+    } catch {
+      setQuestions(snapshot);
+      toast.error("Could not save the new order");
+    } finally {
+      setIsReordering(false);
+    }
+  }, [configId, eventId, isHigherOrLower, router]);
+
+  /* The handle stays enabled while a reorder saves - disabling it would take the
+     focus away mid-keystroke - so the in-flight guard lives in the handlers. */
+  const reorderAllowed = questions.length > 1 && editingId === null && !isPending;
+  const canReorder = reorderAllowed && !isReordering;
+
+  const startDrag = (e: React.PointerEvent<HTMLButtonElement>, id: string) => {
+    if (!canReorder) return;
+    // preventDefault stops the drag selecting the card text, so focus has to be
+    // asked for - it is what the arrow keys act on once the drag is over.
+    e.preventDefault();
+    e.currentTarget.focus();
+    dragSnapshot.current = questions;
+    setDraggingId(id);
+  };
+
+  /* The drag is followed on the window rather than through setPointerCapture on
+     the handle. Reordering moves the handle's card in the DOM, and moving a
+     capturing element makes the browser drop the capture - the rest of the
+     gesture, pointerup included, would then never reach the handler and the new
+     order would be shown but never saved.
+
+     Re-registering as `questions` changes is what keeps the listeners reading
+     the order as it stands rather than the one the drag started from. */
+  useEffect(() => {
+    if (!draggingId) return;
+
+    const onMove = (e: PointerEvent) => {
+      const from = questions.findIndex((q) => q.id === draggingId);
+      if (from < 0) return;
+
+      // Midpoints of the cards that are staying put - the index the dragged card
+      // would land on, and what makes a card swap at halfway rather than at its edge.
+      const midpoints = questions
+        .filter((q) => q.id !== draggingId)
+        .map((q) => {
+          const rect = cardRefs.current.get(q.id)?.getBoundingClientRect();
+          return rect ? rect.top + rect.height / 2 : Number.POSITIVE_INFINITY;
+        });
+
+      const to = dropIndex(midpoints, e.clientY);
+      if (to !== from) setQuestions((prev) => moveQuestion(prev, from, to));
+    };
+
+    const onEnd = () => {
+      setDraggingId(null);
+      const snapshot = dragSnapshot.current;
+      dragSnapshot.current = null;
+      if (snapshot && orderChanged(snapshot, questions)) {
+        persistOrder(questions, snapshot);
+      }
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onEnd);
+    window.addEventListener("pointercancel", onEnd);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onEnd);
+      window.removeEventListener("pointercancel", onEnd);
+    };
+  }, [draggingId, questions, persistOrder]);
+
+  /* Dragging is a pointer gesture, so the handle also answers to the arrow keys -
+     otherwise a round could only be reordered with a mouse or a finger. */
+  const moveByKeyboard = (id: string, delta: number) => {
+    if (!canReorder) return;
+    const from = questions.findIndex((q) => q.id === id);
+    if (from < 0) return;
+    const to = from + delta;
+    if (to < 0 || to >= questions.length) return;
+
+    const snapshot = questions;
+    const reordered = moveQuestion(questions, from, to);
+    setQuestions(reordered);
+    persistOrder(reordered, snapshot);
   };
 
   const deleteQuestion = async (id: string) => {
@@ -541,7 +727,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {includeSpotify && (playlistUrl || spotifyConnected) && (
             <div className="px-5 pt-3">
               {playlistUrl ? (
-                spotifyConnected ? (
+                <div className="space-y-1.5">
+                  {/* The playlist is public and the link is shared by the round,
+                      not by whoever made it - so opening it never depends on
+                      having your own Spotify connected. Only syncing does. */}
                   <div className="flex items-center gap-2">
                     <a
                       href={playlistUrl}
@@ -557,40 +746,55 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleSyncPlaylist}
-                      disabled={isSyncing}
-                      title="Sync playlist with saved songs"
+                      onClick={handleCopyPlaylist}
+                      title="Copy playlist link"
+                      aria-label="Copy playlist link"
                       className="h-10 w-10 shrink-0 rounded-xl border-2 border-admin-line text-admin-primary hover:bg-admin-bg"
                     >
-                      {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      {playlistCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
                     </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5 rounded-xl border-2 border-admin-line bg-admin-bg p-2.5">
-                    <p className="font-bold text-[12px] text-admin-muted">
-                      Spotify playlist - copy into a browser or the Spotify app
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={playlistUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-[13px] font-bold text-admin-primary underline"
-                      >
-                        {playlistUrl}
-                      </a>
+                    {spotifyConnected && !someoneElsesPlaylist && (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleCopyPlaylist}
-                        title="Copy playlist URL"
-                        className="h-9 w-9 shrink-0 rounded-lg border-2 border-admin-line text-admin-primary hover:bg-white"
+                        onClick={handleSyncPlaylist}
+                        disabled={isSyncing}
+                        title="Sync playlist with saved songs"
+                        aria-label="Sync playlist with saved songs"
+                        className="h-10 w-10 shrink-0 rounded-xl border-2 border-admin-line text-admin-primary hover:bg-admin-bg"
                       >
-                        {playlistCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                        {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       </Button>
-                    </div>
+                    )}
                   </div>
-                )
+                  {someoneElsesPlaylist && (
+                    <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface p-2.5">
+                      <p className="text-[13px] text-admin-muted">
+                        {playlistOwner
+                          ? `This is ${playlistOwner}'s playlist.`
+                          : "This playlist was made before everyone had their own."}{" "}
+                        You can open and play it, but only its owner can change it. Make your own
+                        copy to get one this round keeps in step for you - theirs stays as it is.
+                      </p>
+                      {spotifyConnected && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCopyPlaylistToMine}
+                          disabled={isCopying}
+                          className="h-10 w-full rounded-xl border border-admin-primary text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
+                        >
+                          {isCopying ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Copy className="mr-2 h-4 w-4" />
+                          )}
+                          Make my own copy
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <Button
                   type="button"
@@ -628,7 +832,22 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               </div>
             ) : null;
           })()}
-          <div className="space-y-3 bg-admin-bg p-3">
+          <div className={cn("space-y-3 bg-admin-bg p-3", draggingId && "select-none")}>
+            {count > 1 && (
+              <p className="flex items-center gap-1.5 px-1 text-[13px] text-admin-muted">
+                {isReordering ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                    Saving the new order…
+                  </>
+                ) : (
+                  <>
+                    <GripVertical className="h-3.5 w-3.5 shrink-0" />
+                    Drag a question by its handle to reorder the round - the numbers follow.
+                  </>
+                )}
+              </p>
+            )}
             {count === 0 ? (
               <div className="py-8 text-center">
                 <BookOpen className="mx-auto mb-2 h-6 w-6 text-admin-muted opacity-20" />
@@ -643,11 +862,21 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                   isHigherOrLower && q.hint_year
                     ? describeStep(q.release_year, q.hint_year, gapRange)
                     : null;
+                const isDragging = draggingId === q.id;
                 return (
-                  <div key={q.id} className={cn(
-                    "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
-                    isEditing ? "border-admin-primary ring-4 ring-admin-primary/5" : "border-admin-line"
-                  )}>
+                  <div
+                    key={q.id}
+                    ref={(el) => {
+                      if (el) cardRefs.current.set(q.id, el);
+                      else cardRefs.current.delete(q.id);
+                    }}
+                    className={cn(
+                      "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
+                      isEditing ? "border-admin-primary ring-4 ring-admin-primary/5" : "border-admin-line",
+                      isDragging && "border-admin-primary shadow-lg ring-2 ring-admin-primary/20",
+                      draggingId !== null && !isDragging && "opacity-60"
+                    )}
+                  >
                     {isEditing ? (
                       <div className="animate-in space-y-3 duration-200 zoom-in-95 fade-in">
                         <div className="flex items-center gap-2">
@@ -780,6 +1009,30 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       <div className="space-y-2">
                         <div className="-mt-1 flex items-center justify-between gap-2">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            {questions.length > 1 && (
+                              <button
+                                type="button"
+                                aria-label={`Reorder question ${q.question_no ?? idx + 1} - drag, or use the arrow keys`}
+                                title="Drag to reorder"
+                                disabled={!reorderAllowed && !isDragging}
+                                onPointerDown={(e) => startDrag(e, q.id)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "ArrowUp") {
+                                    e.preventDefault();
+                                    moveByKeyboard(q.id, -1);
+                                  } else if (e.key === "ArrowDown") {
+                                    e.preventDefault();
+                                    moveByKeyboard(q.id, 1);
+                                  }
+                                }}
+                                className={cn(
+                                  "-ml-1.5 flex h-8 w-6 shrink-0 touch-none items-center justify-center rounded-lg text-admin-muted transition-colors select-none hover:bg-admin-primary/5 hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30",
+                                  isDragging ? "cursor-grabbing text-admin-primary" : "cursor-grab"
+                                )}
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </button>
+                            )}
                             <span className="shrink-0 font-bold text-sm text-admin-primary">Question {q.question_no ?? idx + 1}:</span>
                             {q.difficulty && (
                               <span
