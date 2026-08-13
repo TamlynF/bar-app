@@ -249,11 +249,31 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   };
 
-  const handleCopyPlaylist = () => {
+  /* On a phone the link is nearly always on its way to a message, so the share
+     sheet saves a paste. Anywhere without one - desktop, or a share the person
+     backs out of - falls through to the clipboard. */
+  const handleCopyPlaylist = async () => {
     if (!playlistUrl) return;
-    navigator.clipboard.writeText(playlistUrl);
-    setPlaylistCopied(true);
-    setTimeout(() => setPlaylistCopied(false), 2000);
+
+    const canShare =
+      typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
+    if (canShare) {
+      try {
+        await navigator.share({ title: `${category_name} playlist`, url: playlistUrl });
+        return;
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(playlistUrl);
+      setPlaylistCopied(true);
+      setTimeout(() => setPlaylistCopied(false), 2000);
+      toast.success("Spotify playlist URL is copied");
+    } catch {
+      toast.error("Could not copy the playlist link - open the playlist and copy it from Spotify.");
+    }
   };
 
   useEffect(() => {
@@ -697,8 +717,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         type="button"
         variant="outline"
         onClick={handleCopyPlaylist}
-        title="Copy playlist link"
-        aria-label="Copy playlist link"
+        title="Share or copy playlist link"
+        aria-label="Share or copy playlist link"
         className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white text-admin-primary hover:bg-admin-bg"
       >
         {playlistCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
