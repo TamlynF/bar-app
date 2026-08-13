@@ -39,6 +39,10 @@ interface ManualEntryProps {
   chainStart: number;
   gapRange: YearRange;
   disabled?: boolean;
+  /* Set when the round has no room left - what saved plus already-picked adds up
+     to. A hand-written entry saves straight to the round, so it has to respect
+     the same ceiling the picks do. Null means there is room. */
+  blockedReason?: string | null;
   onSaved: () => void;
   onPlaylistUrl?: (url: string) => void;
 }
@@ -59,6 +63,7 @@ export default function ManualEntry({
   chainStart,
   gapRange,
   disabled = false,
+  blockedReason = null,
   onSaved,
   onPlaylistUrl,
 }: ManualEntryProps) {
@@ -162,6 +167,11 @@ export default function ManualEntry({
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
+    // The round can fill up while this stays open - ticking drafts below counts.
+    if (blockedReason) {
+      toast.error(blockedReason);
+      return;
+    }
 
     try {
       if (kind === "question") {
@@ -275,6 +285,7 @@ export default function ManualEntry({
     difficulty,
     noun,
     reset,
+    blockedReason,
     onSaved,
     onPlaylistUrl,
   ]);
@@ -283,7 +294,15 @@ export default function ManualEntry({
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        /* Deliberately clickable when the round is full: an error that says why
+           beats a dead button that says nothing. */
+        onClick={() => {
+          if (blockedReason) {
+            toast.error(blockedReason);
+            return;
+          }
+          setOpen(true);
+        }}
         disabled={disabled}
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-admin-primary bg-white px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40"
       >

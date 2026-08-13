@@ -304,6 +304,17 @@ export default function QuizRoundSheet({
   const selectionCap = needed > 0 ? needed : question_count;
   const atCap = selected.size >= selectionCap;
 
+  /* Writing one by hand saves straight to the round rather than joining the
+     drafts, so it has to count what is already ticked as well as what is saved -
+     otherwise a full round could be pushed past its size one at a time. */
+  const spokenFor = savedCount + selected.size;
+  const manualBlockedReason =
+    question_count > 0 && spokenFor >= question_count
+      ? selected.size > 0
+        ? `${category_name} is full: ${savedCount} saved plus ${selected.size} picked fills all ${question_count} ${noun}s. Untick one below to make room for your own.`
+        : `${category_name} already has all ${question_count} ${noun}s. Delete one from the round before writing your own.`
+      : null;
+
   // The comparison year each ticked song would carry, in ticking order, plus
   // the year the next tick has to follow on from.
   const chain = useMemo(() => {
@@ -744,9 +755,38 @@ export default function QuizRoundSheet({
 
   const handleManualSaved = useCallback(() => {
     setApproved(null);
+
+    /* The round just gained a question by hand, so it has room for one fewer
+       pick. Without this the ticks stay where they were and the counter reads
+       "10 of 9 picked" - and approving would push the round past its size. */
+    const room = Math.max(question_count - (savedCount + 1), 0);
+    if (question_count > 0 && selected.size > room) {
+      const ticked = pickOrder.filter((i) => selected.has(i));
+      const untracked = [...selected].filter((i) => !ticked.includes(i)).sort((a, b) => a - b);
+      const kept = [...ticked, ...untracked].slice(0, room);
+      const dropped = selected.size - kept.length;
+
+      setSelected(new Set(kept));
+      setPickOrder(kept);
+      toast.info(
+        room === 0
+          ? `That fills ${category_name}, so the ${plural(dropped, `picked ${noun}`)} came off.`
+          : `Room for ${plural(room, noun)} now - the last ${plural(dropped, noun)} came off.`
+      );
+    }
+
     onApproved?.();
     router.refresh();
-  }, [onApproved, router]);
+  }, [
+    onApproved,
+    router,
+    question_count,
+    savedCount,
+    selected,
+    pickOrder,
+    category_name,
+    noun,
+  ]);
 
   const closeSheet = useCallback(() => setOpen(false), []);
 
@@ -1321,6 +1361,7 @@ export default function QuizRoundSheet({
                     chainStart={chainStart}
                     gapRange={gapRange}
                     disabled={isGenerating || isApproving}
+                    blockedReason={manualBlockedReason}
                     onSaved={handleManualSaved}
                     onPlaylistUrl={onPlaylistUrl}
                   />
