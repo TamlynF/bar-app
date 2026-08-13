@@ -378,8 +378,8 @@ export default function PrivateLayoutClient({
     const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
 
     return (
-        <div className="pt-safe-top flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
-            <aside className={cn(
+        <div data-admin-shell className="pt-safe-top flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
+            <aside data-print-hide className={cn(
                 "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-nav-line bg-nav-bg transition-[width] duration-300 sm:flex",
                 collapsed ? "w-16" : "w-72"
             )}>
@@ -680,8 +680,8 @@ export default function PrivateLayoutClient({
                 </div>
             </aside>
 
-            <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-admin-bg sm:h-screen sm:overflow-y-auto">
-                <header className="sticky top-0 z-40 w-full border-b border-admin-line bg-admin-card/95 backdrop-blur-sm">
+            <div data-admin-scroll className="flex min-h-screen min-w-0 flex-1 flex-col bg-admin-bg sm:h-screen sm:overflow-y-auto">
+                <header data-print-hide className="sticky top-0 z-40 w-full border-b border-admin-line bg-admin-card/95 backdrop-blur-sm">
                     <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-2 sm:hidden">
                         {backHref ? (
                             <button
@@ -749,14 +749,14 @@ export default function PrivateLayoutClient({
                 {/* The bottom gutter is deliberately generous: on phones it has to
                     clear the fixed nav, and on a long list the last row otherwise
                     sits flush against the viewport edge. */}
-                <main className={cn(
+                <main data-admin-main className={cn(
                     "mx-auto w-full flex-1 p-1 pb-28 sm:min-h-0 sm:py-6 sm:pb-16",
                     widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}
                 </main>
 
-                <nav aria-label="Main" className="fixed right-0 bottom-0 left-0 z-50 border-t border-nav-line bg-nav-bg pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.18)] sm:hidden">
+                <nav data-print-hide aria-label="Main" className="fixed right-0 bottom-0 left-0 z-50 border-t border-nav-line bg-nav-bg pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.18)] sm:hidden">
                     <div className="mx-auto flex w-full max-w-md items-stretch justify-around px-2">
                         {navItems.map((item) => {
                             const normalizedHref = item.href.replace(/\/$/, "")

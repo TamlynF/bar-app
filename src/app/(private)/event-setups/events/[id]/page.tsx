@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Brain, CheckCircle2 } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, CheckCircle2, Printer } from "lucide-react";
 import CategorySection from "./category-section";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
 
@@ -206,15 +206,26 @@ export default async function EventQuizQuestionsPage({
               ? `${completedRounds} of ${byCategory.length} rounds complete. Your quiz is ready to review.`
               : `${completedRounds} of ${byCategory.length} rounds complete. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
           </p>
-          {continueHref && (
-            <Link
-              href={continueHref}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
-            >
-              {totalQuestions === 0 ? "Start building quiz" : "Continue building quiz"}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            {totalQuestions > 0 && (
+              <Link
+                href={`/event-setups/events/${event.id}/print`}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
+              >
+                <Printer className="h-4 w-4" />
+                Print host copy
+              </Link>
+            )}
+            {continueHref && (
+              <Link
+                href={continueHref}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+              >
+                {totalQuestions === 0 ? "Start building quiz" : "Continue building quiz"}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

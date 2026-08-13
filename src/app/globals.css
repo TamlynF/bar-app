@@ -1964,3 +1964,48 @@ body {
     }
   }
 }
+
+/* Print. Unlayered on purpose so it outranks the Tailwind utility layer -
+   the admin shell pins itself to the viewport height, which would otherwise
+   clip a printed document to a single page. */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.4cm;
+  }
+
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  [data-print-hide] {
+    display: none;
+  }
+
+  [data-admin-shell] {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  [data-admin-scroll] {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  [data-admin-main] {
+    max-width: none;
+    padding: 0;
+  }
+
+  [data-print-sheet] {
+    max-width: none;
+    padding: 0;
+    color: #000;
+  }
+}
