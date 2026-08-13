@@ -37,6 +37,23 @@ export async function GET(request: NextRequest) {
 
   const tokens = await tokenRes.json()
 
+  /* Who just connected, so the app can name the account without asking Spotify
+     again on every page. It also stands in for "connected": the access token
+     cookie expires after an hour while the refresh token is good for a month, so
+     reading that one would call a live connection dead after 60 minutes. */
+  let accountName = ''
+  try {
+    const meRes = await fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    })
+    if (meRes.ok) {
+      const me = await meRes.json()
+      accountName = me.display_name || me.id || ''
+    }
+  } catch (err) {
+    console.error('Spotify /me lookup failed after connect:', err)
+  }
+
   const separator = state.includes('?') ? '&' : '?'
   const response = NextResponse.redirect(`${siteUrl}${state}${separator}spotify_connected=true`)
 
@@ -50,6 +67,14 @@ export async function GET(request: NextRequest) {
 
   response.cookies.set('spotify_refresh_token', tokens.refresh_token, {
     httpOnly: true,
+    secure: false,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  })
+
+  response.cookies.set('spotify_account', encodeURIComponent(accountName), {
+    httpOnly: false,
     secure: false,
     sameSite: 'lax',
     path: '/',

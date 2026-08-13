@@ -51,6 +51,20 @@ export async function getUserSpotifyToken(): Promise<string | null> {
   return cookieStore.get("spotify_access_token")?.value ?? null;
 }
 
+export const SPOTIFY_COOKIES = [
+  "spotify_access_token",
+  "spotify_refresh_token",
+  "spotify_account",
+] as const;
+
+/* Signing out of Spotify here only drops this app's tokens - the Spotify account
+   itself stays signed in, which is why reconnecting has to ask for the account
+   picker rather than silently handing back the same one. */
+export async function clearSpotifyTokens(): Promise<void> {
+  const cookieStore = await cookies();
+  for (const name of SPOTIFY_COOKIES) cookieStore.delete(name);
+}
+
 async function spotifyUserFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = (await getUserSpotifyToken()) ?? (await refreshUserToken());
   if (!token) throw new SpotifyNotConnectedError();

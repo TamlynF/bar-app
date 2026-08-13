@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
   lookupSpotifyTrackAction,
   reorderCategoryQuestionsAction,
   copyCategoryPlaylistAction,
+  disconnectSpotifyAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
 import { describeStep, stepDirection, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
@@ -40,6 +41,11 @@ type Question = {
   image_url?: string | null;
   difficulty?: string | null;
 };
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 const notOwnerMessage = (owner?: string | null) =>
   `That playlist was made on ${owner ?? "another"}${owner ? "'s" : ""} Spotify account, so only they can change it. You can still open and play it.`;
@@ -133,6 +139,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const sectionRef = useRef<HTMLElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [spotifyAccount, setSpotifyAccount] = useState<string | null>(null);
+  const [spotifyRefreshKey, setSpotifyRefreshKey] = useState(0);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState<string | null>(initialPlaylistUrl ?? null);
   const [playlistCopied, setPlaylistCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -211,6 +220,34 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   };
 
+  /* Connecting leaves the app and comes back, so the return trip names this round
+     - the page reopens and scrolls to it rather than dumping you at the top. */
+  const spotifyReturnPath = `/event-setups/events/${eventId}?category=${encodeURIComponent(category_name)}`;
+  const spotifyLoginHref = `/api/spotify/login?return=${encodeURIComponent(spotifyReturnPath)}`;
+
+  const handleDisconnectSpotify = async () => {
+    if (isDisconnecting) return;
+    const ok = await confirm({
+      title: "Disconnect Spotify?",
+      description: `This signs ${spotifyAccount ?? "the connected account"} out of the quiz app so you can connect a different one. Playlists already made stay exactly where they are, on whichever account made them.`,
+      confirmLabel: "Disconnect",
+    });
+    if (!ok) return;
+
+    setIsDisconnecting(true);
+    try {
+      await disconnectSpotifyAction();
+      setSpotifyConnected(false);
+      setSpotifyAccount(null);
+      setSpotifyRefreshKey((k) => k + 1);
+      toast.success("Spotify disconnected - connect again to use a different account");
+    } catch {
+      toast.error("Could not disconnect Spotify");
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
+
   const handleCopyPlaylist = () => {
     if (!playlistUrl) return;
     navigator.clipboard.writeText(playlistUrl);
@@ -226,13 +263,16 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   }, [autoOpen]);
 
+  /* The account cookie outlives the access token, so it - not the hour-long
+     token - is what says whether Spotify is still connected. */
   useEffect(() => {
-    const hasCookie = document.cookie.includes('spotify_access_token');
-    const urlParams = new URLSearchParams(window.location.search);
-    if (hasCookie || urlParams.get('spotify_connected') === 'true') {
+    const account = readCookie("spotify_account");
+    const justConnected = new URLSearchParams(window.location.search).get("spotify_connected") === "true";
+    if (account !== null || justConnected || document.cookie.includes("spotify_access_token")) {
       setSpotifyConnected(true);
+      setSpotifyAccount(account || null);
     }
-  }, []);
+  }, [spotifyRefreshKey]);
   const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1 });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
@@ -685,6 +725,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               maxYears={maxYears}
               playlistUrl={playlistUrl}
               spotifyConnected={spotifyConnected}
+              spotifyAccount={spotifyAccount}
+              spotifyReturnPath={spotifyReturnPath}
               autoOpen={openSheet}
               nextRound={nextRound}
               onApproved={() => setOpen(true)}
@@ -712,16 +754,53 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
       {open && (
         <>
-          {includeSpotify && !spotifyConnected && (
+          {includeSpotify && (
             <div className="px-5 pt-3">
-              <a
-                href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/events/${eventId}`)}`}
-                style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
-              >
-                <Music className="h-3.5 w-3.5" />
-                Connect Spotify
-              </a>
+              {spotifyConnected ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-admin-line bg-admin-surface px-3 py-2.5">
+                  <span
+                    style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-(--spotify-bg) text-white"
+                  >
+                    <Music className="h-3.5 w-3.5" />
+                  </span>
+                  <p className="min-w-0 flex-1 text-[13px] text-admin-muted">
+                    Connected as{" "}
+                    <span className="font-semibold text-admin-ink">
+                      {spotifyAccount ?? "your Spotify account"}
+                    </span>
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDisconnectSpotify}
+                    disabled={isDisconnecting}
+                    className="h-9 shrink-0 rounded-lg border border-admin-line px-3 text-[13px] font-semibold text-admin-muted hover:bg-admin-card hover:text-admin-ink"
+                  >
+                    {isDisconnecting ? (
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                    )}
+                    Disconnect
+                  </Button>
+                  <a
+                    href={`${spotifyLoginHref}&switch=1`}
+                    className="h-9 shrink-0 rounded-lg border border-admin-primary px-3 text-[13px] font-semibold leading-9 text-admin-primary transition-colors hover:bg-admin-primary-soft"
+                  >
+                    Switch account
+                  </a>
+                </div>
+              ) : (
+                <a
+                  href={spotifyLoginHref}
+                  style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
+                >
+                  <Music className="h-3.5 w-3.5" />
+                  Connect Spotify
+                </a>
+              )}
             </div>
           )}
           {includeSpotify && (playlistUrl || spotifyConnected) && (

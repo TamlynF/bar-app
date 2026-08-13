@@ -10,6 +10,7 @@ import {
   createPublicPlaylist,
   replacePlaylistTracks,
   getPlaylistOwner,
+  clearSpotifyTokens,
   SpotifyScopeError,
   SpotifyNotConnectedError,
 } from '@/lib/spotify'
@@ -1278,6 +1279,15 @@ export type PlaylistSyncResult = {
   /* Set when the playlist belongs to a different Spotify account - reconnecting
      will never help, so the UI has to say whose it is instead. */
   ownerName?: string
+}
+
+/* Drops this app's Spotify tokens so the next connect can pick a different
+   account. Nothing that has already been saved is touched - playlists stay on
+   whichever account made them. */
+export async function disconnectSpotifyAction(): Promise<{ ok: true }> {
+  await clearSpotifyTokens()
+  revalidatePath('/event-setups/events/[id]', 'page')
+  return { ok: true }
 }
 
 export type PlaylistCopyResult = {

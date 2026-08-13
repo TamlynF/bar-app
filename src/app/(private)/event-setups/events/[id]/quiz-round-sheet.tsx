@@ -149,6 +149,10 @@ interface QuizRoundSheetProps {
   maxYears?: number;
   playlistUrl?: string | null;
   spotifyConnected?: boolean;
+  // The Spotify display name, so the banner can say which account songs land on.
+  spotifyAccount?: string | null;
+  // Where connecting should return to - the round, not the top of the page.
+  spotifyReturnPath?: string;
   autoOpen?: boolean;
   // Shown on the success view once the round is filled.
   nextRound?: NextRoundSummary | null;
@@ -198,6 +202,8 @@ export default function QuizRoundSheet({
   maxYears = DEFAULT_YEAR_RANGE.maxYears,
   playlistUrl = null,
   spotifyConnected = false,
+  spotifyAccount = null,
+  spotifyReturnPath,
   autoOpen = false,
   nextRound = null,
   onApproved,
@@ -804,7 +810,7 @@ export default function QuizRoundSheet({
       : `We'll create ${batchSize} spares so you can pick the ones you like.`;
 
   const spotifyLoginHref = `/api/spotify/login?return=${encodeURIComponent(
-    `/event-setups/events/${eventId}`
+    spotifyReturnPath ?? `/event-setups/events/${eventId}?category=${encodeURIComponent(category_name)}`
   )}`;
 
   return (
@@ -1005,7 +1011,9 @@ export default function QuizRoundSheet({
                     <div className="min-w-50 flex-1">
                       <p className="text-[13px] font-semibold text-admin-success">
                         {spotifyConnected
-                          ? "Spotify connected"
+                          ? spotifyAccount
+                            ? `Spotify connected as ${spotifyAccount}`
+                            : "Spotify connected"
                           : "Connect Spotify to build this round's playlist"}
                       </p>
                       <p className="mt-0.5 text-[13px] text-admin-success/80">
