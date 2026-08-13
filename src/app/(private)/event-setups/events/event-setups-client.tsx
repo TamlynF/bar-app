@@ -2204,6 +2204,15 @@ export default function EventsClient({
                   )}
                 </div>
               )}
+              <button
+                type="button"
+                onClick={closeSheet}
+                aria-label="Close"
+                title="Close"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-card text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
+              >
+                <X className="h-5 w-5 shrink-0" />
+              </button>
             </div>
 
             {selected && !isAdding && (
