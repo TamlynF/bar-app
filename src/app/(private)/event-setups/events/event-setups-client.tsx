@@ -370,7 +370,10 @@ export default function EventsClient({
     const m = now.getMonth();
     const last = new Date(y, m + 1, 0).getDate();
     const mm = String(m + 1).padStart(2, "0");
-    return { start: `${y}-${mm}-01`, end: `${y}-${mm}-${String(last).padStart(2, "0")}` };
+    return {
+      start: `${y}-${mm}-${String(now.getDate()).padStart(2, "0")}`,
+      end: `${y}-${mm}-${String(last).padStart(2, "0")}`,
+    };
   });
   const [formBookingId, setFormBookingId] = useState<string>("");
   const [formGroupName, setFormGroupName] = useState<string>("");
