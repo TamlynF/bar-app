@@ -197,6 +197,11 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 /* Month cells render at most this many chips before falling back to "+n more". */
 const DAY_CHIP_LIMIT = 4;
 
+/* The two issues the dialog can fix on the spot. Named so the message and the
+   button that resolves it can never drift apart. */
+const ISSUE_NO_WINNER = "No winning team has been recorded for this quiz.";
+const ISSUE_PAST_BUT_ACTIVE = "This event has already happened but is still marked active.";
+
 const SHEET_PILL =
   "inline-flex h-6.5 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
 
@@ -913,6 +918,7 @@ export default function EventsClient({
       } else {
         toast.success(nextActive ? "Event activated" : "Event deactivated");
         setSelected((cur) => (cur && cur.id === event.id ? { ...cur, is_active: nextActive } : cur));
+        setIssuesEvent((cur) => (cur && cur.id === event.id ? { ...cur, is_active: nextActive } : cur));
       }
     });
   };
@@ -1050,10 +1056,10 @@ export default function EventsClient({
       issues.push(`Quiz questions are incomplete - ${total} of ${target} written.`);
     }
     if (needsWinner(e)) {
-      issues.push("No winning team has been recorded for this quiz.");
+      issues.push(ISSUE_NO_WINNER);
     }
     if (past && e.is_active !== false) {
-      issues.push("This event has already happened but is still marked active.");
+      issues.push(ISSUE_PAST_BUT_ACTIVE);
     }
 
     return issues;
@@ -2119,9 +2125,10 @@ export default function EventsClient({
           )}
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            {/* A phone puts the actions on their own line under the close icon -
-                on one line they eat the width the event title needs. */}
-            <div className="flex flex-wrap items-start justify-between gap-1.5 sm:flex-nowrap sm:gap-3">
+            {/* A phone parks the actions in the header's bottom-right corner -
+                level with the pills, growing up into the date line rather than
+                adding a row of their own. */}
+            <div className="flex items-start justify-between gap-1.5 sm:gap-3">
               <div className="min-w-0">
                 {!showForm && selected ? (
                   <>
@@ -2132,7 +2139,7 @@ export default function EventsClient({
                     <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
                       {selected.title || "Untitled Event"}
                     </SheetTitle>
-                    <p className="mt-1 text-[13px] leading-relaxed font-medium text-admin-muted sm:truncate">
+                    <p className="mt-1 pr-22 text-[13px] leading-relaxed font-medium text-admin-muted sm:truncate sm:pr-0">
                       {formatDate(selected.date)}
                       {(selected.start_time || selected.end_time) && (
                         <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
@@ -2162,7 +2169,7 @@ export default function EventsClient({
                 )}
               </div>
               {selected && !isAdding && (
-                <div className="order-last flex w-full shrink-0 items-center justify-end gap-2 sm:order-0 sm:w-auto sm:justify-start">
+                <div className="absolute right-4 bottom-3 z-10 flex shrink-0 items-center gap-2 sm:static sm:right-auto sm:bottom-auto">
                   <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -2235,7 +2242,7 @@ export default function EventsClient({
             </div>
 
             {selected && !isAdding && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 pr-22 sm:pr-0">
                 {/* A phone gets one pill for the whole state: live or not, and
                     once it sells tickets, whether there are any left. */}
                 {(() => {
@@ -2946,8 +2953,17 @@ export default function EventsClient({
               <>
                 <div className="flex flex-col gap-1 px-6 pt-6 pb-4">
                   <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-admin-ink">
-                    <HelpCircle className="h-4.5 w-4.5 shrink-0 text-admin-error" />
-                    {issues.length} issue{issues.length === 1 ? "" : "s"} to fix
+                    {issues.length === 0 ? (
+                      <>
+                        <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-admin-success" />
+                        Nothing left to fix
+                      </>
+                    ) : (
+                      <>
+                        <HelpCircle className="h-4.5 w-4.5 shrink-0 text-admin-error" />
+                        {issues.length} issue{issues.length === 1 ? "" : "s"} to fix
+                      </>
+                    )}
                   </DialogTitle>
                   <DialogDescription className="text-[13px] font-medium text-admin-muted">
                     {issuesEvent.title || "Untitled Event"}
@@ -2955,12 +2971,67 @@ export default function EventsClient({
                   </DialogDescription>
                 </div>
                 <ul className="max-h-[50vh] divide-y divide-admin-line overflow-y-auto border-y border-admin-line bg-admin-card">
-                  {issues.map((issue) => (
-                    <li key={issue} className="flex items-start gap-2.5 px-6 py-3">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-admin-error" aria-hidden="true" />
-                      <span className="text-[13px] leading-snug font-semibold text-admin-ink">{issue}</span>
+                  {issues.length === 0 ? (
+                    <li className="flex items-start gap-2.5 px-6 py-4">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-admin-success" aria-hidden="true" />
+                      <span className="text-[13px] leading-snug font-semibold text-admin-ink">
+                        Everything this event was flagged for has been sorted.
+                      </span>
                     </li>
-                  ))}
+                  ) : (
+                    issues.map((issue) => (
+                      <li key={issue} className="px-6 py-3">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-admin-error" aria-hidden="true" />
+                          <span className="text-[13px] leading-snug font-semibold text-admin-ink">{issue}</span>
+                        </div>
+                        {issue === ISSUE_NO_WINNER && (() => {
+                          const teams = confirmedTeams(issuesEvent.id);
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  disabled={isPending}
+                                  className="mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50"
+                                >
+                                  <Trophy className="h-4 w-4 shrink-0" />
+                                  Set winner
+                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+                                {teams.length === 0 ? (
+                                  <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
+                                ) : (
+                                  teams.map((team) => (
+                                    <DropdownMenuItem
+                                      key={team.id}
+                                      disabled={isPending}
+                                      onClick={() => chooseWinner(issuesEvent, team.id)}
+                                    >
+                                      <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
+                                    </DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          );
+                        })()}
+                        {issue === ISSUE_PAST_BUT_ACTIVE && (
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => toggleEventActive(issuesEvent)}
+                            className="mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50"
+                          >
+                            <Ban className="h-4 w-4 shrink-0" />
+                            Deactivate event
+                          </button>
+                        )}
+                      </li>
+                    ))
+                  )}
                 </ul>
                 <div className="flex flex-row gap-2 px-6 py-5">
                   <button
