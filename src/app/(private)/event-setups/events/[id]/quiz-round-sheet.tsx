@@ -264,6 +264,19 @@ export default function QuizRoundSheet({
 
   const topicRef = useRef<HTMLInputElement>(null);
 
+  /* Creating pushes step 2 in below the setup form, off the bottom of a phone
+     screen. The batch is the point of pressing the button, so the sheet moves
+     to it as soon as it appears rather than leaving you to scroll. */
+  const draftsRef = useRef<HTMLElement>(null);
+  const draftsShowing = isGenerating || drafts.length > 0;
+  useEffect(() => {
+    if (!draftsShowing) return;
+    const timer = window.setTimeout(() => {
+      draftsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [draftsShowing]);
+
   const kind = roundKind({ isPicture, includeSpotify });
   const isHigherOrLower = includeSpotify && isHigherLower;
   const noun = roundNoun(kind);
@@ -1387,8 +1400,8 @@ export default function QuizRoundSheet({
                 </section>
 
                 {/* Step 2 - pick */}
-                {(isGenerating || drafts.length > 0) && (
-                  <section className="mb-6">
+                {draftsShowing && (
+                  <section ref={draftsRef} className="mb-6">
                     <p className="mb-2.5 flex items-center gap-2 text-[12px] font-bold tracking-wide text-admin-primary uppercase">
                       <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-admin-primary text-[11px] font-bold text-white">
                         2
