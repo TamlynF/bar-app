@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Brain, CheckCircle2, Printer } from "lucide-react";
+import { BookOpen, Brain, CheckCircle2, Printer } from "lucide-react";
 import CategorySection from "./category-section";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
@@ -80,7 +80,6 @@ export default async function EventQuizQuestionsPage({
     category: focusCategory,
     completed: completedCategory,
     open: openParam,
-    back: backParam,
   } = await searchParams;
   const supabase = await createClient();
 
@@ -150,16 +149,6 @@ export default async function EventQuizQuestionsPage({
     0
   );
   const progress = targetQuestions > 0 ? Math.min(100, Math.round((totalQuestions / targetQuestions) * 100)) : 0;
-
-  // Every round type now builds in place, so continuing opens the first
-  // unfinished round's sheet on this page rather than navigating away.
-  const backSuffix =
-    backParam && backParam.startsWith("/") && !backParam.startsWith("//")
-      ? `&back=${encodeURIComponent(backParam)}`
-      : "";
-  const continueHref = firstIncompleteCategory
-    ? `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}&open=1${backSuffix}`
-    : null;
 
   // The next round after each one that still needs questions. Drives the round
   // sheet's footer so approving hands you onward rather than dead-ending.
@@ -243,15 +232,6 @@ export default async function EventQuizQuestionsPage({
               >
                 <Printer className="h-4 w-4" />
                 Print host copy
-              </Link>
-            )}
-            {continueHref && (
-              <Link
-                href={continueHref}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
-              >
-                {totalQuestions === 0 ? "Start building quiz" : "Continue building quiz"}
-                <ArrowRight className="h-4 w-4" />
               </Link>
             )}
           </div>
