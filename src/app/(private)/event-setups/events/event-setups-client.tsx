@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -244,31 +244,58 @@ type QuizCategory = { id: number; category_name: string; question_count: number;
 type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
 type BookingRecord = { id: number; event_id: number; status: string; group_size: number; group_name: string | null };
 
-function getBookingStats(eventId: number, bookings: BookingRecord[]) {
-  const eventBookings = bookings.filter(b => b.event_id === eventId);
-  const confirmed = eventBookings.filter(b => b.status === "confirmed");
-  const waitlisted = eventBookings.filter(b => b.status === "waitlisted");
-  const cancelled = eventBookings.filter(b => b.status === "cancelled");
+/* These are read once per row and the list can run to hundreds of rows, so they
+   take a pre-grouped slice rather than re-scanning every booking and every quiz
+   question for each event - see bookingStatsByEvent / quizStatusByEvent below. */
+type BookingStats = ReturnType<typeof computeBookingStats>;
+type QuizStatus = ReturnType<typeof computeQuizStatus>;
+
+function computeBookingStats(eventBookings: BookingRecord[]) {
+  let confirmedCount = 0;
+  let confirmedPeople = 0;
+  let waitlistedCount = 0;
+  let waitlistedPeople = 0;
+  let cancelledCount = 0;
+  let cancelledPeople = 0;
+
+  for (const b of eventBookings) {
+    const size = b.group_size ?? 0;
+    if (b.status === "confirmed") {
+      confirmedCount++;
+      confirmedPeople += size;
+    } else if (b.status === "waitlisted") {
+      waitlistedCount++;
+      waitlistedPeople += size;
+    } else if (b.status === "cancelled") {
+      cancelledCount++;
+      cancelledPeople += size;
+    }
+  }
+
   return {
-    confirmedCount: confirmed.length,
-    confirmedPeople: confirmed.reduce((s, b) => s + (b.group_size ?? 0), 0),
-    waitlistedCount: waitlisted.length,
-    waitlistedPeople: waitlisted.reduce((s, b) => s + (b.group_size ?? 0), 0),
-    cancelledCount: cancelled.length,
-    cancelledPeople: cancelled.reduce((s, b) => s + (b.group_size ?? 0), 0),
-    totalPeople: confirmed.reduce((s, b) => s + (b.group_size ?? 0), 0),
+    confirmedCount,
+    confirmedPeople,
+    waitlistedCount,
+    waitlistedPeople,
+    cancelledCount,
+    cancelledPeople,
+    totalPeople: confirmedPeople,
   };
 }
 
-function getQuizStatus(eventId: number, quizCategories: QuizCategory[], quizQuestions: QuizQuestion[]) {
-  const eventQs = quizQuestions.filter(q => q.events_id === eventId);
-  const categoryCounts = quizCategories.map(cat => ({
+const EMPTY_BOOKING_STATS: BookingStats = computeBookingStats([]);
+
+function computeQuizStatus(
+  quizCategories: QuizCategory[],
+  countsByCategory?: Map<number, number>
+) {
+  const categoryCounts = quizCategories.map((cat) => ({
     ...cat,
-    count: eventQs.filter(q => q.quiz_category_configs_id === cat.id).length,
+    count: countsByCategory?.get(cat.id) ?? 0,
   }));
   const total = categoryCounts.reduce((s, c) => s + c.count, 0);
   const target = categoryCounts.reduce((s, c) => s + c.question_count, 0);
-  const allComplete = categoryCounts.every(c => c.count >= c.question_count);
+  const allComplete = categoryCounts.every((c) => c.count >= c.question_count);
   const someExist = total > 0;
   return { categoryCounts, total, target, allComplete, someExist };
 }
@@ -384,6 +411,49 @@ export default function EventsClient({
   const [quizOpen, setQuizOpen] = useState(true);
   const [bookingsOpen, setBookingsOpen] = useState(true);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
+
+  /* Grouped once per data change instead of per row. Every row used to filter
+     the whole bookings array four times and the whole questions array once more
+     per category, so any state change - opening the detail sheet included - had
+     to re-scan the entire dataset before the page could paint again. */
+  const bookingStatsByEvent = useMemo(() => {
+    const grouped = new Map<number, BookingRecord[]>();
+    for (const b of bookings) {
+      const list = grouped.get(b.event_id);
+      if (list) list.push(b);
+      else grouped.set(b.event_id, [b]);
+    }
+    const stats = new Map<number, BookingStats>();
+    for (const [eventId, list] of grouped) stats.set(eventId, computeBookingStats(list));
+    return stats;
+  }, [bookings]);
+
+  const quizStatusByEvent = useMemo(() => {
+    const counts = new Map<number, Map<number, number>>();
+    for (const q of quizQuestions) {
+      if (q.quiz_category_configs_id == null) continue;
+      let byCategory = counts.get(q.events_id);
+      if (!byCategory) {
+        byCategory = new Map();
+        counts.set(q.events_id, byCategory);
+      }
+      byCategory.set(
+        q.quiz_category_configs_id,
+        (byCategory.get(q.quiz_category_configs_id) ?? 0) + 1
+      );
+    }
+    const status = new Map<number, QuizStatus>();
+    for (const [eventId, byCategory] of counts) {
+      status.set(eventId, computeQuizStatus(quizCategories, byCategory));
+    }
+    return status;
+  }, [quizQuestions, quizCategories]);
+
+  const emptyQuizStatus = useMemo(() => computeQuizStatus(quizCategories), [quizCategories]);
+
+  const bookingStatsFor = (eventId: number) =>
+    bookingStatsByEvent.get(eventId) ?? EMPTY_BOOKING_STATS;
+  const quizStatusFor = (eventId: number) => quizStatusByEvent.get(eventId) ?? emptyQuizStatus;
 
   const typeById = new Map(eventTypes.map((t) => [t.id, t]));
   const subtypeById = new Map(eventSubtypes.map((s) => [s.id, s]));
@@ -854,7 +924,7 @@ export default function EventsClient({
         const sub = subtypeById.get(e.event_subtypes_id);
         if (sub?.behavior !== "quiz") return false;
         if (!e.date || e.date < todayStr) return false;
-        const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+        const { total, target } = quizStatusFor(e.id);
         return total < target;
       })
     : null;
@@ -864,7 +934,7 @@ export default function EventsClient({
   const needsQuiz = (e: EventRecord) => {
     const sub = subtypeById.get(e.event_subtypes_id);
     if (sub?.behavior !== "quiz") return false;
-    const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+    const { total, target } = quizStatusFor(e.id);
     return total < target;
   };
 
@@ -917,7 +987,7 @@ export default function EventsClient({
       issues.push("Karaoke night with no Singa request link.");
     }
     if (!past && needsQuiz(e)) {
-      const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+      const { total, target } = quizStatusFor(e.id);
       issues.push(`Quiz questions are incomplete - ${total} of ${target} written.`);
     }
     if (needsWinner(e)) {
@@ -944,8 +1014,8 @@ export default function EventsClient({
 
   const QUICK_FILTERS: { key: string; label: string; test: (e: EventRecord) => boolean }[] = [
     { key: "bookable", label: "Requires bookings", test: (e) => e.is_bookable === true },
-    { key: "bookings", label: "Has bookings", test: (e) => getBookingStats(e.id, bookings).confirmedPeople > 0 },
-    { key: "under-10", label: "< 10 bookings", test: (e) => e.is_bookable === true && getBookingStats(e.id, bookings).confirmedPeople < 10 },
+    { key: "bookings", label: "Has bookings", test: (e) => bookingStatsFor(e.id).confirmedPeople > 0 },
+    { key: "under-10", label: "< 10 bookings", test: (e) => e.is_bookable === true && bookingStatsFor(e.id).confirmedPeople < 10 },
     { key: "quiz", label: "Needs quiz", test: needsQuiz },
     { key: "needs-winner", label: "Needs winner", test: needsWinner },
     { key: "active", label: "Active only", test: (e) => e.is_active !== false },
@@ -1116,11 +1186,11 @@ export default function EventsClient({
     const badgeClass = badgeClassFromColor(colorKey);
     const host = employees.find((emp) => emp.id === event.host_employee_id);
     const isQuiz = sub?.behavior === "quiz";
-    const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
+    const quizStat = isQuiz ? quizStatusFor(event.id) : null;
     const canPickWinner = isPlayedQuiz(event);
     const winnerBookingId = winnerByEvent[event.id] ?? null;
     const eventTeams = canPickWinner ? confirmedTeams(event.id) : [];
-    const bStats = getBookingStats(event.id, bookings);
+    const bStats = bookingStatsFor(event.id);
     const inactive = event.is_active === false;
     const hasPricing = !!event.payment_amount && event.payment_amount > 0;
     const isTonight = event.date === todayStr && !inactive;
@@ -1547,7 +1617,7 @@ export default function EventsClient({
 
   const viewSubtype = !showForm && selected ? subtypeById.get(selected.event_subtypes_id) : undefined;
   const viewQuiz = !showForm && selected && viewSubtype?.behavior === "quiz"
-    ? getQuizStatus(selected.id, quizCategories, quizQuestions)
+    ? quizStatusFor(selected.id)
     : null;
   const viewQuizPct = viewQuiz && viewQuiz.target > 0 ? Math.round((viewQuiz.total / viewQuiz.target) * 100) : 0;
 
@@ -2216,7 +2286,7 @@ export default function EventsClient({
               const hasPricing = !!selected.payment_amount && selected.payment_amount > 0;
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = sub?.behavior === "quiz";
-              const bk = getBookingStats(selected.id, bookings);
+              const bk = bookingStatsFor(selected.id);
               const viewAllHref = bookingsHrefFor(selected, "sheet");
               const poster = resolveEventImage({
                 eventImageUrl: selected.image_url,
@@ -2283,7 +2353,7 @@ export default function EventsClient({
                       )}
 
                       {isQuiz && (() => {
-                        const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
+                        const { categoryCounts } = quizStatusFor(selected.id);
                         const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
                         const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                         const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
