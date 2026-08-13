@@ -614,18 +614,27 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             className="h-11 w-18 rounded-lg border border-admin-line bg-white px-3 py-2 text-center text-base font-semibold text-admin-primary tabular-nums outline-none focus:border-admin-primary sm:text-sm"
                           />
                         </div>
-                        {isPicture && q.image_url && (
+                        {isPicture && (
                           <div className="space-y-1.5">
                             <label className="ml-1 text-[13px] font-medium text-admin-muted">Image</label>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={newImagePreview ?? q.image_url}
-                              alt={q.answer_text}
-                              className="h-40 w-full rounded-xl object-cover sm:h-56 sm:w-auto sm:max-w-full sm:object-contain"
-                            />
+                            {newImagePreview ?? q.image_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={newImagePreview ?? q.image_url ?? ""}
+                                alt={q.answer_text}
+                                className="h-40 w-full rounded-xl object-cover sm:h-56 sm:w-auto sm:max-w-full sm:object-contain"
+                              />
+                            ) : (
+                              <div className="flex h-40 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-error/40 bg-admin-error-bg sm:h-56">
+                                <ImageIcon className="h-6 w-6 text-admin-error/50" />
+                                <p className="text-[13px] font-semibold text-admin-error">
+                                  This question has no image
+                                </p>
+                              </div>
+                            )}
                             <label className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line text-[13px] font-semibold text-admin-muted transition-all hover:border-admin-primary hover:text-admin-primary">
                               <Upload className="h-3.5 w-3.5" />
-                              {newImageFile ? newImageFile.name : 'Replace image'}
+                              {newImageFile ? newImageFile.name : q.image_url ? 'Replace image' : 'Upload an image'}
                               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                             </label>
                           </div>
@@ -745,6 +754,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                   alt={q.answer_text}
                                   className="h-40 w-full rounded-xl object-cover sm:h-56 sm:w-auto sm:max-w-full sm:object-contain"
                                 />
+                              ) : isPicture ? (
+                                <div className="flex h-40 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-error/40 bg-admin-error-bg sm:h-56">
+                                  <ImageIcon className="h-6 w-6 text-admin-error/50" />
+                                  <p className="text-[13px] font-semibold text-admin-error">
+                                    No image - edit this question to upload one
+                                  </p>
+                                </div>
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
                                   <p className="text-sm leading-snug text-admin-ink">

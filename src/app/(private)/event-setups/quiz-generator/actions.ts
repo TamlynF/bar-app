@@ -1121,7 +1121,26 @@ export async function syncCategoryPlaylistAction(
 }
 
 
-async function generateImageForAnswer(answer: string): Promise<string | null> {
+const IMAGE_ATTEMPTS = 2
+const IMAGE_RETRY_MS = 700
+const IMAGE_BATCH_SIZE = 3
+const IMAGE_BATCH_PAUSE_MS = 400
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+/* The operator's notes never reach question_text, so they steer the picture
+   without ever reaching the printed sheet the guests answer on. */
+function pictureImagePrompt(answer: string, topic?: string, imageNotes?: string): string {
+  const round = topic?.trim() ? ` on the topic "${topic.trim()}"` : ''
+  const notes = imageNotes?.trim() ? `\n${imageNotes.trim()}` : ''
+  return (
+    `A clear, high-quality image of ${answer} for a pub quiz picture round${round}. ` +
+    `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.` +
+    notes
+  )
+}
+
+async function requestImage(prompt: string, label: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return null
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`
@@ -1130,16 +1149,13 @@ async function generateImageForAnswer(answer: string): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text:
-          `A clear, high-quality photograph of ${answer} for a pub quiz picture round. ` +
-          `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.`
-        }] }],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
       }),
     })
     if (!res.ok) {
       const errBody = await res.text()
-      console.error(`[img-gen] ${answer}: HTTP ${res.status}`, errBody)
+      console.error(`[img-gen] ${label}: HTTP ${res.status}`, errBody)
       return null
     }
     const data = await res.json()
@@ -1147,14 +1163,38 @@ async function generateImageForAnswer(answer: string): Promise<string | null> {
     const parts: any[] = data?.candidates?.[0]?.content?.parts ?? []
     const imagePart = parts.find((p) => p.inlineData?.data)
     if (!imagePart) {
-      console.error(`[img-gen] ${answer}: no inlineData in response`, JSON.stringify(data).slice(0, 300))
+      console.error(`[img-gen] ${label}: no inlineData in response`, JSON.stringify(data).slice(0, 300))
       return null
     }
     return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
   } catch (err) {
-    console.error(`[img-gen] ${answer}:`, err)
+    console.error(`[img-gen] ${label}:`, err)
     return null
   }
+}
+
+/* A single miss is usually a rate limit or a one-off refusal rather than a
+   subject the model cannot draw, so one card failing is worth a second ask. */
+async function generateImageForAnswer(
+  answer: string,
+  topic?: string,
+  imageNotes?: string
+): Promise<string | null> {
+  const prompt = pictureImagePrompt(answer, topic, imageNotes)
+  for (let attempt = 1; attempt <= IMAGE_ATTEMPTS; attempt++) {
+    const image = await requestImage(prompt, answer)
+    if (image) return image
+    if (attempt < IMAGE_ATTEMPTS) await wait(IMAGE_RETRY_MS)
+  }
+  return null
+}
+
+export async function regeneratePictureImageAction(
+  answer: string,
+  topic?: string,
+  imageNotes?: string
+): Promise<{ imageUrl: string | null }> {
+  return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes) }
 }
 
 export async function generatePictureRoundAction(
@@ -1163,7 +1203,8 @@ export async function generatePictureRoundAction(
   difficulty: string = 'Medium',
   eventId?: number,
   categoryConfigId?: number,
-  excludeAnswers?: string[]
+  excludeAnswers?: string[],
+  imageNotes?: string
 ): Promise<{ items?: PictureRoundItem[]; error?: string }> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return { error: 'API Key is missing.' }
@@ -1205,12 +1246,18 @@ export async function generatePictureRoundAction(
       ? `\n- Do NOT include any of these already-used answers: ${JSON.stringify(existingAnswers)}`
       : ''
 
+    // The notes are written to steer the picture, but guidance like "UK artists
+    // only" belongs to the subject list too, so both prompts see them.
+    const notesRule = imageNotes?.trim()
+      ? `\n- Additional guidance from the quiz host: ${imageNotes.trim()}`
+      : ''
+
     const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
 
 Rules:
 - Each item must be a specific named thing with a visually distinctive appearance (suitable for a single photograph)
 - Vary across the topic - avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
-- Difficulty: ${difficultyGuide}${excludeRule}
+- Difficulty: ${difficultyGuide}${excludeRule}${notesRule}
 - Return ONLY a valid JSON array of strings. No markdown, no explanation.
 Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border Collie","Dalmatian","Dachshund"]`
 
@@ -1238,9 +1285,10 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
     const answers = JSON.parse(content) as string[]
 
     const items: PictureRoundItem[] = []
-    for (let i = 0; i < answers.length; i += 3) {
-      const batch = answers.slice(i, i + 3)
-      const images = await Promise.all(batch.map((a) => generateImageForAnswer(a)))
+    for (let i = 0; i < answers.length; i += IMAGE_BATCH_SIZE) {
+      if (i > 0) await wait(IMAGE_BATCH_PAUSE_MS)
+      const batch = answers.slice(i, i + IMAGE_BATCH_SIZE)
+      const images = await Promise.all(batch.map((a) => generateImageForAnswer(a, topic, imageNotes)))
       batch.forEach((answer, j) => items.push({ answer, imageUrl: images[j] }))
     }
 

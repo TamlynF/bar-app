@@ -77,6 +77,7 @@ import {
   savePictureRoundAction,
   generateMusicSnippetsAction,
   saveMusicSnippetsAction,
+  regeneratePictureImageAction,
   type QuizQuestion,
   type PictureRoundItem,
   type MusicSnippetCandidate,
@@ -160,6 +161,10 @@ const isSongDraft = (d: DraftItem): d is MusicSnippetCandidate => "artist" in d;
 const isPictureDraft = (d: DraftItem): d is PictureRoundItem => "imageUrl" in d;
 const isQuestionDraft = (d: DraftItem): d is QuizQuestion => "question" in d;
 
+// The image model refuses or rate-limits the odd subject. A card with nothing to
+// show cannot be picked - it would print as an empty box on the night.
+const missingPicture = (d: DraftItem): boolean => isPictureDraft(d) && !d.imageUrl;
+
 const draftYear = (d: DraftItem): number => (isSongDraft(d) ? d.year : 0);
 
 const draftIdentity = (d: DraftItem): string => {
@@ -209,6 +214,9 @@ export default function QuizRoundSheet({
   }
 
   const [topic, setTopic] = useState("");
+  // Steers the generated picture only - it is never saved as question_text, so it
+  // never reaches the sheet the guests answer on.
+  const [imageNotes, setImageNotes] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -223,6 +231,7 @@ export default function QuizRoundSheet({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
+  const [retryingIndex, setRetryingIndex] = useState<number | null>(null);
 
   const [setupOpen, setSetupOpen] = useState(true);
   const [savedOpen, setSavedOpen] = useState(false);
@@ -302,6 +311,7 @@ export default function QuizRoundSheet({
 
   const savedListId = `round-saved-${categoryConfigId}`;
   const topicId = `round-topic-${categoryConfigId}`;
+  const imageNotesId = `round-image-notes-${categoryConfigId}`;
   const startYearId = `round-start-year-${categoryConfigId}`;
   const minYearsId = `round-min-years-${categoryConfigId}`;
   const maxYearsId = `round-max-years-${categoryConfigId}`;
@@ -322,7 +332,8 @@ export default function QuizRoundSheet({
           difficulty,
           eventId,
           categoryConfigId,
-          draftedAnswers
+          draftedAnswers,
+          imageNotes
         );
         return { items: result.items, error: result.error };
       }
@@ -349,7 +360,7 @@ export default function QuizRoundSheet({
       );
       return { items: result.questions, error: result.error };
     },
-    [kind, effectiveTopic, difficulty, eventId, categoryConfigId, category_name, draftedAnswers, chainStart]
+    [kind, effectiveTopic, difficulty, eventId, categoryConfigId, category_name, draftedAnswers, chainStart, imageNotes]
   );
 
   const handleGenerate = useCallback(async () => {
@@ -418,12 +429,21 @@ export default function QuizRoundSheet({
       const preselect = new Set<number>();
       for (let i = 0; i < items.length; i++) {
         if (preselect.size >= cap) break;
-        if (dupes.has(i)) continue;
+        if (dupes.has(i) || missingPicture(items[i])) continue;
         preselect.add(i);
       }
       setSelected(preselect);
       setPickOrder([...preselect]);
       setAutoPickShown(preselect.size > 0);
+
+      const withoutPicture = items.filter(missingPicture).length;
+      if (withoutPicture > 0) {
+        toast.warning(
+          `${plural(withoutPicture, "picture")} didn't come back - retry ${
+            withoutPicture === 1 ? "it" : "them"
+          } or swap for a different subject.`
+        );
+      }
     } catch {
       toast.error("Could not reach the generator.");
     } finally {
@@ -501,6 +521,37 @@ export default function QuizRoundSheet({
     [swappingIndex, requestDrafts, noun, drafts, selected, kind, isHigherOrLower]
   );
 
+  // Swap replaces the subject, which is the wrong tool when the picture failed but
+  // the answer was the one you wanted. This asks for that same subject again.
+  const handleRetryPicture = useCallback(
+    async (index: number) => {
+      if (retryingIndex !== null) return;
+      const draft = drafts[index];
+      if (!isPictureDraft(draft)) return;
+
+      setRetryingIndex(index);
+      try {
+        const { imageUrl } = await regeneratePictureImageAction(
+          draft.answer,
+          effectiveTopic,
+          imageNotes
+        );
+
+        if (!imageUrl) {
+          toast.error(`Still no picture for "${draft.answer}" - try Swap instead.`);
+          return;
+        }
+
+        setDrafts((prev) => prev.map((d, i) => (i === index ? { ...draft, imageUrl } : d)));
+      } catch {
+        toast.error("Could not create that picture.");
+      } finally {
+        setRetryingIndex(null);
+      }
+    },
+    [retryingIndex, drafts, effectiveTopic, imageNotes]
+  );
+
   // Unticking a song mid-chain can strand the ones after it, so the chain is
   // walked again and anything that no longer follows on comes off with it.
   const pruneChain = useCallback(
@@ -548,6 +599,11 @@ export default function QuizRoundSheet({
         return;
       }
 
+      if (missingPicture(drafts[index])) {
+        toast.info("That card has no picture yet - retry it, or swap it for a different one.");
+        return;
+      }
+
       // Hard cap. A tick past the round size simply does not take - no error
       // state, no disabled Add, nothing to go and resolve.
       if (selected.size >= selectionCap) {
@@ -579,7 +635,15 @@ export default function QuizRoundSheet({
     try {
       // The chain is ordered by the ticking; everything else reads down the list.
       const chosenIndices = isHigherOrLower ? pickOrder : [...selected].sort((a, b) => a - b);
-      const chosen = chosenIndices.map((i) => drafts[i]).filter(Boolean);
+      const chosen = chosenIndices
+        .map((i) => drafts[i])
+        .filter((d) => Boolean(d) && !missingPicture(d));
+
+      if (chosen.length === 0) {
+        toast.error(`Nothing to add - none of those ${noun}s are ready.`);
+        return;
+      }
+
       const chosenHintYears = chainHintYears(
         chosen.map((d) => (isSongDraft(d) ? d.year : 0)),
         chainStart
@@ -694,8 +758,18 @@ export default function QuizRoundSheet({
         ? `This round is full. Create extras if you want spares on the night.`
         : `Create some ${noun}s to get started.`;
     }
-    if (selected.size === 0) return `Nothing picked yet - tick at least 1 ${noun} to add.`;
+    const failedPictures = drafts.filter(missingPicture).length;
+    if (selected.size === 0) {
+      return failedPictures === drafts.length
+        ? `No pictures came back - retry them, or create a new batch.`
+        : `Nothing picked yet - tick at least 1 ${noun} to add.`;
+    }
     if (selected.size >= needed) return "Ready - this completes the round.";
+    if (failedPictures > 0) {
+      return `${selected.size} picked - ${plural(failedPictures, "card")} still ${
+        failedPictures === 1 ? "needs a picture" : "need pictures"
+      } before ${failedPictures === 1 ? "it" : "they"} can be added.`;
+    }
     return `${selected.size} picked - you can add now, ${plural(
       needed - selected.size,
       noun
@@ -748,6 +822,7 @@ export default function QuizRoundSheet({
             setSavedOpen(false);
             setTopicMissing(false);
             setDraftedAnswers([]);
+            setImageNotes("");
           }
         }}
       >
@@ -1024,6 +1099,33 @@ export default function QuizRoundSheet({
                           )}
                         </div>
 
+                        {isPicture && (
+                          <div>
+                            <label
+                              htmlFor={imageNotesId}
+                              className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                            >
+                              Extra picture instructions{" "}
+                              <span className="font-medium normal-case">
+                                - optional, never printed or shown to guests
+                              </span>
+                            </label>
+                            <textarea
+                              id={imageNotesId}
+                              value={imageNotes}
+                              onChange={(e) => setImageNotes(e.target.value)}
+                              rows={2}
+                              placeholder="e.g. no band or artist name anywhere on the cover"
+                              disabled={isGenerating}
+                              className="w-full resize-none rounded-xl border border-admin-line bg-white px-3.5 py-3 text-sm text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary"
+                            />
+                            <p className="mt-1.5 text-[13px] text-admin-muted">
+                              Only the topic is printed on the guests&apos; sheet. Anything here
+                              just tells the picture generator what you want.
+                            </p>
+                          </div>
+                        )}
+
                         {isHigherOrLower && (
                           <div className="grid gap-4 sm:grid-cols-3">
                             <div>
@@ -1239,8 +1341,10 @@ export default function QuizRoundSheet({
                           const isSelected = selected.has(i);
                           const isDuplicate = duplicateIndices.has(i);
                           const isSwapping = swappingIndex === i;
+                          const isRetrying = retryingIndex === i;
                           const song = isSongDraft(d) ? d : null;
                           const picture = isPictureDraft(d) ? d : null;
+                          const pictureMissing = missingPicture(d);
 
                           // A ticked song already sits in the chain; an unticked
                           // one is measured against wherever the chain has got to.
@@ -1251,7 +1355,9 @@ export default function QuizRoundSheet({
                             isHigherOrLower && !isSelected
                               ? describeStep(song?.year, chain.nextYear, gapRange)
                               : null;
-                          const lockedOut = !isSelected && (atCap || !!chainReason);
+                          // A picture that failed is not dimmed like a locked-out
+                          // card - it is the one card asking to be dealt with.
+                          const lockedOut = !isSelected && (atCap || !!chainReason) && !pictureMissing;
 
                           return (
                             <div
@@ -1271,7 +1377,9 @@ export default function QuizRoundSheet({
                                 "relative cursor-pointer rounded-2xl border-2 py-4 pr-4 pl-14 transition-all focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none sm:pl-15",
                                 isSelected
                                   ? "border-admin-primary bg-admin-primary-soft/60"
-                                  : "border-admin-line bg-admin-card hover:border-admin-muted/40",
+                                  : pictureMissing
+                                    ? "border-admin-error/40 bg-admin-error-bg/40"
+                                    : "border-admin-line bg-admin-card hover:border-admin-muted/40",
                                 lockedOut && "opacity-45"
                               )}
                             >
@@ -1289,11 +1397,15 @@ export default function QuizRoundSheet({
                               <span
                                 className={cn(
                                   "absolute -top-2.5 right-4 flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-white uppercase",
-                                  isSelected ? "bg-admin-primary" : "bg-admin-warning"
+                                  isSelected
+                                    ? "bg-admin-primary"
+                                    : pictureMissing
+                                      ? "bg-admin-error"
+                                      : "bg-admin-warning"
                                 )}
                               >
                                 {isSelected && <Check className="h-3 w-3" />}
-                                {isSelected ? "Picked" : "New"}
+                                {isSelected ? "Picked" : pictureMissing ? "No picture" : "New"}
                               </span>
 
                               {picture ? (
@@ -1306,16 +1418,25 @@ export default function QuizRoundSheet({
                                       className="h-20 w-20 shrink-0 rounded-xl border border-admin-line object-cover sm:h-27.5 sm:w-27.5"
                                     />
                                   ) : (
-                                    <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-admin-line bg-admin-surface sm:h-27.5 sm:w-27.5">
-                                      <ImageIcon className="h-6 w-6 text-admin-muted/50" />
+                                    <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-admin-error/40 bg-admin-error-bg sm:h-27.5 sm:w-27.5">
+                                      <ImageIcon className="h-6 w-6 text-admin-error/50" />
                                     </span>
                                   )}
                                   <div className="min-w-0 flex-1">
                                     <p className="text-sm leading-relaxed font-semibold text-admin-ink">
                                       Picture card
                                     </p>
-                                    <p className="mt-0.5 text-[13px] text-admin-muted">
-                                      Guests see this picture and write the answer.
+                                    <p
+                                      className={cn(
+                                        "mt-0.5 text-[13px]",
+                                        pictureMissing
+                                          ? "font-semibold text-admin-error"
+                                          : "text-admin-muted"
+                                      )}
+                                    >
+                                      {pictureMissing
+                                        ? "No picture came back, so this card can't be added. Retry it, or swap for a different subject."
+                                        : "Guests see this picture and write the answer."}
                                     </p>
                                   </div>
                                 </div>
@@ -1401,23 +1522,49 @@ export default function QuizRoundSheet({
                                 </span>
 
                                 {!isSelected && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSwap(i);
-                                    }}
-                                    disabled={isApproving || swappingIndex !== null}
-                                    title={`Replace with a different ${noun}`}
-                                    className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-line bg-white px-2.5 text-[12px] font-semibold text-admin-muted transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
-                                  >
-                                    {isSwapping ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
-                                    ) : (
-                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  <span className="flex shrink-0 items-center gap-2">
+                                    {pictureMissing && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRetryPicture(i);
+                                        }}
+                                        disabled={
+                                          isApproving || retryingIndex !== null || swappingIndex !== null
+                                        }
+                                        title="Try this picture again, same answer"
+                                        className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-primary bg-white px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
+                                      >
+                                        {isRetrying ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                                        ) : (
+                                          <ImageIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                        )}
+                                        Retry picture
+                                      </button>
                                     )}
-                                    Swap
-                                  </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSwap(i);
+                                      }}
+                                      disabled={
+                                        isApproving || swappingIndex !== null || retryingIndex !== null
+                                      }
+                                      title={`Replace with a different ${noun}`}
+                                      className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-line bg-white px-2.5 text-[12px] font-semibold text-admin-muted transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
+                                    >
+                                      {isSwapping ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                                      ) : (
+                                        <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                      )}
+                                      Swap
+                                    </button>
+                                  </span>
                                 )}
                               </div>
                             </div>
