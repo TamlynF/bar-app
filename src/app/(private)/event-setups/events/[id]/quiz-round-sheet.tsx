@@ -927,6 +927,14 @@ export default function QuizRoundSheet({
                           ? "Songs you approve are added to this round's playlist automatically."
                           : "You can still pick songs now - the playlist fills in once connected."}
                       </p>
+                      {spotifyConnected && (
+                        <a
+                          href={`${spotifyLoginHref}&switch=1`}
+                          className="mt-1 inline-block text-[13px] font-semibold text-admin-success underline underline-offset-2"
+                        >
+                          Connected to the wrong Spotify account?
+                        </a>
+                      )}
                     </div>
 
                     {spotifyConnected ? (

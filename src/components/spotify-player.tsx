@@ -118,6 +118,40 @@ async function connectPlayer(): Promise<string | null> {
 }
 
 
+function playTrack(token: string, deviceId: string, trackId: string) {
+  return fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uris: [`spotify:track:${trackId}`], position_ms: 0 }),
+  })
+}
+
+async function transferPlayback(token: string, deviceId: string) {
+  try {
+    await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    })
+  } catch {}
+}
+
+async function describeForbidden(token: string): Promise<string> {
+  try {
+    const res = await fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (res.ok) {
+      const me = await res.json()
+      if (me?.product !== 'premium') {
+        return `${me?.display_name || me?.id || 'This account'} has no Premium`
+      }
+    }
+  } catch {}
+  return 'Spotify is busy on another device'
+}
+
+
 type SpotifyPlayerProps = {
   trackId: string
   title: string
@@ -231,16 +265,17 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         return
       }
 
-      const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uris: [`spotify:track:${trackId}`], position_ms: 0 }),
-      })
+      let playRes = await playTrack(token, deviceId, trackId)
+
+      if (playRes.status === 403) {
+        await transferPlayback(token, deviceId)
+        playRes = await playTrack(token, deviceId, trackId)
+      }
 
       if (!playRes.ok) {
         const errText = await playRes.text()
         console.error('Play failed:', playRes.status, errText)
-        if (playRes.status === 403) setError('Premium required')
+        if (playRes.status === 403) setError(await describeForbidden(token))
         else if (playRes.status === 404) {
           setError('Reconnecting...')
           globalDeviceId = null

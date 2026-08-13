@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const redirectUri = `${siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}/api/spotify/callback`
 
   const returnUrl = request.nextUrl.searchParams.get('return') || '/event-setups/quiz-generator'
+  const switchAccount = request.nextUrl.searchParams.get('switch') === '1'
 
   const scopes = [
     'streaming',
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     client_id: clientId,
     scope: scopes,
     redirect_uri: redirectUri,
-    show_dialog: 'false',
+    show_dialog: switchAccount ? 'true' : 'false',
     state: returnUrl,
   })
 
