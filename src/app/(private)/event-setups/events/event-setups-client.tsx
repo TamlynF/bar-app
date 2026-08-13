@@ -46,6 +46,10 @@ import {
   MoreVertical,
   Ban,
   Trophy,
+  Sparkles,
+  UserRound,
+  Mic2,
+  PoundSterling,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -60,7 +64,7 @@ import {
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
-import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction } from "./actions";
+import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction, patchEventAction, type EventIssuePatch } from "./actions";
 import { setEventWinner } from "../quiz-leaderboards/actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
@@ -197,10 +201,71 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 /* Month cells render at most this many chips before falling back to "+n more". */
 const DAY_CHIP_LIMIT = 4;
 
-/* The two issues the dialog can fix on the spot. Named so the message and the
-   button that resolves it can never drift apart. */
+/* The issues the dialog can fix on the spot. Named so the message and the
+   button that resolves it can never drift apart. The quiz one carries a count,
+   so only its opening words are fixed. */
 const ISSUE_NO_WINNER = "No winning team has been recorded for this quiz.";
 const ISSUE_PAST_BUT_ACTIVE = "This event has already happened but is still marked active.";
+const ISSUE_NO_HOST = "This event type needs a host and none has been chosen.";
+const ISSUE_NO_PAYMENT = "This event type takes payment but no amount has been set.";
+const ISSUE_NO_BOOKING_URL = "Public booking is switched on but there is no booking URL.";
+const ISSUE_NO_KARAOKE_LINK = "Karaoke night with no Singa request link.";
+const ISSUE_QUIZ_INCOMPLETE = "Quiz questions are incomplete";
+
+const ISSUE_ACTION_BUTTON =
+  "mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50";
+
+/* Lives inside the confirm dialog, so what you type has to reach the caller
+   without the dialog owning the value. */
+function IssuePromptField({
+  label,
+  placeholder,
+  initialValue,
+  numeric,
+  suggestion,
+  suggestionLabel,
+  onChange,
+}: {
+  label: string;
+  placeholder?: string;
+  initialValue?: string;
+  numeric?: boolean;
+  suggestion?: string;
+  suggestionLabel?: string;
+  onChange: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initialValue ?? "");
+  const update = (next: string) => {
+    setValue(next);
+    onChange(next);
+  };
+  return (
+    <div className="space-y-2">
+      <label htmlFor="issue-prompt-field" className="block text-[13px] font-semibold text-admin-ink">
+        {label}
+      </label>
+      <input
+        id="issue-prompt-field"
+        autoFocus
+        value={value}
+        inputMode={numeric ? "decimal" : "url"}
+        placeholder={placeholder}
+        onChange={(e) => update(numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)}
+        className="h-11 w-full rounded-xl border-2 border-admin-line bg-white px-3 text-base text-admin-ink outline-none focus:border-admin-primary sm:text-sm"
+      />
+      {suggestion && (
+        <button
+          type="button"
+          onClick={() => update(suggestion)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
+        >
+          <Sparkles className="h-4 w-4 shrink-0" />
+          {suggestionLabel ?? "Create it for me"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 const SHEET_PILL =
   "inline-flex h-6.5 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
@@ -242,7 +307,7 @@ function shortHost(fullName: string) {
   return parts.length > 1 ? `${first} ${parts[parts.length - 1][0]}.` : first;
 }
 
-export type Employee = { id: number; full_name: string };
+export type Employee = { id: number; full_name: string; status?: string | null };
 
 type EventLinkOrigin = "sheet" | "list";
 type QuizCategory = { id: number; category_name: string; question_count: number; short_name?: string; order_no: number };
@@ -946,6 +1011,7 @@ export default function EventsClient({
 
   const todayStr = new Date().toISOString().split("T")[0];
   const employeeById = new Map(employees.map((e) => [e.id, e.full_name]));
+  const activeEmployees = employees.filter((e) => (e.status ?? "active").toLowerCase() === "active");
 
   const canCopy = (e: EventRecord) => !linkedRequestByEvent[e.id];
 
@@ -1017,6 +1083,59 @@ export default function EventsClient({
   const teamLabel = (bookingId: number) =>
     bookings.find((b) => b.id === bookingId)?.group_name?.trim() || `#${bookingId}`;
 
+  /* One field, saved from the issues dialog. The two open copies of the event -
+     the sheet and the dialog - are patched here so the issue list shrinks the
+     moment it is fixed, rather than after the refresh lands. */
+  const applyEventPatch = (event: EventRecord, patch: EventIssuePatch, done: string) => {
+    startTransition(async () => {
+      const result = await patchEventAction(event.id, patch);
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(done);
+      setSelected((cur) => (cur && cur.id === event.id ? { ...cur, ...patch } : cur));
+      setIssuesEvent((cur) => (cur && cur.id === event.id ? { ...cur, ...patch } : cur));
+      router.refresh();
+    });
+  };
+
+  const promptValueRef = useRef("");
+  const promptForValue = async (opts: {
+    title: string;
+    description: string;
+    label: string;
+    placeholder?: string;
+    initialValue?: string;
+    numeric?: boolean;
+    suggestion?: string;
+    suggestionLabel?: string;
+    confirmLabel: string;
+  }): Promise<string | null> => {
+    promptValueRef.current = opts.initialValue ?? "";
+    const ok = await confirm({
+      title: opts.title,
+      description: opts.description,
+      confirmLabel: opts.confirmLabel,
+      content: (
+        <IssuePromptField
+          label={opts.label}
+          placeholder={opts.placeholder}
+          initialValue={opts.initialValue}
+          numeric={opts.numeric}
+          suggestion={opts.suggestion}
+          suggestionLabel={opts.suggestionLabel}
+          onChange={(value) => {
+            promptValueRef.current = value;
+          }}
+        />
+      ),
+    });
+    if (!ok) return null;
+    const value = promptValueRef.current.trim();
+    return value === "" ? null : value;
+  };
+
   const chooseWinner = (event: EventRecord, bookingId: number | null) => {
     startTransition(async () => {
       const result = await setEventWinner(String(event.id), bookingId ? String(bookingId) : null);
@@ -1040,20 +1159,20 @@ export default function EventsClient({
     if (!e.date) issues.push("No date has been set.");
     if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
     if (e.is_bookable && !e.booking_page_url?.trim()) {
-      issues.push("Public booking is switched on but there is no booking URL.");
+      issues.push(ISSUE_NO_BOOKING_URL);
     }
     if (sub?.payment_required && !(e.payment_amount != null && e.payment_amount > 0)) {
-      issues.push("This event type takes payment but no amount has been set.");
+      issues.push(ISSUE_NO_PAYMENT);
     }
     if (sub?.host_required && !e.host_employee_id) {
-      issues.push("This event type needs a host and none has been chosen.");
+      issues.push(ISSUE_NO_HOST);
     }
     if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) {
-      issues.push("Karaoke night with no Singa request link.");
+      issues.push(ISSUE_NO_KARAOKE_LINK);
     }
     if (!past && needsQuiz(e)) {
       const { total, target } = quizStatusFor(e.id);
-      issues.push(`Quiz questions are incomplete - ${total} of ${target} written.`);
+      issues.push(`${ISSUE_QUIZ_INCOMPLETE} - ${total} of ${target} written.`);
     }
     if (needsWinner(e)) {
       issues.push(ISSUE_NO_WINNER);
@@ -2990,11 +3109,7 @@ export default function EventsClient({
                           return (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  disabled={isPending}
-                                  className="mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50"
-                                >
+                                <button type="button" disabled={isPending} className={ISSUE_ACTION_BUTTON}>
                                   <Trophy className="h-4 w-4 shrink-0" />
                                   Set winner
                                   <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
@@ -3018,12 +3133,137 @@ export default function EventsClient({
                             </DropdownMenu>
                           );
                         })()}
+                        {issue === ISSUE_NO_HOST && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" disabled={isPending} className={ISSUE_ACTION_BUTTON}>
+                                <UserRound className="h-4 w-4 shrink-0" />
+                                Set host
+                                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+                              {activeEmployees.length === 0 ? (
+                                <DropdownMenuItem disabled>No active employees</DropdownMenuItem>
+                              ) : (
+                                activeEmployees.map((employee) => (
+                                  <DropdownMenuItem
+                                    key={employee.id}
+                                    disabled={isPending}
+                                    onClick={() =>
+                                      applyEventPatch(
+                                        issuesEvent,
+                                        { host_employee_id: employee.id },
+                                        `${employee.full_name} is now hosting`
+                                      )
+                                    }
+                                  >
+                                    <span className="truncate">{employee.full_name}</span>
+                                  </DropdownMenuItem>
+                                ))
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                        {issue.startsWith(ISSUE_QUIZ_INCOMPLETE) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const target = issuesEvent;
+                              const origin: EventLinkOrigin = selected?.id === target.id ? "sheet" : "list";
+                              setIssuesEvent(null);
+                              navigateFromRow(target, quizHrefFor(target, origin));
+                            }}
+                            className={ISSUE_ACTION_BUTTON}
+                          >
+                            <Brain className="h-4 w-4 shrink-0" />
+                            Manage quiz
+                          </button>
+                        )}
+                        {issue === ISSUE_NO_KARAOKE_LINK && (
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={async () => {
+                              const link = await promptForValue({
+                                title: "Add the Singa request link",
+                                description: "The link guests use to send their song requests on the night.",
+                                label: "Singa request link",
+                                placeholder: "https://…",
+                                initialValue: issuesEvent.karaoke_request_url ?? "",
+                                confirmLabel: "Save link",
+                              });
+                              if (link) applyEventPatch(issuesEvent, { karaoke_request_url: link }, "Singa link saved");
+                            }}
+                            className={ISSUE_ACTION_BUTTON}
+                          >
+                            <Mic2 className="h-4 w-4 shrink-0" />
+                            Add Singa link
+                          </button>
+                        )}
+                        {issue === ISSUE_NO_PAYMENT && (
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={async () => {
+                              const entered = await promptForValue({
+                                title: "Set the payment amount",
+                                description: "What one ticket for this event costs.",
+                                label: "Amount (£)",
+                                placeholder: "e.g. 5.00",
+                                numeric: true,
+                                initialValue: issuesEvent.payment_amount ? String(issuesEvent.payment_amount) : "",
+                                confirmLabel: "Save amount",
+                              });
+                              if (entered === null) return;
+                              const amount = parseFloat(entered);
+                              if (!Number.isFinite(amount) || amount <= 0) {
+                                toast.error("Enter an amount greater than 0.");
+                                return;
+                              }
+                              applyEventPatch(issuesEvent, { payment_amount: amount }, "Payment amount saved");
+                            }}
+                            className={ISSUE_ACTION_BUTTON}
+                          >
+                            <PoundSterling className="h-4 w-4 shrink-0" />
+                            Set amount
+                          </button>
+                        )}
+                        {issue === ISSUE_NO_BOOKING_URL && (
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={async () => {
+                              const link = await promptForValue({
+                                title: "Set the booking link",
+                                description:
+                                  "Paste the link you want guests to book on, or build the standard one for this event.",
+                                label: "Booking URL",
+                                placeholder: "https://…",
+                                initialValue: issuesEvent.booking_page_url ?? "",
+                                suggestion: bookingUrlFor({
+                                  typeId: issuesEvent.event_types_id,
+                                  subtypeId: issuesEvent.event_subtypes_id,
+                                  grouping: typeById.get(issuesEvent.event_types_id)?.booking_grouping,
+                                  eventId: issuesEvent.id,
+                                }),
+                                suggestionLabel: "Create it automatically",
+                                confirmLabel: "Save link",
+                              });
+                              if (link) applyEventPatch(issuesEvent, { booking_page_url: link }, "Booking link saved");
+                            }}
+                            className={ISSUE_ACTION_BUTTON}
+                          >
+                            <Link2 className="h-4 w-4 shrink-0" />
+                            Set booking link
+                          </button>
+                        )}
                         {issue === ISSUE_PAST_BUT_ACTIVE && (
                           <button
                             type="button"
                             disabled={isPending}
                             onClick={() => toggleEventActive(issuesEvent)}
-                            className="mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50"
+                            className={ISSUE_ACTION_BUTTON}
                           >
                             <Ban className="h-4 w-4 shrink-0" />
                             Deactivate event

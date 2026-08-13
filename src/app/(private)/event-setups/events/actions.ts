@@ -159,6 +159,44 @@ export async function saveEventAction(formData: FormData) {
   }
 }
 
+/* The one-field fixes offered from the issues dialog. Kept to a fixed set of
+   columns so a dialog button can never write anything the form owns. */
+export type EventIssuePatch = {
+  host_employee_id?: number | null;
+  payment_amount?: number | null;
+  karaoke_request_url?: string | null;
+  booking_page_url?: string | null;
+};
+
+export async function patchEventAction(id: number, patch: EventIssuePatch) {
+  const supabase = await createClient();
+
+  const update: Record<string, unknown> = {};
+  if ("host_employee_id" in patch) update.host_employee_id = patch.host_employee_id ?? null;
+  if ("payment_amount" in patch) update.payment_amount = patch.payment_amount ?? null;
+  if ("karaoke_request_url" in patch) update.karaoke_request_url = patch.karaoke_request_url?.trim() || null;
+  if ("booking_page_url" in patch) update.booking_page_url = patch.booking_page_url?.trim() || null;
+  if (Object.keys(update).length === 0) return { error: "Nothing to update." };
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
+      if (emp) update.updated_by = emp.id;
+    }
+    update.updated_at = new Date().toISOString();
+
+    const { error } = await supabase.from("events").update(update).eq("id", id);
+    if (error) throw error;
+    revalidatePath("/event-setups/events");
+    revalidatePublicEventPages();
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating event:", error);
+    return { error: error instanceof Error ? error.message : "Failed to update the event." };
+  }
+}
+
 export async function setEventQr(id: number, qrDataUrl: string | null) {
   const supabase = await createClient();
   try {
