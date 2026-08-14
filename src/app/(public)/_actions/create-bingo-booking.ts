@@ -16,7 +16,8 @@ import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { buildCheckoutOptions } from "@/lib/square-order";
-import { getCompanyInfo } from "@/lib/company-info";
+import { getContactEmail } from "@/lib/company-info";
+import { EMAIL_FROM } from "@/lib/email";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -170,7 +171,7 @@ export async function createBingoBooking(formData: FormData) {
       },
       checkoutOptions: buildCheckoutOptions({
         redirectUrl: `${appUrl}/book/bingo/success?bookingId=${newBooking.id}`,
-        supportEmail: (await getCompanyInfo())?.email,
+        supportEmail: await getContactEmail(),
       }),
       prePopulatedData: {
         buyerEmail: email,
@@ -243,7 +244,7 @@ async function sendPaymentPendingEmail(args: {
 
   try {
     const { error: resendError } = await resend.emails.send({
-      from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+      from: EMAIL_FROM,
       to: args.email,
       subject,
       html,
@@ -349,7 +350,7 @@ async function sendBookingEmail(
 
   try {
       const { error: resendError } = await resend.emails.send({
-        from: 'Don Fenticas <admin@bookingsdonfenticas.co.uk>',
+        from: EMAIL_FROM,
         to: email,
         subject: subject,
         html: html

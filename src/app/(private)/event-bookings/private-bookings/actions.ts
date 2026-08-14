@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { EMAIL_FROM } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planPrivateEventSync } from "@/lib/private-event-sync";
@@ -11,7 +12,6 @@ import { eventSlotIsComplete } from "@/lib/event-active";
 import { buildPrivateHireOutcomeEmail } from "@/lib/private-hire-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 async function currentEmployeeId(): Promise<number | null> {
   const supabase = await createClient();
@@ -260,5 +260,5 @@ async function sendOutcomeEmail(
       </div>
     </div>`;
 
-  await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
+  await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
 }

@@ -6,6 +6,7 @@ import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { EMAIL_FROM } from "@/lib/email";
 import {
   allocateOnCreate,
   commitMapping,
@@ -232,7 +233,7 @@ async function sendBookingEmail(
 
   try {
       const { error: resendError } = await resend.emails.send({
-      from: 'Don Fenticas <admin@bookingsdonfenticas.co.uk>',
+      from: EMAIL_FROM,
         to: email,
         subject: subject,
         html: html

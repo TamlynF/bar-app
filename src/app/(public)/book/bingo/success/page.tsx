@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Resend } from "resend";
 import RetryPaymentButton from "@/components/retry-payment-button";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { EMAIL_FROM } from "@/lib/email";
+import { getContactEmail } from "@/lib/company-info";
 
 export const viewport: Viewport = {
   themeColor: "#26300D",
@@ -92,11 +94,11 @@ console.log("Booking fetcheddd:", booking);
           { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
         ],
         manageUrl,
-        footnote: "Questions? Contact us at admin@bookingsdonfenticas.co.uk",
+        footnote: `Questions? Email us at ${await getContactEmail()}`,
       });
 
       await resend.emails.send({
-        from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+        from: EMAIL_FROM,
         to: contact.email,
         subject,
         html,

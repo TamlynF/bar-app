@@ -3,11 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
+import { EMAIL_FROM } from "@/lib/email";
+import { getContactEmail } from "@/lib/company-info";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
-const REPLY_TO = "admin@bookingsdonfenticas.co.uk";
 
 async function currentEmployeeId(): Promise<number | null> {
   const supabase = await createClient();
@@ -70,9 +70,9 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
     </div>`;
 
   await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: record.email,
-    replyTo: REPLY_TO,
+    replyTo: await getContactEmail(),
     subject: `Re: ${record.subject || "Your enquiry"} - Don Fenticas`,
     html,
   });

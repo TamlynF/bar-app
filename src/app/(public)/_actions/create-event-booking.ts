@@ -20,7 +20,8 @@ import {
   buildEventOrder,
   buildPrePopulatedData,
 } from "@/lib/square-order";
-import { getCompanyInfo } from "@/lib/company-info";
+import { getContactEmail } from "@/lib/company-info";
+import { EMAIL_FROM } from "@/lib/email";
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
@@ -268,7 +269,7 @@ export async function createEventBooking(formData: FormData) {
         }),
         checkoutOptions: buildCheckoutOptions({
           redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: newBooking.id })}`,
-          supportEmail: (await getCompanyInfo())?.email,
+          supportEmail: await getContactEmail(),
         }),
         prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
       });
@@ -350,7 +351,7 @@ async function sendPaymentPendingEmail(args: {
 
   try {
     const { error: resendError } = await resend.emails.send({
-      from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+      from: EMAIL_FROM,
       to: args.email,
       subject,
       html,
@@ -437,7 +438,7 @@ async function sendEventBookingEmail(
 
   try {
     const { error: resendError } = await resend.emails.send({
-      from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+      from: EMAIL_FROM,
       to: email,
       subject,
       html,

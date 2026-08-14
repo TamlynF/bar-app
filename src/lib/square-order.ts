@@ -1,4 +1,5 @@
 import type { Square } from "square";
+import { DEFAULT_CONTACT_EMAIL } from "@/lib/email";
 
 export function poundsToPence(pounds: number | null | undefined): number {
   return Math.round((pounds ?? 0) * 100);
@@ -64,15 +65,13 @@ export function buildEventOrder(input: EventOrderInput): Square.Order {
   };
 }
 
-export const DEFAULT_MERCHANT_SUPPORT_EMAIL = "admin@bookingsdonfenticas.co.uk";
-
 export function buildCheckoutOptions(input: {
   redirectUrl: string;
   supportEmail?: string | null;
 }): Square.CheckoutOptions {
   return {
     redirectUrl: input.redirectUrl,
-    merchantSupportEmail: input.supportEmail?.trim() || DEFAULT_MERCHANT_SUPPORT_EMAIL,
+    merchantSupportEmail: input.supportEmail?.trim() || DEFAULT_CONTACT_EMAIL,
   };
 }
 

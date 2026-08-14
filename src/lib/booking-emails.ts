@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bookingsdonfenticas.co.uk";
-export const EMAIL_FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
+export { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
 
 export type BookingEmail = { subject: string; html: string };
 

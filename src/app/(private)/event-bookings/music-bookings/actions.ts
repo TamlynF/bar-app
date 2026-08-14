@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { EMAIL_FROM } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
@@ -15,7 +16,6 @@ import {
 } from "@/lib/music-acts";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 export type BandStatus = BandStatusType;
 
@@ -435,7 +435,7 @@ async function sendRescheduleEmail(
       </div>
     </div>`;
 
-  const { data, error } = await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
+  const { data, error } = await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
   if (error) {
     console.error("[band reschedule email] Resend failed:", JSON.stringify(error));
     return error.message ?? "Email failed to send.";
@@ -495,7 +495,7 @@ async function sendOutcomeEmail(
       </div>
     </div>`;
 
-  const { data, error } = await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
+  const { data, error } = await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
   if (error) {
     console.error("[band outcome email] Resend failed:", JSON.stringify(error));
     return error.message ?? "Email failed to send.";
@@ -555,7 +555,7 @@ async function sendOfferEmail(
     </div>`;
 
   const { data, error } = await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: email,
     subject: e.subject,
     html,

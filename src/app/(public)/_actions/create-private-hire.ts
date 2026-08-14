@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { upsertContactByEmail } from "@/lib/music-acts";
 import { Resend } from "resend";
+import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -12,8 +13,6 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-const ADMIN_EMAIL = "admin@bookingsdonfenticas.co.uk";
-const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 export interface PrivateHireData {
   full_name: string;
@@ -87,7 +86,7 @@ async function sendBookerEmail(name: string, email: string) {
     </div>`;
 
   await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: email,
     subject: "Private Hire Enquiry Received - Don Fenticas",
     html,
@@ -124,7 +123,7 @@ async function sendAdminEmail(data: PrivateHireData, id: string) {
     </div>`;
 
   await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: ADMIN_EMAIL,
     subject: `New Private Hire Enquiry - ${data.full_name}`,
     html,

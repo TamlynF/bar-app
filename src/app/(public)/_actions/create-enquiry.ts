@@ -2,11 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
+import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bookingsdonfenticas.co.uk";
 
 export type EnquiryData = {
   full_name: string;
@@ -67,7 +66,7 @@ async function sendEnquirerEmail(name: string, email: string) {
     </div>`;
 
   await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: email,
     subject: "We've got your message - Don Fenticas",
     html,
@@ -92,7 +91,7 @@ async function sendAdminEmail(data: EnquiryData, id: string) {
     </div>`;
 
   await resend.emails.send({
-    from: FROM,
+    from: EMAIL_FROM,
     to: ADMIN_EMAIL,
     subject: `New Enquiry - ${data.full_name}${data.subject ? `: ${data.subject}` : ""}`,
     html,

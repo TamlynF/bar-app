@@ -39,6 +39,8 @@ export default defineConfig({
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY!,
       NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL!,
       RESEND_API_KEY: process.env.RESEND_API_KEY!,
+      ADMIN_EMAIL: process.env.ADMIN_EMAIL!,
+      EMAIL_FROM: process.env.EMAIL_FROM!,
       SQUARE_ENVIRONMENT: process.env.SQUARE_ENVIRONMENT!,
       SQUARE_ACCESS_TOKEN: process.env.SQUARE_ACCESS_TOKEN!,
       SQUARE_LOCATION_ID: process.env.SQUARE_LOCATION_ID!,

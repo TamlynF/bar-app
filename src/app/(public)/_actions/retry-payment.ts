@@ -10,7 +10,7 @@ import {
   buildEventOrder,
   buildPrePopulatedData,
 } from "@/lib/square-order";
-import { getCompanyInfo } from "@/lib/company-info";
+import { getContactEmail } from "@/lib/company-info";
 import { getFreeTablesForEvent, seatingApplies, type SeatingEvent } from "@/lib/table-allocation";
 import { hasVenueSpaceFor } from "@/lib/update-fully-booked";
 import { releaseUnpaidBooking } from "@/lib/release-unpaid-booking";
@@ -135,7 +135,7 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
       }),
       checkoutOptions: buildCheckoutOptions({
         redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: booking.id })}`,
-        supportEmail: (await getCompanyInfo())?.email,
+        supportEmail: await getContactEmail(),
       }),
       prePopulatedData: buildPrePopulatedData({
         email: contact.email,

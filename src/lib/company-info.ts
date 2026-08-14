@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_CONTACT_EMAIL } from "@/lib/email";
 
 export type DayHours = { open?: string | null; close?: string | null };
 export type OpeningHours = Partial<Record<string, DayHours>>;
@@ -40,6 +41,11 @@ export const getCompanyInfo = cache(async (): Promise<CompanyInfo> => {
 
   return (data ?? null) as CompanyInfo;
 });
+
+export async function getContactEmail(): Promise<string> {
+  const info = await getCompanyInfo();
+  return info?.email?.trim() || DEFAULT_CONTACT_EMAIL;
+}
 
 export function instagramUrl(handle: string | null | undefined): string | null {
   const value = handle?.trim();

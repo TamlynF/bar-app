@@ -57,7 +57,7 @@ Always run `npm run build` successfully before committing.
 - **Forms:** react-hook-form + zod where validation is non-trivial; plain `useState` is fine for simple forms
 - **Auth:** Supabase Auth via `@supabase/ssr`
 - **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)
-- **Email:** Resend (sender: `Don Fenticas <admin@bookingsdonfenticas.co.uk>`)
+- **Email:** Resend. Never hardcode an address - `src/lib/email.ts` owns `EMAIL_FROM` (sender) and `ADMIN_EMAIL` (staff recipient), both env-overridable. The customer-facing contact address (replyTo, "questions?" copy, Square support) comes from `getContactEmail()` in `src/lib/company-info.ts`, which reads `company_information.email`. The sender is **not** DB-driven: Resend only sends from a verified domain
 - **Payments:** Square (sandbox + production envs)
 - **AI:** Google Gemini (quiz generation)
 - **Storage:** Supabase Storage (`gallery`, `band-videos` buckets)
@@ -115,6 +115,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY            # JWT - used in proxy.ts and browser cl
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY     # New Supabase publishable key format
 SUPABASE_SERVICE_ROLE_KEY                # Admin client only, never NEXT_PUBLIC_
 RESEND_API_KEY
+EMAIL_FROM                               # Resend sender, RFC 5322 e.g. 'Don Fenticas <admin@…>' - domain must be verified in Resend
+ADMIN_EMAIL                              # Where internal staff notifications land
 NEXT_PUBLIC_GEMINI_API_KEY
 NEXT_PUBLIC_SITE_URL                     # e.g. https://bar-app-tau.vercel.app
 SQUARE_ACCESS_TOKEN

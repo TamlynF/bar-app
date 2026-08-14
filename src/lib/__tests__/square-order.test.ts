@@ -7,9 +7,9 @@ import {
   buildEventOrder,
   buildCheckoutOptions,
   buildPrePopulatedData,
-  DEFAULT_MERCHANT_SUPPORT_EMAIL,
   type EventOrderInput,
 } from "@/lib/square-order";
+import { DEFAULT_CONTACT_EMAIL } from "@/lib/email";
 
 describe("poundsToPence", () => {
   it("converts pounds to integer pence", () => {
@@ -135,13 +135,13 @@ describe("buildCheckoutOptions", () => {
   it("falls back to the default when the company email is missing or blank", () => {
     const redirectUrl = "https://example.com/book/bingo/success?bookingId=42";
     expect(buildCheckoutOptions({ redirectUrl }).merchantSupportEmail).toBe(
-      DEFAULT_MERCHANT_SUPPORT_EMAIL
+      DEFAULT_CONTACT_EMAIL
     );
     expect(buildCheckoutOptions({ redirectUrl, supportEmail: null }).merchantSupportEmail).toBe(
-      DEFAULT_MERCHANT_SUPPORT_EMAIL
+      DEFAULT_CONTACT_EMAIL
     );
     expect(buildCheckoutOptions({ redirectUrl, supportEmail: "   " }).merchantSupportEmail).toBe(
-      DEFAULT_MERCHANT_SUPPORT_EMAIL
+      DEFAULT_CONTACT_EMAIL
     );
   });
 

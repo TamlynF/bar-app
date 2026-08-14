@@ -4,6 +4,8 @@ import { settlePaidBooking } from "@/lib/settle-paid-booking";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { EMAIL_FROM } from "@/lib/email";
+import { getContactEmail } from "@/lib/company-info";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -118,11 +120,11 @@ export async function POST(req: NextRequest) {
           { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
         ],
         manageUrl,
-        footnote: "Questions? Email us at admin@bookingsdonfenticas.co.uk",
+        footnote: `Questions? Email us at ${await getContactEmail()}`,
       });
 
       await getResend().emails.send({
-        from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+        from: EMAIL_FROM,
         to: contact.email,
         subject,
         html,
