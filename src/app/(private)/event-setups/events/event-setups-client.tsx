@@ -212,6 +212,13 @@ const ISSUE_NO_BOOKING_URL = "Public booking is switched on but there is no book
 const ISSUE_NO_KARAOKE_LINK = "Karaoke night with no Singa request link.";
 const ISSUE_QUIZ_INCOMPLETE = "Quiz questions are incomplete";
 
+/* Switching off a quiz that has been and gone throws away the questions the
+   generator never got round to using. No dialog for it - but it says so. */
+const deactivatedMessage = (generatedRemoved: number) =>
+  generatedRemoved > 0
+    ? `Event deactivated - ${generatedRemoved} generated question${generatedRemoved === 1 ? "" : "s"} removed`
+    : "Event deactivated";
+
 const ISSUE_ACTION_BUTTON =
   "mt-2 ml-6.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50";
 
@@ -940,7 +947,14 @@ export default function EventsClient({
       const result = await saveEventAction(formData);
       if (result?.error) {
         setFormError(result.error);
-      } else if (isEditing && result?.event) {
+        return;
+      }
+      if (result?.generatedRemoved) {
+        toast.success(
+          `${result.generatedRemoved} generated question${result.generatedRemoved === 1 ? "" : "s"} removed`
+        );
+      }
+      if (isEditing && result?.event) {
         const saved = result.event as EventRecord;
         const prevUrl = selected?.booking_page_url ?? null;
         const prevQr = selected?.booking_qr_url ?? null;
@@ -995,7 +1009,9 @@ export default function EventsClient({
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success(nextActive ? "Event activated" : "Event deactivated");
+        toast.success(
+          nextActive ? "Event activated" : deactivatedMessage(result?.generatedRemoved ?? 0)
+        );
         setSelected((cur) => (cur && cur.id === event.id ? { ...cur, is_active: nextActive } : cur));
         setIssuesEvent((cur) => (cur && cur.id === event.id ? { ...cur, is_active: nextActive } : cur));
       }

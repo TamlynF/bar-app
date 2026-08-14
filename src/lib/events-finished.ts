@@ -12,3 +12,17 @@ export function finishedEventOrFilter(now: Date): string {
   const time = format(now, "HH:mm:ss");
   return `date.lt.${day},and(date.eq.${day},end_time.lt.${time})`;
 }
+
+/* The same rule for one event in hand rather than as a query. An event with no
+   date has not finished - it has not been scheduled. A missing end time counts
+   the whole day, so the event is only finished once that day is over. */
+export function eventHasFinished(
+  event: { date?: string | null; end_time?: string | null },
+  now: Date
+): boolean {
+  if (!event.date) return false;
+  const day = format(now, "yyyy-MM-dd");
+  if (event.date < day) return true;
+  if (event.date > day) return false;
+  return (event.end_time ?? "23:59:59") < format(now, "HH:mm:ss");
+}

@@ -8,6 +8,28 @@ import { isBookingGrouping } from "@/lib/booking-grouping";
 import { validateEventForm, findActiveEventClashes, type EventClashCandidate } from "@/lib/event-form-validation";
 import { isEventCreationMethod } from "@/lib/event-creation";
 import { resolveEventIsActive } from "@/lib/event-active";
+import { eventHasFinished } from "@/lib/events-finished";
+
+/* Questions the generator produced but nobody added to a round. Once a quiz
+   that has been and gone is switched off they are scrap, and they are heavy -
+   so switching it off is what clears them. Returns how many went, for the
+   toast; anything already saved into a round lives in past_quiz_questions and
+   is never touched here. */
+async function dropGeneratedQuestions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: number
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("generated_quiz_questions")
+    .delete()
+    .eq("events_id", eventId)
+    .select("id");
+  if (error) {
+    console.error("Error clearing generated questions:", error);
+    return 0;
+  }
+  return data?.length ?? 0;
+}
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -110,6 +132,7 @@ export async function saveEventAction(formData: FormData) {
 
   try {
     let savedEvent;
+    let generatedRemoved = 0;
     if (id) {
       const { data: prevEvent } = await supabase.from("events").select("is_active").eq("id", id).maybeSingle();
       const bookingPageUrl = computeBookingUrl(id);
@@ -122,9 +145,9 @@ export async function saveEventAction(formData: FormData) {
       if (error) throw error;
       savedEvent = updated;
 
-      const today = new Date().toISOString().split("T")[0];
-      if (payload.is_active === false && prevEvent?.is_active !== false && date < today) {
-        await supabase.from("generated_quiz_questions").delete().eq("events_id", parseInt(id, 10));
+      const finished = eventHasFinished({ date, end_time: endTime }, new Date());
+      if (payload.is_active === false && prevEvent?.is_active !== false && finished) {
+        generatedRemoved = await dropGeneratedQuestions(supabase, parseInt(id, 10));
       }
     } else {
       const rawMethod = formData.get("creation_method")?.toString();
@@ -152,7 +175,7 @@ export async function saveEventAction(formData: FormData) {
 
     revalidatePath("/event-setups/events");
     revalidatePublicEventPages();
-    return { success: true, event: savedEvent };
+    return { success: true, event: savedEvent, generatedRemoved };
   } catch (error) {
     console.error("Error saving event:", error);
     return { error: error instanceof Error ? error.message : "Failed to save event." };
@@ -242,9 +265,15 @@ export async function setEventActiveAction(id: number, isActive: boolean) {
 
     const { error } = await supabase.from("events").update({ is_active: isActive }).eq("id", id);
     if (error) throw error;
+
+    const generatedRemoved =
+      !isActive && eventHasFinished(event, new Date())
+        ? await dropGeneratedQuestions(supabase, id)
+        : 0;
+
     revalidatePath("/event-setups/events");
     revalidatePublicEventPages();
-    return { success: true };
+    return { success: true, generatedRemoved };
   } catch (error) {
     console.error("Error updating event status:", error);
     return { error: error instanceof Error ? error.message : "Failed to update the event status." };
