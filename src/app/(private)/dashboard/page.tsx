@@ -177,6 +177,7 @@ export default async function DashboardPage() {
   const venueSales = await venueSalesPromise;
   
   const finishedFilter = finishedEventOrFilter(new Date());
+  const historicToStr = format(new Date(), "yyyy-MM-dd");
 
   const [
     { count: pendingPrivate },
@@ -184,7 +185,7 @@ export default async function DashboardPage() {
     { count: pendingEnquiries },
     { data: unpaidBookingsData },
     { data: upcomingQuizData },
-    { count: finishedInactive },
+    { count: finishedActive },
     { data: finishedQuizData },
     { data: winnerRows },
   ] = await Promise.all([
@@ -216,7 +217,7 @@ export default async function DashboardPage() {
     supabase
       .from("events")
       .select("*", { count: "exact", head: true })
-      .eq("is_active", false)
+      .eq("is_active", true)
       .or(finishedFilter),
     supabase
       .from("events")
@@ -331,7 +332,7 @@ export default async function DashboardPage() {
   });
 
   const totalActions =
-    (finishedInactive ?? 0) +
+    (finishedActive ?? 0) +
     quizzesMissingWinner +
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
@@ -495,7 +496,7 @@ export default async function DashboardPage() {
     .filter((b) => !!b.createdAt);
 
   const actionItems: ActionItem[] = [
-    { key: "finished-inactive", label: "Inactive past events", count: finishedInactive ?? 0, href: "/event-setups/events?quick=historic,inactive", color: "bg-slate-600" },
+    { key: "finished-active", label: "Past events still active", count: finishedActive ?? 0, href: `/event-setups/events?quick=historic,active&to=${historicToStr}`, color: "bg-slate-600" },
     { key: "quiz-winner", label: "Missing quiz winner", count: quizzesMissingWinner, href: "/event-setups/quiz-leaderboards", color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=new,reviewing", color: "bg-purple-700" },

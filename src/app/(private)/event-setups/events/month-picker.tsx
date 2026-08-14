@@ -22,7 +22,8 @@ function fmtShort(iso: string) {
 }
 
 export function dateRangeLabel(range: DateRange | null): string {
-  if (!range || !range.start) return "All dates";
+  if (!range || (!range.start && !range.end)) return "All dates";
+  if (!range.start && range.end) return `Up to ${fmtShort(range.end)}`;
   if (!range.end || range.end === range.start) return fmtShort(range.start);
   return `${fmtShort(range.start)} – ${fmtShort(range.end)}`;
 }
@@ -39,7 +40,8 @@ export function DatePicker({
   appearance?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
-  const initial = value?.start ? new Date(value.start + "T00:00:00") : new Date();
+  const anchor = value?.start || value?.end;
+  const initial = anchor ? new Date(anchor + "T00:00:00") : new Date();
   const [view, setView] = useState({ y: initial.getFullYear(), m: initial.getMonth() });
   const [draft, setDraft] = useState<DateRange>(value?.start ? value : { start: "", end: null });
 
@@ -89,7 +91,7 @@ export function DatePicker({
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  const active = !!value?.start;
+  const active = !!(value?.start || value?.end);
   const secondary = appearance === "secondary";
   const todayISO = toISO(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 

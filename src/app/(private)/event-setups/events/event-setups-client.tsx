@@ -442,7 +442,7 @@ export default function EventsClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | null>(() => {
-    if (initialFrom) return { start: initialFrom, end: initialTo ?? initialFrom };
+    if (initialFrom || initialTo) return { start: initialFrom ?? "", end: initialTo ?? initialFrom ?? null };
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
@@ -1056,13 +1056,12 @@ export default function EventsClient({
       const hay = `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (dateRange?.start) {
+    if (dateRange && (dateRange.start || dateRange.end)) {
       if (!e.date) return false;
-      if (dateRange.end && dateRange.end !== dateRange.start) {
-        if (e.date < dateRange.start || e.date > dateRange.end) return false;
-      } else if (e.date !== dateRange.start) {
-        return false;
-      }
+      const from = dateRange.start || null;
+      const to = dateRange.end || dateRange.start || null;
+      if (from && e.date < from) return false;
+      if (to && e.date > to) return false;
     }
     return true;
   };
@@ -1388,7 +1387,7 @@ export default function EventsClient({
     });
   }
   if (isSearching) filterSummaryParts.push({ prefix: "matching", label: `"${searchQuery.trim()}"` });
-  if (viewMode === "list" && dateRange?.start) {
+  if (viewMode === "list" && (dateRange?.start || dateRange?.end)) {
     filterSummaryParts.push({ prefix: "", label: dateRangeLabel(dateRange) });
   }
   if (quickFilters.size > 0) {
