@@ -82,7 +82,7 @@ function detailRowsHtml(rows: DetailRow[]): string {
       const spacing = index === rows.length - 1 ? "" : "padding-bottom: 16px; ";
       return `
               <tr>
-                <td style="${spacing}color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">${row.label}</td>
+                <td style="${spacing}color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">${row.label}</td>
                 <td style="${spacing}text-align: right; font-weight: 900; color: #1F1F1A;">${row.value}</td>
               </tr>`;
     })
@@ -94,7 +94,7 @@ function changeRowsHtml(changes: BookingChange[]): string {
     .map(
       (change) => `
               <tr>
-                <td style="padding-bottom: 6px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">${change.label}</td>
+                <td style="padding-bottom: 6px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900;">${change.label}</td>
               </tr>
               <tr>
                 <td style="padding-bottom: 16px; color: #1F1F1A; font-weight: 900;">
@@ -133,16 +133,16 @@ function layout(p: {
     : "";
 
   return `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 40px 20px;">
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
-        <div style="background-color: #26300D; padding: 40px 20px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">${p.heading}</h1>
+        <div style="background-color: #26300D; padding: 32px 16px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${p.heading}</h1>
           <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">${p.eyebrow ?? "Don Fenticas"}</p>
         </div>
-        <div style="padding: 40px 30px; color: #1F1F1A;">
+        <div style="padding: 32px 20px; color: #1F1F1A;">
           <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">${p.greeting}</h2>
           <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">${p.intro}</p>
-          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 24px; margin: 32px 0;">
+          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 20px 16px; margin: 28px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">${p.bodyHtml}
             </table>
           </div>${cta}
