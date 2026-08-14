@@ -25,7 +25,9 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
     );
   }
 
-  const active = items.filter((i) => i.count > 0);
+  const active = items
+    .filter((i) => i.count > 0)
+    .sort((a, b) => b.count - a.count);
 
   return (
     <div className="rounded-2xl border border-[#e9c9c0] bg-linear-to-b from-[#fff8f3] to-[#FFFEFA] p-4 shadow-sm">
@@ -36,14 +38,12 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         <div className="flex items-baseline gap-2">
           <span className="text-3xl leading-none font-bold text-admin-ink tabular-nums">{total}</span>
           <span className="text-sm leading-snug font-medium text-admin-muted">
-            Items need
-            <br />
-            action
+            items need action
           </span>
         </div>
       </div>
 
-      <div className="mt-3.5 flex h-3.5 overflow-hidden rounded-full bg-[#F4F1E8]">
+      <div className="mt-3.5 flex h-2 overflow-hidden rounded-full bg-[#F4F1E8]">
         {active.map((i) => (
           <span
             key={i.key}
@@ -53,16 +53,22 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         ))}
       </div>
 
-      <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
         {active.map((i) => (
           <Link
             key={i.key}
             href={i.href}
-            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[#D8D5C8] bg-white px-3 transition-colors hover:border-[#d8cfb3] hover:bg-[#f3efe1]"
+            className="flex min-h-16 flex-col justify-center gap-1 rounded-xl border border-admin-line bg-admin-card px-3 py-2 transition-colors hover:border-[#d8cfb3] hover:bg-[#f3efe1]"
           >
-            <span className={cn("h-2.5 w-2.5 shrink-0 rounded-[3px]", i.color)} />
-            <span className="text-[13px] font-medium whitespace-nowrap text-admin-ink">{i.label}</span>
-            <span className="text-[13px] font-bold text-admin-ink tabular-nums">{i.count}</span>
+            <span className="flex items-center gap-1.5">
+              <span className={cn("h-2.5 w-2.5 shrink-0 rounded-[3px]", i.color)} />
+              <span className="text-lg leading-none font-bold text-admin-ink tabular-nums">
+                {i.count}
+              </span>
+            </span>
+            <span className="text-[11px] leading-tight font-medium text-admin-muted">
+              {i.label}
+            </span>
           </Link>
         ))}
       </div>
