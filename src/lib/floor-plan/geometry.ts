@@ -113,17 +113,22 @@ export function rectCorners(x: number, y: number, width: number, length: number)
   ];
 }
 
-export function rotatePoint(p: Point, center: Point, degrees: number): Point {
-  if (!degrees) return { x: round(p.x), y: round(p.y) };
+export function rotateAbout(p: Point, center: Point, degrees: number): Point {
+  if (!degrees) return { x: p.x, y: p.y };
   const rad = (degrees * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   const dx = p.x - center.x;
   const dy = p.y - center.y;
   return {
-    x: round(center.x + dx * cos - dy * sin),
-    y: round(center.y + dx * sin + dy * cos),
+    x: center.x + dx * cos - dy * sin,
+    y: center.y + dx * sin + dy * cos,
   };
+}
+
+export function rotatePoint(p: Point, center: Point, degrees: number): Point {
+  const r = rotateAbout(p, center, degrees);
+  return { x: round(r.x), y: round(r.y) };
 }
 
 export function rotatedRectCorners(
@@ -135,6 +140,116 @@ export function rotatedRectCorners(
 ): Point[] {
   const center = { x: x + width / 2, y: y + length / 2 };
   return rectCorners(x, y, width, length).map((c) => rotatePoint(c, center, degrees));
+}
+
+export type BoxResize = {
+  dx: number; // -1 shrinks/grows from the min-x edge, +1 the max-x edge, 0 leaves x alone
+  dy: number;
+  rotation: number;
+  width: number;
+  length: number;
+  minSize: number;
+  circular?: boolean; // keep width and length equal
+};
+
+export function resizeRotatedBox(
+  anchor: Point,
+  pointer: Point,
+  opts: BoxResize
+): { x: number; y: number; width: number; length: number } {
+  const { dx, dy, rotation, minSize } = opts;
+  const local = rotateAbout(pointer, anchor, -rotation);
+  let width = dx === 0 ? opts.width : Math.max(minSize, Math.abs(local.x - anchor.x));
+  let length = dy === 0 ? opts.length : Math.max(minSize, Math.abs(local.y - anchor.y));
+  if (opts.circular) {
+    const d = dx !== 0 && dy !== 0 ? Math.max(width, length) : dx !== 0 ? width : length;
+    width = d;
+    length = d;
+  }
+  const centre = rotateAbout(
+    { x: anchor.x + (dx * width) / 2, y: anchor.y + (dy * length) / 2 },
+    anchor,
+    rotation
+  );
+  return {
+    x: round(centre.x - width / 2),
+    y: round(centre.y - length / 2),
+    width: round(width),
+    length: round(length),
+  };
+}
+
+// Separating-axis test. Exact for convex shapes; for a concave polygon it can only
+// err towards reporting an overlap, which is the safe direction for placement.
+export function convexPolygonsOverlap(a: Point[], b: Point[]): boolean {
+  if (a.length < 3 || b.length < 3) return false;
+  const eps = 1e-9;
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const p1 = poly[i];
+      const p2 = poly[(i + 1) % poly.length];
+      const len = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (len < eps) continue;
+      const nx = -(p2.y - p1.y) / len;
+      const ny = (p2.x - p1.x) / len;
+      let aMin = Infinity;
+      let aMax = -Infinity;
+      let bMin = Infinity;
+      let bMax = -Infinity;
+      for (const p of a) {
+        const d = p.x * nx + p.y * ny;
+        if (d < aMin) aMin = d;
+        if (d > aMax) aMax = d;
+      }
+      for (const p of b) {
+        const d = p.x * nx + p.y * ny;
+        if (d < bMin) bMin = d;
+        if (d > bMax) bMax = d;
+      }
+      if (aMax <= bMin + eps || bMax <= aMin + eps) return false;
+    }
+  }
+  return true;
+}
+
+export function resizePolygon(
+  points: Point[],
+  anchor: Point,
+  pointer: Point,
+  opts: { dx: number; dy: number; width: number; length: number; minSize: number }
+): Point[] {
+  const { dx, dy, width, length, minSize } = opts;
+  const newWidth = dx === 0 ? width : Math.max(minSize, Math.abs(pointer.x - anchor.x));
+  const newLength = dy === 0 ? length : Math.max(minSize, Math.abs(pointer.y - anchor.y));
+  const sx = dx === 0 || width <= 0 ? 1 : newWidth / width;
+  const sy = dy === 0 || length <= 0 ? 1 : newLength / length;
+  return points.map((p) => ({
+    x: round(anchor.x + (p.x - anchor.x) * sx),
+    y: round(anchor.y + (p.y - anchor.y) * sy),
+  }));
+}
+
+export function rotatePolygonAbout(points: Point[], centre: Point, degrees: number): Point[] {
+  return points.map((p) => rotatePoint(p, centre, degrees));
+}
+
+export function rotatedEllipseBounds(
+  x: number,
+  y: number,
+  width: number,
+  length: number,
+  degrees: number
+): Bounds {
+  const a = width / 2;
+  const b = length / 2;
+  const rad = (degrees * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const hx = Math.hypot(a * cos, b * sin);
+  const hy = Math.hypot(a * sin, b * cos);
+  const cx = x + a;
+  const cy = y + b;
+  return { minX: cx - hx, minY: cy - hy, maxX: cx + hx, maxY: cy + hy, width: hx * 2, length: hy * 2 };
 }
 
 export function doorClearancePolygon(

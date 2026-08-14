@@ -35,7 +35,11 @@ export type ChairInput = {
   layout: ChairLayout | null;
 };
 
-export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; benches: BenchBar[] } {
+export function chairGapFor(chairZone: number): number {
+  return Math.max(0.18, chairZone * 0.45);
+}
+
+export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; benches: BenchBar[]; seats: ChairDot[] } {
   const { shape, cx, cy, chairGap, baseSeats, extraChairs, layout } = input;
   const base = Math.max(0, baseSeats);
   const extra = Math.max(0, extraChairs);
@@ -48,7 +52,7 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
       const a = ((-90 + (360 / Math.max(1, total)) * i) * Math.PI) / 180;
       chairs.push({ x: round(cx + r * Math.cos(a), 3), y: round(cy + r * Math.sin(a), 3), extra: i >= base });
     }
-    return { chairs, benches: [] };
+    return { chairs, benches: [], seats: chairs };
   }
 
   const w = input.width > 0 ? input.width : 1.2;
@@ -81,20 +85,32 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
 
   const chairs: ChairDot[] = [];
   const benches: BenchBar[] = [];
+  const benchSeats: ChairDot[] = [];
 
   const longOffset = (longVertical ? halfW : halfL) + chairGap;
   const endOffset = (longVertical ? halfL : halfW) + chairGap;
 
   if (mode === "bench") {
     const depth = chairGap * 1.3;
+    const perSide = Math.max(0, layout?.perSide ?? Math.ceil(base / 2));
     if (longVertical) {
       const len = l * 0.92;
       benches.push({ x: cx - halfW - chairGap - depth, y: cy - len / 2, width: depth, length: len });
       benches.push({ x: cx + halfW + chairGap, y: cy - len / 2, width: depth, length: len });
+      benches.forEach((b) =>
+        distribute(perSide, b.y, b.y + b.length).forEach((y) =>
+          benchSeats.push({ x: round(b.x + b.width / 2, 3), y: round(y, 3), extra: false })
+        )
+      );
     } else {
       const len = w * 0.92;
       benches.push({ x: cx - len / 2, y: cy - halfL - chairGap - depth, width: len, length: depth });
       benches.push({ x: cx - len / 2, y: cy + halfL + chairGap, width: len, length: depth });
+      benches.forEach((b) =>
+        distribute(perSide, b.x, b.x + b.width).forEach((x) =>
+          benchSeats.push({ x: round(x, 3), y: round(b.y + b.length / 2, 3), extra: false })
+        )
+      );
     }
   } else {
     if (longVertical) {
@@ -122,5 +138,5 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
   placeEnd(endTotal1, end1, -1);
   placeEnd(endTotal2, end2, 1);
 
-  return { chairs, benches };
+  return { chairs, benches, seats: [...benchSeats, ...chairs] };
 }

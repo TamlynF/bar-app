@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import FloorPlanClient, { type AvailableTable } from "./_components/floor-plan-client";
+import FloorPlanClient, { type AvailableTable, type TableParty } from "./_components/floor-plan-client";
 import type { CalcTable } from "@/lib/floor-plan/calculator";
 import { chairLayoutSeatCount } from "@/lib/floor-plan/chairs";
 import type { ChairLayout, Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/types";
@@ -46,7 +46,9 @@ export default async function FloorPlanPage({
   const loadMappings = (cols: string) =>
     supabase
       .from("booking_table_mappings")
-      .select(`id, add_seat, table_id, booking_id, bookings(status), tables!inner(${cols})`)
+      .select(
+        `id, add_seat, table_id, booking_id, bookings(status, group_name, group_size, contacts!bookings_contact_id_fkey(full_name)), tables!inner(${cols})`
+      )
       .eq("event_id", id);
   const loadAvailable = (cols: string) =>
     supabase.from("tables").select(cols).eq("available", true).order("id", { ascending: true });
@@ -78,32 +80,54 @@ export default async function FloorPlanPage({
   const company = companyRes.data;
   const event = eventRes.data;
 
+  type BookingRow = {
+    status: string;
+    group_name: string | null;
+    group_size: number | null;
+    contacts: { full_name: string | null } | { full_name: string | null }[] | null;
+  };
+
   const rawMappings = (mappingRes.data ?? []) as unknown as Array<{
     id: number;
     add_seat: number | null;
     table_id: number;
     booking_id: number | null;
-    bookings: { status: string } | { status: string }[] | null;
+    bookings: BookingRow | BookingRow[] | null;
     tables: TableRow | TableRow[];
   }>;
 
-  const tables: CalcTable[] = rawMappings
-    .filter((m) => {
-      if (m.booking_id == null) return true;
-      const bk = Array.isArray(m.bookings) ? m.bookings[0] : m.bookings;
-      return bk?.status === "confirmed";
-    })
-    .map((m) => {
-      const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
-      const spec = toSpec(t);
-      return {
+  const confirmed = rawMappings.filter((m) => {
+    if (m.booking_id == null) return true;
+    const bk = Array.isArray(m.bookings) ? m.bookings[0] : m.bookings;
+    return bk?.status === "confirmed";
+  });
+
+  const tables: CalcTable[] = confirmed.map((m) => {
+    const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
+    const spec = toSpec(t);
+    return {
+      mappingId: m.id,
+      tableId: m.table_id,
+      ...spec,
+      extraChairs: Number(m.add_seat ?? 0),
+      isManual: m.booking_id == null,
+    };
+  });
+
+  const parties: TableParty[] = confirmed.flatMap((m) => {
+    const bk = Array.isArray(m.bookings) ? m.bookings[0] : m.bookings;
+    if (!bk) return [];
+    const contact = Array.isArray(bk.contacts) ? bk.contacts[0] : bk.contacts;
+    const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
+    return [
+      {
         mappingId: m.id,
-        tableId: m.table_id,
-        ...spec,
-        extraChairs: Number(m.add_seat ?? 0),
-        isManual: m.booking_id == null,
-      };
-    });
+        name: bk.group_name?.trim() || contact?.full_name?.trim() || null,
+        size: Number(bk.group_size ?? 0),
+        capacity: Number(t?.max_capacity ?? 0),
+      },
+    ];
+  });
 
   const usedTableIds = new Set(tables.map((t) => t.tableId));
   const availableRows = (availableRes.data ?? []) as unknown as TableRow[];
@@ -120,6 +144,7 @@ export default async function FloorPlanPage({
       fixtures={(company?.fixtures as Fixture[] | null) ?? []}
       features={(company?.features as Feature[] | null) ?? []}
       tables={tables}
+      parties={parties}
       availableTables={availableTables}
       availableCount={availableTables.length}
       savedLayout={event.floor_plan_layout ?? null}

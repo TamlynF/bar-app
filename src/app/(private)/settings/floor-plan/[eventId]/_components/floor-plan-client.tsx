@@ -37,19 +37,26 @@ import {
   facingToVector,
   doorClearancePolygon,
   benchSeatPositions,
+  rotatePoint,
+  rectCorners,
+  rotatedRectCorners,
 } from "@/lib/floor-plan/geometry";
-import { computeTableChairs } from "@/lib/floor-plan/chairs";
+import { layoutLabels, type LabelInput } from "@/lib/floor-plan/labels";
+import { computeTableChairs, chairGapFor } from "@/lib/floor-plan/chairs";
 import {
   computeFloorPlan,
   focalPointsFrom,
   buildBlockers,
-  generateCells,
-  tableSpan,
+  findFreeSlot,
+  tableSlot,
+  orientSlot,
   tableFootprint,
-  aabbOverlap,
+  describeSightIssue,
   MIN_AISLE,
   type CalcTable,
+  type PackedPosition,
   type SightRating,
+  type Slot,
   type TableOverride,
 } from "@/lib/floor-plan/calculator";
 import type { ChairLayout, Feature, Fixture, Obstacle, Point, RoomOutline } from "@/lib/floor-plan/types";
@@ -72,13 +79,28 @@ export type AvailableTable = {
   inUse: boolean;
 };
 
+export type TableParty = {
+  mappingId: number;
+  name: string | null;
+  size: number;
+  capacity: number;
+};
+
 const RATING_FILL: Record<SightRating, string> = { good: "#16A34A", acceptable: "#D97706", poor: "#DC2626" };
+const RATING_ORDER: Record<SightRating, number> = { good: 0, acceptable: 1, poor: 2 };
 const FIXTURE_FILL: Record<string, string> = {
   stage: "#4338CA",
   bar: "#34451F",
   dj_booth: "#7C3AED",
   projector: "#0EA5E9",
   tv: "#0D9488",
+};
+const FIXTURE_INK: Record<string, string> = {
+  stage: "#3730A3",
+  bar: "#34451F",
+  dj_booth: "#6D28D9",
+  projector: "#0284C7",
+  tv: "#0F766E",
 };
 
 type SavedLayout = {
@@ -95,6 +117,7 @@ export default function FloorPlanClient({
   fixtures,
   features,
   tables,
+  parties,
   availableTables,
   availableCount,
   savedLayout,
@@ -105,6 +128,7 @@ export default function FloorPlanClient({
   fixtures: Fixture[];
   features: Feature[];
   tables: CalcTable[];
+  parties: TableParty[];
   availableTables: AvailableTable[];
   availableCount: number;
   savedLayout: SavedLayout;
@@ -151,6 +175,7 @@ export default function FloorPlanClient({
     () => tables.map((t) => ({ ...t, extraChairs: tableChairs[t.mappingId] ?? t.extraChairs })),
     [tables, tableChairs]
   );
+  const addableTables = useMemo(() => availableTables.filter((t) => !t.inUse), [availableTables]);
 
   const result = useMemo(
     () =>
@@ -163,8 +188,9 @@ export default function FloorPlanClient({
         benchSeats,
         settings: { chairZone, aisleWidth, mustSee },
         overrides,
+        spareTables: addableTables,
       }),
-    [room, blockers, focals, tablesWithChairs, availableCount, benchSeats, chairZone, aisleWidth, mustSee, overrides]
+    [room, blockers, focals, tablesWithChairs, addableTables, availableCount, benchSeats, chairZone, aisleWidth, mustSee, overrides]
   );
 
   const view = useMemo(() => {
@@ -180,6 +206,9 @@ export default function FloorPlanClient({
   }, [room, obstacles, fixtures, features]);
 
   const fontSize = Math.min(Math.max(Math.min(view.width, view.length) * 0.035, 0.16), 0.45);
+  const labelSize = clamp(Math.min(view.width, view.length) * 0.021, 0.1, 0.24);
+
+  const partyByMapping = useMemo(() => new Map(parties.map((p) => [p.mappingId, p])), [parties]);
 
   const adjustChairs = (mappingId: number, delta: number) => {
     setTableChairs((prev) => ({ ...prev, [mappingId]: Math.max(0, (prev[mappingId] ?? 0) + delta) }));
@@ -324,7 +353,6 @@ export default function FloorPlanClient({
   };
 
   const emptyCells = Math.max(0, result.cellsAvailable - result.placements.length);
-  const addableTables = availableTables.filter((t) => !t.inUse);
 
   const addTable = (tableId: number) => {
     startMutate(async () => {
@@ -361,29 +389,18 @@ export default function FloorPlanClient({
     });
   };
 
-  const cellSize = useMemo(() => {
-    const spans = tablesWithChairs.map((t) => tableSpan(t));
-    const maxSpan = spans.length ? Math.max(...spans) : 1.1;
-    return round(maxSpan + 2 * Math.max(0, chairZone));
-  }, [tablesWithChairs, chairZone]);
-
-  const findFreeCell = (): Point | null => {
+  const findFreeCell = (slot: Slot): PackedPosition | null => {
     if (!room || room.points.length < 3) return null;
-    const cells = generateCells(room.points, blockers, cellSize, aisleWidth);
-    const half = cellSize / 2;
-    const occupied = result.placements.map((p) => tableFootprint({ x: p.x, y: p.y }, p.span, chairZone));
-    for (const c of cells) {
-      const foot = { minX: c.x - half, minY: c.y - half, maxX: c.x + half, maxY: c.y + half };
-      if (occupied.some((o) => aabbOverlap(foot, o))) continue;
-      return c;
-    }
-    return null;
+    const occupied = result.placements.map((p) =>
+      tableFootprint({ x: p.x, y: p.y }, orientSlot(tableSlot(p, chairZone), p.rotation))
+    );
+    return findFreeSlot(room.points, blockers, occupied, slot, aisleWidth);
   };
 
   useEffect(() => {
     if (autoFillTick === 0 || isMutating) return;
     if (addableTables.length === 0) return;
-    const cell = findFreeCell();
+    const cell = findFreeCell(tableSlot(addableTables[0], chairZone));
     if (!cell) return;
     const tableId = addableTables[0].tableId;
     startMutate(async () => {
@@ -393,7 +410,7 @@ export default function FloorPlanClient({
         return;
       }
       if (res?.mappingId != null) {
-        setOverrides((prev) => ({ ...prev, [res.mappingId as number]: { x: cell.x, y: cell.y, rotation: 0 } }));
+        setOverrides((prev) => ({ ...prev, [res.mappingId as number]: cell }));
       }
       markDirty();
       toast.success("Added the next table to the freed space.");
@@ -461,14 +478,15 @@ export default function FloorPlanClient({
         width: p.width,
         length: p.length,
         diameter: p.diameter,
-        chairGap: Math.max(0.18, chairZone * 0.45),
+        chairGap: chairGapFor(chairZone),
         baseSeats: p.baseSeats,
         extraChairs: p.extraChairs,
         layout: p.chairLayout,
       });
       const kept = chairs.filter((c) => {
+        const w = p.rotation ? rotatePoint(c, { x: p.x, y: p.y }, p.rotation) : c;
         const hit = benchBoxes.find(
-          (b) => c.x >= b.box.minX - b.pad && c.x <= b.box.maxX + b.pad && c.y >= b.box.minY - b.pad && c.y <= b.box.maxY + b.pad
+          (b) => w.x >= b.box.minX - b.pad && w.x <= b.box.maxX + b.pad && w.y >= b.box.minY - b.pad && w.y <= b.box.maxY + b.pad
         );
         if (hit) {
           usedBenchIds.add(hit.id);
@@ -485,7 +503,100 @@ export default function FloorPlanClient({
   const displayedTotalSeats = result.stats.totalSeats - tableVisuals.usedBenchSeats;
   const standaloneBenchSeats = benchSeats - tableVisuals.usedBenchSeats;
 
+  const seatReports = useMemo(
+    () =>
+      result.placements
+        .map((p) => {
+          const bad = p.seats.filter((s) => s.rating !== "good");
+          if (bad.length === 0) return null;
+          const grouped = new Map<string, { rating: SightRating; text: string; count: number }>();
+          for (const s of bad) {
+            const text = describeSightIssue(s.issue, s.focalLabel ?? "the focal point");
+            const key = `${s.rating}|${text}`;
+            const hit = grouped.get(key);
+            if (hit) hit.count += 1;
+            else grouped.set(key, { rating: s.rating, text, count: 1 });
+          }
+          return {
+            name: p.name,
+            total: p.seats.length,
+            bad: bad.length,
+            reasons: [...grouped.values()].sort((a, b) => RATING_ORDER[b.rating] - RATING_ORDER[a.rating]),
+          };
+        })
+        .filter((r) => r !== null),
+    [result.placements]
+  );
+
+  const labels = useMemo(() => {
+    const boxOf = (e: { x: number; y: number; width: number; length: number; rotation?: number; shape?: string; points?: Point[] }) =>
+      e.shape === "polygon" && e.points?.length
+        ? polygonBounds(e.points)
+        : polygonBounds(
+            e.rotation
+              ? rotatedRectCorners(e.x, e.y, e.width, e.length, e.rotation)
+              : rectCorners(e.x, e.y, e.width, e.length)
+          );
+
+    const items: LabelInput[] = [
+      ...obstacles.map((o) => ({
+        key: `ob-${o.id}`,
+        text: o.label,
+        bounds: boxOf(o),
+        width: o.width,
+        length: o.length,
+        rotation: o.rotation ?? 0,
+        outsideOnly: o.shape === "polygon",
+        ink: "#991B1B",
+      })),
+      ...fixtures.map((f) => ({
+        key: `fx-${f.id}`,
+        text: f.label,
+        bounds: boxOf(f),
+        width: f.width,
+        length: f.length,
+        rotation: f.rotation ?? 0,
+        outsideOnly: f.shape === "polygon",
+        ink: FIXTURE_INK[f.type] ?? "#34451F",
+      })),
+      ...features.map((f) => ({
+        key: `ft-${f.id}`,
+        text: f.kind === "bench" ? `${f.label} (${f.seats ?? 0})` : f.label,
+        bounds: boxOf(f),
+        width: f.width,
+        length: f.length,
+        rotation: f.rotation ?? 0,
+        outsideOnly: false,
+        ink: "#34451F",
+      })),
+      ...result.placements.map((p) => {
+        const party = partyByMapping.get(p.mappingId);
+        const w = p.shape === "round" ? p.diameter : p.width;
+        const l = p.shape === "round" ? p.diameter : p.length;
+        return {
+          key: `tb-${p.mappingId}`,
+          text: party?.name ?? `Table ${p.name}`,
+          bounds: polygonBounds(
+            p.rotation
+              ? rotatedRectCorners(p.x - w / 2, p.y - l / 2, w, l, p.rotation)
+              : rectCorners(p.x - w / 2, p.y - l / 2, w, l)
+          ),
+          width: w,
+          length: l,
+          rotation: p.rotation,
+          outsideOnly: true, // the middle already carries the occupancy figure
+          ink: "#20231A",
+        };
+      }),
+    ];
+    return layoutLabels(items, { fontSize: labelSize, viewWidth: view.width });
+  }, [obstacles, fixtures, features, result.placements, partyByMapping, labelSize, view.width]);
+
   const hasRoom = !!room && room.points.length >= 3;
+  const mustSeeLabels = focals
+    .filter((f) => mustSee.includes(f.id))
+    .map((f) => f.label)
+    .join(", ");
 
   return (
     <div className="max-w-5xl space-y-4 p-2 sm:p-4">
@@ -801,9 +912,6 @@ export default function FloorPlanClient({
                       ) : (
                         <rect x={f.x} y={f.y} width={f.width} height={f.length} rx={0.05} fill={fill} fillOpacity={0.85} stroke={fill} strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       )}
-                      <text x={cx} y={cy} fontSize={fontSize} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
-                        {f.label}
-                      </text>
                     </g>
                     {arrow && <line x1={cx} y1={cy} x2={cx + arrow.x * aLen} y2={cy + arrow.y * aLen} stroke="#FDCC4B" strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
                   </g>
@@ -863,7 +971,8 @@ export default function FloorPlanClient({
               })}
 
               {result.placements.map((p) => {
-                const fill = p.worstRating ? RATING_FILL[p.worstRating] : "#34451F";
+                const rating = p.mustSeeRating ?? p.worstRating;
+                const fill = rating ? RATING_FILL[rating] : "#34451F";
                 const isSel = selectedId === p.mappingId;
                 const transform = p.rotation ? `rotate(${p.rotation} ${p.x} ${p.y})` : undefined;
                 const w = p.shape === "round" ? p.diameter : p.width;
@@ -872,6 +981,9 @@ export default function FloorPlanClient({
                 const vis = tableVisuals.byMapping.get(p.mappingId);
                 const chairs = vis?.chairs ?? [];
                 const benches = vis?.benches ?? [];
+                const party = partyByMapping.get(p.mappingId);
+                const capacity = party?.capacity || p.baseSeats + p.extraChairs;
+                const occupancy = party ? `${party.size}/${capacity}` : `${p.baseSeats + p.extraChairs}`;
                 return (
                   <g key={p.mappingId} className="cursor-move" onPointerDown={(e) => startDrag(e, p.mappingId)}>
                     <g transform={transform}>
@@ -886,28 +998,119 @@ export default function FloorPlanClient({
                       ) : (
                         <circle cx={p.x} cy={p.y} r={p.diameter / 2} fill={fill} fillOpacity={0.9} stroke={isSel ? "#20231A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
                       )}
-                      <text x={p.x} y={p.y} fontSize={fontSize * 0.95} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
-                        {p.baseSeats + p.extraChairs}
+                      <text x={p.x} y={p.y} fontSize={fontSize * 0.9} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
+                        {occupancy}
                       </text>
                     </g>
+                    {p.seats
+                      .filter((s) => s.rating !== "good")
+                      .map((s, i) => (
+                        <circle
+                          key={`s${i}`}
+                          cx={s.x}
+                          cy={s.y}
+                          r={0.22}
+                          fill="none"
+                          stroke={RATING_FILL[s.rating]}
+                          strokeWidth={2}
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
                     {p.mustSeeViolation && (
                       <circle cx={p.x} cy={p.y} r={ringR} fill="none" stroke="#DC2626" strokeWidth={2.5} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
                     )}
                   </g>
                 );
               })}
+
+              <g className="pointer-events-none">
+                {labels.map((s) =>
+                  s.inside ? (
+                    <text
+                      key={s.key}
+                      x={s.x}
+                      y={s.y}
+                      fontSize={labelSize}
+                      fontWeight={700}
+                      fill={s.ink}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      paintOrder="stroke"
+                      stroke="#FFFEFA"
+                      strokeWidth={labelSize * 0.28}
+                      strokeLinejoin="round"
+                    >
+                      {s.text}
+                    </text>
+                  ) : (
+                    <g key={s.key}>
+                      <line x1={s.cx} y1={s.cy} x2={s.x} y2={s.y} stroke={s.ink} strokeWidth={1} strokeOpacity={0.4} vectorEffect="non-scaling-stroke" />
+                      <rect
+                        x={s.x - s.w / 2}
+                        y={s.y - s.h / 2}
+                        width={s.w}
+                        height={s.h}
+                        rx={s.h * 0.35}
+                        fill="#FFFEFA"
+                        fillOpacity={0.95}
+                        stroke={s.ink}
+                        strokeOpacity={0.35}
+                        strokeWidth={1}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      <text x={s.x} y={s.y} fontSize={labelSize} fontWeight={700} fill={s.ink} textAnchor="middle" dominantBaseline="central">
+                        {s.text}
+                      </text>
+                    </g>
+                  )
+                )}
+              </g>
             </svg>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#5E6654]">
+            <span className="text-[#20231A]">
+              {mustSeeLabels ? `View of ${mustSeeLabels}:` : "Worst view of any focal point:"}
+            </span>
             <span className="flex items-center gap-1.5"><Dot color="#16A34A" /> Good view</span>
             <span className="flex items-center gap-1.5"><Dot color="#D97706" /> Acceptable</span>
             <span className="flex items-center gap-1.5"><Dot color="#DC2626" /> Poor</span>
             <span className="flex items-center gap-1.5"><Dot color="#34451F" /> No focal</span>
             <span className="flex items-center gap-1.5"><Dot color="#FDCC4B" /> Extra chair</span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3 rounded-full border-2 border-red-600" aria-hidden="true" /> Ringed seat = poor view
+            </span>
             <span className="flex items-center gap-1.5 text-red-600">⊘ Must-see violation</span>
             <span className="flex items-center gap-1.5"><Dot color="#34451F" /> Attached / docked bench</span>
           </div>
+
+          {seatReports.length > 0 && (
+            <div className="space-y-2 rounded-2xl border border-[#D8D5C8] bg-white p-3">
+              <p className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                <Eye className="h-3.5 w-3.5" /> Seats without a good view
+                {mustSeeLabels && <span className="normal-case tracking-normal">of {mustSeeLabels}</span>}
+              </p>
+              <ul className="space-y-2">
+                {seatReports.map((r) => (
+                  <li key={r.name} className="rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-2.5">
+                    <p className="font-black text-[13px] text-[#20231A] tabular-nums">
+                      Table {r.name} · {r.bad} of {r.total} seats
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {r.reasons.map((reason) => (
+                        <li key={reason.text} className="flex items-start gap-1.5 text-[11px] font-bold text-[#5E6654]">
+                          <Dot color={RATING_FILL[reason.rating]} />
+                          <span>
+                            {reason.count} seat{reason.count === 1 ? "" : "s"} · {reason.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {result.unplaced.length > 0 && (
             <p className="text-[11px] font-bold text-amber-700">

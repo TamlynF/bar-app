@@ -40,6 +40,11 @@ import {
   doorClearancePolygon,
   benchSeatPositions,
   rectCorners,
+  rotatedRectCorners,
+  rotateAbout,
+  resizeRotatedBox,
+  resizePolygon,
+  rotatePolygonAbout,
 } from "@/lib/floor-plan/geometry";
 import type {
   Feature,
@@ -50,6 +55,14 @@ import type {
   Point,
   RoomOutline,
   VenueGeometry,
+} from "@/lib/floor-plan/types";
+import { layoutLabels, type LabelInput } from "@/lib/floor-plan/labels";
+import {
+  BLOCKING_FIXTURE_TYPES,
+  FOCAL_FIXTURE_TYPES,
+  DEFAULT_FIXTURE_HEIGHT,
+  DEFAULT_VIEW_HEIGHT,
+  DEFAULT_FEATURE_HEIGHT,
 } from "@/lib/floor-plan/types";
 import { saveVenueLayoutAction } from "../actions";
 
@@ -116,6 +129,10 @@ type Selection =
   | { kind: "feature"; id: string }
   | null;
 
+type EntityKind = "obstacle" | "fixture" | "feature";
+
+type BoxPatch = { x?: number; y?: number; width?: number; length?: number; rotation?: number };
+
 type DragState =
   | { kind: "vertex"; index: number }
   | { kind: "obstacle"; id: string; grabDX: number; grabDY: number }
@@ -123,7 +140,91 @@ type DragState =
   | { kind: "fixture"; id: string; grabDX: number; grabDY: number }
   | { kind: "fixtureVertex"; id: string; index: number }
   | { kind: "feature"; id: string; grabDX: number; grabDY: number }
+  | {
+      kind: "resize";
+      entity: EntityKind;
+      id: string;
+      dx: number;
+      dy: number;
+      anchor: Point;
+      rotation: number;
+      width: number;
+      length: number;
+      circular: boolean;
+    }
+  | { kind: "rotate"; entity: EntityKind; id: string; cx: number; cy: number }
+  | {
+      kind: "resizePoly";
+      entity: EntityKind;
+      id: string;
+      dx: number;
+      dy: number;
+      anchor: Point;
+      width: number;
+      length: number;
+      points: Point[];
+    }
+  | {
+      kind: "rotatePoly";
+      entity: EntityKind;
+      id: string;
+      centre: Point;
+      startBearing: number;
+      points: Point[];
+    }
   | null;
+
+type EditableBox = {
+  entity: EntityKind;
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  length: number;
+  rotation: number;
+  circular: boolean;
+  stroke: string;
+  points?: Point[]; // present only for polygons, whose points are the real shape
+};
+
+function bearingTo(centre: Point, p: Point): number {
+  return (Math.atan2(p.x - centre.x, centre.y - p.y) * 180) / Math.PI;
+}
+
+function entityBounds(e: { x: number; y: number; width: number; length: number; rotation?: number; shape?: Shape; points?: Point[] }) {
+  if (shapeOf(e.shape) === "polygon" && e.points?.length) return polygonBounds(e.points);
+  const rotation = rotOf(e.rotation);
+  if (!rotation) return polygonBounds(rectCorners(e.x, e.y, e.width, e.length));
+  return polygonBounds(rotatedRectCorners(e.x, e.y, e.width, e.length, rotation));
+}
+
+const RESIZE_HANDLES = [
+  { id: "nw", dx: -1, dy: -1 },
+  { id: "n", dx: 0, dy: -1 },
+  { id: "ne", dx: 1, dy: -1 },
+  { id: "e", dx: 1, dy: 0 },
+  { id: "se", dx: 1, dy: 1 },
+  { id: "s", dx: 0, dy: 1 },
+  { id: "sw", dx: -1, dy: 1 },
+  { id: "w", dx: -1, dy: 0 },
+] as const;
+
+const ROTATE_SNAP = 5; // degrees
+const RESIZE_CURSORS = ["cursor-ns-resize", "cursor-nesw-resize", "cursor-ew-resize", "cursor-nwse-resize"];
+
+function handleCursor(dx: number, dy: number, rotation: number): string {
+  const bearing = (Math.atan2(dx, -dy) * 180) / Math.PI + rotation;
+  return RESIZE_CURSORS[Math.round((((bearing % 180) + 180) % 180) / 45) % 4];
+}
+
+function boxCentre(b: { x: number; y: number; width: number; length: number }): Point {
+  return { x: b.x + b.width / 2, y: b.y + b.length / 2 };
+}
+
+function cornerAt(b: EditableBox, dx: number, dy: number): Point {
+  const c = boxCentre(b);
+  return rotateAbout({ x: c.x + (dx * b.width) / 2, y: c.y + (dy * b.length) / 2 }, c, b.rotation);
+}
 
 export default function VenueEditorClient({
   companyId,
@@ -193,11 +294,13 @@ export default function VenueEditorClient({
     setSavedAt(false);
   };
 
-  const eventToWorld = (e: React.PointerEvent): Point => {
+  const eventToWorldRaw = (e: React.PointerEvent): Point => {
     const el = svgRef.current;
     if (!el) return { x: 0, y: 0 };
-    const rect = el.getBoundingClientRect();
-    const w = screenToWorld(e.clientX, e.clientY, rect, view.width, view.length);
+    return screenToWorld(e.clientX, e.clientY, el.getBoundingClientRect(), view.width, view.length);
+  };
+  const eventToWorld = (e: React.PointerEvent): Point => {
+    const w = eventToWorldRaw(e);
     return { x: clamp(snap(w.x, GRID), 0, view.width), y: clamp(snap(w.y, GRID), 0, view.length) };
   };
 
@@ -415,9 +518,60 @@ export default function VenueEditorClient({
     svgRef.current?.setPointerCapture(e.pointerId);
   };
 
+  const patchEntity = (entity: EntityKind, id: string, patch: BoxPatch) => {
+    if (entity === "obstacle") updateObstacle(id, patch);
+    else if (entity === "fixture") updateFixture(id, patch);
+    else updateFeature(id, patch);
+  };
+
+  const applyResize = (drag: Extract<DragState, { kind: "resize" }>, pointer: Point) => {
+    patchEntity(drag.entity, drag.id, resizeRotatedBox(drag.anchor, pointer, { ...drag, minSize: MIN_SIZE }));
+  };
+
+  const setPolygonPoints = (entity: EntityKind, id: string, pts: Point[]) => {
+    const b = polygonBounds(pts);
+    const patch = {
+      points: pts,
+      x: round(b.minX),
+      y: round(b.minY),
+      width: round(b.width),
+      length: round(b.length),
+    };
+    if (entity === "obstacle") updateObstacle(id, patch);
+    else if (entity === "fixture") updateFixture(id, patch);
+  };
+
+  const applyResizePoly = (drag: Extract<DragState, { kind: "resizePoly" }>, pointer: Point) => {
+    setPolygonPoints(
+      drag.entity,
+      drag.id,
+      resizePolygon(drag.points, drag.anchor, pointer, { ...drag, minSize: MIN_SIZE })
+    );
+  };
+
+  const applyRotatePoly = (drag: Extract<DragState, { kind: "rotatePoly" }>, pointer: Point) => {
+    if (Math.hypot(pointer.x - drag.centre.x, pointer.y - drag.centre.y) < 1e-3) return;
+    const delta = bearingTo(drag.centre, pointer) - drag.startBearing;
+    const snapped = Math.round(delta / ROTATE_SNAP) * ROTATE_SNAP;
+    setPolygonPoints(drag.entity, drag.id, rotatePolygonAbout(drag.points, drag.centre, snapped));
+  };
+
+  const applyRotate = (drag: Extract<DragState, { kind: "rotate" }>, pointer: Point) => {
+    const vx = pointer.x - drag.cx;
+    const vy = pointer.y - drag.cy;
+    if (Math.hypot(vx, vy) < 1e-3) return;
+    const bearing = (Math.atan2(vx, -vy) * 180) / Math.PI;
+    const snapped = Math.round((((bearing % 360) + 360) % 360) / ROTATE_SNAP) * ROTATE_SNAP;
+    patchEntity(drag.entity, drag.id, { rotation: snapped % 360 });
+  };
+
   const onSvgPointerMove = (e: React.PointerEvent) => {
     const drag = dragRef.current;
     if (!drag) return;
+    if (drag.kind === "resize") return applyResize(drag, eventToWorld(e));
+    if (drag.kind === "rotate") return applyRotate(drag, eventToWorldRaw(e));
+    if (drag.kind === "resizePoly") return applyResizePoly(drag, eventToWorld(e));
+    if (drag.kind === "rotatePoly") return applyRotatePoly(drag, eventToWorldRaw(e));
     const w = eventToWorld(e);
     if (drag.kind === "vertex") {
       setPoints((prev) => prev.map((p, i) => (i === drag.index ? { x: round(w.x), y: round(w.y) } : p)));
@@ -470,7 +624,7 @@ export default function VenueEditorClient({
     });
   };
 
-  const fontSize = clamp(Math.min(view.width, view.length) * 0.04, 0.18, 0.5);
+  const fontSize = clamp(Math.min(view.width, view.length) * 0.021, 0.1, 0.24);
   const handleR = clamp(Math.min(view.width, view.length) * 0.018, 0.08, 0.22);
   const gridLines = useMemo(() => {
     const xs: number[] = [];
@@ -491,6 +645,72 @@ export default function VenueEditorClient({
   const selectedFeature = selection?.kind === "feature" ? features.find((f) => f.id === selection.id) ?? null : null;
 
   const benchSeatTotal = features.filter((f) => f.kind === "bench").reduce((sum, f) => sum + (f.seats ?? 0), 0);
+
+  const labels = useMemo(() => {
+    const toInput = (
+      key: string,
+      text: string,
+      e: { x: number; y: number; width: number; length: number; rotation?: number; shape?: Shape; points?: Point[] },
+      ink: string
+    ): LabelInput => ({
+      key,
+      text,
+      bounds: entityBounds(e),
+      width: e.width,
+      length: e.length,
+      rotation: rotOf(e.rotation),
+      outsideOnly: shapeOf(e.shape) === "polygon",
+      ink,
+    });
+
+    return layoutLabels(
+      [
+        ...obstacles.map((o) => toInput(`ob-${o.id}`, o.label, o, "#991B1B")),
+        ...fixtures.map((f) => toInput(`fx-${f.id}`, f.label, f, FIXTURE_META[f.type].stroke)),
+        ...features.map((f) =>
+          toInput(`ft-${f.id}`, f.kind === "bench" ? `${f.label} (${f.seats ?? 0})` : f.label, f, "#34451F")
+        ),
+      ],
+      { fontSize, viewWidth: view.width }
+    );
+  }, [obstacles, fixtures, features, fontSize, view.width]);
+
+  const editableBox: EditableBox | null = (() => {
+    if (drawingPoly) return null;
+    if (selection?.kind === "obstacleVertex" || selection?.kind === "fixtureVertex") return null;
+    const base = (
+      entity: EntityKind,
+      e: { id: string; x: number; y: number; width: number; length: number; rotation?: number; shape?: Shape; points?: Point[] },
+      stroke: string
+    ): EditableBox => {
+      const shape = shapeOf(e.shape);
+      const isPoly = shape === "polygon" && !!e.points && e.points.length >= 3;
+      return {
+        entity,
+        id: e.id,
+        x: e.x,
+        y: e.y,
+        width: e.width,
+        length: e.length,
+        rotation: isPoly ? 0 : rotOf(e.rotation), // polygons bake rotation into their points
+        circular: shape === "circle",
+        stroke,
+        points: isPoly ? e.points : undefined,
+      };
+    };
+    if (mode === "obstacles" && selectedObstacle) {
+      if (selectedObstacle.shape === "polygon" && !selectedObstacle.points) return null;
+      return base("obstacle", selectedObstacle, "#DC2626");
+    }
+    if (mode === "fixtures" && selectedFixture) {
+      if (shapeOf(selectedFixture.shape) === "polygon" && !selectedFixture.points) return null;
+      return base("fixture", selectedFixture, FIXTURE_META[selectedFixture.type].stroke);
+    }
+    if (mode === "features" && selectedFeature) {
+      return base("feature", { ...selectedFeature, shape: "rect" }, FEATURE_META[selectedFeature.kind].stroke);
+    }
+    return null;
+  })();
 
   return (
     <div className="max-w-5xl space-y-4 px-2 py-2 sm:px-4 sm:py-0">
@@ -671,9 +891,6 @@ export default function VenueEditorClient({
                   ) : (
                     <rect x={o.x} y={o.y} width={o.width} height={o.length} rx={0.05} {...common} />
                   )}
-                  <text x={cx} y={cy} fontSize={fontSize} fontWeight={700} fill="#991B1B" textAnchor="middle" dominantBaseline="middle">
-                    {o.label}
-                  </text>
                 </g>
               </g>
             );
@@ -714,12 +931,8 @@ export default function VenueEditorClient({
                   ) : (
                     <rect x={f.x} y={f.y} width={f.width} height={f.length} rx={0.05} {...common} />
                   )}
-                  <text x={cx} y={cy} fontSize={fontSize} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
-                    {f.label}
-                  </text>
                 </g>
-                {arrow && <line x1={cx} y1={cy} x2={cx + arrow.x * arrowLen} y2={cy + arrow.y * arrowLen} stroke="#FDCC4B" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
-                {arrow && <circle cx={cx + arrow.x * arrowLen} cy={cy + arrow.y * arrowLen} r={handleR * 0.7} fill="#FDCC4B" />}
+                {arrow && <FacingArrow cx={cx} cy={cy} dir={arrow} length={arrowLen} head={handleR} color="#FDCC4B" />}
               </g>
             );
           })}
@@ -749,14 +962,166 @@ export default function VenueEditorClient({
                   {seatPts.map((p, i) => (
                     <circle key={`bs${i}`} cx={p.x} cy={p.y} r={handleR * 0.8} fill="#FFFEFA" stroke={meta.stroke} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                   ))}
-                  <text x={cx} y={f.y - fontSize * 0.3} fontSize={fontSize * 0.85} fontWeight={800} fill="#34451F" textAnchor="middle">
-                    {f.kind === "bench" ? `${f.label} (${f.seats ?? 0})` : f.label}
-                  </text>
                 </g>
-                {arrow && <line x1={cx} y1={cy} x2={cx + arrow.x * arrowLen} y2={cy + arrow.y * arrowLen} stroke="#20231A" strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+                {arrow && <FacingArrow cx={cx} cy={cy} dir={arrow} length={arrowLen} head={handleR * 0.85} color="#20231A" />}
               </g>
             );
           })}
+
+          <g className="pointer-events-none">
+            {labels.map((s) =>
+              s.inside ? (
+                <text
+                  key={s.key}
+                  x={s.x}
+                  y={s.y}
+                  fontSize={fontSize}
+                  fontWeight={700}
+                  fill={s.ink}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  paintOrder="stroke"
+                  stroke="#FFFEFA"
+                  strokeWidth={fontSize * 0.28}
+                  strokeLinejoin="round"
+                >
+                  {s.text}
+                </text>
+              ) : (
+                <g key={s.key}>
+                  <line x1={s.cx} y1={s.cy} x2={s.x} y2={s.y} stroke={s.ink} strokeWidth={1} strokeOpacity={0.45} vectorEffect="non-scaling-stroke" />
+                  <rect
+                    x={s.x - s.w / 2}
+                    y={s.y - s.h / 2}
+                    width={s.w}
+                    height={s.h}
+                    rx={s.h * 0.35}
+                    fill="#FFFEFA"
+                    fillOpacity={0.95}
+                    stroke={s.ink}
+                    strokeOpacity={0.4}
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <text x={s.x} y={s.y} fontSize={fontSize} fontWeight={700} fill={s.ink} textAnchor="middle" dominantBaseline="central">
+                    {s.text}
+                  </text>
+                </g>
+              )
+            )}
+          </g>
+
+          {editableBox && (() => {
+            const box = editableBox;
+            const centre = boxCentre(box);
+            const spin = handleR * 3;
+            const pivot = rotateAbout({ x: centre.x, y: box.y - spin }, centre, box.rotation);
+            const topEdge = rotateAbout({ x: centre.x, y: box.y }, centre, box.rotation);
+            const handles = box.circular ? RESIZE_HANDLES.filter((h) => h.dx !== 0 && h.dy !== 0) : RESIZE_HANDLES;
+            const size = handleR * 1.5;
+            const poly = box.points;
+            // Polygons already show a handle on every vertex, so nudge the box handles clear of them.
+            const pad = poly ? handleR * 1.4 : 0;
+            const outer: EditableBox = poly
+              ? { ...box, x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, length: box.length + pad * 2 }
+              : box;
+            return (
+              <g>
+                <polygon
+                  points={rectCorners(box.x, box.y, box.width, box.length)
+                    .map((p) => rotateAbout(p, centre, box.rotation))
+                    .map((p) => `${round(p.x, 3)},${round(p.y, 3)}`)
+                    .join(" ")}
+                  fill="none"
+                  stroke="#9A5B00"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 3"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <line x1={topEdge.x} y1={topEdge.y} x2={pivot.x} y2={pivot.y} stroke="#9A5B00" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                <circle
+                  cx={pivot.x}
+                  cy={pivot.y}
+                  r={handleR}
+                  fill="#FDCC4B"
+                  stroke="#9A5B00"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                  className="cursor-grab"
+                  onPointerDown={(e) =>
+                    beginDrag(
+                      e,
+                      poly
+                        ? {
+                            kind: "rotatePoly",
+                            entity: box.entity,
+                            id: box.id,
+                            centre,
+                            startBearing: bearingTo(centre, eventToWorldRaw(e)),
+                            points: poly,
+                          }
+                        : { kind: "rotate", entity: box.entity, id: box.id, cx: centre.x, cy: centre.y },
+                      selection
+                    )
+                  }
+                >
+                  <title>Drag to rotate</title>
+                </circle>
+                {handles.map((h) => {
+                  const at = cornerAt(outer, h.dx, h.dy);
+                  const anchor = cornerAt(box, -h.dx, -h.dy);
+                  return (
+                    <rect
+                      key={h.id}
+                      x={at.x - size / 2}
+                      y={at.y - size / 2}
+                      width={size}
+                      height={size}
+                      rx={size * 0.2}
+                      transform={box.rotation ? `rotate(${box.rotation} ${round(at.x, 3)} ${round(at.y, 3)})` : undefined}
+                      fill="#FFFFFF"
+                      stroke={box.stroke}
+                      strokeWidth={2}
+                      vectorEffect="non-scaling-stroke"
+                      className={handleCursor(h.dx, h.dy, box.rotation)}
+                      onPointerDown={(e) =>
+                        beginDrag(
+                          e,
+                          poly
+                            ? {
+                                kind: "resizePoly",
+                                entity: box.entity,
+                                id: box.id,
+                                dx: h.dx,
+                                dy: h.dy,
+                                anchor,
+                                width: box.width,
+                                length: box.length,
+                                points: poly,
+                              }
+                            : {
+                                kind: "resize",
+                                entity: box.entity,
+                                id: box.id,
+                                dx: h.dx,
+                                dy: h.dy,
+                                anchor,
+                                rotation: box.rotation,
+                                width: box.width,
+                                length: box.length,
+                                circular: box.circular,
+                              },
+                          selection
+                        )
+                      }
+                    >
+                      <title>Drag to resize</title>
+                    </rect>
+                  );
+                })}
+              </g>
+            );
+          })()}
 
           {mode === "outline" &&
             points.map((p, i) => {
@@ -767,6 +1132,14 @@ export default function VenueEditorClient({
             })}
         </svg>
       </div>
+
+      {editableBox && (
+        <p className={HINT}>
+          <Info className="h-3 w-3 shrink-0" />
+          Drag the square handles to resize, the gold handle above it to rotate, or the shape itself to move it.
+          {editableBox.points ? " Polygons scale and spin every point together." : " The fields below stay in step."}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-admin-muted">
         <span className="tabular-nums">{points.length} outline point{points.length !== 1 ? "s" : ""}</span>
@@ -799,6 +1172,21 @@ export default function VenueEditorClient({
   );
 }
 
+
+function FacingArrow({ cx, cy, dir, length, head, color }: { cx: number; cy: number; dir: Point; length: number; head: number; color: string }) {
+  const tip = { x: cx + dir.x * length, y: cy + dir.y * length };
+  const back = { x: tip.x - dir.x * head * 1.8, y: tip.y - dir.y * head * 1.8 };
+  const perp = { x: -dir.y * head * 0.8, y: dir.x * head * 0.8 };
+  return (
+    <g>
+      <line x1={cx} y1={cy} x2={back.x} y2={back.y} stroke={color} strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <polygon
+        points={`${round(tip.x, 3)},${round(tip.y, 3)} ${round(back.x + perp.x, 3)},${round(back.y + perp.y, 3)} ${round(back.x - perp.x, 3)},${round(back.y - perp.y, 3)}`}
+        fill={color}
+      />
+    </g>
+  );
+}
 
 function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
@@ -921,7 +1309,8 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
       {isPolygon ? (
         <p className={HINT}>
           <Info className="h-3 w-3 shrink-0" />
-          Drag the red points on the canvas to reshape. Bounds {round(obstacle.width, 1)} × {round(obstacle.length, 1)} m.
+          Drag the red points to reshape, or the square handles around it to scale the whole outline. Bounds{" "}
+          {round(obstacle.width, 1)} × {round(obstacle.length, 1)} m.
         </p>
       ) : isCircle ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -937,11 +1326,21 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
           <NumField id="ob-l" label="Length (m)" value={obstacle.length} min={MIN_SIZE} onChange={(v) => onChange({ length: v })} />
         </div>
       )}
-      {!isPolygon && (
-        <div className="sm:max-w-xs">
-          <RotationField value={rotOf(obstacle.rotation)} onChange={(v) => onChange({ rotation: v })} />
-        </div>
-      )}
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2">
+        {!isPolygon && <RotationField value={rotOf(obstacle.rotation)} onChange={(v) => onChange({ rotation: v })} />}
+        <HeightField
+          id="ob-height"
+          label="Height (m)"
+          value={obstacle.height}
+          placeholder="Full height"
+          onChange={(v) => onChange({ height: v })}
+        />
+      </div>
+      <p className={HINT}>
+        <Info className="h-3 w-3 shrink-0" />
+        Leave the height blank and this always blocks the view. Set it and guests can see over anything lower than their
+        eye line.
+      </p>
       <Button type="button" onClick={onDelete} className={BTN_DANGER}>
         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete obstacle
       </Button>
@@ -952,6 +1351,8 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
 function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: Fixture; onChange: (patch: Partial<Fixture>) => void; onShape: (s: Shape) => void; onDelete: () => void }) {
   const showFacing = fixture.facing != null;
   const shape = shapeOf(fixture.shape);
+  const blocks = BLOCKING_FIXTURE_TYPES.includes(fixture.type);
+  const isFocal = FOCAL_FIXTURE_TYPES.includes(fixture.type);
   return (
     <div className={INSPECTOR}>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -983,7 +1384,8 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
       {shape === "polygon" ? (
         <p className={HINT}>
           <Info className="h-3 w-3 shrink-0" />
-          Drag the points on the canvas to reshape. Bounds {round(fixture.width, 1)} × {round(fixture.length, 1)} m.
+          Drag the points to reshape, or the square handles around it to scale the whole outline. Bounds{" "}
+          {round(fixture.width, 1)} × {round(fixture.length, 1)} m.
         </p>
       ) : shape === "circle" ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -1004,6 +1406,33 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
         {showFacing && <NumField id="fx-facing" label="Facing (°)" value={fixture.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
       </div>
       {showFacing && <p className="text-[11px] font-medium text-admin-muted">Facing: 0° up · 90° right · 180° down · 270° left (sightline direction)</p>}
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2">
+        {blocks && (
+          <HeightField
+            id="fx-height"
+            label="Blocks up to (m)"
+            value={fixture.height}
+            placeholder={`${DEFAULT_FIXTURE_HEIGHT[fixture.type]}`}
+            onChange={(v) => onChange({ height: v })}
+          />
+        )}
+        {isFocal && (
+          <HeightField
+            id="fx-view-height"
+            label="Guests look at (m)"
+            value={fixture.viewHeight}
+            placeholder={`${DEFAULT_VIEW_HEIGHT[fixture.type]}`}
+            onChange={(v) => onChange({ viewHeight: v })}
+          />
+        )}
+      </div>
+      <p className="text-[11px] font-medium text-admin-muted">
+        {blocks && isFocal
+          ? "How tall this stands, and how high up the thing guests actually watch sits."
+          : blocks
+            ? "How tall this stands. Guests seated at 1.2 m can see over anything lower."
+            : "How high up the screen or performer sits - a higher target clears more obstacles."}
+      </p>
       <Button type="button" onClick={onDelete} className={BTN_DANGER}>
         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete fixture
       </Button>
@@ -1033,11 +1462,40 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
         <RotationField value={rotOf(feature.rotation)} onChange={(v) => onChange({ rotation: v })} />
         {showFacing && <NumField id="ft-facing" label="Facing (°)" value={feature.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
         {isBench && <NumField id="ft-seats" label="Seats" value={feature.seats ?? 0} min={0} step={1} onChange={(v) => onChange({ seats: Math.round(v) })} />}
+        <HeightField
+          id="ft-height"
+          label="Height (m)"
+          value={feature.height}
+          placeholder={`${DEFAULT_FEATURE_HEIGHT[feature.kind]}`}
+          onChange={(v) => onChange({ height: v })}
+        />
       </div>
       {showFacing && <p className="text-[11px] font-medium text-admin-muted">Facing: 0° up · 90° right · 180° down · 270° left</p>}
       <Button type="button" onClick={onDelete} className={BTN_DANGER}>
         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete {feature.kind}
       </Button>
+    </div>
+  );
+}
+
+function HeightField({ id, label, value, placeholder, onChange }: { id: string; label: string; value: number | undefined; placeholder: string; onChange: (v: number | undefined) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className={FIELD_LABEL}>{label}</Label>
+      <Input
+        id={id}
+        type="number"
+        min={0}
+        max={10}
+        step={0.1}
+        placeholder={placeholder}
+        value={value ?? ""}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value);
+          onChange(Number.isFinite(n) ? round(Math.min(10, Math.max(0, n))) : undefined);
+        }}
+        className={cn(FIELD_BOX, "tabular-nums")}
+      />
     </div>
   );
 }

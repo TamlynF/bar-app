@@ -14,7 +14,167 @@ import {
   rotatedRectCorners,
   doorClearancePolygon,
   benchSeatPositions,
+  rotateAbout,
+  resizeRotatedBox,
+  resizePolygon,
+  rotatePolygonAbout,
 } from "@/lib/floor-plan/geometry";
+
+describe("resizePolygon", () => {
+  // An L-shape occupying the box (0,0)-(4,4)
+  const shape = [
+    { x: 0, y: 0 },
+    { x: 4, y: 0 },
+    { x: 4, y: 2 },
+    { x: 2, y: 2 },
+    { x: 2, y: 4 },
+    { x: 0, y: 4 },
+  ];
+  const opts = { width: 4, length: 4, minSize: 0.2 };
+
+  it("scales every point about the fixed corner", () => {
+    const out = resizePolygon(shape, { x: 0, y: 0 }, { x: 8, y: 8 }, { ...opts, dx: 1, dy: 1 });
+    expect(out).toEqual([
+      { x: 0, y: 0 },
+      { x: 8, y: 0 },
+      { x: 8, y: 4 },
+      { x: 4, y: 4 },
+      { x: 4, y: 8 },
+      { x: 0, y: 8 },
+    ]);
+  });
+
+  it("keeps the anchor corner exactly where it was", () => {
+    const anchor = { x: 4, y: 4 }; // dragging the nw handle, se corner is fixed
+    const out = resizePolygon(shape, anchor, { x: -2, y: -2 }, { ...opts, dx: -1, dy: -1 });
+    const b = polygonBounds(out);
+    expect(b.maxX).toBeCloseTo(4);
+    expect(b.maxY).toBeCloseTo(4);
+    expect(b.minX).toBeCloseTo(-2);
+  });
+
+  it("stretches one axis only on an edge handle", () => {
+    const out = resizePolygon(shape, { x: 0, y: 0 }, { x: 8, y: 8 }, { ...opts, dx: 1, dy: 0 });
+    const b = polygonBounds(out);
+    expect(b.width).toBeCloseTo(8);
+    expect(b.length).toBeCloseTo(4);
+  });
+
+  it("preserves the outline's proportions, not just its bounds", () => {
+    const out = resizePolygon(shape, { x: 0, y: 0 }, { x: 8, y: 8 }, { ...opts, dx: 1, dy: 1 });
+    expect(out).toHaveLength(shape.length); // the notch survives
+    expect(out[3]).toEqual({ x: 4, y: 4 }); // inner corner scaled, not clipped
+  });
+
+  it("refuses to collapse below the minimum size", () => {
+    const out = resizePolygon(shape, { x: 0, y: 0 }, { x: 0, y: 0 }, { ...opts, dx: 1, dy: 1 });
+    const b = polygonBounds(out);
+    expect(b.width).toBeCloseTo(0.2);
+    expect(b.length).toBeCloseTo(0.2);
+  });
+
+  it("leaves a degenerate axis alone instead of dividing by zero", () => {
+    const flat = [
+      { x: 0, y: 3 },
+      { x: 4, y: 3 },
+    ];
+    const out = resizePolygon(flat, { x: 0, y: 3 }, { x: 8, y: 9 }, { dx: 1, dy: 1, width: 4, length: 0, minSize: 0.2 });
+    expect(out.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y))).toBe(true);
+    expect(out[1].x).toBe(8);
+  });
+});
+
+describe("rotatePolygonAbout", () => {
+  const square = [
+    { x: 1, y: 1 },
+    { x: 3, y: 1 },
+    { x: 3, y: 3 },
+    { x: 1, y: 3 },
+  ];
+
+  it("spins the outline a quarter turn about its centre", () => {
+    const out = rotatePolygonAbout(square, { x: 2, y: 2 }, 90);
+    expect(out).toEqual([
+      { x: 3, y: 1 },
+      { x: 3, y: 3 },
+      { x: 1, y: 3 },
+      { x: 1, y: 1 },
+    ]);
+  });
+
+  it("returns to the original after a full turn", () => {
+    expect(rotatePolygonAbout(square, { x: 2, y: 2 }, 360)).toEqual(square);
+  });
+
+  it("keeps the centre fixed for an arbitrary angle", () => {
+    const b = polygonBounds(rotatePolygonAbout(square, { x: 2, y: 2 }, 37));
+    expect((b.minX + b.maxX) / 2).toBeCloseTo(2, 2);
+    expect((b.minY + b.maxY) / 2).toBeCloseTo(2, 2);
+  });
+});
+
+describe("resizeRotatedBox", () => {
+  const box = { x: 2, y: 2, width: 4, length: 2 };
+  const opts = { rotation: 0, width: box.width, length: box.length, minSize: 0.2 };
+
+  it("grows from the fixed opposite corner", () => {
+    const anchor = { x: 2, y: 2 }; // nw corner stays put while se is dragged
+    expect(resizeRotatedBox(anchor, { x: 8, y: 7 }, { ...opts, dx: 1, dy: 1 })).toEqual({
+      x: 2,
+      y: 2,
+      width: 6,
+      length: 5,
+    });
+  });
+
+  it("moves the origin when the top-left corner is dragged", () => {
+    const anchor = { x: 6, y: 4 }; // se corner is the fixed one
+    expect(resizeRotatedBox(anchor, { x: 1, y: 1 }, { ...opts, dx: -1, dy: -1 })).toEqual({
+      x: 1,
+      y: 1,
+      width: 5,
+      length: 3,
+    });
+  });
+
+  it("leaves the other axis alone on an edge handle", () => {
+    const anchor = { x: 2, y: 3 }; // west edge midpoint
+    const out = resizeRotatedBox(anchor, { x: 9, y: 6 }, { ...opts, dx: 1, dy: 0 });
+    expect(out).toEqual({ x: 2, y: 2, width: 7, length: 2 });
+  });
+
+  it("never shrinks below the minimum size", () => {
+    const out = resizeRotatedBox({ x: 2, y: 2 }, { x: 2, y: 2 }, { ...opts, dx: 1, dy: 1 });
+    expect(out.width).toBe(0.2);
+    expect(out.length).toBe(0.2);
+  });
+
+  it("keeps a circle circular from a corner handle", () => {
+    const out = resizeRotatedBox({ x: 2, y: 2 }, { x: 5, y: 9 }, { ...opts, dx: 1, dy: 1, circular: true });
+    expect(out.width).toBe(out.length);
+    expect(out.width).toBe(7);
+  });
+
+  it("holds the anchor corner still when the box is rotated", () => {
+    const rotation = 35;
+    const centre = { x: 4, y: 3 };
+    const anchor = rotateAbout({ x: 2, y: 2 }, centre, rotation); // rotated nw corner
+    const out = resizeRotatedBox(anchor, { x: 9, y: 8 }, { ...opts, dx: 1, dy: 1, rotation });
+    const newCentre = { x: out.x + out.width / 2, y: out.y + out.length / 2 };
+    const backToNw = rotateAbout({ x: out.x, y: out.y }, newCentre, rotation);
+    expect(backToNw.x).toBeCloseTo(anchor.x, 2);
+    expect(backToNw.y).toBeCloseTo(anchor.y, 2);
+  });
+
+  it("resizes along the rotated axes, not the screen axes", () => {
+    const rotation = 90;
+    const centre = { x: 4, y: 3 };
+    const anchor = rotateAbout({ x: 2, y: 3 }, centre, rotation); // rotated west edge
+    const out = resizeRotatedBox(anchor, { x: 4, y: 9 }, { ...opts, dx: 1, dy: 0, rotation });
+    expect(out.length).toBe(2); // untouched axis
+    expect(out.width).toBeGreaterThan(4); // dragging "down" on screen grows local width
+  });
+});
 
 describe("clamp", () => {
   it("bounds values to the range", () => {
