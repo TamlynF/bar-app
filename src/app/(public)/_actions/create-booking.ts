@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
+import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
 import {
   allocateOnCreate,
   commitMapping,
@@ -79,7 +80,7 @@ export async function createBooking(formData: BookingFormData) {
   try {
     const { data: eventRow, error: eventLookupError } = await supabase
       .from('events')
-      .select('id, date, seating_required, is_bookable')
+      .select('id, date, title, seating_required, is_bookable')
       .eq('id', formData.event_id)
       .single();
 
@@ -87,6 +88,7 @@ export async function createBooking(formData: BookingFormData) {
 
     const eventId = eventRow.id;
     const quizDate = eventRow.date as string;
+    const quizTitle = (eventRow.title as string | null)?.trim() || "Quiz Night";
 
     const { isAvailable } = await checkTeamName(formData.team_name, quizDate);
     if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');
@@ -169,7 +171,7 @@ export async function createBooking(formData: BookingFormData) {
     const isWaitlisted = finalStatus === "waitlisted";
 
     try {
-      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, formData.team_name, formData.team_size, finalStatus);
+      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, quizTitle, formData.team_name, formData.team_size, finalStatus);
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }
@@ -200,42 +202,33 @@ async function sendBookingEmail(
   email: string,
   name: string,
   quiz_date: string,
+  quiz_title: string,
   team_name: string,
   team_size: number,
   status: "confirmed" | "waitlisted"
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_SITE_URL 
-    ? process.env.NEXT_PUBLIC_SITE_URL 
-    : process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000';
 
   const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
-  
-  const subject = status === "confirmed" ? "Quiz Night Table Confirmed! 🎉" : "You are on the Waitlist";
-  const content = status === "confirmed" 
-    ? `Great news! Your team "${team_name}" is locked in.` 
-    : `We're currently full, so "${team_name}" has been added to our waitlist.`;
 
-  const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-      <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; border: 1px solid #e5e7eb;">
-        <h2 style="margin-top: 0; color: #111827;">Hey ${name}!</h2>
-        <p>${content}</p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>📅 Date:</strong> ${quiz_date}</p>
-          <p><strong>🍺 Team:</strong> ${team_name}</p>
-          <p><strong>👥 Size:</strong> ${team_size} people</p>
-        </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
-        </div>
-        <p style="font-size: 12px; color: #6b7280; text-align: center;">
-          If the button doesn't work, copy this link: ${manageUrl}
-        </p>
-      </div>
-    </div>
-  `;
+  const { subject, html } = buildBookingConfirmedEmail({
+    subject: status === "confirmed" ? "Quiz Night Table Confirmed! 🎉" : "You are on the Waitlist",
+    eventTitle: quiz_title,
+    greeting: `Hey ${name}!`,
+    intro: status === "confirmed"
+      ? `Great news! Your team "${team_name}" is locked in.`
+      : `We're currently full, so "${team_name}" has been added to our waitlist.`,
+    rows: [
+      { label: "📅 Date", value: formatEventDate(quiz_date) },
+      { label: "🍺 Team", value: team_name },
+      { label: "👥 Size", value: `${team_size} ${team_size === 1 ? "Person" : "People"}` },
+    ],
+    manageUrl,
+  });
 
   try {
       const { error: resendError } = await resend.emails.send({

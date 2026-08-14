@@ -24,7 +24,7 @@ export interface BookingSnapshot {
 
 export type BookingChange = { label: string; from: string; to: string };
 
-function formatEventDate(date: string | null): string {
+export function formatEventDate(date: string | null): string {
   if (!date) return "TBC";
   return format(new Date(`${date}T00:00:00`), "EEE, d MMM yyyy");
 }
@@ -174,6 +174,29 @@ function bookingDetailRows(b: BookingSnapshot): DetailRow[] {
         ]
       : []),
   ];
+}
+
+export function buildBookingConfirmedEmail(p: {
+  subject: string;
+  eventTitle: string;
+  greeting: string;
+  intro: string;
+  rows: DetailRow[];
+  manageUrl: string;
+  footnote?: string;
+}): BookingEmail {
+  return {
+    subject: p.subject,
+    html: layout({
+      heading: p.eventTitle,
+      greeting: p.greeting,
+      intro: p.intro,
+      bodyHtml: detailRowsHtml(p.rows),
+      ctaLabel: "Manage Booking",
+      ctaUrl: p.manageUrl,
+      footnote: p.footnote,
+    }),
+  };
 }
 
 export function buildBookingChangedEmail(p: {

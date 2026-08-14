@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Resend } from "resend";
 import RetryPaymentButton from "@/components/retry-payment-button";
+import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
 
 export const viewport: Viewport = {
   themeColor: "#26300D",
@@ -75,43 +76,30 @@ console.log("Booking fetcheddd:", booking);
     const eventRaw = booking.events;
     const event = (Array.isArray(eventRaw) ? eventRaw[0] : eventRaw) as { date: string; title: string } | null;
     if (contact?.email) {
-      const eventDate = event?.date
-        ? new Date(event.date).toLocaleDateString("en-GB", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })
-        : "TBC";
-
       const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking.id}`;
+
+      const { subject, html } = buildBookingConfirmedEmail({
+        subject: "Music Bingo Booking Confirmed! 🎵",
+        eventTitle: event?.title ?? "Music Bingo",
+        greeting: `You're in, ${contact.full_name}!`,
+        intro: "Your Music Bingo booking is confirmed and paid. See you there!",
+        rows: [
+          { label: "📅 Date", value: formatEventDate(event?.date ?? null) },
+          {
+            label: "👥 People",
+            value: `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`,
+          },
+          { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
+        ],
+        manageUrl,
+        footnote: "Questions? Contact us at admin@bookingsdonfenticas.co.uk",
+      });
+
       await resend.emails.send({
         from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
         to: contact.email,
-        subject: "Music Bingo Booking Confirmed! 🎵",
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-            <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; border: 1px solid #e5e7eb;">
-              <h2 style="margin-top: 0; color: #111827;">You're in, ${contact.full_name}! 🎉</h2>
-              <p>Your Music Bingo booking is confirmed and paid. See you there!</p>
-              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>🎵 Event:</strong> ${event?.title ?? "Music Bingo"}</p>
-                <p><strong>📅 Date:</strong> ${eventDate}</p>
-                <p><strong>👥 People:</strong> ${booking.group_size}</p>
-                <p><strong>💳 Paid:</strong> £${(booking.total_amount ?? 0).toFixed(2)}</p>
-              </div>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
-              </div>
-              <p style="font-size: 12px; color: #6b7280; text-align: center;">
-                If the button doesn't work, copy this link: ${manageUrl}
-              </p>
-              <p style="font-size: 13px; color: #6b7280;">
-                Questions? Contact us at admin@bookingsdonfenticas.co.uk
-              </p>
-            </div>
-          </div>
-        `,
+        subject,
+        html,
       }).catch(() => {});
     }
 
