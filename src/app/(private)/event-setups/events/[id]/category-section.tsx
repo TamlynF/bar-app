@@ -88,28 +88,41 @@ type Props = {
   nextRound?: NextRoundSummary | null;
 };
 
+/* One sheet, always. Every band of the page is a fixed height in mm that adds
+   up to less than A4, and the sheet clips rather than spills - a picture round
+   that ran onto a second page would print nine boxes and a stray answer grid.
+   The answers block is pushed to the foot of the page by the auto margin, so
+   the pictures get the room that is left. */
 const printStyles = `
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000; }
   /* The inset lives on the sheet, not on @page, so the grid keeps clear of the
      paper edge even when the print dialog is set to "Margins: None". */
-  .sheet { width: 100%; padding: 14mm 12mm; page-break-inside: avoid; }
-  .sheet > *:last-child { margin-bottom: 0; }
-  .hdr { margin-bottom: 10px; font-weight: 600; }
+  .sheet {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 297mm;
+    padding: 12mm;
+    overflow: hidden;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+  }
+  .hdr { margin-bottom: 8px; font-weight: 600; }
   .hdr .fill { display: inline-block; min-width: 280px; border-bottom: 1px solid #000; }
-  .label { font-weight: 700; margin: 8px 0 6px; text-align: center; }
+  .label { font-weight: 700; margin: 6px 0; text-align: center; }
   .label .qtext { font-weight: 400; }
   table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
   table.grid tr, table.grid td { page-break-inside: avoid; }
-  table.grid td { width: 33.33%; vertical-align: top; padding: 6px 8px; }
-  table.questions { margin-bottom: 22px; }
-  table.questions td { border: 1px solid #000; height: 132px; }
-  table.answers td { border: none; height: 44px; }
+  table.grid td { width: 33.33%; vertical-align: top; padding: 4px 6px; }
+  table.questions td { border: 1px solid #000; height: 56mm; }
+  table.answers td { border: none; height: 15mm; }
+  .answers-block { margin-top: auto; }
   .qn { font-weight: 700; }
-  .imgwrap { margin-top: 6px; text-align: center; }
-  .imgwrap img { max-width: 100%; max-height: 100px; object-fit: contain; }
-  .answer { margin-top: 16px; height: 1.3em; border-bottom: 1px solid #000; }
+  .imgwrap { height: 46mm; margin-top: 3px; text-align: center; }
+  .imgwrap img { width: 100%; height: 100%; object-fit: contain; }
+  .answer { margin-top: 14px; height: 1.3em; border-bottom: 1px solid #000; }
   @page { size: A4; margin: 0; }
 `;
 
@@ -695,8 +708,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           <div class="hdr">Team Name:&nbsp;<span class="fill"></span></div>
           <p class="label">Question: <span class="qtext">${escapeHtml(firstQ)}</span></p>
           <table class="grid questions"><tbody>${questionRows}</tbody></table>
-          <p class="label">Answers:</p>
-          <table class="grid answers"><tbody>${answerRows}</tbody></table>
+          <div class="answers-block">
+            <p class="label">Answers:</p>
+            <table class="grid answers"><tbody>${answerRows}</tbody></table>
+          </div>
         </div>
         <script>
           window.onload = function () { window.focus(); window.print(); };
