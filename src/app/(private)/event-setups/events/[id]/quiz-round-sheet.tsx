@@ -97,7 +97,6 @@ import { roundKind, roundNoun } from "@/lib/quiz/round-kind";
 import { AI_ORIGIN } from "@/lib/quiz/question-origin";
 import ManualEntry from "./manual-entry";
 import {
-  buildChain,
   chainHintYears,
   describeStep,
   isValidStep,
@@ -188,6 +187,9 @@ const higherOrLowerQuestion = (s: MusicSnippetCandidate, hintYear: number) =>
   `${s.artist} - ${s.title} is higher or lower than ${hintYear}?`;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// One question is picked from each batch, so a short list beats a long one.
+const HIGHER_LOWER_BATCH = 5;
 
 const formatUseDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
@@ -296,9 +298,12 @@ export default function QuizRoundSheet({
   const needed = questionsNeeded(savedCount, question_count);
   const hasAny = savedCount > 0;
   const isComplete = question_count > 0 && savedCount >= question_count;
-  // A Higher-or-Lower round throws away every candidate that cannot follow on
-  // from the song before it, so it needs a deeper pool to pick a chain out of.
-  const batchSize = generationCount(savedCount, question_count) * (isHigherOrLower ? 2 : 1);
+  /* A Higher-or-Lower round is built one question at a time - the year you pick
+     sets what the next question can be - so it asks for a short list to choose
+     one from rather than a pool to fill the round from. */
+  const batchSize = isHigherOrLower
+    ? HIGHER_LOWER_BATCH
+    : generationCount(savedCount, question_count);
 
   // Every row in a picture round shares one question_text, so the first saved
   // picture fixes the topic for the rest of the round.
@@ -367,7 +372,9 @@ export default function QuizRoundSheet({
     [drafts, previousIdentities]
   );
 
-  const selectionCap = needed > 0 ? needed : question_count;
+  // One question per batch on a chain round; as many as the round still needs
+  // on every other kind.
+  const selectionCap = isHigherOrLower ? 1 : needed > 0 ? needed : question_count;
   const atCap = selected.size >= selectionCap;
 
   /* Writing one by hand saves straight to the round rather than joining the
@@ -380,18 +387,6 @@ export default function QuizRoundSheet({
         ? `${category_name} is full: ${savedCount} saved plus ${selected.size} picked fills all ${question_count} ${noun}s. Untick one below to make room for your own.`
         : `${category_name} already has all ${question_count} ${noun}s. Delete one from the round before writing your own.`
       : null;
-
-  // The comparison year each ticked song would carry, in ticking order, plus
-  // the year the next tick has to follow on from.
-  const chain = useMemo(() => {
-    if (!isHigherOrLower) return { hintByDraft: new Map<number, number>(), nextYear: chainStart };
-
-    const years = pickOrder.map((i) => (isSongDraft(drafts[i]) ? (drafts[i] as MusicSnippetCandidate).year : 0));
-    const hints = chainHintYears(years, chainStart);
-    const hintByDraft = new Map<number, number>(pickOrder.map((draftIndex, i) => [draftIndex, hints[i]]));
-
-    return { hintByDraft, nextYear: years.length ? years[years.length - 1] : chainStart };
-  }, [isHigherOrLower, pickOrder, drafts, chainStart]);
 
   const savedListId = `round-saved-${categoryConfigId}`;
   const topicId = `round-topic-${categoryConfigId}`;
@@ -487,25 +482,19 @@ export default function QuizRoundSheet({
       );
       const cap = needed > 0 ? needed : question_count;
 
+      /* One song at a time: the year it turns on decides what the next question
+         can be, so there is nothing to pre-tick and nothing to pick alongside
+         it. Every candidate is already a legal step against the chain year. */
       if (isHigherOrLower) {
-        // Each song has to follow on from the one before it, so the pre-tick is
-        // a chain rather than "the first few that aren't duplicates".
-        const pool = items
-          .map((item, index) => ({ item, index }))
-          .filter(({ item, index }) => !dupes.has(index) && isSongDraft(item))
-          .map(({ item, index }) => ({ index, year: (item as MusicSnippetCandidate).year }));
+        setSelected(new Set());
+        setPickOrder([]);
+        setAutoPickShown(false);
 
-        const { picked } = buildChain(pool, chainStart, gapRange, cap);
-        setSelected(new Set(picked.map((p) => p.index)));
-        setPickOrder(picked.map((p) => p.index));
-        setAutoPickShown(picked.length > 0);
-
-        if (picked.length < cap) {
-          toast.info(
-            picked.length === 0
-              ? `No song here can follow on from ${chainStart}. Try a wider year gap or create more.`
-              : `Only ${plural(picked.length, "song")} could follow on from each other - create more to fill the round.`
-          );
+        const playable = items.filter(
+          (item, index) => !dupes.has(index) && isSongDraft(item) && isValidStep((item as MusicSnippetCandidate).year, chainStart, gapRange)
+        ).length;
+        if (playable === 0) {
+          toast.info(`No song here can follow on from ${chainStart}. Try again, or widen the year gap.`);
         }
         return;
       }
@@ -639,44 +628,34 @@ export default function QuizRoundSheet({
     [retryingIndex, drafts, effectiveTopic, imageNotes]
   );
 
-  // Unticking a song mid-chain can strand the ones after it, so the chain is
-  // walked again and anything that no longer follows on comes off with it.
-  const pruneChain = useCallback(
-    (order: number[]) => {
-      let comparisonYear = chainStart;
-      const kept: number[] = [];
-
-      for (const i of order) {
-        const draft = drafts[i];
-        const year = isSongDraft(draft) ? draft.year : null;
-        if (!isValidStep(year, comparisonYear, gapRange)) continue;
-        kept.push(i);
-        comparisonYear = year as number;
-      }
-
-      return kept;
-    },
-    [drafts, chainStart, gapRange]
-  );
-
   const toggleDraft = useCallback(
     (index: number) => {
       setAutoPickShown(false);
 
-      if (selected.has(index)) {
-        if (isHigherOrLower) {
-          const kept = pruneChain(pickOrder.filter((i) => i !== index));
-          const stranded = pickOrder.length - 1 - kept.length;
-          setPickOrder(kept);
-          setSelected(new Set(kept));
-          if (stranded > 0) {
-            toast.info(
-              `${plural(stranded, "song")} after it no longer followed on, so ${stranded === 1 ? "it came" : "they came"} off too.`
-            );
-          }
+      /* One song per question, so picking is a choice between the five rather
+         than a tick list: a second pick moves the choice instead of being
+         refused, and picking the chosen one again clears it. */
+      if (isHigherOrLower) {
+        if (selected.has(index)) {
+          setSelected(new Set());
+          setPickOrder([]);
           return;
         }
 
+        const draft = drafts[index];
+        const year = isSongDraft(draft) ? draft.year : null;
+        const reason = describeStep(year, chainStart, gapRange);
+        if (reason) {
+          toast.info(reason);
+          return;
+        }
+
+        setSelected(new Set([index]));
+        setPickOrder([index]);
+        return;
+      }
+
+      if (selected.has(index)) {
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(index);
@@ -698,21 +677,10 @@ export default function QuizRoundSheet({
         return;
       }
 
-      // A song only joins the chain if it can follow the one ticked before it.
-      if (isHigherOrLower) {
-        const draft = drafts[index];
-        const year = isSongDraft(draft) ? draft.year : null;
-        const reason = describeStep(year, chain.nextYear, gapRange);
-        if (reason) {
-          toast.info(reason);
-          return;
-        }
-      }
-
       setSelected((prev) => new Set(prev).add(index));
       setPickOrder((prev) => [...prev, index]);
     },
-    [selected, selectionCap, isHigherOrLower, drafts, chain.nextYear, gapRange, pickOrder, pruneChain]
+    [selected, selectionCap, isHigherOrLower, drafts, chainStart, gapRange]
   );
 
   const handleApprove = useCallback(async () => {
@@ -886,9 +854,13 @@ export default function QuizRoundSheet({
     }
     const failedPictures = drafts.filter(missingPicture).length;
     if (selected.size === 0) {
+      if (isHigherOrLower) return `Pick the one song to follow ${chainStart}.`;
       return failedPictures === drafts.length
         ? `No pictures came back - retry them, or create a new batch.`
         : `Nothing picked yet - tick at least 1 ${noun} to add.`;
+    }
+    if (isHigherOrLower && needed > 1) {
+      return `1 picked - add it, then create the next question.`;
     }
     if (selected.size >= needed) return "Ready - this completes the round.";
     if (failedPictures > 0) {
@@ -904,15 +876,17 @@ export default function QuizRoundSheet({
 
   const footerReady = drafts.length > 0 && selected.size > 0 && selected.size >= needed;
 
-  const pickHelp =
-    kind === "picture"
+  const pickHelp = isHigherOrLower
+    ? `One song becomes this question - whichever you pick, its release year is what the next question asks about. Tap another to change your mind.`
+    : kind === "picture"
       ? "On the night, guests see the picture and write down the answer. Press Swap to replace a picture you don't like."
       : kind === "song"
         ? "Press play to hear a snippet before deciding. On the night, guests hear the snippet and name the song and artist."
         : "Tap a question to pick or untick it. Don't like one? Press Swap to replace just that one.";
 
-  const generateFootnote =
-    needed > 0
+  const generateFootnote = isHigherOrLower
+    ? `We'll suggest ${batchSize} songs released ${gapRange.minYears}-${gapRange.maxYears} years either side of ${chainStart}. Pick one - its year is what the next question is measured against.`
+    : needed > 0
       ? kind === "song"
         ? `We'll suggest ${batchSize} so you can pick your favourite ${needed}. Picked songs go straight onto the round's Spotify playlist.`
         : `We'll create ${batchSize} so you can pick your favourite ${needed} and skip the rest.`
@@ -1471,12 +1445,12 @@ export default function QuizRoundSheet({
                       <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-admin-primary text-[11px] font-bold text-white">
                         2
                       </span>
-                      Pick your favourites
+                      {isHigherOrLower ? "Pick one" : "Pick your favourites"}
                     </p>
 
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
                       <h3 className="text-base font-bold tracking-tight text-admin-ink">
-                        New {noun}s
+                        {isHigherOrLower ? `Higher or lower than ${chainStart}?` : `New ${noun}s`}
                       </h3>
                       <span
                         aria-live="polite"
@@ -1522,18 +1496,21 @@ export default function QuizRoundSheet({
                           const picture = isPictureDraft(d) ? d : null;
                           const pictureMissing = missingPicture(d);
 
-                          // A ticked song already sits in the chain; an unticked
-                          // one is measured against wherever the chain has got to.
-                          const hintYear = isHigherOrLower
-                            ? (chain.hintByDraft.get(i) ?? chain.nextYear)
-                            : null;
+                          /* Every card in a chain batch answers the same
+                             question, so they are all measured against the year
+                             the round has reached - picking one is a choice
+                             between them, not a step past them. */
+                          const hintYear = isHigherOrLower ? chainStart : null;
                           const chainReason =
                             isHigherOrLower && !isSelected
-                              ? describeStep(song?.year, chain.nextYear, gapRange)
+                              ? describeStep(song?.year, chainStart, gapRange)
                               : null;
                           // A picture that failed is not dimmed like a locked-out
                           // card - it is the one card asking to be dealt with.
-                          const lockedOut = !isSelected && (atCap || !!chainReason) && !pictureMissing;
+                          const lockedOut =
+                            !isSelected &&
+                            ((atCap && !isHigherOrLower) || !!chainReason) &&
+                            !pictureMissing;
 
                           return (
                             <div

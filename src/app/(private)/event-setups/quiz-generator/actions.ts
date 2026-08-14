@@ -16,6 +16,7 @@ import {
 } from '@/lib/spotify'
 import {
   isValidStep,
+  stepDirection,
   DEFAULT_START_YEAR,
   DEFAULT_YEAR_RANGE,
   type YearRange,
@@ -699,14 +700,18 @@ async function rechainHigherLowerQuestions(
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const hintYear = rows[i - 1].release_year;
-    const answerText = row.release_year == null ? row.answer_text : String(row.release_year);
+    const answerText =
+      row.release_year == null || hintYear == null
+        ? row.answer_text
+        : `${stepDirection(row.release_year, hintYear)} - ${row.release_year}`;
 
     if (row.hint_year === hintYear && row.answer_text === answerText) continue;
 
-    const updates: Record<string, unknown> = { hint_year: hintYear, answer_text: answerText };
-    if (row.answer_text_ext) {
-      updates.question_text = `${row.answer_text_ext} is higher or lower than ${hintYear}?`;
-    }
+    const updates: Record<string, unknown> = {
+      hint_year: hintYear,
+      answer_text: answerText,
+      question_text: `Higher or lower than ${hintYear}?`,
+    };
 
     await supabase
       .from('past_quiz_questions')
@@ -1034,22 +1039,30 @@ export async function generateMusicSnippetsAction(
         : '- Song difficulty: Mix of well-known hits and some lesser-known tracks.'
 
     const currentYear = new Date().getFullYear()
-    const windowFrom = Math.max(1960, chainYear - range.maxYears * 3)
-    const windowTo = Math.min(currentYear, chainYear + range.maxYears * 3)
+    /* Only one of these songs is going to be picked, and whichever it is gets
+       compared against ${chainYear}. So every candidate has to be a legal step
+       on its own - the two windows the gap allows, one either side. */
+    const lowerFrom = chainYear - range.maxYears
+    const lowerTo = chainYear - range.minYears
+    const higherFrom = chainYear + range.minYears
+    const higherTo = Math.min(currentYear, chainYear + range.maxYears)
 
     const prompt = isHigherOrLower
       ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
-The round is a chain: the host reads out a year, the teams say whether the next song was released higher or lower than it, and that song's release year becomes the year the following song is measured against. It starts from ${chainYear}.
-Generate ${numberOfSongs} candidate songs to build that chain from.
+The host reads out the year ${chainYear}, and the teams say whether the next song was released higher or lower than it.
+Generate ${numberOfSongs} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.
 
 Requirements:
-- Release years between ${windowFrom} and ${windowTo}, spread evenly both above and below ${chainYear}.
-- Every release year must be different from every other, and none may be ${chainYear}.
-- Consecutive songs get compared to each other, so near-identical years are useless - aim for gaps of ${range.minYears} to ${range.maxYears} years between the years you pick.
+- The release year MUST be between ${lowerFrom} and ${lowerTo}, or between ${higherFrom} and ${higherTo}. This is absolute: a song released outside both of those ranges is wrong however well it fits everything else.
+- That means the release year is between ${range.minYears} and ${range.maxYears} years away from ${chainYear}, in either direction. Never ${chainYear} itself.
+- Offer a mix: some released before ${chainYear} and some after, so the answer is not obvious.
+- Every release year must be different from every other.
+- Give the year the song was originally released, not a re-issue or remaster.
 - Well-known, recognizable songs that a British pub audience would know.
 ${topicLine}
 ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
+- Return fewer than ${numberOfSongs} songs rather than including one outside the allowed years.
 - Return a JSON array.`
       : `You are a music expert for a pub quiz at "Don Fenticas".
 Generate exactly ${numberOfSongs} songs whose studio recording opens with a purely instrumental intro.
@@ -1117,13 +1130,24 @@ ${difficultyLine}
     /* A Higher-or-Lower round needs years either side of the chain, so a period
        topic is only binding on a name-that-tune round. */
     const topicWindow = isHigherOrLower ? null : parseTopicYearWindow(topic)
-    const candidates = topicWindow
+    let candidates = topicWindow
       ? rawSongs.filter((s) => withinTopicYears(s.year, topicWindow))
       : rawSongs
 
     if (topicWindow && !candidates.length) {
       return {
         error: `Every suggestion fell outside ${topicWindow.from}-${topicWindow.to}. Try again, or widen the topic.`,
+      }
+    }
+
+    /* The model is told the window; this is what makes it true. A song that is
+       not a legal step would only be offered to be refused. */
+    if (isHigherOrLower) {
+      candidates = candidates.filter((s) => isValidStep(s.year, chainYear, range))
+      if (!candidates.length) {
+        return {
+          error: `Nothing came back that is ${range.minYears}-${range.maxYears} years from ${chainYear}. Try again, or widen the year gap.`,
+        }
       }
     }
 
@@ -1244,10 +1268,13 @@ export async function saveMusicSnippetsAction(
         skipped++
         return
       }
+      /* What the host reads out is the year alone - naming the song would give
+         the game away. The song is on the answer side, with the direction and
+         the year it turned on. */
       insertData.push({
         ...shared,
-        question_text: `${songIdentity} is higher or lower than ${comparisonYear}?`,
-        answer_text: String(s.year),
+        question_text: `Higher or lower than ${comparisonYear}?`,
+        answer_text: `${stepDirection(s.year, comparisonYear)} - ${s.year}`,
         answer_text_ext: songIdentity,
         hint_year: comparisonYear,
       })
