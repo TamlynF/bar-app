@@ -222,7 +222,6 @@ export default async function DashboardPage() {
     supabase
       .from("events")
       .select("id, bookings!bookings_event_id_fkey(id, status), event_subtypes!inner(behavior)")
-      .neq("is_active", false)
       .eq("event_subtypes.behavior", "quiz")
       .or(finishedFilter),
     supabase.from("booking_scores").select("event_id").eq("is_winner", true),
@@ -231,14 +230,15 @@ export default async function DashboardPage() {
   const unpaidCount = ((unpaidBookingsData ?? []) as { total_amount: number | null; paid_amount: number | null }[])
     .filter((b) => (b.paid_amount ?? 0) < (b.total_amount ?? 0)).length;
 
-  /* A quiz needs a winner once it has been played to teams. A cancelled quiz was
-     never played, and one nobody booked has nobody to crown. */
+  /* A quiz needs a winner once it has been played to teams. Only confirmed
+     bookings count as teams on the night - a quiz with nothing but cancelled or
+     waitlisted bookings has nobody to crown. */
   const eventsWithWinner = new Set((winnerRows ?? []).map((row) => Number(row.event_id)));
   const quizzesMissingWinner = (
     (finishedQuizData ?? []) as unknown as { id: number; bookings: { status: string }[] | null }[]
   ).filter((ev) => {
     const bookings = Array.isArray(ev.bookings) ? ev.bookings : [];
-    return bookings.some((b) => b.status !== "cancelled") && !eventsWithWinner.has(ev.id);
+    return bookings.some((b) => b.status === "confirmed") && !eventsWithWinner.has(ev.id);
   }).length;
 
   const { data: bandPreferredDates } = await supabase
@@ -497,10 +497,10 @@ export default async function DashboardPage() {
 
   const actionItems: ActionItem[] = [
     { key: "finished-active", label: "Past events still active", count: finishedActive ?? 0, href: `/event-setups/events?quick=historic,active&to=${historicToStr}`, color: "bg-slate-600" },
-    { key: "quiz-winner", label: "Missing quiz winner", count: quizzesMissingWinner, href: "/event-setups/quiz-leaderboards", color: "bg-yellow-600" },
+    { key: "quiz-winner", label: "Past events missing quiz winner", count: quizzesMissingWinner, href: `/event-setups/events?quick=historic,needs-winner&to=${historicToStr}`, color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
-    { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=new,reviewing", color: "bg-purple-700" },
-    { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
+    { key: "bands", label: "Band requests pending", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=new,reviewing", color: "bg-purple-700" },
+    { key: "hires", label: "Private requests pending", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
     { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
     { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
   ];

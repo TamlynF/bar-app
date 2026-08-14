@@ -5,7 +5,15 @@ import PrivateHireListClient from "./components/private-hire-list-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function PrivateBookingsPage() {
+export default async function PrivateBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
+  const initialStatuses = status
+    ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+    : [];
   const supabase = await createClient();
 
   const { data: requests, error } = await supabase
@@ -19,7 +27,7 @@ export default async function PrivateBookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-3 py-4 sm:py-0 md:px-4 xl:max-w-none">
-      <PrivateHireListClient initialRequests={items} />
+      <PrivateHireListClient initialRequests={items} initialStatuses={initialStatuses} />
     </div>
   );
 }

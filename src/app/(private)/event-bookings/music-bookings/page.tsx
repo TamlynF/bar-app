@@ -5,7 +5,15 @@ import BandBookingListClient from "./components/band-booking-list-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function MusicBookingsPage() {
+export default async function MusicBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
+  const initialStatuses = status
+    ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+    : [];
   const supabase = await createClient();
 
   const { data: requests, error } = await supabase
@@ -24,7 +32,7 @@ export default async function MusicBookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-1.5 py-4 sm:px-3 sm:py-0 md:px-4 xl:max-w-none">
-      <BandBookingListClient initialRequests={items} />
+      <BandBookingListClient initialRequests={items} initialStatuses={initialStatuses} />
     </div>
   );
 }
