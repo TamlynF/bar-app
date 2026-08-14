@@ -94,6 +94,7 @@ import {
 } from "@/lib/quiz/round-stages";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
 import { roundKind, roundNoun } from "@/lib/quiz/round-kind";
+import { EMPTY_ROUND_SETTINGS, type RoundSettings } from "@/lib/quiz/round-defaults";
 import { AI_ORIGIN } from "@/lib/quiz/question-origin";
 import ManualEntry from "./manual-entry";
 import {
@@ -108,6 +109,14 @@ import {
 
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 type Difficulty = (typeof DIFFICULTIES)[number];
+
+const DEFAULT_DIFFICULTY: Difficulty = "Medium";
+
+// The archive stores whatever the sheet sent, so a value that no longer matches
+// one of the three buttons falls back rather than leaving nothing selected.
+const asDifficulty = (value: string): Difficulty =>
+  DIFFICULTIES.find((d) => d.toLowerCase() === value.trim().toLowerCase()) ??
+  DEFAULT_DIFFICULTY;
 
 export interface NextRoundSummary {
   categoryName: string;
@@ -144,6 +153,9 @@ interface QuizRoundSheetProps {
   category_name: string;
   question_count: number;
   savedQuestions: SavedQuestion[];
+  // How the round's last batch was created, read back off the questions it
+  // saved, so adding the rest of a round starts where the last run left off.
+  lastSettings?: RoundSettings;
   orderNo?: number;
   includeSpotify?: boolean;
   isPicture?: boolean;
@@ -206,6 +218,7 @@ export default function QuizRoundSheet({
   category_name,
   question_count,
   savedQuestions,
+  lastSettings = EMPTY_ROUND_SETTINGS,
   orderNo,
   includeSpotify = false,
   isPicture = false,
@@ -241,11 +254,13 @@ export default function QuizRoundSheet({
     []
   );
 
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(lastSettings.topic);
   // Steers the generated picture only - it is never saved as question_text, so it
   // never reaches the sheet the guests answer on.
-  const [imageNotes, setImageNotes] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
+  const [imageNotes, setImageNotes] = useState(lastSettings.imageNotes);
+  const [difficulty, setDifficulty] = useState<Difficulty>(
+    asDifficulty(lastSettings.difficulty)
+  );
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   // In a Higher-or-Lower round the ticking order IS the chain, so index order
@@ -711,7 +726,8 @@ export default function QuizRoundSheet({
           categoryConfigId,
           effectiveTopic,
           difficulty,
-          AI_ORIGIN
+          AI_ORIGIN,
+          imageNotes
         );
       } else if (kind === "song") {
         const result = await saveMusicSnippetsAction(
@@ -778,6 +794,7 @@ export default function QuizRoundSheet({
     category_name,
     categoryConfigId,
     effectiveTopic,
+    imageNotes,
     difficulty,
     savedCount,
     noun,
@@ -950,7 +967,7 @@ export default function QuizRoundSheet({
             setSavedOpen(false);
             setTopicMissing(false);
             setDraftedAnswers([]);
-            setImageNotes("");
+            setImageNotes(lastSettings.imageNotes);
           }
         }}
       >

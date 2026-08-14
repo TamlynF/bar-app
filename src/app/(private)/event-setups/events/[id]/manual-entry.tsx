@@ -257,7 +257,8 @@ export default function ManualEntry({
           categoryConfigId,
           topic.trim(),
           difficulty,
-          MANUAL_ORIGIN
+          MANUAL_ORIGIN,
+          imageNotes
         );
       }
 
@@ -286,6 +287,7 @@ export default function ManualEntry({
     categoryConfigId,
     categoryName,
     topic,
+    imageNotes,
     difficulty,
     noun,
     reset,

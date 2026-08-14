@@ -10,6 +10,7 @@ import {
   playlistOwnerName,
   type CategoryPlaylistRow,
 } from "@/lib/quiz/category-playlist";
+import { lastRoundSettings, type RoundSettingsRow } from "@/lib/quiz/round-defaults";
 
 export const maxDuration = 300;
 
@@ -87,6 +88,7 @@ export default async function EventQuizQuestionsPage({
     { data: event, error: eventError },
     { data: categories },
     { data: questions },
+    { data: settingsRows },
     { data: playlists },
   ] = await Promise.all([
     supabase.from("events").select("id, title, date").eq("id", id).single(),
@@ -102,6 +104,11 @@ export default async function EventQuizQuestionsPage({
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),
     supabase
+      .from("past_quiz_questions")
+      .select("quiz_category_configs_id, topic, difficulty, image_notes, created_at")
+      .eq("events_id", id)
+      .order("created_at", { ascending: true }),
+    supabase
       .from("event_category_playlists")
       .select("quiz_category_configs_id, playlist_url, playlist_id, employee_id, employees(full_name)")
       .eq("events_id", id),
@@ -111,6 +118,7 @@ export default async function EventQuizQuestionsPage({
 
   const cats: Category[] = categories ?? [];
   const qs: Question[] = questions ?? [];
+  const settingsByCategory = lastRoundSettings((settingsRows ?? []) as RoundSettingsRow[]);
 
   /* Each employee keeps their own playlist for a round, so the page shows yours
      when you have one and falls back to whatever else the round has - a legacy
@@ -248,6 +256,7 @@ export default async function EventQuizQuestionsPage({
             category_name={cat.category_name}
             question_count={cat.question_count}
             questions={cat.questions}
+            lastSettings={settingsByCategory.get(cat.id)}
             orderNo={cat.order_no}
             includeSpotify={cat.include_spotify}
             isPicture={cat.is_picture}

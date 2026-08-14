@@ -1806,7 +1806,8 @@ export async function savePictureRoundAction(
   categoryConfigId: number,
   questionText: string,
   difficulty: string = '',
-  origin: QuestionOrigin
+  origin: QuestionOrigin,
+  imageNotes: string = ''
 ): Promise<void> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -1864,6 +1865,7 @@ export async function savePictureRoundAction(
       category: categoryName,
       topic: questionText,
       difficulty: difficulty.trim() || null,
+      image_notes: imageNotes.trim() || null,
       image_url: storedImageUrl,
       asked_on: askedOn,
       events_id: eventId,

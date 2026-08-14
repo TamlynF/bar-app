@@ -28,6 +28,7 @@ import {
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
 import { describeStep, stepAnswerText, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
 import { moveQuestion, orderChanged, dropIndex } from "@/lib/quiz/question-order";
+import { type RoundSettings } from "@/lib/quiz/round-defaults";
 
 type Question = {
   id: string;
@@ -69,6 +70,9 @@ type Props = {
   category_name: string;
   question_count: number;
   questions: Question[];
+  // Topic, difficulty and picture instructions the round's last batch was
+  // created with - the round sheet opens on them.
+  lastSettings?: RoundSettings;
   orderNo?: number;
   includeSpotify?: boolean;
   isPicture?: boolean;
@@ -126,7 +130,7 @@ const printStyles = `
   @page { size: A4; margin: 0; }
 `;
 
-export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, playlistIsMine = false, playlistOwnerName = null, autoOpen, openSheet, nextRound }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, lastSettings, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, playlistIsMine = false, playlistOwnerName = null, autoOpen, openSheet, nextRound }: Props) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
@@ -832,6 +836,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               category_name={category_name}
               question_count={question_count}
               savedQuestions={questions}
+              lastSettings={lastSettings}
               orderNo={orderNo}
               includeSpotify={includeSpotify}
               isPicture={isPicture}
