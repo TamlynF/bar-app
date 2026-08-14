@@ -14,7 +14,13 @@ import {
 } from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
+import {
+  buildBuyerPhone,
+  buildCheckoutOptions,
+  buildEventOrder,
+  buildPrePopulatedData,
+} from "@/lib/square-order";
+import { getCompanyInfo } from "@/lib/company-info";
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
@@ -260,10 +266,10 @@ export async function createEventBooking(formData: FormData) {
           email,
           buyerPhone,
         }),
-        checkoutOptions: {
+        checkoutOptions: buildCheckoutOptions({
           redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: newBooking.id })}`,
-          merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
-        },
+          supportEmail: (await getCompanyInfo())?.email,
+        }),
         prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
       });
       checkoutUrl = paymentLink?.url;

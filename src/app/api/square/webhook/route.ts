@@ -15,6 +15,15 @@ const APP_URL = process.env.NEXT_PUBLIC_SITE_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
+type SquarePayment = {
+  id?: string;
+  order_id?: string;
+  status?: string;
+  amount_money?: { amount?: number };
+};
+
+const PAYMENT_EVENT_TYPES = new Set(["payment.created", "payment.updated"]);
+
 const WEBHOOK_SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
 const WEBHOOK_URL =
   process.env.NEXT_PUBLIC_SITE_URL
@@ -39,18 +48,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let event: { type: string; data?: { object?: { payment?: { id?: string; order_id?: string; amount_money?: { amount?: number } } } } };
+  let event: { type: string; data?: { object?: { payment?: SquarePayment } } };
   try {
     event = JSON.parse(body);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (event.type !== "payment.completed") {
+  if (!PAYMENT_EVENT_TYPES.has(event.type)) {
     return NextResponse.json({ received: true });
   }
 
-  const orderId = event.data?.object?.payment?.order_id;
+  const payment = event.data?.object?.payment;
+  if (payment?.status !== "COMPLETED") {
+    return NextResponse.json({ received: true });
+  }
+
+  const orderId = payment.order_id;
   if (!orderId) return NextResponse.json({ received: true });
 
   try {
@@ -70,8 +84,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const amountPaid = event.data?.object?.payment?.amount_money?.amount;
-    const paymentId = event.data?.object?.payment?.id ?? null;
+    const amountPaid = payment.amount_money?.amount;
+    const paymentId = payment.id ?? null;
 
     const settlement = await settlePaidBooking(supabase, {
       bookingId: booking.id,

@@ -4,7 +4,13 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
-import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
+import {
+  buildBuyerPhone,
+  buildCheckoutOptions,
+  buildEventOrder,
+  buildPrePopulatedData,
+} from "@/lib/square-order";
+import { getCompanyInfo } from "@/lib/company-info";
 import { getFreeTablesForEvent, seatingApplies, type SeatingEvent } from "@/lib/table-allocation";
 import { hasVenueSpaceFor } from "@/lib/update-fully-booked";
 import { releaseUnpaidBooking } from "@/lib/release-unpaid-booking";
@@ -127,10 +133,10 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
         email: contact.email,
         buyerPhone,
       }),
-      checkoutOptions: {
+      checkoutOptions: buildCheckoutOptions({
         redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: booking.id })}`,
-        merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
-      },
+        supportEmail: (await getCompanyInfo())?.email,
+      }),
       prePopulatedData: buildPrePopulatedData({
         email: contact.email,
         fullName: contact.full_name,

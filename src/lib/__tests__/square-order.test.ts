@@ -5,7 +5,9 @@ import {
   buildBuyerPhone,
   formatTicketLineName,
   buildEventOrder,
+  buildCheckoutOptions,
   buildPrePopulatedData,
+  DEFAULT_MERCHANT_SUPPORT_EMAIL,
   type EventOrderInput,
 } from "@/lib/square-order";
 
@@ -117,6 +119,38 @@ describe("buildEventOrder", () => {
     expect(
       buildEventOrder({ ...baseInput, currency: "USD" }).lineItems?.[0].basePriceMoney?.currency
     ).toBe("USD");
+  });
+});
+
+describe("buildCheckoutOptions", () => {
+  it("uses the company email when one is set", () => {
+    const options = buildCheckoutOptions({
+      redirectUrl: "https://example.com/book/event/7/success?bookingId=42",
+      supportEmail: "hello@donfenticas.co.uk",
+    });
+    expect(options.redirectUrl).toBe("https://example.com/book/event/7/success?bookingId=42");
+    expect(options.merchantSupportEmail).toBe("hello@donfenticas.co.uk");
+  });
+
+  it("falls back to the default when the company email is missing or blank", () => {
+    const redirectUrl = "https://example.com/book/bingo/success?bookingId=42";
+    expect(buildCheckoutOptions({ redirectUrl }).merchantSupportEmail).toBe(
+      DEFAULT_MERCHANT_SUPPORT_EMAIL
+    );
+    expect(buildCheckoutOptions({ redirectUrl, supportEmail: null }).merchantSupportEmail).toBe(
+      DEFAULT_MERCHANT_SUPPORT_EMAIL
+    );
+    expect(buildCheckoutOptions({ redirectUrl, supportEmail: "   " }).merchantSupportEmail).toBe(
+      DEFAULT_MERCHANT_SUPPORT_EMAIL
+    );
+  });
+
+  it("trims a padded company email", () => {
+    const options = buildCheckoutOptions({
+      redirectUrl: "https://example.com/x",
+      supportEmail: "  hello@donfenticas.co.uk  ",
+    });
+    expect(options.merchantSupportEmail).toBe("hello@donfenticas.co.uk");
   });
 });
 

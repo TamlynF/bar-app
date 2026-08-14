@@ -56,17 +56,20 @@ function makeRequest(
 }
 
 function paymentCompleted(overrides: {
+  type?: string;
+  status?: string;
   orderId?: string;
   paymentId?: string;
   amount?: number;
 } = {}) {
   return JSON.stringify({
-    type: "payment.completed",
+    type: overrides.type ?? "payment.updated",
     data: {
       object: {
         payment: {
           id: overrides.paymentId ?? "pay_123",
           order_id: overrides.orderId ?? "order_abc",
+          status: overrides.status ?? "COMPLETED",
           amount_money: overrides.amount !== undefined ? { amount: overrides.amount } : undefined,
         },
       },
@@ -95,7 +98,16 @@ beforeEach(() => {
   h.settle.mockReset().mockResolvedValue({ outcome: "settled", status: "confirmed" });
 });
 
-describe("square webhook - payment.completed settlement", () => {
+describe("square webhook - completed payment settlement", () => {
+  it("settles on payment.created as well as payment.updated", async () => {
+    h.client = makeSupabase({ ...pendingBooking }).client;
+
+    const res = await POST(makeRequest(paymentCompleted({ type: "payment.created" })));
+
+    expect(res.status).toBe(200);
+    expect(h.settle).toHaveBeenCalledTimes(1);
+  });
+
   it("settles the booking with the payment details and emails the booker", async () => {
     h.client = makeSupabase({ ...pendingBooking }).client;
 
@@ -162,7 +174,7 @@ describe("square webhook - payment.completed settlement", () => {
 });
 
 describe("square webhook - guards", () => {
-  it("ignores event types other than payment.completed", async () => {
+  it("ignores event types other than payment.created / payment.updated", async () => {
     h.client = makeSupabase({ ...pendingBooking }).client;
 
     const res = await POST(makeRequest(JSON.stringify({ type: "refund.updated", data: {} })));
@@ -171,10 +183,37 @@ describe("square webhook - guards", () => {
     expect(h.settle).not.toHaveBeenCalled();
   });
 
-  it("no-ops a payment.completed with no order id", async () => {
+  it("ignores a payment that has not reached COMPLETED", async () => {
     h.client = makeSupabase({ ...pendingBooking }).client;
 
-    const body = JSON.stringify({ type: "payment.completed", data: { object: { payment: {} } } });
+    for (const status of ["APPROVED", "PENDING", "FAILED", "CANCELED"]) {
+      const res = await POST(makeRequest(paymentCompleted({ status })));
+      expect(res.status).toBe(200);
+    }
+
+    expect(h.settle).not.toHaveBeenCalled();
+  });
+
+  it("ignores a payment event with no status at all", async () => {
+    h.client = makeSupabase({ ...pendingBooking }).client;
+
+    const body = JSON.stringify({
+      type: "payment.updated",
+      data: { object: { payment: { id: "pay_1", order_id: "order_abc" } } },
+    });
+    const res = await POST(makeRequest(body));
+
+    expect(res.status).toBe(200);
+    expect(h.settle).not.toHaveBeenCalled();
+  });
+
+  it("no-ops a completed payment with no order id", async () => {
+    h.client = makeSupabase({ ...pendingBooking }).client;
+
+    const body = JSON.stringify({
+      type: "payment.updated",
+      data: { object: { payment: { status: "COMPLETED" } } },
+    });
     const res = await POST(makeRequest(body));
 
     expect(res.status).toBe(200);

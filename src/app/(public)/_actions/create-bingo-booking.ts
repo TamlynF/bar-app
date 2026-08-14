@@ -15,6 +15,8 @@ import { revalidatePath } from "next/cache";
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
+import { buildCheckoutOptions } from "@/lib/square-order";
+import { getCompanyInfo } from "@/lib/company-info";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -166,10 +168,10 @@ export async function createBingoBooking(formData: FormData) {
           },
         }],
       },
-      checkoutOptions: {
+      checkoutOptions: buildCheckoutOptions({
         redirectUrl: `${appUrl}/book/bingo/success?bookingId=${newBooking.id}`,
-        merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
-      },
+        supportEmail: (await getCompanyInfo())?.email,
+      }),
       prePopulatedData: {
         buyerEmail: email,
         ...(buyerPhone ? { buyerPhoneNumber: buyerPhone } : {}),

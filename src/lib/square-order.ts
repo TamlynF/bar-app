@@ -64,6 +64,18 @@ export function buildEventOrder(input: EventOrderInput): Square.Order {
   };
 }
 
+export const DEFAULT_MERCHANT_SUPPORT_EMAIL = "admin@bookingsdonfenticas.co.uk";
+
+export function buildCheckoutOptions(input: {
+  redirectUrl: string;
+  supportEmail?: string | null;
+}): Square.CheckoutOptions {
+  return {
+    redirectUrl: input.redirectUrl,
+    merchantSupportEmail: input.supportEmail?.trim() || DEFAULT_MERCHANT_SUPPORT_EMAIL,
+  };
+}
+
 export function buildPrePopulatedData(input: {
   email: string;
   fullName: string;
