@@ -47,6 +47,7 @@ import {
   ArrowRight,
   ImageIcon,
   Music,
+  AlertTriangle,
 } from "lucide-react";
 
 import { SiSpotify } from "react-icons/si";
@@ -79,9 +80,11 @@ import {
   generateMusicSnippetsAction,
   saveMusicSnippetsAction,
   regeneratePictureImageAction,
+  pictureTopicUsageAction,
   type QuizQuestion,
   type PictureRoundItem,
   type MusicSnippetCandidate,
+  type PictureTopicUse,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 
 import {
@@ -184,6 +187,13 @@ const higherOrLowerQuestion = (s: MusicSnippetCandidate, hintYear: number) =>
   `${s.artist} - ${s.title} is higher or lower than ${hintYear}?`;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const formatUseDate = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
 const clampYear = (value: string, fallback: number) => {
   const parsed = parseInt(value, 10);
@@ -296,6 +306,37 @@ export default function QuizRoundSheet({
     : "";
   const topicLocked = isPicture && lockedTopic.length > 0;
   const effectiveTopic = topicLocked ? lockedTopic : topic;
+
+  /* A picture round is remembered by its topic, so running one the venue has
+     already done is a repeat night. Checked as you type - a warning, never a
+     block, since a popular topic is a fair thing to bring back. */
+  const [topicUsedBy, setTopicUsedBy] = useState<PictureTopicUse[]>([]);
+  useEffect(() => {
+    if (!isPicture || !open) {
+      setTopicUsedBy([]);
+      return;
+    }
+    const query = effectiveTopic.trim();
+    if (query.length < 3) {
+      setTopicUsedBy([]);
+      return;
+    }
+
+    let live = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const used = await pictureTopicUsageAction(query, eventId);
+        if (live) setTopicUsedBy(used);
+      } catch {
+        if (live) setTopicUsedBy([]);
+      }
+    }, 400);
+
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [effectiveTopic, isPicture, open, eventId]);
 
   // Once the round has a question the seed is settled: the next song follows on
   // from the last one saved, so the host's start year is history.
@@ -1187,6 +1228,26 @@ export default function QuizRoundSheet({
                               Picture rounds keep one topic - this round is already &ldquo;
                               {lockedTopic}&rdquo;, so new pictures stay on that topic.
                             </p>
+                          )}
+                          {topicUsedBy.length > 0 && (
+                            <div className="mt-1.5 rounded-xl border border-admin-warning/25 bg-admin-warning-bg px-3 py-2 text-[13px] text-admin-warning">
+                              <p className="flex items-start gap-1.5 font-semibold">
+                                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                This picture topic has run before - regulars may have seen these
+                                pictures already.
+                              </p>
+                              <ul className="mt-1 ml-5 space-y-0.5 font-medium">
+                                {topicUsedBy.slice(0, 3).map((use) => (
+                                  <li key={use.eventId}>
+                                    &ldquo;{use.topic}&rdquo; - {use.title || "an event"}
+                                    {use.date ? ` on ${formatUseDate(use.date)}` : ""}
+                                  </li>
+                                ))}
+                                {topicUsedBy.length > 3 && (
+                                  <li>and {topicUsedBy.length - 3} more</li>
+                                )}
+                              </ul>
+                            </div>
                           )}
                         </div>
 

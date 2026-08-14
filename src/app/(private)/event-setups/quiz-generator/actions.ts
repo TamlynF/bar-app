@@ -21,6 +21,7 @@ import {
   type YearRange,
 } from '@/lib/quiz/higher-lower'
 import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
+import { topicSearchTokens, topicsOverlap } from '@/lib/quiz/topic-match'
 import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 
@@ -1587,6 +1588,61 @@ export async function regeneratePictureImageAction(
   imageNotes?: string
 ): Promise<{ imageUrl: string | null }> {
   return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes) }
+}
+
+export type PictureTopicUse = {
+  eventId: number
+  title: string | null
+  date: string | null
+  topic: string
+}
+
+type TopicRow = {
+  events_id: number
+  topic: string | null
+  events: { title: string | null; date: string | null } | { title: string | null; date: string | null }[] | null
+}
+
+/* A picture round is its topic, so running the same one twice is a repeat night
+   rather than a repeat question. Only rows with a picture count - the topic
+   column is filled in on other round types too, where it means the steer given
+   to the generator rather than what the guests were asked.
+
+   The database narrows on any one word of the topic; whether two topics are
+   really the same round is decided here, so "Famous dog breeds" finds "Dog
+   breeds" without a full-text index to maintain. */
+export async function pictureTopicUsageAction(
+  topic: string,
+  eventId: number
+): Promise<PictureTopicUse[]> {
+  const words = topicSearchTokens(topic)
+  if (words.length === 0) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('past_quiz_questions')
+    .select('events_id, topic, events(title, date)')
+    .or(words.map((word) => `topic.ilike.*${word}*`).join(','))
+    .not('image_url', 'is', null)
+    .neq('events_id', eventId)
+    .limit(500)
+
+  if (error || !data) return []
+
+  const byEvent = new Map<number, PictureTopicUse>()
+  for (const row of data as unknown as TopicRow[]) {
+    if (row.events_id == null || byEvent.has(row.events_id)) continue
+    if (!row.topic || !topicsOverlap(topic, row.topic)) continue
+    const ev = Array.isArray(row.events) ? row.events[0] : row.events
+    byEvent.set(row.events_id, {
+      eventId: row.events_id,
+      title: ev?.title ?? null,
+      date: ev?.date ?? null,
+      topic: row.topic,
+    })
+  }
+
+  return [...byEvent.values()].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 }
 
 export async function generatePictureRoundAction(
