@@ -15,8 +15,10 @@ const HOMEPAGE_EVENT_LIMIT = 8;
 
 export function HighlightedEvents({
   events,
+  upcoming = false,
 }: {
   events: SerializedEvent[];
+  upcoming?: boolean;
 }) {
   const visibleEvents = events.slice(0, HOMEPAGE_EVENT_LIMIT);
 
@@ -27,7 +29,7 @@ export function HighlightedEvents({
     >
       <SectionHeading
         eyebrow="The schedule"
-        title="What's on this week"
+        title={upcoming ? "What's coming up" : "What's on this week"}
         action={{
           href: "/whats-on",
           label: events.length > HOMEPAGE_EVENT_LIMIT
@@ -67,7 +69,7 @@ export function HighlightedEvents({
           />
 
           <p className="font-black text-sm tracking-tight text-stone-500 uppercase">
-            Nothing Else This Week
+            {upcoming ? "Nothing on the schedule yet" : "Nothing Else This Week"}
           </p>
 
           <p className="mt-1 text-xs text-stone-600">

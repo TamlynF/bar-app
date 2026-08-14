@@ -72,9 +72,12 @@ export default async function HomePage() {
   const tonightEvents = isTonight ? tonight : highlightedEvents.slice(0, 1);
   const heroIds = new Set(tonightEvents.map((e) => e.id));
   const weekEndStr = format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
-  const scheduleEvents = highlightedEvents.filter(
-    (e) => !heroIds.has(e.id) && e.date <= weekEndStr
-  );
+  const remainingEvents = highlightedEvents.filter((e) => !heroIds.has(e.id));
+  const thisWeekEvents = remainingEvents.filter((e) => e.date <= weekEndStr);
+  const showUpcoming = thisWeekEvents.length === 0;
+  const scheduleEvents = showUpcoming
+    ? remainingEvents.slice(0, 5)
+    : thisWeekEvents;
 
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
     (s) =>
@@ -130,7 +133,7 @@ export default async function HomePage() {
       </div>
 
       <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
-        <HighlightedEvents events={scheduleEvents} />
+        <HighlightedEvents events={scheduleEvents} upcoming={showUpcoming} />
 
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
           {specials.length > 0 && <SpecialsSection specials={specials} />}
