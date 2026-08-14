@@ -16,7 +16,7 @@ import {
 } from '@/lib/spotify'
 import {
   isValidStep,
-  stepDirection,
+  stepAnswerText,
   DEFAULT_START_YEAR,
   DEFAULT_YEAR_RANGE,
   type YearRange,
@@ -703,7 +703,7 @@ async function rechainHigherLowerQuestions(
     const answerText =
       row.release_year == null || hintYear == null
         ? row.answer_text
-        : `${stepDirection(row.release_year, hintYear)} - ${row.release_year}`;
+        : stepAnswerText(row.release_year, hintYear);
 
     if (row.hint_year === hintYear && row.answer_text === answerText) continue;
 
@@ -1274,7 +1274,7 @@ export async function saveMusicSnippetsAction(
       insertData.push({
         ...shared,
         question_text: `Higher or lower than ${comparisonYear}?`,
-        answer_text: `${stepDirection(s.year, comparisonYear)} - ${s.year}`,
+        answer_text: stepAnswerText(s.year, comparisonYear),
         answer_text_ext: songIdentity,
         hint_year: comparisonYear,
       })

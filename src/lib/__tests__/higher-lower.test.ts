@@ -4,6 +4,7 @@ import {
   describeStep,
   chainHintYears,
   stepDirection,
+  stepAnswerText,
   buildChain,
   type YearRange,
 } from "@/lib/quiz/higher-lower";
@@ -90,6 +91,13 @@ describe("stepDirection", () => {
 
   it("reads Lower when it is below", () => {
     expect(stepDirection(1986, 1990)).toBe("Lower");
+  });
+});
+
+describe("stepAnswerText", () => {
+  it("reads as the host says it, direction then release year", () => {
+    expect(stepAnswerText(2002, 2000)).toBe("Higher - released 2002");
+    expect(stepAnswerText(1998, 2000)).toBe("Lower - released 1998");
   });
 });
 

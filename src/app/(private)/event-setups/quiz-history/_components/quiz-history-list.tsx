@@ -22,6 +22,7 @@ import { SpotifyPlayer } from "@/components/spotify-player";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
 import QuizHistoryFilter from "./quiz-history-filter";
 import type { QuizEventSummary } from "@/app/(private)/event-setups/quiz-generator/actions";
+import { stepAnswerText } from "@/lib/quiz/higher-lower";
 
 export type HistoryQuestion = {
   id: string;
@@ -412,9 +413,8 @@ function HistoryQuestionCard({
               <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm">
                 <Target className="h-3 w-3 shrink-0 text-white/50" />
                 <span className="text-center font-bold text-xs tracking-tight">
-                  {(question.releaseYear ?? 0) > question.hintYear ? "Higher" : "Lower"}
+                  {stepAnswerText(question.releaseYear ?? 0, question.hintYear)}
                 </span>
-                <span className="shrink-0 font-bold text-xs text-white/50 tabular-nums">{question.releaseYear}</span>
               </div>
             </div>
           ) : (

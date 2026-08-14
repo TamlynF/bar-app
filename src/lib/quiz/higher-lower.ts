@@ -66,6 +66,13 @@ export function stepDirection(releaseYear: number, comparisonYear: number): "Hig
   return releaseYear > comparisonYear ? "Higher" : "Lower";
 }
 
+/* What the host reads out, and what is written to answer_text. One definition,
+   so the saved row, the host copy and the screens can never word it three
+   different ways. */
+export function stepAnswerText(releaseYear: number, comparisonYear: number): string {
+  return `${stepDirection(releaseYear, comparisonYear)} - released ${releaseYear}`;
+}
+
 // Walks the pool for the longest run of songs that can each follow the last,
 // preferring to flip direction at every step so the round is a genuine mix
 // rather than a march in one direction. Returns fewer than `limit` when the pool

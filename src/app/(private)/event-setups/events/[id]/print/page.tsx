@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import PrintActions from "./print-actions";
-import { stepDirection } from "@/lib/quiz/higher-lower";
+import { stepAnswerText } from "@/lib/quiz/higher-lower";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { pickCategoryPlaylist, type CategoryPlaylistRow } from "@/lib/quiz/category-playlist";
 
@@ -205,7 +205,12 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
                             )}
                           </>
                         ) : (
-                          q.question_text
+                          <>
+                            {q.question_text}
+                            {/* The question names only the year, so the host
+                                needs the song beside it to know what to play. */}
+                            {isHigherOrLower && q.answer_text_ext && ` (${q.answer_text_ext})`}
+                          </>
                         )}
                       </p>
                       <p className="mt-0.5 pl-5 text-[13px] leading-snug font-bold">
@@ -213,7 +218,7 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
                             the year the next question compares against. */}
                         A:{" "}
                         {isHigherOrLower && q.hint_year && q.release_year
-                          ? `${stepDirection(q.release_year, q.hint_year)} - ${q.release_year}`
+                          ? stepAnswerText(q.release_year, q.hint_year)
                           : q.answer_text}
                       </p>
                     </li>

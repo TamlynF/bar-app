@@ -100,7 +100,7 @@ import {
   chainHintYears,
   describeStep,
   isValidStep,
-  stepDirection,
+  stepAnswerText,
   DEFAULT_START_YEAR,
   DEFAULT_YEAR_RANGE,
   type YearRange,
@@ -182,9 +182,6 @@ const draftIdentity = (d: DraftItem): string => {
   if (isQuestionDraft(d)) return d.question;
   return d.answer;
 };
-
-const higherOrLowerQuestion = (s: MusicSnippetCandidate, hintYear: number) =>
-  `${s.artist} - ${s.title} is higher or lower than ${hintYear}?`;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -1052,7 +1049,7 @@ export default function QuizRoundSheet({
                           <p className="shrink-0 text-[13px] font-semibold text-admin-primary">
                             {isSongDraft(d)
                               ? isHigherOrLower
-                                ? `${d.year} (${stepDirection(d.year, approved.hintYears?.[i] ?? d.year)})`
+                                ? stepAnswerText(d.year, approved.hintYears?.[i] ?? d.year)
                                 : d.year
                               : isPictureDraft(d)
                                 ? d.answer
@@ -1594,20 +1591,31 @@ export default function QuizRoundSheet({
                                   </div>
                                 </div>
                               ) : song ? (
+                                /* On a chain round every card answers the one
+                                   question in the heading, so the card is just
+                                   the song: what it is, and the year that
+                                   decides the answer. */
                                 <div className="flex items-start gap-3">
-                                  <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-surface">
-                                    <Music className="h-5 w-5 text-admin-muted" />
-                                  </span>
+                                  {!isHigherOrLower && (
+                                    <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-surface">
+                                      <Music className="h-5 w-5 text-admin-muted" />
+                                    </span>
+                                  )}
                                   <div className="min-w-0 flex-1">
                                     <p className="text-sm leading-relaxed font-semibold text-admin-ink">
-                                      {isHigherOrLower && isSelected
-                                        ? higherOrLowerQuestion(song, hintYear ?? 0)
-                                        : song.title}
+                                      {song.title}
                                     </p>
                                     <p className="mt-0.5 text-[13px] text-admin-muted">
-                                      {isHigherOrLower && isSelected
-                                        ? song.artist
-                                        : `${song.artist} · ${song.year}`}
+                                      {isHigherOrLower ? (
+                                        <>
+                                          {song.artist} ·{" "}
+                                          <span className="font-bold text-admin-ink tabular-nums">
+                                            {song.year}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        `${song.artist} · ${song.year}`
+                                      )}
                                     </p>
                                   </div>
                                 </div>
@@ -1642,21 +1650,22 @@ export default function QuizRoundSheet({
                               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                 <span className="flex flex-wrap items-center gap-2">
                                   {song ? (
-                                    <>
-                                      <span className="rounded-lg border border-admin-line bg-white px-3 py-1.5 text-[13px] font-semibold text-admin-muted tabular-nums">
-                                        {isHigherOrLower && isSelected ? hintYear : song.year}
+                                    isHigherOrLower ? (
+                                      /* The year lives with the song above; down
+                                         here it is the answer the host reads. */
+                                      <span
+                                        className={cn(
+                                          "rounded-lg px-3 py-1.5 text-[13px] font-semibold text-admin-primary",
+                                          isSelected ? "bg-white" : "bg-admin-primary-soft"
+                                        )}
+                                      >
+                                        Answer: {stepAnswerText(song.year, hintYear ?? 0)}
                                       </span>
-                                      {isHigherOrLower && isSelected && (
-                                        <span
-                                          className={cn(
-                                            "rounded-lg px-3 py-1.5 text-[13px] font-semibold text-admin-primary",
-                                            isSelected ? "bg-white" : "bg-admin-primary-soft"
-                                          )}
-                                        >
-                                          Answer: {song.year} ({stepDirection(song.year, hintYear ?? 0)})
-                                        </span>
-                                      )}
-                                    </>
+                                    ) : (
+                                      <span className="rounded-lg border border-admin-line bg-white px-3 py-1.5 text-[13px] font-semibold text-admin-muted tabular-nums">
+                                        {song.year}
+                                      </span>
+                                    )
                                   ) : (
                                     <span
                                       className={cn(

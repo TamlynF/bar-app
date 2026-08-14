@@ -26,7 +26,7 @@ import {
   disconnectSpotifyAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
-import { describeStep, stepDirection, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
+import { describeStep, stepAnswerText, DEFAULT_YEAR_RANGE } from "@/lib/quiz/higher-lower";
 import { moveQuestion, orderChanged, dropIndex } from "@/lib/quiz/question-order";
 
 type Question = {
@@ -992,10 +992,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
             ) : (
               questions.map((q, idx) => {
                 const isEditing = editingId === q.id;
-                const chainWarning =
-                  isHigherOrLower && q.hint_year
-                    ? describeStep(q.release_year, q.hint_year, gapRange)
-                    : null;
+                const hasChainAnswer = isHigherOrLower && !!q.hint_year;
+                const chainWarning = hasChainAnswer
+                  ? describeStep(q.release_year, q.hint_year, gapRange)
+                  : null;
                 const isDragging = draggingId === q.id;
                 return (
                   <div
@@ -1250,17 +1250,27 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                           </DropdownMenu>
                         </div>
                         <div className="space-y-3">
-                          {isHigherOrLower && q.hint_year ? (
-                            <div className="space-y-2">
+                          {hasChainAnswer ? (
+                            /* Same shape as every other song card: what the host
+                               reads, the track to play, then the answer. */
+                            <div className="space-y-3">
                               <p className="text-sm leading-snug text-admin-ink">
                                 <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-admin-warning">{q.hint_year}</span>?
                               </p>
-                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm">
-                                <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                <span className="text-center font-bold text-xs tracking-tight">
-                                  {stepDirection(q.release_year ?? 0, q.hint_year)}
-                                </span>
-                                <span className="shrink-0 font-bold text-xs text-white/50 tabular-nums">{q.release_year}</span>
+                              {q.spotify_track_id && (
+                                <SpotifyPlayer
+                                  trackId={q.spotify_track_id}
+                                  title={q.answer_text_ext ?? q.answer_text}
+                                  compact
+                                />
+                              )}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
+                                  <Target className="h-3 w-3 shrink-0 text-white/50" />
+                                  <span className="text-center font-bold text-xs tracking-tight">
+                                    {stepAnswerText(q.release_year ?? 0, q.hint_year!)}
+                                  </span>
+                                </div>
                               </div>
                               {/* Deleting a question re-links the chain but cannot
                                   find a new song, so a gap can end up outside the
@@ -1302,7 +1312,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                   <Target className="h-3 w-3 shrink-0 text-white/50" />
                                   <span className="text-center font-bold text-xs tracking-tight">{q.answer_text}</span>
                                 </div>
-                                {includeSpotify && q.release_year != null && (
+                                {/* On a name-that-tune round the year is not part
+                                    of the answer, so it is not on the card. A
+                                    chain question that has lost its hint year
+                                    still needs it - that is what it turns on. */}
+                                {isHigherOrLower && q.release_year != null && (
                                   <span
                                     title="Release year"
                                     className="inline-flex items-center gap-1.5 rounded-xl border border-admin-line bg-white px-3 py-2 font-bold text-xs text-admin-primary tabular-nums"
@@ -1315,7 +1329,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             </>
                           )}
                         </div>
-                        {includeSpotify && q.spotify_track_id && !hideQuestionText && (
+                        {includeSpotify && q.spotify_track_id && !hideQuestionText && !hasChainAnswer && (
                           <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text_ext ?? q.answer_text} compact />
                         )}
                       </div>
