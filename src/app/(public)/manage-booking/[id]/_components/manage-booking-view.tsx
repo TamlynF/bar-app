@@ -154,6 +154,12 @@ export default function ManageBookingView({
     return () => clearTimeout(timer);
   }, [groupName, savedGroupName, isEditing, groupNameVisible, groupNameLabel, eventId, bookingId]);
 
+  const hasChanges =
+    parseInt(groupSize, 10) !== (booking.group_size ?? 0) ||
+    (groupNameVisible && groupName.trim() !== savedGroupName.trim()) ||
+    (specialRequestsField.visible &&
+      specialRequests.trim() !== (booking.special_requests ?? "").trim());
+
   const handleCancel = async () => {
     const ok = await confirm({
       title: "Cancel booking",
@@ -177,6 +183,19 @@ export default function ManageBookingView({
 
   const handleSave = async () => {
     if (seatingError || nameError) return;
+
+    if (!hasChanges) {
+      setIsEditing(false);
+      return;
+    }
+
+    const ok = await confirm({
+      title: "Save changes",
+      description: "Are you sure you want to save these changes to your booking?",
+      confirmLabel: "Save changes",
+      cancelLabel: "Keep editing",
+    });
+    if (!ok) return;
 
     setIsSaving(true);
     setError("");
@@ -221,25 +240,25 @@ export default function ManageBookingView({
 
   return (
     <div className="w-full">
-      <div className="mb-8 animate-in text-center duration-500 fade-in">
+      <div className="mb-5 animate-in text-center duration-500 fade-in sm:mb-8">
         {isEditing ? (
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#fdcc4b]/20 bg-[#fdcc4b]/10 px-3 py-1">
             <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#fdcc4b]" />
             <span className="font-black text-[10px] tracking-widest text-[#fdcc4b] uppercase">Editing Mode</span>
           </div>
         ) : isCancelled ? (
-          <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+          <XCircle className="mx-auto mb-2 h-11 w-11 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)] sm:mb-4 sm:h-16 sm:w-16" />
         ) : isPending ? (
-          <Clock3 className="mx-auto mb-4 h-16 w-16 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
+          <Clock3 className="mx-auto mb-2 h-11 w-11 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)] sm:mb-4 sm:h-16 sm:w-16" />
         ) : (
-          <CheckCircle className="mx-auto mb-4 h-16 w-16 text-[#fdcc4b] drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+          <CheckCircle className="mx-auto mb-2 h-11 w-11 text-[#fdcc4b] drop-shadow-[0_0_15px_rgba(253,204,75,0.3)] sm:mb-4 sm:h-16 sm:w-16" />
         )}
 
-        <h1 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">
+        <h1 className="font-black text-xl leading-none tracking-tighter text-white uppercase sm:text-4xl">
           {isEditing ? "Modify Booking" : isCancelled ? "Booking Cancelled" : "Your Booking"}
         </h1>
         {!isEditing && (
-          <p className="mt-2 text-xs font-bold tracking-widest text-stone-500 uppercase sm:text-sm">
+          <p className="mt-1.5 text-[10px] font-bold tracking-widest text-stone-500 uppercase sm:mt-2 sm:text-sm">
             Ref: #{booking.id}
           </p>
         )}
@@ -395,8 +414,8 @@ export default function ManageBookingView({
           </div>
         </div>
       ) : (
-        <div className="animate-in space-y-8 duration-500 fade-in">
-          <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
+        <div className="animate-in space-y-4 duration-500 fade-in sm:space-y-8">
+          <div className="group relative space-y-3.5 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner sm:space-y-6 sm:p-8">
             <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />
 
             <DetailRow icon={<Ticket />} label="Event" value={booking.events?.event_title || "Event"} />
@@ -431,7 +450,7 @@ export default function ManageBookingView({
           </div>
 
           {!isCancelled && (
-            <div className={cn("grid grid-cols-1 gap-3", canModify && "sm:grid-cols-2")}>
+            <div className={cn("grid grid-cols-1 gap-2.5 sm:gap-3", canModify && "grid-cols-2")}>
               {canModify && (
                 <button
                   type="button"
@@ -441,7 +460,7 @@ export default function ManageBookingView({
                     setIsEditing(true);
                   }}
                   disabled={isCancelling}
-                  className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-sm tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
+                  className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] px-2 text-center font-black text-[11px] tracking-wider text-[#26300D] uppercase shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#e5b843] active:scale-95 disabled:opacity-50 sm:h-16 sm:text-sm sm:tracking-widest"
                 >
                   Modify Booking
                 </button>
@@ -451,7 +470,7 @@ export default function ManageBookingView({
                 type="button"
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="flex h-16 w-full items-center justify-center rounded-2xl border-2 border-red-500/30 font-black text-xs tracking-widest text-red-500 uppercase transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50"
+                className="flex h-14 w-full items-center justify-center rounded-2xl border-2 border-red-500/30 px-2 text-center font-black text-[11px] tracking-wider text-red-500 uppercase transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50 sm:h-16 sm:text-xs sm:tracking-widest"
               >
                 {isCancelling ? <Loader2 className="h-5 w-5 animate-spin" /> : "Cancel Booking"}
               </button>
@@ -473,16 +492,16 @@ export default function ManageBookingView({
 function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start">
-      <div className="mr-4 shrink-0 rounded-2xl border border-[#fdcc4b]/20 bg-[#26300D] p-3 text-[#fdcc4b] shadow-lg">
+      <div className="mr-3 shrink-0 rounded-xl border border-[#fdcc4b]/20 bg-[#26300D] p-2.5 text-[#fdcc4b] shadow-lg sm:mr-4 sm:rounded-2xl sm:p-3">
         {React.isValidElement(icon)
           ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
-              className: "w-5 h-5",
+              className: "w-4 h-4 sm:w-5 sm:h-5",
             })
           : icon}
       </div>
-      <div className="min-w-0 pt-1 text-left">
-        <p className="mb-0.5 font-black text-[10px] leading-none tracking-[0.15em] text-[#fdcc4b]/50 uppercase">{label}</p>
-        <p className="font-black text-lg leading-tight tracking-tight wrap-break-word whitespace-pre-wrap text-white sm:text-xl">{value}</p>
+      <div className="min-w-0 text-left sm:pt-1">
+        <p className="mb-0.5 font-black text-[9px] leading-none tracking-[0.15em] text-[#fdcc4b]/50 uppercase sm:text-[10px]">{label}</p>
+        <p className="font-black text-base leading-tight tracking-tight wrap-break-word whitespace-pre-wrap text-white sm:text-xl">{value}</p>
       </div>
     </div>
   );
