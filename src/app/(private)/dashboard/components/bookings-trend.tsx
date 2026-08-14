@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TrendingUp, ChevronDown, Filter } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
 export interface TrendBooking {
@@ -28,7 +30,9 @@ const SERIES_COLORS = [
 ];
 
 const TOP_N = 5;
+const TOP_N_PHONE = 3;
 const OTHER_COLOR = "#9CA3AF";
+const PHONE_QUERY = "(max-width: 639px)";
 
 const titleCase = (s: string) =>
   s ? s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : s;
@@ -51,16 +55,28 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
   const [applied, setApplied] = useState<string>("all"); // 'all' | 'type:<id>' | 'sub:<id>'
   const [selType, setSelType] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const isPhone = useMediaQuery(PHONE_QUERY);
 
+  /* The phone build hands the filter to a Radix sheet, which owns its own
+     dismissal. Keeping this listener alive there would close the panel on the
+     pointerdown that starts a tap, so the option never receives the click. */
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    if (!open || isPhone) return;
+    const onDown = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, isPhone]);
 
   const taxonomy = useMemo(() => {
     const types = new Map<string, { id: string; name: string; subs: Map<string, { id: string; name: string }> }>();
@@ -175,10 +191,11 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       total: cur[i].reduce((a, b) => a + b, 0),
     }));
 
+    const cap = isPhone ? TOP_N_PHONE : TOP_N;
     list.sort((a, b) => b.total - a.total);
-    if (list.length > TOP_N) {
-      const keep = list.slice(0, TOP_N);
-      const rest = list.slice(TOP_N);
+    if (list.length > cap) {
+      const keep = list.slice(0, cap);
+      const rest = list.slice(cap);
       const oVals = new Array(period.n).fill(0);
       const oPrev = new Array(period.n).fill(0);
       let oTotal = 0;
@@ -194,7 +211,11 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       ...s,
       color: s.id === "__other__" ? OTHER_COLOR : SERIES_COLORS[i % SERIES_COLORS.length],
     }));
-  }, [bookings, applied, taxonomy, period]);
+  }, [bookings, applied, taxonomy, period, isPhone]);
+
+  useEffect(() => {
+    setActiveIdx(null);
+  }, [range, view, applied]);
 
   const isDetail = view === "detail";
 
@@ -231,6 +252,79 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
 
   const selectedType = selType ? taxonomy.find((t) => t.id === selType) : null;
 
+  /* Each bucket owns the strip of chart halfway to its neighbours, so a tap
+     anywhere near a point picks that point rather than needing to hit the line. */
+  const bandFor = (i: number) => {
+    const step = period.n > 1 ? W / (period.n - 1) : W;
+    const x0 = Math.max(0, xFor(i, period.n) - step / 2);
+    const x1 = Math.min(W, xFor(i, period.n) + step / 2);
+    return { x: x0, w: Math.max(1, x1 - x0) };
+  };
+
+  const pctX = (i: number) => (xFor(i, period.n) / W) * 100;
+  const pctY = (v: number) => (yFor(v, niceMax) / H) * 100;
+
+  const activeMarkers =
+    activeIdx === null
+      ? []
+      : isDetail
+        ? detail.map((s) => ({ key: s.id, color: s.color, y: pctY(s.vals[activeIdx]) }))
+        : [
+            { key: "prev", color: "#bdb49a", y: pctY(summary.prev[activeIdx]) },
+            { key: "cur", color: "#34451F", y: pctY(summary.cur[activeIdx]) },
+          ];
+
+  const typeList = (
+    <div className={cn("p-1.5", !isPhone && "max-h-60 overflow-y-auto border-r border-[#D8D5C8]")}>
+      <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
+      <FilterOpt
+        label="All bookable events"
+        active={applied === "all"}
+        onClick={() => { setApplied("all"); setSelType(null); setOpen(false); }}
+      />
+      {taxonomy.map((t) => (
+        <FilterOpt
+          key={t.id}
+          label={titleCase(t.name)}
+          chevron={t.subs.length > 0}
+          selected={selType === t.id}
+          active={applied === `type:${t.id}` && selType === t.id}
+          onClick={() => { setSelType(t.id); setApplied(`type:${t.id}`); }}
+        />
+      ))}
+    </div>
+  );
+
+  const subList = (
+    <div className={cn("p-1.5", isPhone ? "border-t border-[#D8D5C8]" : "max-h-60 overflow-y-auto")}>
+      {!selectedType ? (
+        <p className="p-3 text-[12px] leading-relaxed font-medium text-[#a7a288] italic">
+          Pick an event type to filter by its sub-types.
+        </p>
+      ) : (
+        <>
+          <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">{titleCase(selectedType.name)} sub-type</p>
+          <FilterOpt
+            label={`All ${titleCase(selectedType.name)}`}
+            active={applied === `type:${selectedType.id}`}
+            onClick={() => { setApplied(`type:${selectedType.id}`); setOpen(false); }}
+          />
+          {selectedType.subs.map((s) => (
+            <FilterOpt
+              key={s.id}
+              label={titleCase(s.name)}
+              active={applied === `sub:${s.id}`}
+              onClick={() => { setApplied(`sub:${s.id}`); setOpen(false); }}
+            />
+          ))}
+          {selectedType.subs.length === 0 && (
+            <p className="p-3 text-[12px] font-medium text-[#a7a288] italic">No sub-types with bookings.</p>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <section className="space-y-2">
       <div className="flex flex-wrap items-center gap-2 px-1">
@@ -243,7 +337,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               type="button"
               onClick={() => setRange(r)}
               className={cn(
-                "rounded-lg px-2.5 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors sm:px-3",
+                "min-h-11 rounded-lg px-3 font-bold text-[12px] tracking-wide uppercase transition-colors sm:min-h-8",
                 range === r ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
               )}
             >
@@ -254,80 +348,41 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       </div>
 
       <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
-          <div ref={ref} className="relative min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-lg border bg-[#F4F1E8] px-3 py-2 text-[13px] font-bold text-[#20231A] transition-colors",
-                open ? "border-[#34451F] ring-2 ring-[#34451F]/15" : "border-[#D8D5C8] hover:border-[#d3cbb0]",
-              )}
-            >
-              <span className="flex-1 truncate text-left">{labelFor(applied)}</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-[#5E6654] transition-transform", open && "rotate-180")} />
-            </button>
-            {open && (
-              <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
-                <div className="grid grid-cols-2">
-                  <div className="max-h-60 overflow-y-auto border-r border-[#D8D5C8] p-1.5">
-                    <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
-                    <FilterOpt
-                      label="All bookable events"
-                      active={applied === "all"}
-                      onClick={() => { setApplied("all"); setSelType(null); setOpen(false); }}
-                    />
-                    {taxonomy.map((t) => (
-                      <FilterOpt
-                        key={t.id}
-                        label={titleCase(t.name)}
-                        chevron={t.subs.length > 0}
-                        selected={selType === t.id}
-                        active={applied === `type:${t.id}` && selType === t.id}
-                        onClick={() => { setSelType(t.id); setApplied(`type:${t.id}`); }}
-                      />
-                    ))}
-                  </div>
-                  <div className="max-h-60 overflow-y-auto p-1.5">
-                    {!selectedType ? (
-                      <p className="p-3 text-[12px] leading-relaxed font-medium text-[#a7a288] italic">
-                        Pick an event type to filter by its sub-types.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">{titleCase(selectedType.name)} sub-type</p>
-                        <FilterOpt
-                          label={`All ${titleCase(selectedType.name)}`}
-                          active={applied === `type:${selectedType.id}`}
-                          onClick={() => { setApplied(`type:${selectedType.id}`); setOpen(false); }}
-                        />
-                        {selectedType.subs.map((s) => (
-                          <FilterOpt
-                            key={s.id}
-                            label={titleCase(s.name)}
-                            active={applied === `sub:${s.id}`}
-                            onClick={() => { setApplied(`sub:${s.id}`); setOpen(false); }}
-                          />
-                        ))}
-                        {selectedType.subs.length === 0 && (
-                          <p className="p-3 text-[12px] font-medium text-[#a7a288] italic">No sub-types with bookings.</p>
-                        )}
-                      </>
-                    )}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1">
+            <Filter className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
+            <div ref={ref} className="relative min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                aria-expanded={open}
+                aria-haspopup="dialog"
+                className={cn(
+                  "flex min-h-11 w-full items-center gap-2 rounded-lg border bg-[#F4F1E8] px-3 py-2 text-[13px] font-bold text-[#20231A] transition-colors sm:min-h-9",
+                  open ? "border-[#34451F] ring-2 ring-[#34451F]/15" : "border-[#D8D5C8] hover:border-[#d3cbb0]",
+                )}
+              >
+                <span className="flex-1 truncate text-left">{labelFor(applied)}</span>
+                <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-[#5E6654] transition-transform", open && "rotate-180")} />
+              </button>
+              {open && !isPhone && (
+                <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
+                  <div className="grid grid-cols-2">
+                    {typeList}
+                    {subList}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-          <div className="flex shrink-0 gap-0.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] p-0.5">
+          <div className="ml-auto flex shrink-0 gap-0.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] p-0.5">
             {(["summary", "detail"] as View[]).map((vw) => (
               <button
                 key={vw}
                 type="button"
                 onClick={() => setView(vw)}
                 className={cn(
-                  "rounded-md px-2.5 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors",
+                  "min-h-11 rounded-md px-3 font-bold text-[12px] tracking-wide uppercase transition-colors sm:min-h-8",
                   view === vw ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
                 )}
               >
@@ -336,6 +391,38 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             ))}
           </div>
         </div>
+
+        {isPhone && (
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetContent
+              side="bottom"
+              showCloseButton={false}
+              className="flex max-h-[85vh] flex-col gap-0 rounded-t-3xl border-t-2 border-[#D8D5C8] bg-white p-0"
+            >
+              <div className="shrink-0 border-b border-[#D8D5C8] px-4 py-3">
+                <SheetTitle className="text-base leading-tight font-bold text-[#20231A]">
+                  Filter bookings
+                </SheetTitle>
+                <SheetDescription className="mt-0.5 text-[13px] font-medium text-[#5E6654]">
+                  Pick an event type, then narrow it to a sub-type.
+                </SheetDescription>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {typeList}
+                {subList}
+              </div>
+              <div className="shrink-0 border-t border-[#D8D5C8] p-4 pb-8">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="h-12 w-full rounded-xl border border-[#D8D5C8] text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE]"
+                >
+                  Done
+                </button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
 
         {isDetail ? (
           <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
@@ -349,6 +436,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                       className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-(--c)"
                       style={{ "--c": s.color } as React.CSSProperties}
                     /> {titleCase(s.name)}
+                    <span className="text-[#20231A] tabular-nums">{s.total}</span>
                   </span>
                 ))}
                 <span className="basis-full text-[13px] font-bold tracking-wide text-[#a7a288] uppercase">
@@ -358,18 +446,57 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             )}
           </div>
         ) : (
-          <div className="mb-2.5 flex items-center gap-4 px-0.5">
+          <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
             <span className="flex items-center gap-1.5 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
               <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-[#34451F]" /> {period.curLbl}
+              <span className="text-[#20231A] tabular-nums">{sumCur}</span>
             </span>
             <span className="flex items-center gap-1.5 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
               <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-dashed border-[#bdb49a]" /> {period.prevLbl}
+              <span className="text-[#20231A] tabular-nums">{sumPrev}</span>
             </span>
             <span className={cn("ml-auto font-bold text-[12px] tracking-wide uppercase", up ? "text-green-700" : "text-red-600")}>
               {delta}
             </span>
           </div>
         )}
+
+        <div className="mb-2 flex min-h-9 flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-[#F4F1E8] px-2.5 py-1.5">
+          {activeIdx === null ? (
+            <span className="text-[12px] font-medium text-[#a7a288] italic">
+              Tap a point on the chart to read its exact figures.
+            </span>
+          ) : (
+            <>
+              <span className="font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
+                {period.labels[activeIdx]}
+              </span>
+              {isDetail ? (
+                detail.map((s) => (
+                  <span key={s.id} className="flex items-center gap-1.5 font-bold text-[12px] text-[#20231A]">
+                    <i
+                      className="h-2 w-2 shrink-0 rounded-full bg-(--c)"
+                      style={{ "--c": s.color } as React.CSSProperties}
+                    />
+                    <span className="tabular-nums">{s.vals[activeIdx]}</span>
+                    <span className="font-medium text-[#5E6654]">{titleCase(s.name)}</span>
+                  </span>
+                ))
+              ) : (
+                <>
+                  <span className="font-bold text-[12px] text-[#20231A]">
+                    <span className="tabular-nums">{summary.cur[activeIdx]}</span>{" "}
+                    <span className="font-medium text-[#5E6654]">{period.curLbl.toLowerCase()}</span>
+                  </span>
+                  <span className="font-bold text-[12px] text-[#20231A]">
+                    <span className="tabular-nums">{summary.prev[activeIdx]}</span>{" "}
+                    <span className="font-medium text-[#5E6654]">{period.prevLbl.toLowerCase()}</span>
+                  </span>
+                </>
+              )}
+            </>
+          )}
+        </div>
 
         <div className="relative pl-7">
           <div className="absolute top-0 bottom-6 left-0 w-6">
@@ -384,7 +511,13 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             ))}
           </div>
 
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={cn("w-full", isDetail ? "h-44 sm:h-52" : "h-28 sm:h-32")}>
+          <div className="relative">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            preserveAspectRatio="none"
+            onPointerLeave={(e) => { if (e.pointerType === "mouse") setActiveIdx(null); }}
+            className={cn("w-full touch-manipulation", isDetail ? "h-52" : "h-36 sm:h-32")}
+          >
             <defs>
               <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#34451F22" />
@@ -440,11 +573,50 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                 <circle cx={curPath.last[0]} cy={curPath.last[1]} r="4" fill="#34451F" vectorEffect="non-scaling-stroke" />
               </>
             )}
+            {period.labels.map((l, i) => {
+              const b = bandFor(i);
+              return (
+                <rect
+                  key={`hit-${l}`}
+                  x={b.x}
+                  y={0}
+                  width={b.w}
+                  height={H}
+                  fill="transparent"
+                  onPointerDown={() => setActiveIdx(i)}
+                  onPointerEnter={(e) => { if (e.pointerType === "mouse") setActiveIdx(i); }}
+                />
+              );
+            })}
           </svg>
 
-          <div className="mt-1.5 flex justify-between px-0.5">
-            {period.labels.map((l) => (
-              <span key={l} className="text-[12px] font-bold tracking-wide text-[#5E6654] uppercase">
+          {activeIdx !== null && (
+            <div className="pointer-events-none absolute inset-0">
+              <span
+                className="absolute top-0 bottom-0 left-(--x) w-px bg-[#5E6654]/35"
+                style={{ "--x": `${pctX(activeIdx)}%` } as React.CSSProperties}
+              />
+              {activeMarkers.map((m) => (
+                <span
+                  key={m.key}
+                  className="absolute left-(--x) top-(--y) h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-(--c) shadow-sm"
+                  style={{ "--x": `${pctX(activeIdx)}%`, "--y": `${m.y}%`, "--c": m.color } as React.CSSProperties}
+                />
+              ))}
+            </div>
+          )}
+          </div>
+
+          <div className="relative mt-1.5 h-4">
+            {period.labels.map((l, i) => (
+              <span
+                key={l}
+                className={cn(
+                  "absolute left-(--x) text-[12px] font-bold tracking-wide text-[#5E6654] uppercase",
+                  i === 0 ? "translate-x-0" : i === period.n - 1 ? "-translate-x-full" : "-translate-x-1/2",
+                )}
+                style={{ "--x": `${pctX(i)}%` } as React.CSSProperties}
+              >
                 {l}
               </span>
             ))}
@@ -473,7 +645,7 @@ function FilterOpt({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-left text-[13px] font-bold transition-colors",
+        "flex min-h-11 w-full items-center gap-1.5 rounded-lg px-3 py-2 text-left text-[13px] font-bold transition-colors",
         active ? "bg-[#34451F] text-white" : selected ? "bg-[#efe9d8] text-[#34451F]" : "text-[#20231A] hover:bg-[#F4F1E8]",
       )}
     >

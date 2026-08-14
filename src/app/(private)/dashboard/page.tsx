@@ -519,60 +519,58 @@ export default async function DashboardPage() {
             the widest child's min-content and the whole page overflows on a phone. */}
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
 
-          <div className="lg:row-start-1 lg:col-span-2">
+          <section className="space-y-2 lg:row-start-1 lg:col-span-2">
+            <SectionLabel
+              icon={TrendingUp}
+              label={`${format(new Date(), "MMMM")} at a Glance`}
+            />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard
+                label="Bookings"
+                value={analytics.thisMonth.bookings}
+                sub="this month"
+                delta={analytics.deltas.bookings}
+              />
+              <StatCard
+                label="New Guests"
+                value={analytics.guestSplit.newGuests}
+                sub="first-time bookers"
+              />
+              <StatCard
+                label="Returning"
+                value={`${analytics.guestSplit.returningPct}%`}
+                sub="of month's guests"
+              />
+              <StatCard
+                label="Collected"
+                value={`£${analytics.thisMonth.collected.toFixed(2)}`}
+                sub="revenue paid"
+                positive
+                delta={analytics.deltas.collected}
+              />
+            </div>
+          </section>
+
+          <div className="lg:row-start-2 lg:col-span-2">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          <div className="space-y-5 lg:row-start-2 lg:col-start-1">
-            <section className="space-y-2">
-              <SectionLabel
-                icon={TrendingUp}
-                label={`${format(new Date(), "MMMM")} at a Glance`}
-              />
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <StatCard
-                  label="Bookings"
-                  value={analytics.thisMonth.bookings}
-                  sub="this month"
-                  delta={analytics.deltas.bookings}
-                />
-                <StatCard
-                  label="New Guests"
-                  value={analytics.guestSplit.newGuests}
-                  sub="first-time bookers"
-                />
-                <StatCard
-                  label="Returning"
-                  value={`${analytics.guestSplit.returningPct}%`}
-                  sub="of month's guests"
-                />
-                <StatCard
-                  label="Collected"
-                  value={`£${analytics.thisMonth.collected.toFixed(2)}`}
-                  sub="revenue paid"
-                  positive
-                  delta={analytics.deltas.collected}
-                />
+          <section className="space-y-2 lg:row-start-3 lg:col-start-1">
+            <SectionLabel icon={CalendarDays} label="Coming Up" />
+            {comingUp.length > 0 ? (
+              <EventRowListClient items={comingUp} />
+            ) : (
+              <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
+                <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5E6654] opacity-20" />
+                <p className="font-bold text-sm text-[#20231A]">No Upcoming Events</p>
+                <p className="mt-1 text-[13px] font-medium text-[#5E6654]">
+                  Schedule an event in Settings to see it here.
+                </p>
               </div>
-            </section>
+            )}
+          </section>
 
-            <section className="space-y-2">
-              <SectionLabel icon={CalendarDays} label="Coming Up" />
-              {comingUp.length > 0 ? (
-                <EventRowListClient items={comingUp} />
-              ) : (
-                <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
-                  <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5E6654] opacity-20" />
-                  <p className="font-bold text-sm text-[#20231A]">No Upcoming Events</p>
-                  <p className="mt-1 text-[13px] font-medium text-[#5E6654]">
-                    Schedule an event in Settings to see it here.
-                  </p>
-                </div>
-              )}
-            </section>
-          </div>
-
-          <section className="space-y-2 lg:row-start-2 lg:col-start-2">
+          <section className="space-y-2 lg:row-start-3 lg:col-start-2">
             <SectionLabel
               icon={BarChart3}
               label="Trends"
@@ -608,7 +606,7 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          <section className="space-y-2 lg:col-span-2">
+          <section className="space-y-2 lg:row-start-4 lg:col-span-2">
             <SectionLabel icon={Wine} label="Venue Sales" />
             <VenueSalesSection data={venueSales} />
           </section>
