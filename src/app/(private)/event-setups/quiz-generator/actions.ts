@@ -21,6 +21,12 @@ import {
   type YearRange,
 } from '@/lib/quiz/higher-lower'
 import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
+import {
+  originColumns,
+  QUIZ_TEXT_MODEL,
+  QUIZ_IMAGE_MODEL,
+  type QuestionOrigin,
+} from '@/lib/quiz/question-origin'
 import { topicSearchTokens, topicsOverlap } from '@/lib/quiz/topic-match'
 import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
@@ -83,6 +89,8 @@ export type PastQuestionRecord = {
   hint_year?: number | null;
   spotify_track_id?: string | null;
   image_url?: string | null;
+  creation_method?: string | null;
+  ai_model?: string | null;
 }
 
 export type QuizEventSummary = {
@@ -170,8 +178,7 @@ export async function generateQuizAction(
     if (!apiKey) {
       return { error: "API Key is missing. Please check your environment variables." };
     }
-  const model = "gemini-2.5-flash";
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`;
 
 
  const prompt = `Act as the Pub Quiz Master for "Don Fenticas". 
@@ -745,7 +752,8 @@ export async function saveQuizToDatabase(
   questions: QuizQuestion[],
   eventId: number | null,
   topic: string,
-  difficulty: string = ''
+  difficulty: string = '',
+  origin: QuestionOrigin
 ) {
   const supabase = await createClient()
 
@@ -800,6 +808,7 @@ export async function saveQuizToDatabase(
       events_id: eventId,
       quiz_category_configs_id: cid,
       question_no: question_no ?? null,
+      ...originColumns(origin),
       created_by: currentEmployeeId,
       created_at: new Date().toISOString(),
       updated_by: currentEmployeeId,
@@ -1008,8 +1017,7 @@ export async function generateMusicSnippetsAction(
       return { error: 'API Key is missing. Please check your environment variables.' }
     }
 
-    const model = 'gemini-2.5-flash'
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`
 
     const topicLine = topic.trim()
       ? `- Focus on this theme/genre: "${topic.trim()}".`
@@ -1164,7 +1172,8 @@ export async function saveMusicSnippetsAction(
   categoryConfigId: number,
   topic: string = '',
   difficulty: string = '',
-  startYear?: number
+  startYear: number | undefined,
+  origin: QuestionOrigin
 ) {
   const supabase = await createClient()
 
@@ -1221,6 +1230,7 @@ export async function saveMusicSnippetsAction(
       events_id: eventId,
       quiz_category_configs_id: categoryConfigId,
       question_no: baseNo + insertData.length + 1,
+      ...originColumns(origin),
       created_by: currentEmployeeId,
       created_at: now,
       updated_by: currentEmployeeId,
@@ -1535,7 +1545,7 @@ function pictureImagePrompt(answer: string, topic?: string, imageNotes?: string)
 async function requestImage(prompt: string, label: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return null
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_IMAGE_MODEL}:generateContent?key=${apiKey}`
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -1681,8 +1691,7 @@ export async function generatePictureRoundAction(
     if (excludeAnswers?.length) {
       existingAnswers = [...existingAnswers, ...excludeAnswers]
     }
-    const model = 'gemini-2.5-flash'
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`
 
     const difficultyGuide = difficulty === 'Easy'
       ? 'very well-known, instantly recognisable by almost everyone'
@@ -1769,7 +1778,8 @@ export async function savePictureRoundAction(
   categoryName: string,
   categoryConfigId: number,
   questionText: string,
-  difficulty: string = ''
+  difficulty: string = '',
+  origin: QuestionOrigin
 ): Promise<void> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -1832,6 +1842,7 @@ export async function savePictureRoundAction(
       events_id: eventId,
       quiz_category_configs_id: categoryConfigId,
       question_no: baseNo + i + 1,
+      ...originColumns(origin),
       created_by: currentEmployeeId,
       created_at: now,
       updated_by: currentEmployeeId,

@@ -24,6 +24,7 @@ import { SpotifyPlayer } from "@/components/spotify-player";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
 import { describeStep, type YearRange } from "@/lib/quiz/higher-lower";
 import { roundNoun, type RoundKind } from "@/lib/quiz/round-kind";
+import { MANUAL_ORIGIN } from "@/lib/quiz/question-origin";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
@@ -184,7 +185,8 @@ export default function ManualEntry({
           [{ question: question.trim(), answer: answer.trim(), category: categoryName }],
           eventId,
           topic,
-          difficulty
+          difficulty,
+          MANUAL_ORIGIN
         );
       } else if (kind === "song") {
         const parsedYear = parseInt(year, 10);
@@ -223,7 +225,8 @@ export default function ManualEntry({
           categoryConfigId,
           topic,
           difficulty,
-          chainStart
+          chainStart,
+          MANUAL_ORIGIN
         );
 
         if (result?.skipped) {
@@ -253,7 +256,8 @@ export default function ManualEntry({
           categoryName,
           categoryConfigId,
           topic.trim(),
-          difficulty
+          difficulty,
+          MANUAL_ORIGIN
         );
       }
 

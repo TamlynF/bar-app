@@ -94,6 +94,7 @@ import {
 } from "@/lib/quiz/round-stages";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
 import { roundKind, roundNoun } from "@/lib/quiz/round-kind";
+import { AI_ORIGIN } from "@/lib/quiz/question-origin";
 import ManualEntry from "./manual-entry";
 import {
   buildChain,
@@ -744,7 +745,8 @@ export default function QuizRoundSheet({
           category_name,
           categoryConfigId,
           effectiveTopic,
-          difficulty
+          difficulty,
+          AI_ORIGIN
         );
       } else if (kind === "song") {
         const result = await saveMusicSnippetsAction(
@@ -759,7 +761,8 @@ export default function QuizRoundSheet({
           categoryConfigId,
           effectiveTopic,
           difficulty,
-          chainStart
+          chainStart,
+          AI_ORIGIN
         );
         playlistSynced = !result?.needsConnect && !!result?.ok;
         if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
@@ -777,7 +780,8 @@ export default function QuizRoundSheet({
             .map((q) => ({ ...q, category: category_name })),
           eventId,
           effectiveTopic,
-          difficulty
+          difficulty,
+          AI_ORIGIN
         );
       }
 

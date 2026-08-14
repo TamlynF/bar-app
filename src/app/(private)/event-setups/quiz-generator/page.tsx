@@ -57,6 +57,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SpotifyPlayer, isSpotifyConnected } from '@/components/spotify-player'
+import { AI_ORIGIN } from '@/lib/quiz/question-origin'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -370,7 +371,7 @@ export default function QuizGeneratorPage() {
       setIsSaving(true)
       try {
         const storedPictures = await uploadPictureDrafts(selectedData, parseInt(selectedEventId))
-        await savePictureRoundAction(storedPictures, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty)
+        await savePictureRoundAction(storedPictures, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty, AI_ORIGIN)
         setPictureItems([])
         setSelectedPictureIndices(new Set())
         await finishApproval(selectedData.length)
@@ -399,7 +400,9 @@ export default function QuizGeneratorPage() {
           category,
           selectedCategoryConfig!.id,
           topic,
-          difficulty
+          difficulty,
+          undefined,
+          AI_ORIGIN
         )
         if (result?.needsConnect) {
           toast.warning("Connect Spotify on the event page to build the playlist.")
@@ -425,7 +428,8 @@ export default function QuizGeneratorPage() {
         selectedData.map(q => ({ ...q, category })),
         parseInt(selectedEventId),
         topic,
-        difficulty
+        difficulty,
+        AI_ORIGIN
       )
       setQuestions([])
       setSelectedIndices(new Set())
