@@ -22,7 +22,12 @@ import {
 } from "@/lib/square-order";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
-import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import {
+  buildPaymentPendingEmail,
+  paymentPendingMergeValues,
+} from "@/lib/payment-pending-email";
+import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
@@ -241,7 +246,7 @@ export async function createEventBooking(formData: FormData) {
 
     if (isFree) {
       await sendEventBookingEmail(
-        newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
+        supabase, newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
       );
       await notifyAdminBookingCreated(newBooking.id);
       await updateFullyBookedStatus(supabase, eventId);
@@ -305,7 +310,7 @@ export async function createEventBooking(formData: FormData) {
       .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
-    await sendPaymentPendingEmail({
+    await sendPaymentPendingEmail(supabase, {
       bookingId: newBooking.id,
       eventId,
       email,
@@ -327,19 +332,34 @@ export async function createEventBooking(formData: FormData) {
   }
 }
 
-async function sendPaymentPendingEmail(args: {
-  bookingId: number;
-  eventId: number;
-  email: string;
-  name: string;
-  eventTitle: string;
-  eventDate: string;
-  groupSize: number;
-  amountDue: number;
-}) {
+async function sendPaymentPendingEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  args: {
+    bookingId: number;
+    eventId: number;
+    email: string;
+    name: string;
+    eventTitle: string;
+    eventDate: string;
+    groupSize: number;
+    amountDue: number;
+  }
+) {
+  const slots = await renderTemplate(
+    supabase,
+    "booking.payment_pending",
+    paymentPendingMergeValues({
+      name: args.name,
+      eventTitle: args.eventTitle,
+      eventDate: args.eventDate,
+      groupSize: args.groupSize,
+      amountDue: args.amountDue,
+    })
+  );
+  if (!slots) return;
+
   const { subject, html } = buildPaymentPendingEmail({
-    name: args.name,
-    eventTitle: args.eventTitle,
+    slots,
     eventDate: args.eventDate,
     groupSize: args.groupSize,
     amountDue: args.amountDue,
@@ -363,6 +383,7 @@ async function sendPaymentPendingEmail(args: {
 }
 
 async function sendEventBookingEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   bookingId: number,
   email: string,
   name: string,
@@ -375,19 +396,29 @@ async function sendEventBookingEmail(
   groupNameRow: { label: string; value: string } | null
 ) {
   const manageUrl = `${appUrl}/manage-booking/${bookingId}`;
+  const partySize = `${groupSize} ${groupSize === 1 ? "Person" : "People"}`;
 
-  const subject = status === "confirmed"
-    ? `🎫 Booking Confirmed: ${eventTitle} @ Don Fenticas`
-    : `📋 You're on the Waitlist: ${eventTitle} @ Don Fenticas`;
+  const slots = await renderTemplate(
+    supabase,
+    status === "confirmed" ? "booking.event.confirmed" : "booking.event.waitlisted",
+    {
+      customerName: name,
+      eventTitle,
+      eventDate: formatEventDate(bookingDate),
+      groupName: groupNameRow?.value ?? "",
+      groupSize: partySize,
+      bookingId: String(bookingId),
+      contactEmail: await getContactEmail(),
+    }
+  );
+  if (!slots) return;
 
-  const content = status === "confirmed"
-    ? `Your spot for <strong>${eventTitle}</strong> is officially secured for ${groupSize} ${groupSize === 1 ? "person" : "people"}.`
-    : `We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!`;
-
+  /* The rows this booking actually has - the money pair only appears once
+     something has been charged. */
   const detailRows = [
     { label: "📅 Date", value: format(new Date(`${bookingDate}T00:00:00`), "EEE, d MMM yyyy") },
     ...(groupNameRow ? [{ label: `🏷️ ${groupNameRow.label}`, value: groupNameRow.value }] : []),
-    { label: "👥 Tickets", value: `${groupSize} ${groupSize === 1 ? "Person" : "People"}` },
+    { label: "👥 Tickets", value: partySize },
     ...(Number(totalAmount) > 0
       ? [
           { label: "💷 Total", value: `£${Number(totalAmount).toFixed(2)}` },
@@ -396,45 +427,7 @@ async function sendEventBookingEmail(
       : []),
   ];
 
-  const detailRowsHtml = detailRows
-    .map((row, index) => {
-      const spacing = index === detailRows.length - 1 ? "" : "padding-bottom: 16px; ";
-      return `
-              <tr>
-                <td style="${spacing}color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">${row.label}</td>
-                <td style="${spacing}text-align: right; font-weight: 900; color: #1F1F1A;">${row.value}</td>
-              </tr>`;
-    })
-    .join("");
-
-  const html = `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
-        <div style="background-color: #26300D; padding: 32px 16px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${eventTitle}</h1>
-          <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Don Fenticas</p>
-        </div>
-        <div style="padding: 32px 20px; color: #1F1F1A;">
-          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">Hey ${name}!</h2>
-          <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">${content}</p>
-          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 20px 16px; margin: 28px 0;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">${detailRowsHtml}
-            </table>
-          </div>
-          <div style="text-align: center; margin: 40px 0 20px 0;">
-            <a href="${manageUrl}" style="background-color: #FDCC4B; color: #26300D; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">Manage Booking</a>
-          </div>
-          <p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">
-            Button not working? Copy and paste this link:<br>
-            <a href="${manageUrl}" style="color: #26300D; text-decoration: underline; margin-top: 8px; display: inline-block;">${manageUrl}</a>
-          </p>
-        </div>
-        <div style="background-color: #1F1F1A; padding: 30px; text-align: center;">
-          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">Don Fenticas · Licensed Venue</p>
-        </div>
-      </div>
-    </div>
-  `;
+  const { subject, html } = buildBookingConfirmedEmail({ slots, rows: detailRows, manageUrl });
 
   try {
     const { error: resendError } = await resend.emails.send({

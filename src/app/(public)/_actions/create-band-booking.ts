@@ -5,8 +5,13 @@ import { upsertContactByEmail, upsertMusicActFromBand } from "@/lib/music-acts";
 import { getAvailableBandDates } from "@/lib/band-availability-data";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
+import { renderTemplate } from "@/lib/email/resolve";
+import { plainLayout } from "@/lib/email/layout";
+import { escapeHtml } from "@/lib/email/escape";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -103,84 +108,76 @@ export async function createBandBooking(data: BandBookingData) {
   }
 
   await Promise.allSettled([
-    sendBookerEmail(data.booker_name, data.email),
-    sendAdminEmail(data, record.id),
+    sendBookerEmail(supabase, data.booker_name, data.email),
+    sendAdminEmail(supabase, data, record.id),
   ]);
 
   return { success: true, id: record.id };
 }
 
-async function sendBookerEmail(name: string, email: string) {
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">Hey ${name}!</h2>
-        <p>Thanks for applying to perform at <strong>Don Fenticas</strong>. We've received your application and our team will review it shortly.</p>
-        <p>We'll be in touch via email once we've had a chance to review your details.</p>
-        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas - Live Music Venue</p>
-        </div>
-        <p style="font-size:12px;color:#6b7280;">If you have any questions, reply to this email.</p>
-      </div>
-    </div>`;
+async function sendBookerEmail(supabase: ServerClient, name: string, email: string) {
+  const slots = await renderTemplate(supabase, "band.application.customer", {
+    customerName: name,
+  });
+  if (!slots) return;
 
   await resend.emails.send({
     from: EMAIL_FROM,
     to: email,
-    subject: "Band Application Received - Don Fenticas",
-    html,
+    subject: slots.subject,
+    html: plainLayout({ slots }),
   });
 }
 
-async function sendAdminEmail(data: BandBookingData, id: string) {
+async function sendAdminEmail(supabase: ServerClient, data: BandBookingData, id: string) {
+  const slots = await renderTemplate(supabase, "band.application.admin", {
+    bookerName: data.booker_name,
+  });
+  if (!slots) return;
+
+  /* Two variable-length lists and several optional fields, all of it typed into
+     a public form - generated and escaped rather than authored. */
   const socials = Object.entries(data.social_links)
     .filter(([, v]) => v)
-    .map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`)
+    .map(([k, v]) => `<li><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(v))}</li>`)
     .join("");
 
   const videos = data.video_urls
     .filter(Boolean)
     .map((u, i) => {
       const desc = data.video_descriptions?.[i]?.trim();
-      return `<li>${u}${desc ? ` - ${desc}` : ""}</li>`;
+      return `<li>${escapeHtml(u)}${desc ? ` - ${escapeHtml(desc)}` : ""}</li>`;
     })
     .join("");
+
   const dates = data.preferred_dates.filter(Boolean).join(", ") || "Not specified";
   const requestUrl = `${appUrl}/event-bookings/music-bookings?open=${id}`;
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">New Band Application</h2>
-        <p>A new band/artist has applied to perform at Don Fenticas.</p>
-        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p><strong>Act / Group Name:</strong> ${data.group_name}</p>
-          <p><strong>Type:</strong> ${data.type}</p>
-          ${data.genre ? `<p><strong>Genre:</strong> ${data.genre}</p>` : ""}
-          ${data.payment_amount != null ? `<p><strong>Expected Payment:</strong> £${data.payment_amount}</p>` : ""}
-          <p><strong>Booker Name:</strong> ${data.booker_name}</p>
-          <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Phone:</strong> ${data.phone_no || "-"}</p>
-          <p><strong>Preferred Dates:</strong> ${dates}</p>
-          ${socials ? `<p><strong>Social Links:</strong></p><ul>${socials}</ul>` : ""}
-          ${videos ? `<p><strong>Video Links:</strong></p><ul>${videos}</ul>` : ""}
-          ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ""}
-        </div>
-        <div style="text-align:center;margin:32px 0 20px 0;">
-          <a href="${requestUrl}" style="background-color:#FDCC4B;color:#26300D;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:900;display:inline-block;text-transform:uppercase;letter-spacing:1.5px;">View Request</a>
-        </div>
-        <p style="font-size:12px;color:#6b7280;text-align:center;">
-          Button not working? Copy and paste this link:<br>
-          <a href="${requestUrl}" style="color:#26300D;text-decoration:underline;margin-top:8px;display:inline-block;">${requestUrl}</a>
-        </p>
-        <p style="font-size:12px;color:#6b7280;">Application ID: ${id}</p>
-      </div>
-    </div>`;
+  const panelHtml = [
+    `<p><strong>Act / Group Name:</strong> ${escapeHtml(data.group_name)}</p>`,
+    `<p><strong>Type:</strong> ${escapeHtml(data.type)}</p>`,
+    data.genre ? `<p><strong>Genre:</strong> ${escapeHtml(data.genre)}</p>` : "",
+    data.payment_amount != null
+      ? `<p><strong>Expected Payment:</strong> £${escapeHtml(String(data.payment_amount))}</p>`
+      : "",
+    `<p><strong>Booker Name:</strong> ${escapeHtml(data.booker_name)}</p>`,
+    `<p><strong>Email:</strong> ${escapeHtml(data.email)}</p>`,
+    `<p><strong>Phone:</strong> ${escapeHtml(data.phone_no || "-")}</p>`,
+    `<p><strong>Preferred Dates:</strong> ${escapeHtml(dates)}</p>`,
+    socials ? `<p><strong>Social Links:</strong></p><ul>${socials}</ul>` : "",
+    videos ? `<p><strong>Video Links:</strong></p><ul>${videos}</ul>` : "",
+    data.notes ? `<p><strong>Notes:</strong> ${escapeHtml(data.notes)}</p>` : "",
+  ].join("");
 
   await resend.emails.send({
     from: EMAIL_FROM,
     to: ADMIN_EMAIL,
-    subject: `New Band Application - ${data.booker_name}`,
-    html,
+    subject: slots.subject,
+    html: plainLayout({
+      slots,
+      panelHtml,
+      ctaUrl: requestUrl,
+      trailer: `Application ID: ${escapeHtml(id)}`,
+    }),
   });
 }

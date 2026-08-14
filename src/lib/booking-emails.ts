@@ -1,10 +1,17 @@
 import { format } from "date-fns";
+import {
+  brandLayout,
+  changeRowsHtml,
+  detailRowsHtml,
+  type ChangeRow,
+  type DetailRow,
+} from "@/lib/email/layout";
+import type { MergeValues, TemplateSlots } from "@/lib/email/render";
 
 export { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
+export type { DetailRow };
 
 export type BookingEmail = { subject: string; html: string };
-
-export type DetailRow = { label: string; value: string };
 
 export interface BookingSnapshot {
   bookingId: number | string;
@@ -21,14 +28,14 @@ export interface BookingSnapshot {
   paidAmount?: number | null;
 }
 
-export type BookingChange = { label: string; from: string; to: string };
+export type BookingChange = ChangeRow;
 
 export function formatEventDate(date: string | null): string {
   if (!date) return "TBC";
   return format(new Date(`${date}T00:00:00`), "EEE, d MMM yyyy");
 }
 
-function people(size: number | null): string {
+export function people(size: number | null): string {
   if (size == null) return "-";
   return `${size} ${size === 1 ? "Person" : "People"}`;
 }
@@ -36,6 +43,21 @@ function people(size: number | null): string {
 function blank(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : "-";
+}
+
+/* What the templates for every booking scenario can refer to. Kept next to the
+   snapshot it is derived from, so a new field is added in one place. */
+export function bookingMergeValues(b: BookingSnapshot): MergeValues {
+  return {
+    customerName: b.customerName,
+    customerEmail: b.customerEmail,
+    eventTitle: b.eventTitle,
+    eventDate: formatEventDate(b.eventDate),
+    groupName: b.groupName?.trim() ?? "",
+    groupSize: people(b.groupSize),
+    groupSizeLower: people(b.groupSize).toLowerCase(),
+    bookingId: String(b.bookingId),
+  };
 }
 
 export function describeBookingChanges(
@@ -75,87 +97,9 @@ export function describeBookingChanges(
   return changes;
 }
 
-function detailRowsHtml(rows: DetailRow[]): string {
-  return rows
-    .map((row, index) => {
-      const spacing = index === rows.length - 1 ? "" : "padding-bottom: 16px; ";
-      return `
-              <tr>
-                <td style="${spacing}color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">${row.label}</td>
-                <td style="${spacing}text-align: right; font-weight: 900; color: #1F1F1A;">${row.value}</td>
-              </tr>`;
-    })
-    .join("");
-}
-
-function changeRowsHtml(changes: BookingChange[]): string {
-  return changes
-    .map(
-      (change) => `
-              <tr>
-                <td style="padding-bottom: 6px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900;">${change.label}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #1F1F1A; font-weight: 900;">
-                  <span style="color: #9A9483; text-decoration: line-through;">${change.from}</span>
-                  <span style="color: #5F624F;"> &rarr; </span>
-                  <span>${change.to}</span>
-                </td>
-              </tr>`
-    )
-    .join("");
-}
-
-function layout(p: {
-  heading: string;
-  eyebrow?: string;
-  greeting: string;
-  intro: string;
-  bodyHtml: string;
-  ctaLabel?: string;
-  ctaUrl?: string;
-  footnote?: string;
-}): string {
-  const cta = p.ctaUrl && p.ctaLabel
-    ? `
-          <div style="text-align: center; margin: 40px 0 20px 0;">
-            <a href="${p.ctaUrl}" style="background-color: #FDCC4B; color: #26300D; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">${p.ctaLabel}</a>
-          </div>
-          <p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">
-            Button not working? Copy and paste this link:<br>
-            <a href="${p.ctaUrl}" style="color: #26300D; text-decoration: underline; margin-top: 8px; display: inline-block;">${p.ctaUrl}</a>
-          </p>`
-    : "";
-
-  const footnote = p.footnote
-    ? `<p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">${p.footnote}</p>`
-    : "";
-
-  return `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
-        <div style="background-color: #26300D; padding: 32px 16px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${p.heading}</h1>
-          <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">${p.eyebrow ?? "Don Fenticas"}</p>
-        </div>
-        <div style="padding: 32px 20px; color: #1F1F1A;">
-          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">${p.greeting}</h2>
-          <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">${p.intro}</p>
-          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 20px 16px; margin: 28px 0;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">${p.bodyHtml}
-            </table>
-          </div>${cta}
-          ${footnote}
-        </div>
-        <div style="background-color: #1F1F1A; padding: 30px; text-align: center;">
-          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">Don Fenticas · Licensed Venue</p>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function bookingDetailRows(b: BookingSnapshot): DetailRow[] {
+/* The detail block is generated, not authored: which rows appear depends on what
+   the booking actually has, and the money pair only shows on a paid booking. */
+export function bookingDetailRows(b: BookingSnapshot): DetailRow[] {
   return [
     { label: "Date", value: formatEventDate(b.eventDate) },
     ...(b.groupName?.trim()
@@ -175,68 +119,6 @@ function bookingDetailRows(b: BookingSnapshot): DetailRow[] {
   ];
 }
 
-export function buildBookingConfirmedEmail(p: {
-  subject: string;
-  eventTitle: string;
-  greeting: string;
-  intro: string;
-  rows: DetailRow[];
-  manageUrl: string;
-  footnote?: string;
-}): BookingEmail {
-  return {
-    subject: p.subject,
-    html: layout({
-      heading: p.eventTitle,
-      greeting: p.greeting,
-      intro: p.intro,
-      bodyHtml: detailRowsHtml(p.rows),
-      ctaLabel: "Manage Booking",
-      ctaUrl: p.manageUrl,
-      footnote: p.footnote,
-    }),
-  };
-}
-
-export function buildBookingChangedEmail(p: {
-  booking: BookingSnapshot;
-  changes: BookingChange[];
-  manageUrl: string;
-  changedByAdmin?: boolean;
-}): BookingEmail {
-  return {
-    subject: `Booking updated: ${p.booking.eventTitle} @ Don Fenticas`,
-    html: layout({
-      heading: p.booking.eventTitle,
-      greeting: `Hey ${p.booking.customerName}!`,
-      intro: p.changedByAdmin
-        ? "We've updated your booking. Here's what changed - if this doesn't look right, please get in touch."
-        : "Your booking has been updated. Here's what changed.",
-      bodyHtml: changeRowsHtml(p.changes),
-      ctaLabel: "View Booking",
-      ctaUrl: p.manageUrl,
-    }),
-  };
-}
-
-export function buildBookingCancelledEmail(p: {
-  booking: BookingSnapshot;
-  cancelledByAdmin?: boolean;
-}): BookingEmail {
-  return {
-    subject: `Booking cancelled: ${p.booking.eventTitle} @ Don Fenticas`,
-    html: layout({
-      heading: p.booking.eventTitle,
-      greeting: `Hey ${p.booking.customerName},`,
-      intro: p.cancelledByAdmin
-        ? "Your booking has been cancelled by the venue. If you weren't expecting this, please get in touch."
-        : "Your booking has been cancelled. Sorry to miss you - you're welcome back any time.",
-      bodyHtml: detailRowsHtml(bookingDetailRows(p.booking)),
-      footnote: "If you paid for this booking, refunds are handled by our team - please allow 3–5 business days.",
-    }),
-  };
-}
-
 function adminContactRows(b: BookingSnapshot): DetailRow[] {
   return [
     { label: "Reference", value: `#${b.bookingId}` },
@@ -245,57 +127,93 @@ function adminContactRows(b: BookingSnapshot): DetailRow[] {
   ];
 }
 
+/* Every builder below takes copy that has already been resolved from the
+   database and rendered - they compose the generated half around it. */
+
+export function buildBookingConfirmedEmail(p: {
+  slots: TemplateSlots;
+  rows: DetailRow[];
+  manageUrl: string;
+}): BookingEmail {
+  return {
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
+      bodyHtml: detailRowsHtml(p.rows),
+      ctaUrl: p.manageUrl,
+    }),
+  };
+}
+
+export function buildBookingChangedEmail(p: {
+  slots: TemplateSlots;
+  changes: BookingChange[];
+  manageUrl: string;
+}): BookingEmail {
+  return {
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
+      bodyHtml: changeRowsHtml(p.changes),
+      ctaUrl: p.manageUrl,
+    }),
+  };
+}
+
+export function buildBookingCancelledEmail(p: {
+  slots: TemplateSlots;
+  booking: BookingSnapshot;
+}): BookingEmail {
+  return {
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
+      bodyHtml: detailRowsHtml(bookingDetailRows(p.booking)),
+    }),
+  };
+}
+
 export function buildAdminNewBookingEmail(p: {
+  slots: TemplateSlots;
   booking: BookingSnapshot;
   adminUrl: string;
 }): BookingEmail {
-  console.log("buildAdminNewBookingEmail", JSON.stringify(p, null, 2), "adminUrl:", p.adminUrl);
   return {
-    subject: `New booking - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (${people(p.booking.groupSize)})`,
-    html: layout({
-      heading: "New Booking",
-      eyebrow: p.booking.eventTitle,
-      greeting: "A booking just came in",
-      intro: `${p.booking.customerName} booked ${people(p.booking.groupSize).toLowerCase()} for <strong>${p.booking.eventTitle}</strong>.`,
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
       bodyHtml: detailRowsHtml([...adminContactRows(p.booking), ...bookingDetailRows(p.booking)]),
-      ctaLabel: "Open In Admin",
       ctaUrl: p.adminUrl,
     }),
   };
 }
 
 export function buildAdminBookingChangedEmail(p: {
+  slots: TemplateSlots;
   booking: BookingSnapshot;
   changes: BookingChange[];
   adminUrl: string;
 }): BookingEmail {
   return {
-    subject: `Booking changed - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
-    html: layout({
-      heading: "Booking Changed",
-      eyebrow: p.booking.eventTitle,
-      greeting: "A customer edited their booking",
-      intro: `${p.booking.customerName} updated booking <strong>#${p.booking.bookingId}</strong> for <strong>${p.booking.eventTitle}</strong>.`,
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
       bodyHtml: [changeRowsHtml(p.changes), detailRowsHtml(adminContactRows(p.booking))].join(""),
-      ctaLabel: "Open In Admin",
       ctaUrl: p.adminUrl,
     }),
   };
 }
 
 export function buildAdminBookingCancelledEmail(p: {
+  slots: TemplateSlots;
   booking: BookingSnapshot;
   adminUrl: string;
 }): BookingEmail {
   return {
-    subject: `Booking cancelled - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
-    html: layout({
-      heading: "Booking Cancelled",
-      eyebrow: p.booking.eventTitle,
-      greeting: "A booking was cancelled",
-      intro: `${p.booking.customerName} cancelled booking <strong>#${p.booking.bookingId}</strong> for <strong>${p.booking.eventTitle}</strong>. Any table held for it has been released.`,
+    subject: p.slots.subject,
+    html: brandLayout({
+      slots: p.slots,
       bodyHtml: detailRowsHtml([...adminContactRows(p.booking), ...bookingDetailRows(p.booking)]),
-      ctaLabel: "Open In Admin",
       ctaUrl: p.adminUrl,
     }),
   };

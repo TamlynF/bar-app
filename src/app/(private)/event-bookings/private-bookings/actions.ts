@@ -9,7 +9,10 @@ import { planPrivateEventSync } from "@/lib/private-event-sync";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
 import { eventSlotIsComplete } from "@/lib/event-active";
-import { buildPrivateHireOutcomeEmail } from "@/lib/private-hire-emails";
+import { privateHireScenarioKey } from "@/lib/private-hire-emails";
+import { renderTemplate } from "@/lib/email/resolve";
+import { plainLayout, plainNote } from "@/lib/email/layout";
+import { escapeHtml } from "@/lib/email/escape";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -233,7 +236,7 @@ export async function updatePrivateHireStatus(
   }
 
   if (status !== "pending") {
-    await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
+    await sendOutcomeEmail(supabase, record.full_name, record.email, status, adminNotes);
   }
 
   revalidatePath("/event-bookings/private-bookings");
@@ -242,23 +245,32 @@ export async function updatePrivateHireStatus(
   revalidatePath("/event-setups/events");
 }
 
+/* Lets the status dialog preview exactly what will be sent, rather than an
+   approximation built from copy compiled into the page. */
+export async function privateHireEmailSlotsAction(
+  outcome: "confirmed" | "cancelled",
+  name: string
+) {
+  const supabase = await createClient();
+  return renderTemplate(supabase, privateHireScenarioKey(outcome), { customerName: name });
+}
+
 async function sendOutcomeEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   name: string,
   email: string,
   status: "confirmed" | "cancelled",
   notes?: string | null
 ) {
-  const e = buildPrivateHireOutcomeEmail({ name, outcome: status, notes });
+  const slots = await renderTemplate(supabase, privateHireScenarioKey(status), {
+    customerName: name,
+  });
+  if (!slots) return;
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">${e.greeting}</h2>
-        ${e.body.map((p) => `<p>${p}</p>`).join("")}
-        ${e.noteLabel ? `<div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;"><p style="margin:0;"><strong>Note from our team:</strong> ${e.noteLabel}</p></div>` : ""}
-        <p style="font-size:12px;color:#6b7280;">If you have questions, please reply to this email.</p>
-      </div>
-    </div>`;
-
-  await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to: email,
+    subject: slots.subject,
+    html: plainLayout({ slots, bodyHtml: plainNote(escapeHtml(notes?.trim() || "")) }),
+  });
 }

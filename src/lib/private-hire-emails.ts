@@ -1,3 +1,5 @@
+import { toParagraphs, type TemplateSlots } from "@/lib/email/render";
+
 export type PrivateHireEmail = {
   subject: string;
   heading: string;
@@ -6,26 +8,21 @@ export type PrivateHireEmail = {
   noteLabel?: string;
 };
 
+export const privateHireScenarioKey = (outcome: "confirmed" | "cancelled") =>
+  outcome === "confirmed" ? "private_hire.confirmed" : "private_hire.cancelled";
+
+/* Turns resolved copy into the shape the admin preview renders. The note is
+   typed by staff when they change the status, so it never lives in the
+   template - only the wording around it does. */
 export function buildPrivateHireOutcomeEmail(p: {
-  name: string;
-  outcome: "confirmed" | "cancelled";
+  slots: TemplateSlots;
   notes?: string | null;
 }): PrivateHireEmail {
-  const isConfirmed = p.outcome === "confirmed";
-
   return {
-    subject: isConfirmed
-      ? "Your Private Hire Enquiry Has Been Confirmed! 🎉"
-      : "Update on Your Private Hire Enquiry - Don Fenticas",
-    heading: isConfirmed ? "You're Confirmed!" : "Enquiry Update",
-    greeting: `Hi ${p.name}!`,
-    body: isConfirmed
-      ? [
-          "We're delighted to confirm your private hire booking at Don Fenticas. Our team will be in touch shortly with the next steps.",
-        ]
-      : [
-          "Thank you for your private hire enquiry. Unfortunately we're unable to accommodate your request at this time.",
-        ],
+    subject: p.slots.subject,
+    heading: p.slots.greeting,
+    greeting: p.slots.greeting,
+    body: toParagraphs(p.slots.intro),
     noteLabel: p.notes?.trim() || "",
   };
 }

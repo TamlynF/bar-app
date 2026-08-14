@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
+import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite, bandEmailSlotsAction } from "../actions";
 import type { BandStatus } from "../actions";
 import {
   ChevronDown,
@@ -52,7 +52,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
 import { type BandLifecycleStage } from "@/lib/band-lifecycle";
-import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmail } from "@/lib/band-emails";
+import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
@@ -514,6 +514,9 @@ function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to:
           {email.feeLabel && <p className="mt-1 text-xs font-bold text-[#5E6654]">{email.feeLabel}</p>}
         </div>
       )}
+      {email.outro.map((p, i) => (
+        <p key={`outro-${i}`} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
+      ))}
       {email.noteLabel && (
         <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
           <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Note from our team</p>
@@ -1135,7 +1138,8 @@ export function BandBookingCard({
           placeholder: string;
           slotLabel?: string;
           destructive?: boolean;
-          build: (note: string) => BandEmail;
+          kind: BandEmailKind;
+          paymentAmount?: number | null;
         }
       >
     > = {
@@ -1146,12 +1150,8 @@ export function BandBookingCard({
         label: "Message to the band (optional)",
         placeholder: "Anything they should know about the slot, load-in, kit...",
         slotLabel: "Proposed Slot",
-        build: (note) =>
-          buildOfferEmail({
-            ...slot,
-            paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
-            notes: note,
-          }),
+        kind: "offered",
+        paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
       },
       booked: {
         title: "Book & email band?",
@@ -1160,7 +1160,7 @@ export function BandBookingCard({
         label: "Message to the band (optional)",
         placeholder: "Anything they should know before the night...",
         slotLabel: "Performance Date",
-        build: (note) => buildOutcomeEmail({ ...slot, outcome: "confirmed", notes: note }),
+        kind: "booked",
       },
       declined: {
         title: "Decline & email band?",
@@ -1169,12 +1169,27 @@ export function BandBookingCard({
         label: "Reason for declining (optional)",
         placeholder: "Shared with the band in the email. Leave blank to say nothing.",
         destructive: true,
-        build: (note) => buildOutcomeEmail({ ...slot, outcome: "cancelled", notes: note }),
+        kind: "declined",
       },
     };
 
     const d = dialogs[newStatus];
     if (!d) return { ok: true, note: adminNotes };
+
+    /* Fetched rather than composed here, so the preview shows the copy that
+       will actually be sent - including anything changed on the settings page. */
+    const slots = await bandEmailSlotsAction(d.kind, request.booker_name, request.group_name);
+    if (!slots) {
+      return {
+        ok: await confirm({
+          title: d.title,
+          description: `${d.description} This email is currently switched off, so nothing will be sent.`,
+          confirmLabel: d.confirmLabel,
+          variant: d.destructive ? "destructive" : undefined,
+        }),
+        note: adminNotes,
+      };
+    }
 
     const initial = "";
     noteDraft.current = initial;
@@ -1189,7 +1204,17 @@ export function BandBookingCard({
           onNoteChange={(v) => {
             noteDraft.current = v;
           }}
-          build={d.build}
+          build={(note) =>
+            buildBandEmail({
+              slots,
+              kind: d.kind,
+              date: slot.date,
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              paymentAmount: d.paymentAmount,
+              notes: note,
+            })
+          }
           to={to}
           label={d.label}
           placeholder={d.placeholder}
@@ -1269,20 +1294,31 @@ export function BandBookingCard({
           const c = await findClashes();
           if (c.length) return;
 
-          const preview = buildRescheduleEmail({
-            name: request.booker_name,
-            groupName: request.group_name,
-            date: selectedDate || null,
-            startTime: selectedStartTime || null,
-            endTime: selectedEndTime || null,
-          });
+          const slots = await bandEmailSlotsAction(
+            "rescheduled",
+            request.booker_name,
+            request.group_name
+          );
 
           const ok = await confirm({
             title: "Update slot & notify band",
-            description:
-              "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:",
+            description: slots
+              ? "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:"
+              : "This moves the booking back to Offered and takes the linked event off the schedule. The re-confirm email is switched off, so nothing will be sent.",
             confirmLabel: "Update & Email",
-            content: <EmailPreview email={preview} to={request.email} slotLabel="New Slot" />,
+            content: slots ? (
+              <EmailPreview
+                email={buildBandEmail({
+                  slots,
+                  kind: "rescheduled",
+                  date: selectedDate || null,
+                  startTime: selectedStartTime || null,
+                  endTime: selectedEndTime || null,
+                })}
+                to={request.email}
+                slotLabel="New Slot"
+              />
+            ) : undefined,
           });
           if (!ok) return;
 

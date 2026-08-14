@@ -4,6 +4,7 @@ import { settlePaidBooking } from "@/lib/settle-paid-booking";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
 
@@ -106,29 +107,36 @@ export async function POST(req: NextRequest) {
     if (contact?.email) {
       const manageUrl = `${APP_URL}/book/bingo/manage-booking/${booking.id}`;
 
-      const { subject, html } = buildBookingConfirmedEmail({
-        subject: "Music Bingo Booking Confirmed! 🎵",
+      const partySize = `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`;
+
+      const slots = await renderTemplate(supabase, "booking.bingo.confirmed", {
+        customerName: contact.full_name,
         eventTitle: eventRow?.title ?? "Music Bingo",
-        greeting: `You're in, ${contact.full_name}!`,
-        intro: "Your Music Bingo booking is confirmed and paid.",
-        rows: [
-          { label: "📅 Date", value: formatEventDate(eventRow?.date ?? null) },
-          {
-            label: "👥 People",
-            value: `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`,
-          },
-          { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
-        ],
-        manageUrl,
-        footnote: `Questions? Email us at ${await getContactEmail()}`,
+        eventDate: formatEventDate(eventRow?.date ?? null),
+        groupName: contact.full_name,
+        groupSize: partySize,
+        bookingId: String(booking.id),
+        contactEmail: await getContactEmail(),
       });
 
-      await getResend().emails.send({
-        from: EMAIL_FROM,
-        to: contact.email,
-        subject,
-        html,
-      }).catch(() => {});
+      if (slots) {
+        const { subject, html } = buildBookingConfirmedEmail({
+          slots,
+          rows: [
+            { label: "📅 Date", value: formatEventDate(eventRow?.date ?? null) },
+            { label: "👥 People", value: partySize },
+            { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
+          ],
+          manageUrl,
+        });
+
+        await getResend().emails.send({
+          from: EMAIL_FROM,
+          to: contact.email,
+          subject,
+          html,
+        }).catch(() => {});
+      }
     }
   } catch (err) {
     console.error("Webhook handler error:", err);

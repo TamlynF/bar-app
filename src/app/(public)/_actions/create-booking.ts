@@ -7,6 +7,7 @@ import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
 import { EMAIL_FROM } from "@/lib/email";
+import { renderTemplate } from "@/lib/email/resolve";
 import {
   allocateOnCreate,
   commitMapping,
@@ -172,7 +173,7 @@ export async function createBooking(formData: BookingFormData) {
     const isWaitlisted = finalStatus === "waitlisted";
 
     try {
-      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, quizTitle, formData.team_name, formData.team_size, finalStatus);
+      await sendBookingEmail(supabase, newBooking.id, formData.email, formData.name, quizDate, quizTitle, formData.team_name, formData.team_size, finalStatus);
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }
@@ -199,6 +200,7 @@ export async function createBooking(formData: BookingFormData) {
 }
 
 async function sendBookingEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   booking_id: number,
   email: string,
   name: string,
@@ -215,18 +217,28 @@ async function sendBookingEmail(
       : 'http://localhost:3000';
 
   const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
+  const partySize = `${team_size} ${team_size === 1 ? "Person" : "People"}`;
+
+  const slots = await renderTemplate(
+    supabase,
+    status === "confirmed" ? "booking.quiz.confirmed" : "booking.quiz.waitlisted",
+    {
+      customerName: name,
+      eventTitle: quiz_title,
+      eventDate: formatEventDate(quiz_date),
+      groupName: team_name,
+      groupSize: partySize,
+      bookingId: String(booking_id),
+    }
+  );
+  if (!slots) return;
 
   const { subject, html } = buildBookingConfirmedEmail({
-    subject: status === "confirmed" ? "Quiz Night Table Confirmed! 🎉" : "You are on the Waitlist",
-    eventTitle: quiz_title,
-    greeting: `Hey ${name}!`,
-    intro: status === "confirmed"
-      ? `Great news! Your team "${team_name}" is locked in.`
-      : `We're currently full, so "${team_name}" has been added to our waitlist.`,
+    slots,
     rows: [
       { label: "📅 Date", value: formatEventDate(quiz_date) },
       { label: "🍺 Team", value: team_name },
-      { label: "👥 Size", value: `${team_size} ${team_size === 1 ? "Person" : "People"}` },
+      { label: "👥 Size", value: partySize },
     ],
     manageUrl,
   });

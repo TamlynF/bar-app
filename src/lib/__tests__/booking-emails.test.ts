@@ -1,11 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
+  bookingMergeValues,
   describeBookingChanges,
   buildBookingChangedEmail,
   buildAdminNewBookingEmail,
   buildAdminBookingChangedEmail,
   type BookingSnapshot,
 } from "@/lib/booking-emails";
+import { findScenario } from "@/lib/email/scenarios";
+import { renderSlots } from "@/lib/email/render";
 
 const base: BookingSnapshot = {
   bookingId: 42,
@@ -21,6 +24,10 @@ const base: BookingSnapshot = {
   totalAmount: null,
   paidAmount: null,
 };
+
+/* Resolved from the shipped template, so these also guard the default copy. */
+const slotsFor = (key: string, booking: BookingSnapshot = base) =>
+  renderSlots(findScenario(key)!.defaults, bookingMergeValues(booking)).slots;
 
 describe("describeBookingChanges", () => {
   it("reports nothing when nothing the customer sees changed", () => {
@@ -74,11 +81,29 @@ describe("describeBookingChanges", () => {
   });
 });
 
+describe("bookingMergeValues", () => {
+  it("formats the values a template can refer to", () => {
+    expect(bookingMergeValues(base)).toMatchObject({
+      customerName: "Jane Doe",
+      eventTitle: "Boxing Day Bash",
+      eventDate: "Sat, 26 Dec 2026",
+      groupName: "The Quizzards",
+      groupSize: "4 People",
+      groupSizeLower: "4 people",
+      bookingId: "42",
+    });
+  });
+
+  it("gives an unnamed group an empty string rather than the word null", () => {
+    expect(bookingMergeValues({ ...base, groupName: null }).groupName).toBe("");
+  });
+});
+
 describe("customer change email", () => {
   it("shows the before and after of each change and links to the manage page", () => {
     const changes = describeBookingChanges(base, { ...base, groupSize: 6 });
     const { subject, html } = buildBookingChangedEmail({
-      booking: base,
+      slots: slotsFor("booking.changed.by_customer"),
       changes,
       manageUrl: "https://example.test/manage-booking/42",
     });
@@ -92,15 +117,14 @@ describe("customer change email", () => {
   it("uses venue-initiated wording when an admin made the change", () => {
     const changes = describeBookingChanges(base, { ...base, groupSize: 6 });
     const byAdmin = buildBookingChangedEmail({
-      booking: base,
+      slots: slotsFor("booking.changed.by_admin"),
       changes,
       manageUrl: "https://example.test/manage-booking/42",
-      changedByAdmin: true,
     });
     expect(byAdmin.html).toMatch(/we've updated your booking/i);
 
     const byCustomer = buildBookingChangedEmail({
-      booking: base,
+      slots: slotsFor("booking.changed.by_customer"),
       changes,
       manageUrl: "https://example.test/manage-booking/42",
     });
@@ -111,6 +135,7 @@ describe("customer change email", () => {
 describe("admin emails", () => {
   it("puts the event, date and party size in the new-booking subject", () => {
     const { subject } = buildAdminNewBookingEmail({
+      slots: slotsFor("admin.booking.new"),
       booking: base,
       adminUrl: "https://example.test/event-bookings",
     });
@@ -119,6 +144,7 @@ describe("admin emails", () => {
 
   it("includes the customer's contact details for follow-up", () => {
     const { html } = buildAdminNewBookingEmail({
+      slots: slotsFor("admin.booking.new"),
       booking: base,
       adminUrl: "https://example.test/event-bookings",
     });
@@ -129,11 +155,23 @@ describe("admin emails", () => {
   it("references the booking id in the change subject", () => {
     const changes = describeBookingChanges(base, { ...base, groupSize: 6 });
     const { subject } = buildAdminBookingChangedEmail({
+      slots: slotsFor("admin.booking.changed"),
       booking: base,
       changes,
       adminUrl: "https://example.test/event-bookings",
     });
     expect(subject).toContain("#42");
     expect(subject).toMatch(/booking changed/i);
+  });
+
+  it("escapes a customer name that contains markup", () => {
+    const nasty = { ...base, customerName: "<script>alert(1)</script>" };
+    const { html } = buildAdminNewBookingEmail({
+      slots: slotsFor("admin.booking.new", nasty),
+      booking: nasty,
+      adminUrl: "https://example.test/event-bookings",
+    });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
   });
 });

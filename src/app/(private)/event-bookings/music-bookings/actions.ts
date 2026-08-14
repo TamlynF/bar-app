@@ -8,7 +8,16 @@ import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
 import { eventSlotIsComplete } from "@/lib/event-active";
-import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail } from "@/lib/band-emails";
+import {
+  bandMergeValues,
+  bandScenarioKey,
+  bandSlotCardLabel,
+  buildBandEmail,
+  type BandEmailKind,
+} from "@/lib/band-emails";
+import { renderTemplate } from "@/lib/email/resolve";
+import { bandCard, bandLayout, bandNote } from "@/lib/email/layout";
+import { escapeHtml } from "@/lib/email/escape";
 import {
   upsertContactByEmail,
   upsertMusicActFromBand,
@@ -242,14 +251,14 @@ export async function rescheduleConfirmedBooking(
     await updateLinkedEvent(supabase, plan.eventId, { is_active: false }, empId);
   }
 
-  const emailError = await sendRescheduleEmail(
-    record.booker_name,
-    record.email,
-    record.group_name,
-    record.selected_date,
-    record.selected_start_time,
-    record.selected_end_time
-  );
+  const emailError = await sendBandEmail(supabase, "rescheduled", {
+    name: record.booker_name,
+    email: record.email,
+    groupName: record.group_name,
+    date: record.selected_date,
+    startTime: record.selected_start_time,
+    endTime: record.selected_end_time,
+  });
 
   revalidatePath("/event-bookings/music-bookings");
   revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
@@ -367,28 +376,17 @@ export async function updateBandStatus(
   }
 
   let emailError: string | null = null;
-  if (status === "offered") {
-    emailError = await sendOfferEmail(
-      record.booker_name,
-      record.email,
-      record.group_name,
-      record.selected_date,
-      record.selected_start_time,
-      record.selected_end_time,
-      record.payment_amount,
-      emailNote
-    );
-  } else if (status === "booked" || status === "declined") {
-    emailError = await sendOutcomeEmail(
-      record.booker_name,
-      record.email,
-      status === "booked" ? "confirmed" : "cancelled",
-      record.group_name,
-      record.selected_date,
-      record.selected_start_time,
-      record.selected_end_time,
-      emailNote
-    );
+  if (status === "offered" || status === "booked" || status === "declined") {
+    emailError = await sendBandEmail(supabase, status, {
+      name: record.booker_name,
+      email: record.email,
+      groupName: record.group_name,
+      date: record.selected_date,
+      startTime: record.selected_start_time,
+      endTime: record.selected_end_time,
+      paymentAmount: record.payment_amount,
+      notes: emailNote,
+    });
   }
 
   revalidatePath("/event-bookings/music-bookings");
@@ -400,170 +398,78 @@ export async function updateBandStatus(
   return { emailError };
 }
 
-async function sendRescheduleEmail(
+
+/* Lets the status dialog preview the copy that will actually be sent, rather
+   than an approximation compiled into the page. */
+export async function bandEmailSlotsAction(
+  kind: BandEmailKind,
   name: string,
-  email: string,
-  groupName: string | null,
-  date: string | null,
-  startTime: string | null,
-  endTime: string | null
-): Promise<string | null> {
-  const e = buildRescheduleEmail({ name, groupName, date, startTime, endTime });
-
-  const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
-      <div style="background:#34451F;padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
-          ${e.heading}
-        </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
-      </div>
-      <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        ${e.body.map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
-        ${e.dateLabel ? `
-        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">New Performance Slot</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.dateLabel}</p>
-          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.timeLabel}</p>` : ""}
-        </div>` : ""}
-      </div>
-      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5E6654;">
-          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
-        </p>
-      </div>
-    </div>`;
-
-  const { data, error } = await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
-  if (error) {
-    console.error("[band reschedule email] Resend failed:", JSON.stringify(error));
-    return error.message ?? "Email failed to send.";
-  }
-  console.log("[band reschedule email] sent:", data?.id, "→", email);
-  return null;
+  groupName: string | null
+) {
+  const supabase = await createClient();
+  return renderTemplate(supabase, bandScenarioKey(kind), bandMergeValues({ name, groupName }));
 }
 
-async function sendOutcomeEmail(
-  name: string,
-  email: string,
-  status: "confirmed" | "cancelled",
-  groupName?: string | null,
-  selectedDate?: string | null,
-  startTime?: string | null,
-  endTime?: string | null,
-  notes?: string | null
-): Promise<string | null> {
-  const e = buildOutcomeEmail({
-    name,
-    groupName,
-    outcome: status,
-    date: selectedDate ?? null,
-    startTime: startTime ?? null,
-    endTime: endTime ?? null,
-    notes,
-  });
-
-  const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
-      <div style="background:#34451F;padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
-          ${e.heading}
-        </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
-      </div>
-      <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
-        ${e.dateLabel ? `
-        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Performance Date</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.dateLabel}</p>
-          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.timeLabel}</p>` : ""}
-        </div>` : ""}
-        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
-        ${e.noteLabel ? `
-        <div style="background:#fff;border-left:4px solid #34451F;border-radius:8px;padding:16px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${e.noteLabel}</p>
-        </div>` : ""}
-      </div>
-      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5E6654;">
-          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
-        </p>
-      </div>
-    </div>`;
-
-  const { data, error } = await resend.emails.send({ from: EMAIL_FROM, to: email, subject: e.subject, html });
-  if (error) {
-    console.error("[band outcome email] Resend failed:", JSON.stringify(error));
-    return error.message ?? "Email failed to send.";
+/* One sender for all four band emails. Only the placement of the slot card and
+   the note differs between them - the offer shows both above its closing
+   paragraph, an outcome shows the date above and the note below. */
+async function sendBandEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  kind: BandEmailKind,
+  p: {
+    name: string;
+    email: string;
+    groupName: string | null;
+    date: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    paymentAmount?: number | null;
+    notes?: string | null;
   }
-  console.log("[band outcome email] sent:", data?.id, "→", email);
-  return null;
-}
-
-async function sendOfferEmail(
-  name: string,
-  email: string,
-  groupName: string | null,
-  date: string | null,
-  startTime: string | null,
-  endTime: string | null,
-  paymentAmount: number | null,
-  notes?: string | null
 ): Promise<string | null> {
-  const e = buildOfferEmail({
-    name,
-    groupName,
-    date,
-    startTime,
-    endTime,
-    paymentAmount,
-    notes,
+  const slots = await renderTemplate(
+    supabase,
+    bandScenarioKey(kind),
+    bandMergeValues({ name: p.name, groupName: p.groupName })
+  );
+  if (!slots) return null;
+
+  const e = buildBandEmail({
+    slots,
+    kind,
+    date: p.date,
+    startTime: p.startTime,
+    endTime: p.endTime,
+    paymentAmount: p.paymentAmount,
+    notes: p.notes,
   });
 
-  const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
-      <div style="background:#34451F;padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
-          ${e.heading}
-        </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
-      </div>
-      <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
-        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Proposed Slot</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.slotLabel}</p>
-          ${e.feeLabel ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.feeLabel}</p>` : ""}
-        </div>
-        ${e.noteLabel ? `
-        <div style="background:#fff;border-left:4px solid #34451F;border-radius:8px;padding:16px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${e.noteLabel}</p>
-        </div>` : ""}
-        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
-      </div>
-      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5E6654;">
-          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
-        </p>
-      </div>
-    </div>`;
+  const card =
+    kind === "offered"
+      ? bandCard(bandSlotCardLabel(kind), escapeHtml(e.slotLabel ?? ""), escapeHtml(e.feeLabel ?? ""))
+      : e.dateLabel
+        ? bandCard(bandSlotCardLabel(kind), escapeHtml(e.dateLabel), escapeHtml(e.timeLabel))
+        : "";
+
+  const note = bandNote(escapeHtml(e.noteLabel ?? ""));
+
+  const html = bandLayout({
+    slots,
+    groupName: p.groupName ? escapeHtml(p.groupName) : null,
+    middleHtml: kind === "offered" ? card + note : card,
+    tailHtml: kind === "offered" ? "" : note,
+  });
 
   const { data, error } = await resend.emails.send({
     from: EMAIL_FROM,
-    to: email,
+    to: p.email,
     subject: e.subject,
     html,
   });
   if (error) {
-    console.error("[band offer email] Resend failed:", JSON.stringify(error));
+    console.error(`[band ${kind} email] Resend failed:`, JSON.stringify(error));
     return error.message ?? "Email failed to send.";
   }
-  console.log("[band offer email] sent:", data?.id, "→", email);
+  console.log(`[band ${kind} email] sent:`, data?.id, "→", p.email);
   return null;
 }

@@ -8,6 +8,7 @@ import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import {
   ADMIN_EMAIL,
   EMAIL_FROM,
+  bookingMergeValues,
   buildAdminBookingCancelledEmail,
   buildAdminBookingChangedEmail,
   buildAdminNewBookingEmail,
@@ -17,6 +18,7 @@ import {
   type BookingEmail,
   type BookingSnapshot,
 } from "@/lib/booking-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -140,7 +142,6 @@ async function send(to: string, email: BookingEmail): Promise<void> {
 }
 
 function urls(loaded: LoadedBooking) {
-  console.log("LoadedBooking: ", JSON.stringify(loaded, null, 2));
   return {
     manageUrl: `${appUrl}${manageBookingPath(loaded.snapshot.bookingId)}`,
     adminUrl: `${appUrl}${adminBookingsHref({
@@ -154,15 +155,29 @@ function urls(loaded: LoadedBooking) {
   };
 }
 
+/* Templates are read with the service-role client these notifications already
+   use - they fire from webhooks and background paths where there is no session. */
+function slotsFor(key: string, snapshot: BookingSnapshot) {
+  return renderTemplate(createAdminClient(), key, bookingMergeValues(snapshot));
+}
+
 export async function notifyAdminBookingCreated(
   bookingId: number | string
 ): Promise<void> {
-  console.log("notifyAdminBookingCreated", bookingId);
   const loaded = await loadBookingSnapshot(bookingId);
-  console.log("Loaded booking snapshot: ", JSON.stringify(loaded, null, 2));
   if (!loaded) return;
 
-  await send(ADMIN_EMAIL, buildAdminNewBookingEmail({ booking: loaded.snapshot, adminUrl: urls(loaded).adminUrl }));
+  const slots = await slotsFor("admin.booking.new", loaded.snapshot);
+  if (!slots) return;
+
+  await send(
+    ADMIN_EMAIL,
+    buildAdminNewBookingEmail({
+      slots,
+      booking: loaded.snapshot,
+      adminUrl: urls(loaded).adminUrl,
+    })
+  );
 }
 
 export async function notifyBookingChanged(
@@ -178,21 +193,30 @@ export async function notifyBookingChanged(
 
   const { manageUrl, adminUrl } = urls(loaded);
 
-  await send(
-    loaded.snapshot.customerEmail,
-    buildBookingChangedEmail({
-      booking: loaded.snapshot,
-      changes,
-      manageUrl,
-      changedByAdmin: opts.changedByAdmin,
-    })
+  const customerSlots = await slotsFor(
+    opts.changedByAdmin ? "booking.changed.by_admin" : "booking.changed.by_customer",
+    loaded.snapshot
   );
+  if (customerSlots) {
+    await send(
+      loaded.snapshot.customerEmail,
+      buildBookingChangedEmail({ slots: customerSlots, changes, manageUrl })
+    );
+  }
 
   if (!opts.changedByAdmin) {
-    await send(
-      ADMIN_EMAIL,
-      buildAdminBookingChangedEmail({ booking: loaded.snapshot, changes, adminUrl })
-    );
+    const adminSlots = await slotsFor("admin.booking.changed", loaded.snapshot);
+    if (adminSlots) {
+      await send(
+        ADMIN_EMAIL,
+        buildAdminBookingChangedEmail({
+          slots: adminSlots,
+          booking: loaded.snapshot,
+          changes,
+          adminUrl,
+        })
+      );
+    }
   }
 }
 
@@ -205,12 +229,24 @@ export async function notifyBookingCancelled(
 
   const { adminUrl } = urls(loaded);
 
-  await send(
-    loaded.snapshot.customerEmail,
-    buildBookingCancelledEmail({ booking: loaded.snapshot, cancelledByAdmin: opts.cancelledByAdmin })
+  const customerSlots = await slotsFor(
+    opts.cancelledByAdmin ? "booking.cancelled.by_admin" : "booking.cancelled.by_customer",
+    loaded.snapshot
   );
+  if (customerSlots) {
+    await send(
+      loaded.snapshot.customerEmail,
+      buildBookingCancelledEmail({ slots: customerSlots, booking: loaded.snapshot })
+    );
+  }
 
   if (!opts.cancelledByAdmin) {
-    await send(ADMIN_EMAIL, buildAdminBookingCancelledEmail({ booking: loaded.snapshot, adminUrl }));
+    const adminSlots = await slotsFor("admin.booking.cancelled", loaded.snapshot);
+    if (adminSlots) {
+      await send(
+        ADMIN_EMAIL,
+        buildAdminBookingCancelledEmail({ slots: adminSlots, booking: loaded.snapshot, adminUrl })
+      );
+    }
   }
 }

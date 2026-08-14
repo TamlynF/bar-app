@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
+import { renderTemplate } from "@/lib/email/resolve";
+import { plainLayout } from "@/lib/email/layout";
+import { escapeHtml } from "@/lib/email/escape";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -56,26 +59,28 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
 
   if (error || !record) throw new Error("Failed to update enquiry.");
 
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">Hi ${record.full_name}!</h2>
-        <p style="white-space:pre-wrap;">${trimmed}</p>
-        <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;">
-          <p style="margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:bold;">Your original message:</p>
-          <p style="margin:0;font-size:13px;color:#6b7280;white-space:pre-wrap;">${record.message}</p>
-        </div>
-        <p style="font-size:12px;color:#6b7280;">Reply to this email to continue the conversation.</p>
-      </div>
-    </div>`;
-
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: record.email,
-    replyTo: await getContactEmail(),
-    subject: `Re: ${record.subject || "Your enquiry"} - Don Fenticas`,
-    html,
+  const slots = await renderTemplate(supabase, "enquiry.reply", {
+    customerName: record.full_name,
+    enquirySubject: record.subject || "Your enquiry",
   });
+
+  if (slots) {
+    /* The reply itself is typed by staff at send time, and the original message
+       came from the public web - both are generated content, not template copy,
+       so both are escaped. */
+    const bodyHtml = `<p style="white-space:pre-wrap;">${escapeHtml(trimmed)}</p>`;
+    const panelHtml =
+      `<p style="margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:bold;">Your original message:</p>` +
+      `<p style="margin:0;font-size:13px;color:#6b7280;white-space:pre-wrap;">${escapeHtml(record.message)}</p>`;
+
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: record.email,
+      replyTo: await getContactEmail(),
+      subject: slots.subject,
+      html: plainLayout({ slots, bodyHtml, panelHtml }),
+    });
+  }
 
   revalidatePath("/requests/enquiries");
   revalidatePath("/dashboard");

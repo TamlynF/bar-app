@@ -1,5 +1,5 @@
-
 import { toHHMM } from "@/lib/event-clash";
+import { toParagraphs, type MergeValues, type TemplateSlots } from "@/lib/email/render";
 
 function formatTime12(t?: string | null): string {
   const hhmm = toHHMM(t);
@@ -21,11 +21,18 @@ function formatDateLong(d?: string | null): string {
   });
 }
 
+export type BandEmailKind = "offered" | "booked" | "declined" | "rescheduled";
+
+export const bandScenarioKey = (kind: BandEmailKind) => `band.${kind}`;
+
 export type BandEmail = {
   subject: string;
   heading: string;
   greeting: string;
+  /** Paragraphs above the slot card. */
   body: string[];
+  /** Paragraphs below it. */
+  outro: string[];
   dateLabel: string; // "" when no date
   timeLabel: string; // "" when no times
   slotLabel?: string;
@@ -35,32 +42,24 @@ export type BandEmail = {
 
 export type RescheduleEmail = BandEmail;
 
-export function buildRescheduleEmail(p: {
+export function bandMergeValues(p: {
   name: string;
   groupName?: string | null;
-  date: string | null;
-  startTime: string | null;
-  endTime: string | null;
-}): BandEmail {
-  const dateLabel = formatDateLong(p.date);
-  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
-
+}): MergeValues {
   return {
-    subject: "Please confirm your updated performance slot - Don Fenticas",
-    heading: "Slot Updated",
-    greeting: `Hey ${p.name},`,
-    body: [
-      `We've updated the proposed date and time for your performance at Don Fenticas${p.groupName ? ` (${p.groupName})` : ""}.`,
-      "Please review the new slot below and reply to this email to confirm it works for you. Your booking is on hold until we hear back.",
-    ],
-    dateLabel,
-    timeLabel,
+    customerName: p.name,
+    groupName: p.groupName ?? "you",
+    /* Blank rather than "()" when the act has no name of its own. */
+    groupSuffix: p.groupName ? ` (${p.groupName})` : "",
   };
 }
 
-export function buildOfferEmail(p: {
-  name: string;
-  groupName?: string | null;
+/* One builder for all four band emails: now that the copy comes from the
+   template, the only thing that varies between them is which labels the slot
+   card gets and whether a declined act still sees a date. */
+export function buildBandEmail(p: {
+  slots: TemplateSlots;
+  kind: BandEmailKind;
   date: string | null;
   startTime: string | null;
   endTime: string | null;
@@ -68,57 +67,35 @@ export function buildOfferEmail(p: {
   notes?: string | null;
 }): BandEmail {
   const dateLabel = formatDateLong(p.date);
-  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
-  const slotLabel = dateLabel
-    ? [dateLabel, timeLabel].filter(Boolean).join(", ")
-    : "to be arranged";
+  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)]
+    .filter(Boolean)
+    .join(" – ");
+
+  const declined = p.kind === "declined";
+  const offered = p.kind === "offered";
 
   return {
-    subject: `We'd love to book you${p.groupName ? `, ${p.groupName}` : ""} - Don Fenticas`,
-    heading: "We'd Love to Book You",
-    greeting: `Hi ${p.name},`,
-    body: [
-      `Great news - we'd love to have ${p.groupName ?? "you"} play at Don Fenticas. Here's what we're offering:`,
-      "Reply to this email to accept the slot or discuss details - once you confirm, we'll lock it in and it goes on our events calendar.",
-    ],
-    dateLabel,
-    timeLabel,
-    slotLabel,
-    feeLabel: p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
+    subject: p.slots.subject,
+    heading: p.slots.heading,
+    greeting: p.slots.greeting,
+    body: toParagraphs(p.slots.intro),
+    outro: toParagraphs(p.slots.outro),
+    /* A declined act is not being given a date, so the card is dropped. */
+    dateLabel: declined ? "" : dateLabel,
+    timeLabel: declined ? "" : timeLabel,
+    slotLabel: offered
+      ? dateLabel
+        ? [dateLabel, timeLabel].filter(Boolean).join(", ")
+        : "to be arranged"
+      : undefined,
+    feeLabel: offered && p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
     noteLabel: p.notes?.trim() || "",
   };
 }
 
-export function buildOutcomeEmail(p: {
-  name: string;
-  groupName?: string | null;
-  outcome: "confirmed" | "cancelled";
-  date: string | null;
-  startTime: string | null;
-  endTime: string | null;
-  notes?: string | null;
-}): BandEmail {
-  const isConfirmed = p.outcome === "confirmed";
-  const dateLabel = formatDateLong(p.date);
-  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
-
-  return {
-    subject: isConfirmed
-      ? "Your Performance at Don Fenticas is Confirmed!"
-      : "Update on Your Application - Don Fenticas",
-    heading: isConfirmed ? "You're Confirmed!" : "Application Update",
-    greeting: `Hey ${p.name},`,
-    body: isConfirmed
-      ? [
-          "Great news! Your application to perform at Don Fenticas has been confirmed.",
-          "We'll be in touch closer to the date with any further details. If you have any questions in the meantime, just reply to this email.",
-        ]
-      : [
-          "Thank you for applying to perform at Don Fenticas. After reviewing your application, we're unable to proceed at this time.",
-          "We appreciate your interest and encourage you to apply again in the future.",
-        ],
-    dateLabel: isConfirmed ? dateLabel : "",
-    timeLabel: isConfirmed ? timeLabel : "",
-    noteLabel: p.notes?.trim() || "",
-  };
+/* The heading each email's slot card carries. */
+export function bandSlotCardLabel(kind: BandEmailKind): string {
+  if (kind === "offered") return "Proposed Slot";
+  if (kind === "rescheduled") return "New Performance Slot";
+  return "Performance Date";
 }

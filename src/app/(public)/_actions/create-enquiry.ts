@@ -3,6 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
+import { renderTemplate } from "@/lib/email/resolve";
+import { plainLayout } from "@/lib/email/layout";
+import { escapeHtml } from "@/lib/email/escape";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -45,55 +48,52 @@ export async function createEnquiry(formData: FormData) {
   }
 
   await Promise.allSettled([
-    sendEnquirerEmail(data.full_name, data.email),
-    sendAdminEmail(data, record.id),
+    sendEnquirerEmail(supabase, data.full_name, data.email),
+    sendAdminEmail(supabase, data, record.id),
   ]);
 
   return { success: true, id: record.id };
 }
 
-async function sendEnquirerEmail(name: string, email: string) {
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">Hi ${name}!</h2>
-        <p>Thanks for getting in touch with <strong>Don Fenticas</strong>. We've received your message and one of the team will get back to you shortly.</p>
-        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas - Grassroots Live Music & Nightlife, Hinckley</p>
-        </div>
-        <p style="font-size:12px;color:#6b7280;">If it's urgent, you can reply directly to this email.</p>
-      </div>
-    </div>`;
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function sendEnquirerEmail(supabase: ServerClient, name: string, email: string) {
+  const slots = await renderTemplate(supabase, "enquiry.received.customer", {
+    customerName: name,
+  });
+  if (!slots) return;
 
   await resend.emails.send({
     from: EMAIL_FROM,
     to: email,
-    subject: "We've got your message - Don Fenticas",
-    html,
+    subject: slots.subject,
+    html: plainLayout({ slots }),
   });
 }
 
-async function sendAdminEmail(data: EnquiryData, id: string) {
-  const html = `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">New Enquiry</h2>
-        <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p><strong>Name:</strong> ${data.full_name}</p>
-          <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Phone:</strong> ${data.phone_no || "-"}</p>
-          <p><strong>Subject:</strong> ${data.subject || "-"}</p>
-          <p><strong>Message:</strong></p>
-          <p style="white-space:pre-wrap;">${data.message}</p>
-        </div>
-        <p style="font-size:12px;color:#6b7280;">Enquiry ID: ${id}</p>
-      </div>
-    </div>`;
+async function sendAdminEmail(supabase: ServerClient, data: EnquiryData, id: string) {
+  const slots = await renderTemplate(supabase, "enquiry.received.admin", {
+    customerName: data.full_name,
+    enquirySubject: data.subject ?? "-",
+    subjectSuffix: data.subject ? `: ${data.subject}` : "",
+  });
+  if (!slots) return;
+
+  /* The field dump is generated rather than authored: it has to follow whatever
+     the enquiry form collects, and every value here came from the public web. */
+  const panelHtml = [
+    `<p><strong>Name:</strong> ${escapeHtml(data.full_name)}</p>`,
+    `<p><strong>Email:</strong> ${escapeHtml(data.email)}</p>`,
+    `<p><strong>Phone:</strong> ${escapeHtml(data.phone_no || "-")}</p>`,
+    `<p><strong>Subject:</strong> ${escapeHtml(data.subject || "-")}</p>`,
+    `<p><strong>Message:</strong></p>`,
+    `<p style="white-space:pre-wrap;">${escapeHtml(data.message)}</p>`,
+  ].join("");
 
   await resend.emails.send({
     from: EMAIL_FROM,
     to: ADMIN_EMAIL,
-    subject: `New Enquiry - ${data.full_name}${data.subject ? `: ${data.subject}` : ""}`,
-    html,
+    subject: slots.subject,
+    html: plainLayout({ slots, panelHtml, trailer: `Enquiry ID: ${escapeHtml(id)}` }),
   });
 }

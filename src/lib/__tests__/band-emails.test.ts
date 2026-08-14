@@ -1,117 +1,135 @@
 import { describe, it, expect } from "vitest";
-import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail } from "@/lib/band-emails";
+import {
+  bandMergeValues,
+  bandScenarioKey,
+  bandSlotCardLabel,
+  buildBandEmail,
+  type BandEmailKind,
+} from "@/lib/band-emails";
+import { findScenario } from "@/lib/email/scenarios";
+import { renderSlots } from "@/lib/email/render";
 
-describe("buildRescheduleEmail", () => {
-  it("greets the booker and includes the group name in the body", () => {
-    const e = buildRescheduleEmail({
-      name: "Jane",
-      groupName: "The Test Band",
-      date: "2026-07-01",
-      startTime: "22:00",
-      endTime: "00:00",
-    });
-    expect(e.greeting).toContain("Jane");
-    expect(e.body.join(" ")).toContain("The Test Band");
-    expect(e.subject.toLowerCase()).toContain("confirm");
+const base = {
+  name: "Jane",
+  groupName: "The Wanderers",
+  date: "2026-09-12",
+  startTime: "20:00",
+  endTime: "22:30",
+};
+
+/* Built from the shipped template, so these also guard the default copy. */
+const build = (kind: BandEmailKind, over: Record<string, unknown> = {}) => {
+  const p = { ...base, ...over } as typeof base & {
+    paymentAmount?: number | null;
+    notes?: string | null;
+  };
+  const scenario = findScenario(bandScenarioKey(kind))!;
+  const { slots } = renderSlots(
+    scenario.defaults,
+    bandMergeValues({ name: p.name, groupName: p.groupName })
+  );
+  return buildBandEmail({
+    slots,
+    kind,
+    date: p.date,
+    startTime: p.startTime,
+    endTime: p.endTime,
+    paymentAmount: p.paymentAmount,
+    notes: p.notes,
+  });
+};
+
+describe("reschedule email", () => {
+  it("asks the band to re-confirm and shows the new slot", () => {
+    const e = build("rescheduled");
+    expect(e.subject).toBe("Please confirm your updated performance slot - Don Fenticas");
+    expect(e.heading).toBe("Slot Updated");
+    expect(e.greeting).toBe("Hey Jane,");
+    expect(e.dateLabel).toBe("Saturday, 12 September 2026");
+    expect(e.timeLabel).toBe("8:00 PM – 10:30 PM");
+    expect(e.body.join(" ")).toMatch(/on hold until we hear back/i);
   });
 
-  it("formats the new date and 12h time window", () => {
-    const e = buildRescheduleEmail({
-      name: "Jane",
-      groupName: null,
-      date: "2026-07-01",
-      startTime: "22:00:00",
-      endTime: "00:00:00",
-    });
-    expect(e.dateLabel).toMatch(/2026/);
-    expect(e.dateLabel).toContain("July");
-    expect(e.timeLabel).toBe("10:00 PM – 12:00 AM");
+  it("names the act in brackets when it has a name", () => {
+    expect(build("rescheduled").body[0]).toContain("(The Wanderers)");
   });
 
-  it("leaves date/time labels empty when not set", () => {
-    const e = buildRescheduleEmail({ name: "Jane", groupName: null, date: null, startTime: null, endTime: null });
+  it("leaves no empty brackets when the act has no name", () => {
+    const e = build("rescheduled", { groupName: null });
+    expect(e.body[0]).not.toContain("()");
+    expect(e.body[0]).toMatch(/at Don Fenticas\./);
+  });
+
+  it("drops the slot card when there is no date", () => {
+    const e = build("rescheduled", { date: null, startTime: null, endTime: null });
     expect(e.dateLabel).toBe("");
     expect(e.timeLabel).toBe("");
   });
 });
 
-describe("buildOfferEmail", () => {
-  const base = {
-    name: "Jane",
-    groupName: "The Test Band",
-    date: "2026-07-01",
-    startTime: "22:00",
-    endTime: "00:00",
-  };
-
-  it("names the act in the subject and body, and greets the booker", () => {
-    const e = buildOfferEmail({ ...base, paymentAmount: 100 });
-    expect(e.subject).toContain("The Test Band");
-    expect(e.greeting).toContain("Jane");
-    expect(e.body.join(" ")).toContain("The Test Band");
+describe("offer email", () => {
+  it("names the act in the subject", () => {
+    expect(build("offered").subject).toBe("We'd love to book you, The Wanderers - Don Fenticas");
   });
 
-  it("builds a slot label from the date and 12h time window", () => {
-    const e = buildOfferEmail({ ...base, paymentAmount: 100 });
-    expect(e.slotLabel).toBe("Wednesday, 1 July 2026, 10:00 PM – 12:00 AM");
-    expect(e.feeLabel).toBe("Fee: £100");
+  it("puts the date and time into one slot label", () => {
+    expect(build("offered").slotLabel).toBe("Saturday, 12 September 2026, 8:00 PM – 10:30 PM");
   });
 
-  it("says the slot is to be arranged when there is no date", () => {
-    const e = buildOfferEmail({ ...base, date: null, startTime: null, endTime: null, paymentAmount: null });
+  it("says the slot is to be arranged when no date is set", () => {
+    const e = build("offered", { date: null, startTime: null, endTime: null });
     expect(e.slotLabel).toBe("to be arranged");
-    expect(e.dateLabel).toBe("");
   });
 
-  it("omits the fee and note labels when there is no fee or note", () => {
-    const e = buildOfferEmail({ ...base, paymentAmount: null });
-    expect(e.feeLabel).toBe("");
-    expect(e.noteLabel).toBe("");
+  it("shows a fee only when one is given", () => {
+    expect(build("offered", { paymentAmount: 100 }).feeLabel).toBe("Fee: £100");
+    expect(build("offered", { paymentAmount: null }).feeLabel).toBe("");
   });
 
-  it("carries a note to the applicant through, trimmed", () => {
-    const e = buildOfferEmail({ ...base, paymentAmount: 0, notes: "  Load in from the rear door.  " });
-    expect(e.noteLabel).toBe("Load in from the rear door.");
-    expect(e.feeLabel).toBe("Fee: £0");
+  it("trims the note and drops it when blank", () => {
+    expect(build("offered", { notes: "  Load in from the rear door.  " }).noteLabel).toBe(
+      "Load in from the rear door."
+    );
+    expect(build("offered", { notes: "   " }).noteLabel).toBe("");
   });
 
-  it("falls back to 'you' when the act has no group name", () => {
-    const e = buildOfferEmail({ ...base, groupName: null, paymentAmount: 50 });
-    expect(e.subject).toBe("We'd love to book you - Don Fenticas");
-    expect(e.body.join(" ")).toContain("have you play");
+  it("falls back to \"you\" in the body when the act has no name", () => {
+    expect(build("offered", { groupName: null }).body[0]).toContain("have you play");
   });
 });
 
-describe("buildOutcomeEmail", () => {
-  const base = {
-    name: "Jane",
-    groupName: "The Test Band",
-    date: "2026-07-01",
-    startTime: "22:00",
-    endTime: "00:00",
-  };
-
-  it("confirms with the slot and an upbeat subject", () => {
-    const e = buildOutcomeEmail({ ...base, outcome: "confirmed" });
-    expect(e.subject).toContain("Confirmed");
+describe("outcome emails", () => {
+  it("confirms with the performance date", () => {
+    const e = build("booked");
+    expect(e.subject).toBe("Your Performance at Don Fenticas is Confirmed!");
     expect(e.heading).toBe("You're Confirmed!");
-    expect(e.greeting).toContain("Jane");
-    expect(e.dateLabel).toContain("July");
-    expect(e.timeLabel).toBe("10:00 PM – 12:00 AM");
+    expect(e.dateLabel).toBe("Saturday, 12 September 2026");
   });
 
-  it("drops the slot when declining, even if a date was pencilled in", () => {
-    const e = buildOutcomeEmail({ ...base, outcome: "cancelled" });
+  it("declines without dangling a date the act is not getting", () => {
+    const e = build("declined");
+    expect(e.subject).toBe("Update on Your Application - Don Fenticas");
     expect(e.heading).toBe("Application Update");
     expect(e.dateLabel).toBe("");
     expect(e.timeLabel).toBe("");
-    expect(e.body.join(" ")).toContain("unable to proceed");
   });
 
-  it("carries a note through on either outcome", () => {
-    const yes = buildOutcomeEmail({ ...base, outcome: "confirmed", notes: "Bring your own PA." });
-    const no = buildOutcomeEmail({ ...base, outcome: "cancelled", notes: "Try us again in spring." });
-    expect(yes.noteLabel).toBe("Bring your own PA.");
-    expect(no.noteLabel).toBe("Try us again in spring.");
+  it("carries a note on either outcome", () => {
+    expect(build("booked", { notes: "Bring your own PA." }).noteLabel).toBe("Bring your own PA.");
+    expect(build("declined", { notes: "Try us again in spring." }).noteLabel).toBe(
+      "Try us again in spring."
+    );
+  });
+
+  it("splits the closing paragraph out so it can sit below the date card", () => {
+    expect(build("booked").outro.join(" ")).toMatch(/in touch closer to the date/i);
+  });
+});
+
+describe("bandSlotCardLabel", () => {
+  it("labels each card for what it is", () => {
+    expect(bandSlotCardLabel("offered")).toBe("Proposed Slot");
+    expect(bandSlotCardLabel("rescheduled")).toBe("New Performance Slot");
+    expect(bandSlotCardLabel("booked")).toBe("Performance Date");
   });
 });

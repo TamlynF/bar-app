@@ -370,6 +370,7 @@ export default function PrivateLayoutClient({
                 "customers": "Customers",
                 "users": "System users",
                 "music-acts": "Music acts",
+                "email-templates": "Email templates",
             }
             const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Settings", subtitle, backHref: "/settings" }

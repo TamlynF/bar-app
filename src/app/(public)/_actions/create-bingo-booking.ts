@@ -12,7 +12,12 @@ import {
 } from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import {
+  buildPaymentPendingEmail,
+  paymentPendingMergeValues,
+} from "@/lib/payment-pending-email";
+import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { buildCheckoutOptions } from "@/lib/square-order";
@@ -129,7 +134,7 @@ export async function createBingoBooking(formData: FormData) {
 
     if (isFree) {
       await sendBookingEmail(
-        newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0
+        supabase, newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0
       );
       await notifyAdminBookingCreated(newBooking.id);
       await updateFullyBookedStatus(supabase, eventId);
@@ -195,7 +200,7 @@ export async function createBingoBooking(formData: FormData) {
       .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
-    await sendPaymentPendingEmail({
+    await sendPaymentPendingEmail(supabase, {
       bookingId: newBooking.id,
       eventId,
       email,
@@ -221,18 +226,33 @@ export async function createBingoBooking(formData: FormData) {
   }
 }
 
-async function sendPaymentPendingEmail(args: {
-  bookingId: number;
-  eventId: number;
-  email: string;
-  name: string;
-  eventDate: string;
-  groupSize: number;
-  amountDue: number;
-}) {
+async function sendPaymentPendingEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  args: {
+    bookingId: number;
+    eventId: number;
+    email: string;
+    name: string;
+    eventDate: string;
+    groupSize: number;
+    amountDue: number;
+  }
+) {
+  const slots = await renderTemplate(
+    supabase,
+    "booking.payment_pending",
+    paymentPendingMergeValues({
+      name: args.name,
+      eventTitle: "Music Bingo",
+      eventDate: args.eventDate,
+      groupSize: args.groupSize,
+      amountDue: args.amountDue,
+    })
+  );
+  if (!slots) return;
+
   const { subject, html } = buildPaymentPendingEmail({
-    name: args.name,
-    eventTitle: "Music Bingo",
+    slots,
     eventDate: args.eventDate,
     groupSize: args.groupSize,
     amountDue: args.amountDue,
@@ -256,6 +276,7 @@ async function sendPaymentPendingEmail(args: {
 }
 
 async function sendBookingEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   booking_id: number,
   email: string,
   name: string,
@@ -266,87 +287,37 @@ async function sendBookingEmail(
   paid_amount: number | string
 ) {
   const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking_id}`;
-  
-  const subject = status === "confirmed" 
-    ? "🎫 Booking Confirmed: Music Bingo @ Don Fenticas 🎵" 
-    : "📋 You're on the Waitlist: Music Bingo @ Don Fenticas";
-    
-  const content = status === "confirmed" 
-    ? `Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for ${group_size} ${group_size === 1 ? 'person' : 'people'}.` 
-    : `We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!`;
+  const partySize = `${group_size} ${group_size === 1 ? "Person" : "People"}`;
 
-  const html = `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
+  const slots = await renderTemplate(
+    supabase,
+    status === "confirmed" ? "booking.bingo.confirmed" : "booking.bingo.waitlisted",
+    {
+      customerName: name,
+      eventTitle: "Music Bingo",
+      eventDate: formatEventDate(booking_date),
+      groupName: name,
+      groupSize: partySize,
+      bookingId: String(booking_id),
+      contactEmail: await getContactEmail(),
+    }
+  );
+  if (!slots) return;
 
-        <!-- Header -->
-        <div style="background-color: #26300D; padding: 32px 16px; text-align: center;">
-          <img src="./CompanyLogo.png" alt="Company Logo" style="display: inline-block; margin-bottom: 16px; max-height: 60px;" />
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">Music Bingo</h1>
-          <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Don Fenticas</p>
-        </div>
-
-        <!-- Body -->
-        <div style="padding: 32px 20px; color: #1F1F1A;">
-          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">Hey ${name}!</h2>
-          <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">
-            ${content}
-          </p>
-
-          <!-- Details Card -->
-          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 20px 16px; margin: 28px 0;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">📅 Date</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${booking_date}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">🏷️ Name</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${name}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">👥 Tickets</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${group_size} ${group_size === 1 ? 'Person' : 'People'}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">ℹ️ Status</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A; text-transform: capitalize;">${status}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">💷 Total Amount</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(total_amount).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">💳 Paid Amount</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(paid_amount).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 900; white-space: nowrap; padding-right: 12px;">🪑 Table Name</td>
-                <td style="text-align: right; font-weight: 900; color: #1F1F1A;">${name}</td>
-              </tr>
-            </table>
-          </div>
-
-          <!-- Action -->
-          <div style="text-align: center; margin: 40px 0 20px 0;">
-            <a href="${manageUrl}" style="background-color: #FDCC4B; color: #26300D; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">Manage Booking</a>
-          </div>
-          <p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">
-            Button not working? Copy and paste this link:<br>
-            <a href="${manageUrl}" style="color: #26300D; text-decoration: underline; margin-top: 8px; display: inline-block;">${manageUrl}</a>
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background-color: #1F1F1A; padding: 30px; text-align: center;">
-          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">
-            Don Fenticas • Licensed Venue
-          </p>
-        </div>
-
-      </div>
-    </div>
-  `;
+  /* Free and paid bingo bookings now build on the same shell as every other
+     booking email, rather than the copy of it this file used to carry. */
+  const { subject, html } = buildBookingConfirmedEmail({
+    slots,
+    rows: [
+      { label: "📅 Date", value: formatEventDate(booking_date) },
+      { label: "🏷️ Name", value: name },
+      { label: "👥 Tickets", value: partySize },
+      { label: "ℹ️ Status", value: status },
+      { label: "💷 Total Amount", value: `£${Number(total_amount).toFixed(2)}` },
+      { label: "💳 Paid Amount", value: `£${Number(paid_amount).toFixed(2)}` },
+    ],
+    manageUrl,
+  });
 
   try {
       const { error: resendError } = await resend.emails.send({

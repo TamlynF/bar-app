@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Resend } from "resend";
 import RetryPaymentButton from "@/components/retry-payment-button";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
 
@@ -80,29 +81,36 @@ console.log("Booking fetcheddd:", booking);
     if (contact?.email) {
       const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking.id}`;
 
-      const { subject, html } = buildBookingConfirmedEmail({
-        subject: "Music Bingo Booking Confirmed! 🎵",
+      const partySize = `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`;
+
+      const slots = await renderTemplate(supabase, "booking.bingo.confirmed", {
+        customerName: contact.full_name,
         eventTitle: event?.title ?? "Music Bingo",
-        greeting: `You're in, ${contact.full_name}!`,
-        intro: "Your Music Bingo booking is confirmed and paid. See you there!",
-        rows: [
-          { label: "📅 Date", value: formatEventDate(event?.date ?? null) },
-          {
-            label: "👥 People",
-            value: `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`,
-          },
-          { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
-        ],
-        manageUrl,
-        footnote: `Questions? Email us at ${await getContactEmail()}`,
+        eventDate: formatEventDate(event?.date ?? null),
+        groupName: contact.full_name,
+        groupSize: partySize,
+        bookingId: String(booking.id),
+        contactEmail: await getContactEmail(),
       });
 
-      await resend.emails.send({
-        from: EMAIL_FROM,
-        to: contact.email,
-        subject,
-        html,
-      }).catch(() => {});
+      if (slots) {
+        const { subject, html } = buildBookingConfirmedEmail({
+          slots,
+          rows: [
+            { label: "📅 Date", value: formatEventDate(event?.date ?? null) },
+            { label: "👥 People", value: partySize },
+            { label: "💳 Paid", value: `£${(booking.total_amount ?? 0).toFixed(2)}` },
+          ],
+          manageUrl,
+        });
+
+        await resend.emails.send({
+          from: EMAIL_FROM,
+          to: contact.email,
+          subject,
+          html,
+        }).catch(() => {});
+      }
     }
 
     return { status: "paid" as const, booking };

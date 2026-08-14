@@ -7,6 +7,7 @@ import {
   updatePrivateHireFields,
   getPrivateEventOptions,
   getClashingEvents,
+  privateHireEmailSlotsAction,
 } from "../actions";
 import {
   AlertCircle,
@@ -804,6 +805,24 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     const d = dialogs[newStatus];
     if (!d) return { ok: true, note: adminNotes };
 
+    /* Fetched rather than composed here, so the preview is the copy that will
+       actually be sent - including any wording changed on the settings page. */
+    const slots = await privateHireEmailSlotsAction(
+      newStatus === "confirmed" ? "confirmed" : "cancelled",
+      request.full_name
+    );
+    if (!slots) {
+      return {
+        ok: await confirm({
+          title: d.title,
+          description: `${d.description} This email is currently switched off, so nothing will be sent.`,
+          confirmLabel: d.confirmLabel,
+          variant: d.destructive ? "destructive" : undefined,
+        }),
+        note: adminNotes,
+      };
+    }
+
     const initial = newStatus === "cancelled" ? adminNotes : "";
     noteDraft.current = initial;
     const ok = await confirm({
@@ -817,13 +836,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           onNoteChange={(v) => {
             noteDraft.current = v;
           }}
-          build={(note) =>
-            buildPrivateHireOutcomeEmail({
-              name: request.full_name,
-              outcome: newStatus === "confirmed" ? "confirmed" : "cancelled",
-              notes: note,
-            })
-          }
+          build={(note) => buildPrivateHireOutcomeEmail({ slots, notes: note })}
           to={to}
           label={d.label}
           placeholder={d.placeholder}
