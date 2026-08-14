@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { checkEventGroupName, createEventBooking } from "@/app/(public)/_actions/create-event-booking";
 import { checkSeatingAvailability } from "@/app/(public)/_actions/check-seating";
 import {
@@ -55,6 +55,8 @@ export default function EventBookingForm({ event, config }: Props) {
   const [groupNameError, setGroupNameError] = useState("");
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
   const [seatingError, setSeatingError] = useState("");
+
+  const successRef = useRef<HTMLDivElement>(null);
 
   const cfg = normalizeBookingConfig(config);
   const f = cfg.fields;
@@ -128,6 +130,12 @@ export default function EventBookingForm({ event, config }: Props) {
     return () => clearTimeout(timer);
   }, [formData.groupSize, event.id]);
 
+  useEffect(() => {
+    if (!booked) return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    successRef.current?.focus({ preventScroll: true });
+  }, [booked]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setError(null);
@@ -153,7 +161,11 @@ export default function EventBookingForm({ event, config }: Props) {
 
   if (booked) {
     return (
-      <div className="animate-in py-4 text-center duration-300 fade-in zoom-in">
+      <div
+        ref={successRef}
+        tabIndex={-1}
+        className="animate-in py-4 text-center duration-300 fade-in zoom-in focus:outline-none"
+      >
         <div className="mb-6 flex justify-center">
           <div className="rounded-full bg-emerald-500/20 p-4">
             <CheckCircle className="h-10 w-10 text-emerald-500" />
