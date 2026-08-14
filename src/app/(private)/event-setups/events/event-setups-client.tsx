@@ -442,7 +442,7 @@ export default function EventsClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | null>(() => {
-    if (initialFrom || initialTo) return { start: initialFrom ?? "", end: initialTo ?? initialFrom ?? null };
+    if (initialFrom || initialTo) return { start: initialFrom ?? "", end: initialTo ?? "" };
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
@@ -1059,7 +1059,7 @@ export default function EventsClient({
     if (dateRange && (dateRange.start || dateRange.end)) {
       if (!e.date) return false;
       const from = dateRange.start || null;
-      const to = dateRange.end || dateRange.start || null;
+      const to = dateRange.end === "" ? null : dateRange.end || dateRange.start || null;
       if (from && e.date < from) return false;
       if (to && e.date > to) return false;
     }

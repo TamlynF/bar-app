@@ -161,13 +161,9 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const analyticsPromise = fetchDashboardAnalytics(supabase);
   const venueSalesPromise = fetchVenueSales(supabase);
-  const nowMs = new Date().getTime();
-  const todayStr = new Date().toISOString().split("T")[0];
-  const twelveMonthsStr = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth() + 12,
-    new Date().getDate()
-  ).toISOString().split("T")[0];
+  const today = new Date();
+  const nowMs = today.getTime();
+  const todayStr = format(today, "yyyy-MM-dd");
 
   const trendFrom = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 1))
     .toISOString()
@@ -176,8 +172,7 @@ export default async function DashboardPage() {
   const analytics = await analyticsPromise;
   const venueSales = await venueSalesPromise;
   
-  const finishedFilter = finishedEventOrFilter(new Date());
-  const historicToStr = format(new Date(), "yyyy-MM-dd");
+  const finishedFilter = finishedEventOrFilter(today);
 
   const [
     { count: pendingPrivate },
@@ -211,7 +206,6 @@ export default async function DashboardPage() {
       .from("events")
       .select("id, date, event_subtypes!inner(behavior), past_quiz_questions(id)")
       .gte("date", todayStr)
-      .lte("date", twelveMonthsStr)
       .eq("is_active", true)
       .eq("event_subtypes.behavior", "quiz"),
     supabase
@@ -496,13 +490,13 @@ export default async function DashboardPage() {
     .filter((b) => !!b.createdAt);
 
   const actionItems: ActionItem[] = [
-    { key: "finished-active", label: "Past events still active", count: finishedActive ?? 0, href: `/event-setups/events?quick=historic,active&to=${historicToStr}`, color: "bg-slate-600" },
-    { key: "quiz-winner", label: "Past events missing quiz winner", count: quizzesMissingWinner, href: `/event-setups/events?quick=historic,needs-winner&to=${historicToStr}`, color: "bg-yellow-600" },
+    { key: "finished-active", label: "Past events still active", count: finishedActive ?? 0, href: `/event-setups/events?quick=historic,active&to=${todayStr}`, color: "bg-slate-600" },
+    { key: "quiz-winner", label: "Past events missing quiz winner", count: quizzesMissingWinner, href: `/event-setups/events?quick=historic,needs-winner&to=${todayStr}`, color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Band requests pending", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=new,reviewing", color: "bg-purple-700" },
     { key: "hires", label: "Private requests pending", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
     { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
-    { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
+    { key: "quizzes", label: "Events missing quiz questions", count: quizzesMissingQuestions, href: `/event-setups/events?quick=quiz,active&from=${todayStr}`, color: "bg-green-700" },
   ];
 
   const comingUp = allListItems;

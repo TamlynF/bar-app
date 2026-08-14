@@ -21,9 +21,13 @@ function fmtShort(iso: string) {
   return `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
 }
 
+/* An empty string on either end means that side is unbounded, which the picker
+   itself never produces - only a from/to link can ask for it. A null end still
+   means the single day picked as the start. */
 export function dateRangeLabel(range: DateRange | null): string {
   if (!range || (!range.start && !range.end)) return "All dates";
   if (!range.start && range.end) return `Up to ${fmtShort(range.end)}`;
+  if (range.end === "") return `From ${fmtShort(range.start)}`;
   if (!range.end || range.end === range.start) return fmtShort(range.start);
   return `${fmtShort(range.start)} – ${fmtShort(range.end)}`;
 }
