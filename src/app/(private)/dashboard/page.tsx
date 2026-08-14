@@ -523,67 +523,13 @@ export default async function DashboardPage() {
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          <section className="space-y-2 lg:row-start-2 lg:col-start-1">
-            <SectionLabel
-              icon={BarChart3}
-              label="Trends"
-              action={
-                <Link
-                  href="/marketing/trends"
-                  className="-mr-1.5 inline-flex h-11 items-center gap-1 rounded-lg px-2 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
-                >
-                  Market trends
-                  <ChevronRight className="h-4 w-4 shrink-0" />
-                </Link>
-              }
-            />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <RevenueTrendChart data={analytics.weekly} />
-              <RevenueByTypeChart
-                data={analytics.revenueByType}
-                bandSpend={analytics.bandSpendThisMonth}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard
-                label="Returning"
-                value={`${analytics.guestSplit.returningPct}%`}
-                sub="of month's guests"
-              />
-              <StatCard
-                label="Cancellations"
-                value={`${analytics.cancellationPct}%`}
-                sub="of bookings"
-                warn={analytics.cancellationPct > 15}
-              />
-              <StatCard
-                label="Lead Time"
-                value={`${analytics.medianLeadDays}d`}
-                sub="median booking"
-              />
-            </div>
-          </section>
-
-          <div className="space-y-5 lg:row-start-2 lg:col-start-2">
+          <div className="space-y-5 lg:row-start-2 lg:col-start-1">
             <section className="space-y-2">
               <SectionLabel
                 icon={TrendingUp}
                 label={`${format(new Date(), "MMMM")} at a Glance`}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <StatCard
-                  label="Collected"
-                  value={`£${analytics.thisMonth.collected.toFixed(2)}`}
-                  sub="revenue paid"
-                  positive
-                  delta={analytics.deltas.collected}
-                />
-                <StatCard
-                  label="Outstanding"
-                  value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
-                  sub="to collect"
-                  warn={analytics.thisMonth.outstanding > 0}
-                />
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <StatCard
                   label="Bookings"
                   value={analytics.thisMonth.bookings}
@@ -594,6 +540,18 @@ export default async function DashboardPage() {
                   label="New Guests"
                   value={analytics.guestSplit.newGuests}
                   sub="first-time bookers"
+                />
+                <StatCard
+                  label="Returning"
+                  value={`${analytics.guestSplit.returningPct}%`}
+                  sub="of month's guests"
+                />
+                <StatCard
+                  label="Collected"
+                  value={`£${analytics.thisMonth.collected.toFixed(2)}`}
+                  sub="revenue paid"
+                  positive
+                  delta={analytics.deltas.collected}
                 />
               </div>
             </section>
@@ -613,6 +571,42 @@ export default async function DashboardPage() {
               )}
             </section>
           </div>
+
+          <section className="space-y-2 lg:row-start-2 lg:col-start-2">
+            <SectionLabel
+              icon={BarChart3}
+              label="Trends"
+              action={
+                <Link
+                  href="/marketing/trends"
+                  className="-mr-1.5 inline-flex h-11 items-center gap-1 rounded-lg px-2 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
+                >
+                  Market trends
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                </Link>
+              }
+            />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <RevenueTrendChart data={analytics.weekly} />
+              <RevenueByTypeChart
+                data={analytics.revenueByType}
+                bandSpend={analytics.bandSpendThisMonth}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard
+                label="Cancellations"
+                value={`${analytics.cancellationPct}%`}
+                sub="of bookings"
+                warn={analytics.cancellationPct > 15}
+              />
+              <StatCard
+                label="Lead Time"
+                value={`${analytics.medianLeadDays}d`}
+                sub="median booking"
+              />
+            </div>
+          </section>
 
           <section className="space-y-2 lg:col-span-2">
             <SectionLabel icon={Wine} label="Venue Sales" />

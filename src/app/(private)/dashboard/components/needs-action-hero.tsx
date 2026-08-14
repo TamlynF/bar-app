@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { BellRing, CheckCircle2 } from "lucide-react";
+import { BellRing, CheckCircle2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ActionItem {
@@ -11,6 +14,8 @@ export interface ActionItem {
 }
 
 export default function NeedsActionHero({ items, total }: { items: ActionItem[]; total: number }) {
+  const [open, setOpen] = useState(true);
+
   if (total === 0) {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-[#bbf7d0] bg-linear-to-b from-[#f0fdf4] to-[#FFFEFA] p-5 shadow-sm">
@@ -31,17 +36,30 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
 
   return (
     <div className="rounded-2xl border border-[#e9c9c0] bg-linear-to-b from-[#fff8f3] to-[#FFFEFA] p-4 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls="needs-action-items"
+        title={open ? "Hide items" : "Show items"}
+        className="flex w-full items-center gap-3 text-left"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-600">
           <BellRing className="h-6 w-6 text-white" />
-        </div>
-        <div className="flex items-baseline gap-2">
+        </span>
+        <span className="flex items-baseline gap-2">
           <span className="text-3xl leading-none font-bold text-admin-ink tabular-nums">{total}</span>
           <span className="text-sm leading-snug font-medium text-admin-muted">
             items need action
           </span>
-        </div>
-      </div>
+        </span>
+        <ChevronDown
+          className={cn(
+            "ml-auto h-5 w-5 shrink-0 text-admin-muted transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
 
       <div className="mt-3.5 flex h-2 overflow-hidden rounded-full bg-[#F4F1E8]">
         {active.map((i) => (
@@ -53,7 +71,13 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         ))}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div
+        id="needs-action-items"
+        className={cn(
+          "mt-3 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4",
+          open ? "grid" : "hidden"
+        )}
+      >
         {active.map((i) => (
           <Link
             key={i.key}
