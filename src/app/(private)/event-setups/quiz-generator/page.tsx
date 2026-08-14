@@ -56,7 +56,7 @@ import {
   ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SpotifyPlayer } from '@/components/spotify-player'
+import { SpotifyPlayer, isSpotifyConnected } from '@/components/spotify-player'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -113,9 +113,8 @@ export default function QuizGeneratorPage() {
   const [formOpen, setFormOpen] = useState(true)
 
   useEffect(() => {
-    const hasCookie = document.cookie.includes('spotify_access_token')
     const urlParams = new URLSearchParams(window.location.search)
-    if (hasCookie || urlParams.get('spotify_connected') === 'true') {
+    if (isSpotifyConnected() || urlParams.get('spotify_connected') === 'true') {
       setSpotifyConnected(true)
     }
   }, [])

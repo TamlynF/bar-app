@@ -10,6 +10,14 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null
 }
 
+/* The account cookie outlives the hour-long access token, so it - not the token -
+   is what says whether Spotify is still connected; getToken refreshes the token
+   on demand. Presence is the test, because the cookie is empty when Spotify's
+   /me lookup came back without a name. */
+export function isSpotifyConnected(): boolean {
+  return /(?:^|; )spotify_account=/.test(document.cookie) || !!getCookie('spotify_access_token')
+}
+
 
 let globalPlayer: Spotify.Player | null = null
 let globalDeviceId: string | null = null
@@ -181,7 +189,7 @@ type SpotifyPlayerProps = {
 export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayerProps) {
   const connected = useSyncExternalStore(
     () => () => {},
-    () => !!getCookie('spotify_access_token'),
+    () => isSpotifyConnected(),
     () => false,
   )
   const [isPlaying, setIsPlaying] = useState(false)
