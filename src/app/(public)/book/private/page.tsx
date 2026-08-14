@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import PrivateHireForm from "./_components/private-hire-form";
 import { PublicNav } from "@/components/public-nav";
@@ -6,6 +7,10 @@ import { getCompanyInfo } from "@/lib/company-info";
 export const metadata = {
   title: "Private Hire | Don Fenticas",
   description: "Book Don Fenticas for your private event.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export default async function PrivateHirePage() {

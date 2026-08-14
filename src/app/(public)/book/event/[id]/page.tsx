@@ -1,4 +1,5 @@
 import React from "react";
+import type { Viewport } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -18,6 +19,10 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
   Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {

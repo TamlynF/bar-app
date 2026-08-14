@@ -1,4 +1,5 @@
 import React from 'react'
+import type { Viewport } from "next";
 import BookingForm, { type QuizEvent } from "@/app/(public)/book/quiz/_components/quiz-booking-form";
 import { 
   Calendar, Banknote, Users, Trophy, Wine, 
@@ -13,6 +14,10 @@ import { cn } from "@/lib/utils";
 export const metadata = {
   title: 'Book a Quiz | Don Fenticas',
   description: 'Secure your spot for our next quiz night.',
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {

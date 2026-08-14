@@ -1,4 +1,5 @@
 import React from "react";
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import CancelButton from "./_components/cancel-button";
@@ -6,6 +7,10 @@ import type { ManageBooking } from "./_components/cancel-button";
 
 export const metadata = {
   title: "Manage Booking | Don Fenticas",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export default async function ManageBookingPage({

@@ -1,4 +1,5 @@
 import React from "react";
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import BingoBookingForm, { type BingoEvent } from "./_components/bingo-booking-form";
 import Image from "next/image";
@@ -13,6 +14,10 @@ import { cn } from "@/lib/utils";
 export const metadata = {
   title: "Music Bingo | Don Fenticas",
   description: "Book your spot for Music Bingo night at Don Fenticas.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 const ICON_MAP: Record<string, React.ElementType> = {

@@ -1,4 +1,5 @@
 import React from "react";
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { toCamelCase } from "@/lib/utils";
 import { getAvailableBandDates } from "@/lib/band-availability-data";
@@ -8,6 +9,10 @@ import { PublicNav } from "@/components/public-nav";
 export const metadata = {
   title: "Book the Stage | Don Fenticas",
   description: "Apply to perform live at Don Fenticas.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export default async function BandBookingPage() {

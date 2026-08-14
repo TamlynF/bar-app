@@ -1,10 +1,10 @@
 import React from 'react'
+import type { Viewport } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import GroupedBookingForm, {
   type GroupedEvent
 } from './_components/grouped-booking-form'
-import ImageThemer from '../../../event/[id]/_components/image-themer'
 import Image from 'next/image'
 import {
   Banknote,
@@ -117,6 +117,10 @@ async function loadHeader (scope: Scope, id: string) {
   }
 }
 
+export const viewport: Viewport = {
+  themeColor: '#26300D'
+}
+
 export async function generateMetadata ({
   params
 }: {
@@ -202,16 +206,6 @@ export default async function GroupedBookingPage ({
       `
         }}
       />
-
-      {cfg.booking_image_url && (
-        <>
-          <ImageThemer imageUrl={cfg.booking_image_url} />
-          <div
-            aria-hidden
-            className='pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)] opacity-80'
-          />
-        </>
-      )}
 
       <PublicNav currentPath='/book/group' />
 

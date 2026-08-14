@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import ManageBingoBooking from "./_components/manage-bingo-booking";
@@ -5,6 +6,10 @@ import type { BingoManageBooking } from "./_components/manage-bingo-booking";
 
 export const metadata = {
   title: "Manage Booking | Don Fenticas",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export default async function ManageBingoBookingPage({

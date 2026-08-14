@@ -2,10 +2,20 @@
 
 import { useEffect } from "react";
 
+const PAGE_BASE_RGB = [0x26, 0x30, 0x0d];
+const WASH_OPACITY = 0.8;
+
+const toHex = (n: number) =>
+  Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0");
+
+const themeColorMeta = () =>
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+
 export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
   useEffect(() => {
     let cancelled = false;
     const root = document.documentElement;
+    const originalThemeColor = themeColorMeta()?.content ?? null;
     const img = new Image();
     img.crossOrigin = "anonymous";
 
@@ -66,6 +76,15 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         const fgRgb = washLum > 0.58 ? "28 25 23" : "245 245 244"; // near-black vs near-white
         root.style.setProperty("--ev-fg", `rgb(${fgRgb})`);
         root.style.setProperty("--ev-fg-dim", `rgb(${fgRgb} / 0.62)`);
+
+        const meta = themeColorMeta();
+        if (meta) {
+          const flatten = (c: number, base: number) =>
+            c * WASH_OPACITY + base * (1 - WASH_OPACITY);
+          meta.content = `#${toHex(flatten(wr, PAGE_BASE_RGB[0]))}${toHex(
+            flatten(wg, PAGE_BASE_RGB[1])
+          )}${toHex(flatten(wb, PAGE_BASE_RGB[2]))}`;
+        }
       } catch {
       }
     };
@@ -77,6 +96,10 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
       root.style.removeProperty("--ev-theme");
       root.style.removeProperty("--ev-fg");
       root.style.removeProperty("--ev-fg-dim");
+      const meta = themeColorMeta();
+      if (meta && originalThemeColor !== null) {
+        meta.content = originalThemeColor;
+      }
     };
   }, [imageUrl]);
 

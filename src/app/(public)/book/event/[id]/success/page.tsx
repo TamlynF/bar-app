@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { settlePaidBooking } from "@/lib/settle-paid-booking";
@@ -5,6 +6,10 @@ import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Resend } from "resend";
 import RetryPaymentButton from "@/components/retry-payment-button";
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
+};
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
