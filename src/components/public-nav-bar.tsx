@@ -32,6 +32,7 @@ export function PublicNavBar({
   const primaryLinks = [
     { href: "/whats-on", label: "What's On" },
     { href: "/menu", label: "Menu" },
+    { href: "/market", label: "Market" },
     { href: "/gallery", label: "Gallery" },
     { href: "/contact", label: "Contact" },
   ];

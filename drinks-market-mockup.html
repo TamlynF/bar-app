@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Don Fenticas — Drinks Exchange (Mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --canvas: #14180a;
+    --canvas-2: #1b210f;
+    --ink: #fff4cc;
+    --ink-2: #b4b294;
+    --hairline: rgb(255 255 255 / 0.1);
+    --gold: #fdcc4b;
+    --on-gold: #1a2008;
+    --neon: #ff6b35;
+    --burgundy: #7a1f1f;
+    --up: #b6e84c;
+    --down: #ff59b0;
+    --cyan: #38d9f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--canvas); color: var(--ink); font-family: 'Archivo', system-ui, sans-serif; min-height: 100vh; overflow-x: hidden; }
+  .display { font-family: 'Anton', 'Archivo Black', sans-serif; letter-spacing: 0.01em; }
+  .black { font-family: 'Archivo Black', sans-serif; }
+
+  /* ── mockup mode switch ─────────────────────────────── */
+  .mode-switch {
+    position: fixed; top: 14px; right: 14px; z-index: 300;
+    display: flex; gap: 6px; background: rgb(0 0 0 / 0.55); border: 1px solid var(--hairline);
+    border-radius: 999px; padding: 5px; backdrop-filter: blur(6px);
+  }
+  .mode-switch button {
+    font-family: 'Archivo Black', sans-serif; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-2); background: transparent; border: 0; border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  }
+  .mode-switch button.active { background: var(--gold); color: var(--on-gold); }
+  .mode-switch button.crash-btn { color: var(--down); border: 1px solid rgb(255 89 176 / 0.45); }
+
+  /* ── TV BOARD ───────────────────────────────────────── */
+  #tv { display: flex; flex-direction: column; height: 100vh; padding: clamp(10px, 1.6vw, 28px) clamp(10px, 1.8vw, 32px) 0; gap: clamp(8px, 1vw, 18px); }
+
+  .tv-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .brand-eyebrow { font-family: 'Archivo Black', sans-serif; font-size: clamp(9px, 0.75vw, 13px); letter-spacing: 0.35em; text-transform: uppercase; color: var(--gold); }
+  h1 { font-family: 'Anton', sans-serif; font-size: clamp(30px, 4.6vw, 76px); text-transform: uppercase; line-height: 0.95; letter-spacing: 0.01em; }
+  h1 .x { color: var(--neon); }
+  .live-pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgb(182 232 76 / 0.45); background: rgb(182 232 76 / 0.1); color: var(--up); border-radius: 999px; padding: 6px 14px; font-family: 'Archivo Black', sans-serif; font-size: clamp(9px, 0.7vw, 12px); letter-spacing: 0.2em; text-transform: uppercase; }
+  .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--up); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgb(182 232 76 / 0.5);} 50% { opacity: 0.6; box-shadow: 0 0 0 6px rgb(182 232 76 / 0);} }
+  .head-right { display: flex; align-items: center; gap: clamp(10px, 1.4vw, 26px); }
+  .clock { font-family: 'Anton', sans-serif; font-size: clamp(20px, 2.4vw, 40px); color: var(--gold); font-variant-numeric: tabular-nums; }
+  .session-label { text-align: right; }
+  .session-label .top { font-family: 'Archivo Black', sans-serif; font-size: clamp(8px, 0.65vw, 11px); letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-2); }
+  .session-label .bottom { font-weight: 700; font-size: clamp(11px, 0.95vw, 16px); color: var(--ink); }
+
+  .index-strip { display: flex; gap: clamp(8px, 1vw, 16px); flex-wrap: wrap; }
+  .index-chip { display: flex; align-items: baseline; gap: 10px; border: 1px solid var(--hairline); background: var(--canvas-2); border-radius: 14px; padding: clamp(6px, 0.7vw, 12px) clamp(12px, 1.2vw, 20px); }
+  .index-chip .k { font-family: 'Archivo Black', sans-serif; font-size: clamp(8px, 0.62vw, 11px); letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-2); }
+  .index-chip .v { font-family: 'Anton', sans-serif; font-size: clamp(16px, 1.5vw, 26px); font-variant-numeric: tabular-nums; }
+  .index-chip .v.up { color: var(--up); } .index-chip .v.down { color: var(--down); } .index-chip .v.gold { color: var(--gold); }
+
+  .board { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: clamp(8px, 0.9vw, 16px); min-height: 0; }
+  @media (max-width: 1100px) { .board { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 800px) { .board { grid-template-columns: repeat(2, 1fr); } }
+
+  .card {
+    position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+    background: var(--canvas-2); border: 1px solid var(--hairline); border-radius: 18px;
+    padding: clamp(8px, 0.95vw, 18px); transition: box-shadow 0.4s, border-color 0.4s; min-height: 0;
+  }
+  .card.flash-up { border-color: rgb(182 232 76 / 0.7); box-shadow: 0 0 24px rgb(182 232 76 / 0.22) inset, 0 0 18px rgb(182 232 76 / 0.18); }
+  .card.flash-down { border-color: rgb(255 89 176 / 0.6); box-shadow: 0 0 24px rgb(255 89 176 / 0.18) inset; }
+  .card.sold-out { opacity: 0.55; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .cat { font-family: 'Archivo Black', sans-serif; font-size: clamp(7px, 0.55vw, 10px); letter-spacing: 0.24em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid; }
+  .cat.beer { color: var(--gold); border-color: rgb(253 204 75 / 0.4); background: rgb(253 204 75 / 0.08); }
+  .cat.cocktail { color: var(--down); border-color: rgb(255 89 176 / 0.45); background: rgb(255 89 176 / 0.1); }
+  .cat.wine { color: var(--cyan); border-color: rgb(56 217 240 / 0.45); background: rgb(56 217 240 / 0.1); }
+  .cat.shot { color: var(--neon); border-color: rgb(255 107 53 / 0.45); background: rgb(255 107 53 / 0.1); }
+  .ticker-sym { font-family: 'Archivo Black', sans-serif; font-size: clamp(8px, 0.6vw, 11px); letter-spacing: 0.12em; color: var(--ink-2); }
+  .drink-name { font-family: 'Anton', sans-serif; font-size: clamp(15px, 1.45vw, 27px); text-transform: uppercase; line-height: 1; margin-top: 6px; }
+  .serve { font-size: clamp(9px, 0.72vw, 13px); font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.14em; margin-top: 3px; }
+  .price-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 6px; }
+  .price { font-family: 'Anton', sans-serif; font-size: clamp(24px, 2.6vw, 46px); line-height: 1; font-variant-numeric: tabular-nums; }
+  .delta { text-align: right; font-variant-numeric: tabular-nums; }
+  .delta .arrow-pct { font-family: 'Archivo Black', sans-serif; font-size: clamp(11px, 1vw, 17px); }
+  .delta .since { font-size: clamp(7px, 0.55vw, 10px); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-2); }
+  .up-t { color: var(--up); } .down-t { color: var(--down); } .flat-t { color: var(--ink-2); }
+  .spark { width: 100%; height: clamp(20px, 2.4vh, 42px); margin-top: 6px; }
+  .spark polyline { fill: none; stroke-width: 2; }
+  .spark .fillarea { opacity: 0.14; stroke: none; }
+
+  .ribbon {
+    position: absolute; top: 12px; right: -34px; transform: rotate(35deg); width: 130px; text-align: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 9px; letter-spacing: 0.18em; padding: 4px 0; text-transform: uppercase;
+  }
+  .ribbon.low { background: var(--gold); color: var(--on-gold); animation: blink 1.2s infinite; }
+  .ribbon.out { background: var(--down); color: #2a0517; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .stamp {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+  }
+  .stamp span { font-family: 'Anton', sans-serif; font-size: clamp(16px, 1.6vw, 30px); text-transform: uppercase; color: var(--down); border: 3px solid var(--down); border-radius: 10px; padding: 4px 14px; transform: rotate(-12deg); background: rgb(20 24 10 / 0.75); }
+
+  .tv-foot { display: flex; align-items: stretch; gap: clamp(8px, 1vw, 16px); padding-bottom: clamp(10px, 1.4vh, 20px); }
+  .qr-card { display: flex; align-items: center; gap: 12px; background: var(--gold); color: var(--on-gold); border-radius: 16px; padding: 8px 14px; flex-shrink: 0; }
+  .qr-card canvas { width: clamp(44px, 4.6vw, 78px); height: clamp(44px, 4.6vw, 78px); border-radius: 6px; background: #fff; padding: 3px; }
+  .qr-card .txt { font-family: 'Archivo Black', sans-serif; font-size: clamp(8px, 0.68vw, 12px); letter-spacing: 0.14em; text-transform: uppercase; line-height: 1.5; max-width: 200px; }
+  .tape-wrap { flex: 1; overflow: hidden; border: 1px solid var(--hairline); background: #0d1006; border-radius: 16px; display: flex; align-items: center; position: relative; }
+  .tape-label { position: absolute; left: 0; top: 0; bottom: 0; z-index: 2; display: flex; align-items: center; padding: 0 16px; background: var(--neon); color: #23090020; color: #2a0e00; font-family: 'Archivo Black', sans-serif; font-size: clamp(9px, 0.7vw, 12px); letter-spacing: 0.2em; border-radius: 16px 0 0 16px; }
+  .tape { display: inline-block; white-space: nowrap; padding-left: 100%; animation: scroll 45s linear infinite; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: clamp(12px, 1.05vw, 19px); letter-spacing: 0.06em; }
+  .tape b.up-t, .tape b.down-t, .tape b.gold-t { font-family: 'Archivo Black', sans-serif; }
+  .gold-t { color: var(--gold); }
+  .tape .sep { color: var(--ink-2); margin: 0 18px; }
+  @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+  /* crash overlay */
+  #crash-overlay { position: fixed; inset: 0; z-index: 400; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; background: rgb(122 31 31 / 0.62); backdrop-filter: blur(3px); animation: crashflash 0.35s infinite alternate; }
+  #crash-overlay.show { display: flex; }
+  @keyframes crashflash { from { background: rgb(122 31 31 / 0.55); } to { background: rgb(122 31 31 / 0.75); } }
+  #crash-overlay .big { font-family: 'Anton', sans-serif; font-size: clamp(50px, 9vw, 150px); text-transform: uppercase; color: #fff4cc; text-shadow: 0 0 40px rgb(255 89 176 / 0.9); transform: rotate(-3deg); }
+  #crash-overlay .sub { font-family: 'Archivo Black', sans-serif; font-size: clamp(14px, 1.8vw, 30px); letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); }
+
+  /* ── PHONE VIEW ─────────────────────────────────────── */
+  #phone-stage { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 40px 12px; background: radial-gradient(ellipse at 50% 0%, #232c11 0%, var(--canvas) 60%); }
+  #phone-stage.show { display: flex; }
+  .phone-frame { width: 390px; max-width: 96vw; height: 800px; max-height: 88vh; border: 10px solid #000; border-radius: 44px; background: var(--canvas); overflow: hidden; position: relative; box-shadow: 0 30px 80px rgb(0 0 0 / 0.6); display: flex; flex-direction: column; }
+  .notch { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 120px; height: 24px; background: #000; border-radius: 999px; z-index: 5; }
+  .phone-scroll { flex: 1; overflow-y: auto; padding: 52px 16px 90px; }
+  .ph-eyebrow { font-family: 'Archivo Black', sans-serif; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold); }
+  .ph-title { font-family: 'Anton', sans-serif; font-size: 34px; text-transform: uppercase; line-height: 0.95; margin-top: 4px; }
+  .ph-sub { color: var(--ink-2); font-size: 12.5px; margin-top: 8px; line-height: 1.5; }
+  .notify-cta { margin-top: 14px; width: 100%; border: 0; border-radius: 14px; background: var(--gold); color: var(--on-gold); font-family: 'Archivo Black', sans-serif; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 15px 12px; cursor: pointer; }
+  .notify-cta.on { background: rgb(182 232 76 / 0.14); color: var(--up); border: 1px solid rgb(182 232 76 / 0.45); }
+  .ph-hint { margin-top: 8px; font-size: 10.5px; color: var(--ink-2); text-align: center; }
+  .ph-list { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .ph-row { display: flex; align-items: center; gap: 10px; background: var(--canvas-2); border: 1px solid var(--hairline); border-radius: 14px; padding: 10px 12px; position: relative; overflow: hidden; }
+  .ph-row.sold-out { opacity: 0.5; }
+  .fav { width: 34px; height: 34px; min-width: 34px; border-radius: 10px; border: 1px solid var(--hairline); background: transparent; color: var(--ink-2); font-size: 16px; cursor: pointer; }
+  .fav.on { color: var(--gold); border-color: rgb(253 204 75 / 0.5); background: rgb(253 204 75 / 0.1); }
+  .ph-info { flex: 1; min-width: 0; }
+  .ph-name { font-family: 'Anton', sans-serif; font-size: 15px; text-transform: uppercase; }
+  .ph-serve { font-size: 10px; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.14em; }
+  .ph-flag { font-family: 'Archivo Black', sans-serif; font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; margin-left: 6px; }
+  .ph-flag.low { background: rgb(253 204 75 / 0.15); color: var(--gold); border: 1px solid rgb(253 204 75 / 0.4); }
+  .ph-flag.out { background: rgb(255 89 176 / 0.14); color: var(--down); border: 1px solid rgb(255 89 176 / 0.45); }
+  .ph-price { text-align: right; font-variant-numeric: tabular-nums; }
+  .ph-price .p { font-family: 'Anton', sans-serif; font-size: 19px; }
+  .ph-price .d { font-family: 'Archivo Black', sans-serif; font-size: 10px; }
+  .push-toast { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10; background: rgb(13 16 6 / 0.97); border: 1px solid rgb(253 204 75 / 0.5); border-radius: 16px; padding: 12px 14px; transform: translateY(-130%); transition: transform 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.2); box-shadow: 0 12px 30px rgb(0 0 0 / 0.55); }
+  .push-toast.show { transform: translateY(0); }
+  .push-app { display: flex; align-items: center; gap: 6px; font-family: 'Archivo Black', sans-serif; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 5px; }
+  .push-app .dot { width: 14px; height: 14px; border-radius: 4px; background: var(--gold); }
+  .push-title { font-weight: 700; font-size: 13.5px; }
+  .push-body { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="mode-switch">
+  <button id="btn-tv" class="active">TV Board</button>
+  <button id="btn-phone">Phone</button>
+  <button id="btn-crash" class="crash-btn">Crash!</button>
+</div>
+
+<!-- ══════════════ TV / PROJECTOR BOARD ══════════════ -->
+<div id="tv">
+  <div class="tv-head">
+    <div>
+      <div class="brand-eyebrow">Don Fenticas presents</div>
+      <div class="brand-row">
+        <h1>The Drinks E<span class="x">x</span>change</h1>
+        <span class="live-pill"><span class="live-dot"></span>Market Open</span>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="session-label">
+        <div class="top">Friday Night Session</div>
+        <div class="bottom">Buy low. Drink up. No refunds on regret.</div>
+      </div>
+      <div class="clock" id="clock">21:42</div>
+    </div>
+  </div>
+
+  <div class="index-strip">
+    <div class="index-chip"><span class="k">DFX Index</span><span class="v gold" id="dfx">100.0</span></div>
+    <div class="index-chip"><span class="k">Top Riser</span><span class="v up" id="riser">—</span></div>
+    <div class="index-chip"><span class="k">Top Faller</span><span class="v down" id="faller">—</span></div>
+    <div class="index-chip"><span class="k">Trades Tonight</span><span class="v" id="trades">0</span></div>
+    <div class="index-chip"><span class="k">Next Crash</span><span class="v down" id="crash-timer">??:??</span></div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="tv-foot">
+    <div class="qr-card">
+      <canvas id="qr" width="84" height="84"></canvas>
+      <div class="txt">Scan for live prices + price-drop alerts on your phone</div>
+    </div>
+    <div class="tape-wrap">
+      <div class="tape-label">Live</div>
+      <div class="tape" id="tape"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PHONE VIEW ══════════════ -->
+<div id="phone-stage">
+  <div class="phone-frame">
+    <div class="notch"></div>
+    <div class="push-toast" id="push-toast">
+      <div class="push-app"><span class="dot"></span> Don Fenticas · now</div>
+      <div class="push-title" id="push-title">📉 Guinness (pint) down to £4.20</div>
+      <div class="push-body" id="push-body">Was £4.60 — get to the bar.</div>
+    </div>
+    <div class="phone-scroll">
+      <div class="ph-eyebrow">Live · Friday Night Session</div>
+      <div class="ph-title">Drinks Exchange</div>
+      <div class="ph-sub">Prices move with every drink sold at the bar. Star your favourites and we'll ping you when they drop — or when they're about to run out.</div>
+      <button class="notify-cta" id="notify-cta">🔔 Notify me on price drops</button>
+      <div class="ph-hint" id="ios-hint">On iPhone: add to Home Screen first to enable alerts.</div>
+      <div class="ph-list" id="ph-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="crash-overlay">
+  <div class="big">💥 Market Crash</div>
+  <div class="sub" id="crash-sub">All prices down 25% — go go go</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── seed data: name, serve, symbol, category, opening price, tracked stock ── */
+  var DRINKS = [
+    { n: 'Guinness',         s: 'pint',        sym: 'GNS',  cat: 'beer',     open: 5.20, stock: null },
+    { n: 'Neck Oil',         s: 'pint',        sym: 'NKO',  cat: 'beer',     open: 5.60, stock: 14  },
+    { n: 'Madrí',            s: 'pint',        sym: 'MDR',  cat: 'beer',     open: 5.40, stock: null },
+    { n: 'House Lager',      s: 'pint',        sym: 'HLG',  cat: 'beer',     open: 4.60, stock: null },
+    { n: 'Guest Cider',      s: 'pint',        sym: 'CDR',  cat: 'beer',     open: 5.00, stock: 9   },
+    { n: 'Aperol Spritz',    s: 'glass',       sym: 'APZ',  cat: 'cocktail', open: 8.50, stock: null },
+    { n: 'Espresso Martini', s: 'glass',       sym: 'ESP',  cat: 'cocktail', open: 8.90, stock: null },
+    { n: 'Old Fashioned',    s: 'glass',       sym: 'OLF',  cat: 'cocktail', open: 9.20, stock: null },
+    { n: 'House Red',        s: 'glass 175ml', sym: 'HRD',  cat: 'wine',     open: 5.10, stock: null },
+    { n: 'Prosecco',         s: 'glass',       sym: 'PSC',  cat: 'wine',     open: 6.40, stock: 6   },
+    { n: 'Jägerbomb',        s: 'each',        sym: 'JGB',  cat: 'shot',     open: 4.50, stock: null },
+    { n: 'Tequila',          s: 'single',      sym: 'TQL',  cat: 'shot',     open: 4.20, stock: null }
+  ];
+
+  var CAT_LABEL = { beer: 'Beer & Cider', cocktail: 'Cocktails', wine: 'Wine & Fizz', shot: 'Shots' };
+  var SPARK_COLOR = { up: '#b6e84c', down: '#ff59b0', flat: '#b4b294' };
+  var HISTORY_LEN = 42;
+  var SALE_BUMP_PCT = 4, DRIFT_PCT = 1, JITTER_PCT = 0.6, IDLE_TICKS = 4;
+  var CRASH_EVERY_MS = 90000, CRASH_PCT = 25;
+
+  function r5(p) { return Math.round(p * 20) / 20; }
+  function gbp(p) { return '£' + p.toFixed(2); }
+  function clampBand(item, p) { return Math.min(item.ceiling, Math.max(item.floor, r5(p))); }
+
+  var items = DRINKS.map(function (d, i) {
+    var it = {
+      id: i, name: d.n, serve: d.s, sym: d.sym, cat: d.cat,
+      open: d.open, price: d.open,
+      floor: r5(d.open * 0.8), ceiling: r5(d.open * 1.3),
+      stock: d.stock, stockInit: d.stock, status: 'ok',
+      idle: 0, hist: [], fav: (i === 0 || i === 5),
+      lastAlertPrice: d.open
+    };
+    for (var k = 0; k < HISTORY_LEN; k++) it.hist.push(d.open);
+    return it;
+  });
+
+  var trades = 0, optedIn = false, nextCrashAt = Date.now() + CRASH_EVERY_MS;
+  var tapeMsgs = [
+    'WELCOME TO THE DON FENTICAS DRINKS EXCHANGE',
+    'EVERY DRINK SOLD PUSHES ITS PRICE UP',
+    'NOBODY BUYING? PRICE DRIFTS BACK DOWN',
+    'WATCH OUT FOR THE MARKET CRASH 💥'
+  ];
+
+  /* ── build TV cards ── */
+  var board = document.getElementById('board');
+  items.forEach(function (it) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + it.id;
+    card.innerHTML =
+      '<div>' +
+        '<div class="card-top"><span class="cat ' + it.cat + '">' + CAT_LABEL[it.cat] + '</span>' +
+        '<span class="ticker-sym">' + it.sym + '</span></div>' +
+        '<div class="drink-name">' + it.name + '</div>' +
+        '<div class="serve">' + it.serve + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<div class="price-row">' +
+          '<div class="price" id="price-' + it.id + '">' + gbp(it.price) + '</div>' +
+          '<div class="delta"><div class="arrow-pct flat-t" id="delta-' + it.id + '">▲ 0.0%</div>' +
+          '<div class="since">since open</div></div>' +
+        '</div>' +
+        '<svg class="spark" id="spark-' + it.id + '" viewBox="0 0 100 30" preserveAspectRatio="none">' +
+          '<polygon class="fillarea" id="fill-' + it.id + '" points=""></polygon>' +
+          '<polyline id="line-' + it.id + '" points=""></polyline>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="ribbon low" id="ribbon-low-' + it.id + '" style="display:none">Low stock</div>' +
+      '<div class="ribbon out" id="ribbon-out-' + it.id + '" style="display:none">Sold out</div>' +
+      '<div class="stamp" id="stamp-' + it.id + '" style="display:none"><span>Sold out</span></div>';
+    board.appendChild(card);
+  });
+
+  /* ── build phone rows ── */
+  var phList = document.getElementById('ph-list');
+  items.forEach(function (it) {
+    var row = document.createElement('div');
+    row.className = 'ph-row';
+    row.id = 'ph-row-' + it.id;
+    row.innerHTML =
+      '<button class="fav' + (it.fav ? ' on' : '') + '" id="fav-' + it.id + '" aria-label="Favourite ' + it.name + '">' + (it.fav ? '★' : '☆') + '</button>' +
+      '<div class="ph-info"><div class="ph-name">' + it.name + '<span id="ph-flag-' + it.id + '"></span></div>' +
+      '<div class="ph-serve">' + it.serve + '</div></div>' +
+      '<div class="ph-price"><div class="p" id="ph-price-' + it.id + '">' + gbp(it.price) + '</div>' +
+      '<div class="d flat-t" id="ph-delta-' + it.id + '">0.0%</div></div>';
+    phList.appendChild(row);
+    row.querySelector('.fav').addEventListener('click', function () {
+      it.fav = !it.fav;
+      this.classList.toggle('on', it.fav);
+      this.textContent = it.fav ? '★' : '☆';
+    });
+  });
+
+  /* ── rendering ── */
+  function pct(it) { return ((it.price - it.open) / it.open) * 100; }
+
+  function renderItem(it) {
+    var p = pct(it);
+    var cls = p > 0.05 ? 'up-t' : p < -0.05 ? 'down-t' : 'flat-t';
+    var arrow = p > 0.05 ? '▲' : p < -0.05 ? '▼' : '■';
+    document.getElementById('price-' + it.id).textContent = gbp(it.price);
+    var d = document.getElementById('delta-' + it.id);
+    d.textContent = arrow + ' ' + Math.abs(p).toFixed(1) + '%';
+    d.className = 'arrow-pct ' + cls;
+
+    var min = Math.min.apply(null, it.hist), max = Math.max.apply(null, it.hist);
+    var span = (max - min) || 0.01;
+    var pts = it.hist.map(function (v, i) {
+      var x = (i / (HISTORY_LEN - 1)) * 100;
+      var y = 27 - ((v - min) / span) * 24;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    var color = SPARK_COLOR[p > 0.05 ? 'up' : p < -0.05 ? 'down' : 'flat'];
+    var line = document.getElementById('line-' + it.id);
+    line.setAttribute('points', pts);
+    line.setAttribute('stroke', color);
+    var fill = document.getElementById('fill-' + it.id);
+    fill.setAttribute('points', '0,30 ' + pts + ' 100,30');
+    fill.setAttribute('fill', color);
+
+    var low = it.status === 'low', out = it.status === 'out';
+    document.getElementById('ribbon-low-' + it.id).style.display = low ? 'block' : 'none';
+    document.getElementById('ribbon-out-' + it.id).style.display = out ? 'block' : 'none';
+    document.getElementById('stamp-' + it.id).style.display = out ? 'flex' : 'none';
+    document.getElementById('card-' + it.id).classList.toggle('sold-out', out);
+
+    document.getElementById('ph-price-' + it.id).textContent = gbp(it.price);
+    var pd = document.getElementById('ph-delta-' + it.id);
+    pd.textContent = arrow + ' ' + Math.abs(p).toFixed(1) + '%';
+    pd.className = 'd ' + cls;
+    var flag = document.getElementById('ph-flag-' + it.id);
+    flag.innerHTML = out ? '<span class="ph-flag out">Sold out</span>' : low ? '<span class="ph-flag low">Low stock</span>' : '';
+    document.getElementById('ph-row-' + it.id).classList.toggle('sold-out', out);
+  }
+
+  function renderIndex() {
+    var sum = 0, best = items[0], worst = items[0];
+    items.forEach(function (it) {
+      sum += pct(it);
+      if (pct(it) > pct(best)) best = it;
+      if (pct(it) < pct(worst)) worst = it;
+    });
+    var dfx = 100 + sum / items.length;
+    var el = document.getElementById('dfx');
+    el.textContent = dfx.toFixed(1);
+    el.className = 'v ' + (dfx >= 100 ? 'up' : 'down');
+    document.getElementById('riser').textContent = best.sym + ' +' + pct(best).toFixed(1) + '%';
+    document.getElementById('faller').textContent = worst.sym + ' ' + pct(worst).toFixed(1) + '%';
+    document.getElementById('trades').textContent = trades;
+    var secs = Math.max(0, Math.round((nextCrashAt - Date.now()) / 1000));
+    document.getElementById('crash-timer').textContent =
+      String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0');
+  }
+
+  function flash(it, dir) {
+    var card = document.getElementById('card-' + it.id);
+    card.classList.add('flash-' + dir);
+    setTimeout(function () { card.classList.remove('flash-' + dir); }, 900);
+  }
+
+  function tapePush(html) {
+    tapeMsgs.push(html);
+    if (tapeMsgs.length > 14) tapeMsgs.shift();
+    document.getElementById('tape').innerHTML =
+      tapeMsgs.map(function (m) { return m; }).join('<span class="sep">◆</span>');
+  }
+  tapePush('DFX OPENS AT 100.0 — GOOD LUCK OUT THERE');
+
+  /* ── mock push notification (phone view) ── */
+  var toastTimer = null;
+  function mockPush(title, body) {
+    if (!optedIn) return;
+    document.getElementById('push-title').textContent = title;
+    document.getElementById('push-body').textContent = body;
+    var t = document.getElementById('push-toast');
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4200);
+  }
+
+  function checkAlerts(it, prev) {
+    if (it.fav && it.price <= it.lastAlertPrice * 0.95) {
+      mockPush('📉 ' + it.name + ' (' + it.serve + ') down to ' + gbp(it.price), 'Was ' + gbp(it.lastAlertPrice) + ' — get to the bar.');
+      it.lastAlertPrice = it.price;
+    }
+    if (prev !== 'low' && prev !== 'out' && it.status === 'low') {
+      tapePush('<b class="gold-t">⚠ ' + it.name.toUpperCase() + ' RUNNING LOW — ' + it.stock + ' LEFT</b>');
+      if (it.fav) mockPush('⚠️ Only ' + it.stock + ' ' + it.name + ' left', 'Running low at the bar right now.');
+    }
+    if (prev !== 'out' && it.status === 'out') {
+      tapePush('<b class="down-t">✖ ' + it.name.toUpperCase() + ' HAS SOLD OUT</b>');
+      if (it.fav) mockPush('❌ ' + it.name + ' has SOLD OUT', 'That’s all she wrote for tonight.');
+    }
+  }
+
+  function updateStock(it) {
+    var prev = it.status;
+    if (it.stock !== null) {
+      it.status = it.stock <= 0 ? 'out' : it.stock <= 5 ? 'low' : 'ok';
+    }
+    checkAlerts(it, prev);
+  }
+
+  /* ── simulated engine ── */
+  function sale(it, qty) {
+    if (it.status === 'out') return;
+    var before = it.price;
+    it.price = clampBand(it, it.price + r5(it.open * SALE_BUMP_PCT / 100) * qty);
+    it.idle = 0;
+    trades += qty;
+    if (it.stock !== null) it.stock = Math.max(0, it.stock - qty);
+    var prev = it.status;
+    updateStock(it);
+    if (it.price > before) {
+      flash(it, 'up');
+      tapePush('<b class="up-t">▲ ' + qty + '× ' + it.name.toUpperCase() + ' SOLD — NOW ' + gbp(it.price) + '</b>');
+    }
+    if (qty >= 3 && prev === it.status) {
+      tapePush('<b class="gold-t">🔥 ' + it.name.toUpperCase() + ' IS ON A RUN</b>');
+    }
+  }
+
+  function tick() {
+    items.forEach(function (it) {
+      if (it.status === 'out') { it.hist.push(it.price); it.hist.shift(); return; }
+      var before = it.price;
+      it.idle++;
+      if (it.idle >= IDLE_TICKS) {
+        it.price = clampBand(it, it.price - it.open * DRIFT_PCT / 100);
+      } else {
+        it.price = clampBand(it, it.price + it.open * (JITTER_PCT / 100) * (Math.random() * 2 - 1));
+      }
+      if (it.price < before) checkAlerts(it, it.status);
+      it.hist.push(it.price); it.hist.shift();
+    });
+    items.forEach(renderItem);
+    renderIndex();
+  }
+
+  function randomSale() {
+    var candidates = items.filter(function (it) { return it.status !== 'out'; });
+    if (!candidates.length) return;
+    var it = candidates[Math.floor(Math.random() * candidates.length)];
+    sale(it, Math.random() < 0.25 ? 2 + Math.floor(Math.random() * 2) : 1);
+    items.forEach(renderItem);
+    renderIndex();
+    setTimeout(randomSale, 1800 + Math.random() * 4200);
+  }
+
+  function crash() {
+    nextCrashAt = Date.now() + CRASH_EVERY_MS;
+    items.forEach(function (it) {
+      it.price = Math.max(it.floor, r5(it.price * (1 - CRASH_PCT / 100)));
+      it.lastAlertPrice = Math.max(it.price, it.floor);
+      it.idle = 0;
+      it.hist.push(it.price); it.hist.shift();
+      flash(it, 'down');
+    });
+    tapePush('<b class="down-t">💥 MARKET CRASH — EVERYTHING DOWN ' + CRASH_PCT + '%</b>');
+    mockPush('💥 MARKET CRASH', 'Everything just dropped ' + CRASH_PCT + '% — run, don’t walk.');
+    var ov = document.getElementById('crash-overlay');
+    document.getElementById('crash-sub').textContent = 'All prices down ' + CRASH_PCT + '% — go go go';
+    ov.classList.add('show');
+    setTimeout(function () { ov.classList.remove('show'); }, 2600);
+    items.forEach(renderItem);
+    renderIndex();
+  }
+
+  /* ── clock, QR, controls ── */
+  setInterval(function () {
+    var d = new Date();
+    document.getElementById('clock').textContent =
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }, 1000);
+
+  (function drawQr() {
+    var c = document.getElementById('qr'), ctx = c.getContext('2d'), n = 21, cell = c.width / n;
+    var seed = 42;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = '#14180a';
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) {
+      var finder = (x < 7 && y < 7) || (x >= n - 7 && y < 7) || (x < 7 && y >= n - 7);
+      if (finder) continue;
+      if (rnd() > 0.52) ctx.fillRect(x * cell, y * cell, cell - 0.4, cell - 0.4);
+    }
+    [[0, 0], [n - 7, 0], [0, n - 7]].forEach(function (f) {
+      ctx.fillRect(f[0] * cell, f[1] * cell, 7 * cell, 7 * cell);
+      ctx.fillStyle = '#fff'; ctx.fillRect((f[0] + 1) * cell, (f[1] + 1) * cell, 5 * cell, 5 * cell);
+      ctx.fillStyle = '#14180a'; ctx.fillRect((f[0] + 2) * cell, (f[1] + 2) * cell, 3 * cell, 3 * cell);
+    });
+  })();
+
+  var tvEl = document.getElementById('tv'), phEl = document.getElementById('phone-stage');
+  document.getElementById('btn-tv').addEventListener('click', function () {
+    tvEl.style.display = 'flex'; phEl.classList.remove('show');
+    this.classList.add('active'); document.getElementById('btn-phone').classList.remove('active');
+  });
+  document.getElementById('btn-phone').addEventListener('click', function () {
+    tvEl.style.display = 'none'; phEl.classList.add('show');
+    this.classList.add('active'); document.getElementById('btn-tv').classList.remove('active');
+  });
+  document.getElementById('btn-crash').addEventListener('click', crash);
+
+  document.getElementById('notify-cta').addEventListener('click', function () {
+    optedIn = !optedIn;
+    this.classList.toggle('on', optedIn);
+    this.textContent = optedIn ? '🔔 Alerts on — you’ll hear it here first' : '🔔 Notify me on price drops';
+    if (optedIn) mockPush('🔔 The Drinks Market is OPEN', 'You’re on the list. Star drinks to track them.');
+  });
+
+  /* ── kick off ── */
+  items.forEach(renderItem);
+  renderIndex();
+  setInterval(tick, 2000);
+  setTimeout(randomSale, 1500);
+  setInterval(function () { if (Date.now() >= nextCrashAt) crash(); }, 1000);
+})();
+</script>
+</body>
+</html>

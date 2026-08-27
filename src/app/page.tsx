@@ -10,6 +10,7 @@ import { HighlightedEvents } from "@/components/highlighted-events";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
+import { MarketLiveBanner } from "@/components/market-live-banner";
 import {
   getEventType,
   serializeEvent,
@@ -133,6 +134,8 @@ export default async function HomePage() {
       </div>
 
       <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
+        <MarketLiveBanner />
+
         <HighlightedEvents events={scheduleEvents} upcoming={showUpcoming} />
 
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">

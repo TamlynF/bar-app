@@ -2,6 +2,7 @@ import {
   BookUser,
   Building2,
   Camera,
+  CandlestickChart,
   Component,
   Crown,
   Dices,
@@ -137,6 +138,12 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
         href: "/settings/price-rounds",
         icon: Scale,
         description: "What the price page compares",
+      },
+      {
+        label: "Drinks market",
+        href: "/settings/market",
+        icon: CandlestickChart,
+        description: "Live price board for market nights",
       },
       {
         label: "Specials",
