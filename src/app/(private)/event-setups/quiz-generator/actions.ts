@@ -22,6 +22,7 @@ import {
   type YearRange,
 } from '@/lib/quiz/higher-lower'
 import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
+import { promptSubject } from '@/lib/quiz/prompt-subject'
 import {
   originColumns,
   QUIZ_TEXT_MODEL,
@@ -182,9 +183,11 @@ export async function generateQuizAction(
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`;
 
 
- const prompt = `Act as the Pub Quiz Master for "Don Fenticas". 
-  Generate a round for the category: "${category}".
-  ${topic ? `Focus specifically on this theme within that category: "${topic}".` : `Provide a balanced variety of questions within the "${category}" genre.`}
+  const subject = promptSubject(category);
+
+ const prompt = `Act as the Pub Quiz Master for "Don Fenticas".
+  Generate a round for the category: "${subject}".
+  ${topic ? `Focus specifically on this theme within that category: "${topic}".` : `Provide a balanced variety of questions within the "${subject}" genre.`}
   
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
