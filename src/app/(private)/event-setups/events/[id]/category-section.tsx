@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { cn } from "@/lib/utils";
+import { buildPictureSheetPdf } from "@/lib/quiz/picture-sheet-pdf";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -91,46 +92,6 @@ type Props = {
   // omit it and the footer just says the quiz is ready.
   nextRound?: NextRoundSummary | null;
 };
-
-/* One sheet, always. Every band of the page is a fixed height in mm, and the
-   sum comes to roughly 250mm - deliberately well short of A4's 297mm. Mobile
-   Safari ignores a zero @page margin and adds its own printer margins plus a
-   URL/date footer, so a sheet sized to the full paper height ran onto a second
-   page there. Sizing to the content leaves room for whatever margins the device
-   imposes, and the sheet clips rather than spills - a picture round that ran
-   onto a second page would print nine boxes and a stray answer grid. */
-const printStyles = `
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: auto; overflow: visible; }
-  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000; }
-  /* The inset lives on the sheet as well as @page, so the grid keeps clear of
-     the paper edge even when the print dialog is set to "Margins: None". */
-  .sheet {
-    width: 100%;
-    max-height: 260mm;
-    padding: 6mm;
-    overflow: hidden;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-  .hdr { margin-bottom: 3mm; font-weight: 600; }
-  .hdr .fill { display: inline-block; min-width: 280px; border-bottom: 1px solid #000; }
-  .label { font-weight: 700; margin: 2mm 0; text-align: center; }
-  .label .qtext { font-weight: 400; }
-  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; break-inside: avoid; page-break-inside: avoid; }
-  table.grid tr, table.grid td { break-inside: avoid; page-break-inside: avoid; }
-  table.grid td { width: 33.33%; vertical-align: top; padding: 4px 6px; }
-  table.questions td { border: 1px solid #000; height: 54mm; }
-  table.answers td { border: none; height: 12mm; }
-  .answers-block { margin-top: 5mm; }
-  .qn { font-weight: 700; }
-  .imgwrap { height: 43mm; margin-top: 3px; text-align: center; }
-  .imgwrap img { width: 100%; height: 100%; object-fit: contain; }
-  .answer { margin-top: 10px; height: 1.3em; border-bottom: 1px solid #000; }
-  @page { size: A4 portrait; margin: 10mm; }
-`;
 
 export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, lastSettings, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, playlistIsMine = false, playlistOwnerName = null, autoOpen, openSheet, nextRound }: Props) {
   const router = useRouter();
@@ -665,66 +626,42 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   };
 
-  const handlePrintPictureSheet = () => {
-    const escapeHtml = (s: string) =>
-      s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+  /* The sheet is built as a real PDF rather than a printed web page. iOS
+     Safari stamps a URL/date footer on every printed page and ignores the
+     @page rules that would remove it, and its print scaling kept pushing the
+     answer grid onto a second sheet. A PDF prints as-is on every device.
 
+     The tab is opened synchronously from the click so pop-up blockers allow
+     it; the PDF is generated afterwards and the tab is pointed at it. */
+  const handlePrintPictureSheet = () => {
     const sorted = [...questions].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
     const firstQ = questions.find((q) => q.question_text)?.question_text ?? "";
-    const cols = 3;
     const total = 9; // fixed 3×3 grid to match the Word layout / fit one page
     if (sorted.length > total) {
       toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
     }
     const cells = Array.from({ length: total }, (_, i) => {
       const q = sorted[i];
-      return { no: q?.question_no ?? i + 1, img: q?.image_url ?? "" };
+      return { no: q?.question_no ?? i + 1, imageUrl: q?.image_url ?? null };
     });
 
-    const buildRows = (render: (c: { no: number; img: string }) => string) => {
-      let html = "";
-      for (let r = 0; r < cells.length; r += cols) {
-        const row = cells.slice(r, r + cols);
-        html += `<tr>${row.map(render).join("")}</tr>`;
-      }
-      return html;
-    };
-
-    const questionRows = buildRows((c) => `
-      <td>
-        <span class="qn">Q${c.no}</span>
-        ${c.img ? `<div class="imgwrap"><img src="${escapeHtml(c.img)}" alt="" /></div>` : ""}
-      </td>`);
-
-    const answerRows = buildRows((c) => `
-      <td>
-        <span class="qn">Q${c.no}:</span>
-        <div class="answer"></div>
-      </td>`);
-
-    const win = window.open("", "_blank", "width=900,height=1200");
+    const win = window.open("", "_blank");
     if (!win) {
       toast.error("Allow pop-ups to print the sheet");
       return;
     }
-    win.document.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${escapeHtml(category_name)} - Quiz Sheet</title>
-      <style>${printStyles}</style></head>
-      <body>
-        <div class="sheet">
-          <div class="hdr">Team Name:&nbsp;<span class="fill"></span></div>
-          <p class="label">Question: <span class="qtext">${escapeHtml(firstQ)}</span></p>
-          <table class="grid questions"><tbody>${questionRows}</tbody></table>
-          <div class="answers-block">
-            <p class="label">Answers:</p>
-            <table class="grid answers"><tbody>${answerRows}</tbody></table>
-          </div>
-        </div>
-        <script>
-          window.onload = function () { window.focus(); window.print(); };
-          window.onafterprint = function () { window.close(); };
-        </script>
-      </body></html>`);
-    win.document.close();
+    const title = `${category_name} - Picture sheet`;
+    win.document.title = title;
+    win.document.body.textContent = "Preparing picture sheet…";
+
+    buildPictureSheetPdf({ title, question: firstQ, cells })
+      .then((blob) => {
+        win.location.href = URL.createObjectURL(blob);
+      })
+      .catch(() => {
+        win.close();
+        toast.error("Couldn't build the picture sheet");
+      });
   };
 
   /* The playlist is public and the link is shared by the round, not by whoever
