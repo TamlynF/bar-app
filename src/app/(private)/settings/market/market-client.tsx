@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CandlestickChart,
+  ChevronDown,
   Info,
   Link2,
   Loader2,
@@ -128,10 +129,20 @@ const CONFIG_FIELDS: {
   },
 ];
 
+function configSummary(config: MarketConfig): string {
+  return [
+    `${config.tickIntervalSec}s ticks`,
+    `volatility ${config.noiseSigma}`,
+    `${config.floorPct}x to ${config.ceilPct}x base`,
+    `alert at ${Math.round(config.moveNotifyPct * 100)}%`,
+    `low stock at ${config.lowStockThreshold}`,
+  ].join(" · ");
+}
+
 function ConfigFields({ config }: { config: MarketConfig }) {
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {CONFIG_FIELDS.map((field) => {
           const inputId = `market-config-${field.key}`;
           return (
@@ -157,6 +168,7 @@ function ConfigFields({ config }: { config: MarketConfig }) {
                     <p className="text-[12px] font-semibold leading-snug text-admin-ink">
                       {field.label}
                     </p>
+                    <p className="text-[11px] leading-snug text-admin-muted">{field.hint}</p>
                     <p className="text-[11px] leading-snug text-admin-muted">{field.help}</p>
                   </TooltipContent>
                 </Tooltip>
@@ -170,7 +182,6 @@ function ConfigFields({ config }: { config: MarketConfig }) {
                 min="0"
                 className={FIELD}
               />
-              <span className="mt-1 block text-[11px] text-admin-muted">{field.hint}</span>
             </div>
           );
         })}
@@ -338,6 +349,7 @@ export default function MarketClient({
   }
 
   const live = session !== null;
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
@@ -348,7 +360,19 @@ export default function MarketClient({
           <div className="flex items-center gap-2.5">
             <CandlestickChart className="h-5 w-5 text-admin-primary" aria-hidden="true" />
             <div>
-              <h2 className="text-sm font-bold text-admin-ink">Drinks market</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-admin-ink">Drinks market</h2>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
+                    live
+                      ? "bg-admin-success-bg text-admin-success"
+                      : "bg-admin-surface text-admin-muted"
+                  )}
+                >
+                  {live ? "Live" : "Closed"}
+                </span>
+              </div>
               <p className="text-[11px] text-admin-muted">
                 {live
                   ? `Live since ${new Date(session.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} · tick ${session.tickNo}`
@@ -356,14 +380,36 @@ export default function MarketClient({
               </p>
             </div>
           </div>
-          <span
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase",
-              live ? "bg-admin-success-bg text-admin-success" : "bg-admin-surface text-admin-muted"
-            )}
-          >
-            {live ? "Live" : "Closed"}
-          </span>
+          {live && (
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="/market/board"
+                target="_blank"
+                rel="noreferrer"
+                className={NEUTRAL_BUTTON}
+              >
+                <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+                Open big screen
+              </a>
+              <button
+                type="button"
+                onClick={handleCrash}
+                disabled={isPending}
+                className={OUTLINE_BUTTON}
+              >
+                <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                Crash the market
+              </button>
+              <button
+                type="button"
+                onClick={handleEnd}
+                disabled={isPending}
+                className={NEUTRAL_BUTTON}
+              >
+                End market
+              </button>
+            </div>
+          )}
         </div>
 
         {!live ? (
@@ -411,47 +457,41 @@ export default function MarketClient({
             </div>
           </form>
         ) : (
-          <div className="mt-4 space-y-4">
-            <form
-              action={(formData) => {
-                run(() => updateConfigAction(formData), "Market settings updated.");
-              }}
-              className="space-y-3"
+          <div className="mt-3 border-t border-admin-line pt-3">
+            <button
+              type="button"
+              onClick={() => setSettingsOpen((open) => !open)}
+              aria-expanded={settingsOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-3 text-left sm:min-h-9"
             >
-              <ConfigFields config={session.config} />
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <a
-                  href="/market/board"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={NEUTRAL_BUTTON}
-                >
-                  <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-                  Open big screen
-                </a>
-                <button
-                  type="button"
-                  onClick={handleCrash}
-                  disabled={isPending}
-                  className={OUTLINE_BUTTON}
-                >
-                  <TrendingDown className="h-4 w-4" aria-hidden="true" />
-                  Crash the market
-                </button>
-                <button
-                  type="button"
-                  onClick={handleEnd}
-                  disabled={isPending}
-                  className={NEUTRAL_BUTTON}
-                >
-                  End market
-                </button>
-                <button type="submit" disabled={isPending} className={PRIMARY_BUTTON}>
-                  {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                  Save settings
-                </button>
-              </div>
-            </form>
+              <span className="text-[11px] text-admin-muted">
+                <span className="font-semibold text-admin-ink">Settings</span>
+                {!settingsOpen && ` · ${configSummary(session.config)}`}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-admin-muted transition-transform",
+                  settingsOpen && "rotate-180"
+                )}
+                aria-hidden="true"
+              />
+            </button>
+            {settingsOpen && (
+              <form
+                action={(formData) => {
+                  run(() => updateConfigAction(formData), "Market settings updated.");
+                }}
+                className="mt-3 space-y-3"
+              >
+                <ConfigFields config={session.config} />
+                <div className="flex justify-end">
+                  <button type="submit" disabled={isPending} className={PRIMARY_BUTTON}>
+                    {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                    Save settings
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         )}
       </section>
