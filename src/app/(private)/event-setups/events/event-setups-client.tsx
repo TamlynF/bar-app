@@ -1049,13 +1049,14 @@ export default function EventsClient({
 
   const canCopy = (e: EventRecord) => !linkedRequestByEvent[e.id];
 
+  const searchHaystack = (e: EventRecord) => {
+    const host = e.host_employee_id ? (employeeById.get(e.host_employee_id) ?? "") : "";
+    return `${e.id} ${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
+  };
+
   const matchesFilters = (e: EventRecord) => {
     const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      const host = e.host_employee_id ? (employeeById.get(e.host_employee_id) ?? "") : "";
-      const hay = `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
+    if (q && !searchHaystack(e).includes(q)) return false;
     if (dateRange && (dateRange.start || dateRange.end)) {
       if (!e.date) return false;
       const from = dateRange.start || null;
@@ -1308,8 +1309,7 @@ export default function EventsClient({
   const matchesSearchOnly = (e: EventRecord) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    const host = e.host_employee_id ? (employeeById.get(e.host_employee_id) ?? "") : "";
-    return `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase().includes(q);
+    return searchHaystack(e).includes(q);
   };
   const eventsByDate = new Map<string, EventRecord[]>();
   for (const e of baseEvents) {
@@ -1962,7 +1962,7 @@ export default function EventsClient({
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
-            placeholder="Search events by title, date or host"
+            placeholder="Search events by title, date, host or id"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
