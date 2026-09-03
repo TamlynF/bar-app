@@ -14,6 +14,7 @@ import {
   FileText,
   RotateCcw,
   Info,
+  AlertTriangle,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,6 +33,13 @@ import {
   resolvePrompt,
   type PromptKind,
 } from "@/lib/quiz/prompt-templates";
+import {
+  ROUND_TYPES,
+  ROUND_TYPE_LABELS,
+  roundTypeFlags,
+  roundTypeFor,
+  type RoundType,
+} from "@/lib/quiz/round-kind";
 import {
   planSave,
   planDelete,
@@ -52,6 +60,7 @@ import {
   DetailCard,
   DetailCell,
   FormRow,
+  FormToggle,
   ErrorBox,
 } from "@/components/admin";
 
@@ -59,8 +68,12 @@ export type EmployeeOption = { id: number; full_name: string };
 
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
-const CHECKBOX = "h-5 w-5 cursor-pointer rounded accent-admin-primary";
+const FIELD_SELECT =
+  "min-w-0 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none [text-align-last:right]";
+const YEAR_INPUT =
+  "w-12 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none tabular-nums";
 const PROMPT_TEXT = "font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap";
+const TWO_COLUMNS = "grid gap-4 sm:grid-cols-2 sm:items-start sm:gap-5";
 
 function roundLabel(config: QuizCategoryConfig): string {
   return `${config.question_count} Q · ${config.points_per_question} pt`;
@@ -96,16 +109,25 @@ export default function QuizCategoriesClient({
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [isHigherLower, setIsHigherLower] = useState(false);
-  const [includeSpotify, setIncludeSpotify] = useState(false);
-  const [isPicture, setIsPicture] = useState(false);
+  const [roundType, setRoundType] = useState<RoundType>("default");
   const [position, setPosition] = useState(1);
   const [promptDraft, setPromptDraft] = useState<PromptDraft>(BLANK_DRAFT);
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
-  const formKind = promptKindFor({ isPicture, includeSpotify, isHigherLower });
+  const promptKindForType = (type: RoundType) => {
+    const flags = roundTypeFlags(type);
+    return promptKindFor({
+      isPicture: flags.is_picture,
+      includeSpotify: flags.include_spotify,
+      isHigherLower: flags.is_higher_lower,
+    });
+  };
+  const formKind = promptKindForType(roundType);
   const draftIsBlank = normalisePrompt(promptDraft.text) === "";
-  const draftKindMismatch = !draftIsBlank && promptDraft.kind !== formKind;
+  const draftIsBuiltIn =
+    draftIsBlank ||
+    normalisePrompt(promptDraft.text) === normalisePrompt(DEFAULT_PROMPTS[promptDraft.kind]);
+  const draftKindMismatch = !draftIsBuiltIn && promptDraft.kind !== formKind;
 
   const updatePromptDraft = (text: string) =>
     setPromptDraft((prev) => ({
@@ -113,12 +135,23 @@ export default function QuizCategoriesClient({
       kind: normalisePrompt(prev.text) === "" ? formKind : prev.kind,
     }));
 
-  const insertBuiltInPrompt = async () => {
-    if (!draftIsBlank) {
+  // An untouched built-in prompt follows the round type; a customised one is
+  // kept, and the mismatch warning says so.
+  const changeRoundType = (type: RoundType) => {
+    setRoundType(type);
+    if (draftIsBuiltIn) {
+      const kind = promptKindForType(type);
+      setPromptDraft({ text: DEFAULT_PROMPTS[kind], kind });
+    }
+  };
+
+  const resetToBuiltInPrompt = async () => {
+    if (!draftIsBuiltIn) {
       const ok = await sheet.confirm({
-        title: "Replace what you've written?",
-        description: `The prompt box will be filled with the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt, and what is there now will be lost.`,
-        confirmLabel: "Insert built-in prompt",
+        title: "Discard your changes to this prompt?",
+        description: `The prompt box goes back to the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt, and what is there now will be lost.`,
+        confirmLabel: "Reset to built-in",
+        variant: "destructive",
       });
       if (!ok) return;
     }
@@ -175,12 +208,27 @@ export default function QuizCategoriesClient({
   });
   const affected = describeChanges(orderRows, plan.changes);
 
+  const orderChanged = canChoosePosition && position !== formDefault.order_no;
+  const deactivating = wasActive && !isActive;
+  const showReorderWarning = orderChanged || deactivating;
+
+  // The planner only reports the other rows that shift; the category being
+  // edited is added here so the confirmation shows its own move as well.
+  const ownChange: ChangeDescription | null =
+    formDefault?.id != null && formDefault.order_no !== plan.position
+      ? {
+          id: formDefault.id,
+          name: formDefault.category_name,
+          from: formDefault.order_no,
+          to: plan.position,
+        }
+      : null;
+  const changeList = ownChange ? [ownChange, ...affected] : affected;
+
   const openAdd = () => {
     setIsActive(true);
-    setIsHigherLower(false);
-    setIncludeSpotify(false);
-    setIsPicture(false);
-    setPromptDraft(BLANK_DRAFT);
+    setRoundType("default");
+    setPromptDraft({ text: DEFAULT_PROMPTS.question, kind: "question" });
     setPosition(nextPosition(orderRows));
     sheet.openAdd();
   };
@@ -188,10 +236,9 @@ export default function QuizCategoriesClient({
   const startEdit = () => {
     if (!selected) return;
     setIsActive(selected.is_active);
-    setIsHigherLower(selected.is_higher_lower);
-    setIncludeSpotify(selected.include_spotify);
-    setIsPicture(selected.is_picture);
-    setPromptDraft({ text: selected.ai_prompt ?? "", kind: configPromptKind(selected) });
+    setRoundType(roundTypeFor(selected));
+    const kind = configPromptKind(selected);
+    setPromptDraft({ text: resolvePrompt(kind, selected.ai_prompt).template, kind });
     setPosition(selected.order_no || nextPosition(orderRows));
     sheet.startEdit();
   };
@@ -203,12 +250,12 @@ export default function QuizCategoriesClient({
 
   const reorderPrompt = (name: string) => {
     if (wasActive && !isActive) {
-      return `Making "${name}" inactive will move it to round 0 and update:`;
+      return `Making "${name}" inactive moves it to round 0. These round orders will change:`;
     }
     if (!wasActive && isActive) {
-      return `Making "${name}" active will place it at round ${plan.position} and update:`;
+      return `Making "${name}" active places it at round ${plan.position}. These round orders will change:`;
     }
-    return `Moving "${name}" to round ${plan.position} will also update:`;
+    return `Moving "${name}" to round ${plan.position} changes these round orders:`;
   };
 
   // Submitted by hand rather than as a form action, so the rounds that shift
@@ -218,18 +265,18 @@ export default function QuizCategoriesClient({
     const formData = new FormData(e.currentTarget);
     const submit = sheet.submit(saveQuizCategoryAction);
 
-    if (affected.length === 0) {
+    if (changeList.length === 0) {
       submit(formData);
       return;
     }
 
     const ok = await sheet.confirm({
-      title: "Reorder quiz categories",
+      title: "Round orders will change",
       description: reorderPrompt(
         formData.get("category_name")?.toString().trim() || "this category",
       ),
-      content: <ChangeList changes={affected} />,
-      confirmLabel: "Update rounds",
+      content: <ChangeList changes={changeList} />,
+      confirmLabel: "Save and update rounds",
     });
     if (ok) submit(formData);
   };
@@ -373,7 +420,7 @@ export default function QuizCategoriesClient({
                           <span className="hidden sm:inline">Picture</span>
                         </InfoBadge>
                       )}
-                      {config.ai_prompt && (
+                      {resolvePrompt(configPromptKind(config), config.ai_prompt).isCustomised && (
                         <InfoBadge icon={<FileText className="h-3 w-3" />}>
                           <span className="hidden sm:inline">Custom prompt</span>
                         </InfoBadge>
@@ -429,49 +476,45 @@ export default function QuizCategoriesClient({
       >
         {!showForm && selected && (
           <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-            <DetailCard>
-              <DetailCell dense label="Category" value={selected.category_name} />
-              <DetailCell dense label="Short name" value={selected.short_name || "-"} />
-              <DetailCell
-                dense
-                label="Round order"
-                value={selected.is_active ? String(selected.order_no) : "0 (inactive)"}
-              />
-              <DetailCell dense label="Questions" value={String(selected.question_count)} />
-              <DetailCell
-                dense
-                label="Points / Q"
-                value={String(selected.points_per_question)}
-              />
-              <DetailCell
-                dense
-                label="Spotify"
-                value={selected.include_spotify ? "Yes" : "No"}
-              />
-              <DetailCell
-                dense
-                label="Higher / Lower"
-                value={selected.is_higher_lower ? "Yes" : "No"}
-              />
-              {selected.include_spotify && (
+            <div className={TWO_COLUMNS}>
+              <DetailCard>
                 <DetailCell
                   dense
-                  label="Number songs by"
-                  value={
-                    selected.is_higher_lower
-                      ? "Order added (the chain)"
-                      : selected.number_by_release_year
-                        ? "Release year"
-                        : "Order added"
-                  }
+                  label="Round order"
+                  value={selected.is_active ? String(selected.order_no) : "0 (inactive)"}
                 />
-              )}
-              <DetailCell
-                dense
-                label="Picture round"
-                value={selected.is_picture ? "Yes" : "No"}
-              />
-            </DetailCard>
+                <DetailCell dense label="Name" value={selected.category_name} />
+                <DetailCell dense label="Short name" value={selected.short_name || "-"} />
+              </DetailCard>
+
+              <DetailCard>
+                <DetailCell dense label="Questions" value={String(selected.question_count)} />
+                <DetailCell
+                  dense
+                  label="Points / Q"
+                  value={String(selected.points_per_question)}
+                />
+                <DetailCell
+                  dense
+                  label="Round type"
+                  value={ROUND_TYPE_LABELS[roundTypeFor(selected)]}
+                />
+                {roundTypeFor(selected) === "spotify" && (
+                  <DetailCell
+                    dense
+                    label="Order songs by"
+                    value={selected.number_by_release_year ? "Release year" : "Order added"}
+                  />
+                )}
+                {roundTypeFor(selected) === "higher_lower" && (
+                  <DetailCell
+                    dense
+                    label="Years apart"
+                    value={`${selected.min_years} to ${selected.max_years}`}
+                  />
+                )}
+              </DetailCard>
+            </div>
 
             <DetailCard>
               <div className="flex items-center justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5">
@@ -506,30 +549,9 @@ export default function QuizCategoriesClient({
               <input type="hidden" name="id" value={formDefault.id} />
             )}
 
-            <DetailCard className="divide-y divide-admin-line/50">
-              <FormRow label="Name" required>
-                <input
-                  name="category_name"
-                  required
-                  aria-label="Category name"
-                  placeholder="e.g. Movies"
-                  defaultValue={formDefault?.category_name ?? ""}
-                  className={FIELD_INPUT}
-                />
-              </FormRow>
-
-              <FormRow label="Short name">
-                <input
-                  name="short_name"
-                  aria-label="Short name"
-                  placeholder="e.g. MOV"
-                  maxLength={5}
-                  defaultValue={formDefault?.short_name ?? ""}
-                  className={cn(FIELD_INPUT, "uppercase")}
-                />
-              </FormRow>
-
-              <FormRow label="Round order">
+            <div className={TWO_COLUMNS}>
+            <DetailCard>
+              <FormRow dense label="Round order">
                 {canChoosePosition ? (
                   <input
                     name="order_no"
@@ -554,7 +576,51 @@ export default function QuizCategoriesClient({
                 )}
               </FormRow>
 
-              <FormRow label="Questions">
+              <FormRow dense label="Name" required>
+                <input
+                  name="category_name"
+                  required
+                  aria-label="Category name"
+                  placeholder="e.g. Movies"
+                  defaultValue={formDefault?.category_name ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <FormRow dense label="Short name">
+                <input
+                  name="short_name"
+                  aria-label="Short name"
+                  placeholder="e.g. MOV"
+                  maxLength={5}
+                  defaultValue={formDefault?.short_name ?? ""}
+                  className={cn(FIELD_INPUT, "uppercase")}
+                />
+              </FormRow>
+
+              <FormRow dense label="Active">
+                <span className="flex-1" />
+                <input type="hidden" name="is_active" value={isActive ? "on" : ""} />
+                <FormToggle
+                  label="Active"
+                  on={isActive}
+                  onToggle={() => setIsActive((o) => !o)}
+                />
+              </FormRow>
+
+              {showReorderWarning && (
+                <div className="flex items-start gap-2 px-4 pt-0 pb-3 sm:px-5">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-admin-warning" />
+                  <p className="text-[11px] font-semibold leading-snug text-admin-warning">
+                    The round order of other active categories may be updated to keep the
+                    sequence. You will see the changes before they are saved.
+                  </p>
+                </div>
+              )}
+            </DetailCard>
+
+            <DetailCard>
+              <FormRow dense label="Questions">
                 <input
                   name="question_count"
                   type="number"
@@ -566,7 +632,7 @@ export default function QuizCategoriesClient({
                 />
               </FormRow>
 
-              <FormRow label="Points / Q">
+              <FormRow dense label="Points / Q">
                 <input
                   name="points_per_question"
                   type="number"
@@ -577,131 +643,71 @@ export default function QuizCategoriesClient({
                 />
               </FormRow>
 
-              <FormRow label="Spotify">
-                <span className="flex-1" />
-                <input
-                  id="include_spotify"
-                  name="include_spotify"
-                  type="checkbox"
-                  aria-label="Include Spotify"
-                  checked={includeSpotify}
-                  onChange={(e) => setIncludeSpotify(e.target.checked)}
-                  className={CHECKBOX}
-                />
+              <FormRow dense label="Round type">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                  <select
+                    id="round_type"
+                    name="round_type"
+                    aria-label="Round type"
+                    value={roundType}
+                    onChange={(e) => changeRoundType(e.target.value as RoundType)}
+                    className={FIELD_SELECT}
+                  >
+                    {ROUND_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {ROUND_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-admin-muted" />
+                </div>
               </FormRow>
 
-              <FormRow label="Higher / Lower">
-                <span className="flex-1" />
-                <input
-                  id="is_higher_lower"
-                  name="is_higher_lower"
-                  type="checkbox"
-                  aria-label="Higher / Lower round"
-                  checked={isHigherLower}
-                  onChange={(e) => setIsHigherLower(e.target.checked)}
-                  className={CHECKBOX}
-                />
-              </FormRow>
-
-              {includeSpotify && !isHigherLower && (
-                <>
-                  <FormRow label="Number songs by">
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                      <select
-                        id="number_by_release_year"
-                        name="number_by_release_year"
-                        aria-label="How the songs in this round are numbered"
-                        defaultValue={
-                          (formDefault?.number_by_release_year ?? true) ? "year" : "added"
-                        }
-                        className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none [text-align-last:right]"
-                      >
-                        <option value="year">Release year</option>
-                        <option value="added">Order added</option>
-                      </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-admin-muted" />
-                    </div>
-                  </FormRow>
-
-                  <div className="px-4 pt-0 pb-3 sm:px-5">
-                    <p className="text-[11px] font-medium text-admin-muted opacity-70">
-                      Release year plays the round oldest-first and renumbers it every time songs
-                      are added. Order added keeps question 1 as the first song you picked, the way
-                      an ordinary round works.
-                    </p>
+              {roundType === "spotify" && (
+                <FormRow dense label="Order songs by">
+                  <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                    <select
+                      id="number_by_release_year"
+                      name="number_by_release_year"
+                      aria-label="How the songs in this round are ordered"
+                      defaultValue={
+                        (formDefault?.number_by_release_year ?? true) ? "year" : "added"
+                      }
+                      className={FIELD_SELECT}
+                    >
+                      <option value="year">Release year</option>
+                      <option value="added">Order added</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-admin-muted" />
                   </div>
-                </>
+                </FormRow>
               )}
 
-              {isHigherLower && (
-                <>
-                  <FormRow label="Min years apart">
+              {roundType === "higher_lower" && (
+                <FormRow dense label="Years apart">
+                  <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                     <input
                       name="min_years"
                       type="number"
                       min="1"
                       aria-label="Minimum years between a song and the year it is compared against"
                       defaultValue={formDefault?.min_years ?? 3}
-                      className={cn(FIELD_INPUT, "tabular-nums")}
+                      className={YEAR_INPUT}
                     />
-                  </FormRow>
-
-                  <FormRow label="Max years apart">
+                    <span className="text-[11px] font-semibold text-admin-muted">to</span>
                     <input
                       name="max_years"
                       type="number"
                       min="1"
                       aria-label="Maximum years between a song and the year it is compared against"
                       defaultValue={formDefault?.max_years ?? 10}
-                      className={cn(FIELD_INPUT, "tabular-nums")}
+                      className={YEAR_INPUT}
                     />
-                  </FormRow>
-
-                  <div className="px-4 pt-0 pb-3 sm:px-5">
-                    <p className="text-[11px] font-medium text-admin-muted opacity-70">
-                      Each song is compared against the previous question&apos;s answer, and must sit
-                      this far from it. It can never match that year exactly.
-                    </p>
                   </div>
-                </>
+                </FormRow>
               )}
-
-              <FormRow label="Picture round">
-                <span className="flex-1" />
-                <input
-                  id="is_picture"
-                  name="is_picture"
-                  type="checkbox"
-                  aria-label="Picture round"
-                  checked={isPicture}
-                  onChange={(e) => setIsPicture(e.target.checked)}
-                  className={CHECKBOX}
-                />
-              </FormRow>
-
-              <FormRow label="Active">
-                <span className="flex-1" />
-                <input
-                  id="is_active"
-                  name="is_active"
-                  type="checkbox"
-                  aria-label="Active"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className={CHECKBOX}
-                />
-              </FormRow>
-
-              <div className="px-4 pt-0 pb-3 sm:px-5">
-                <p className="text-[11px] font-medium text-admin-muted opacity-70">
-                  {isActive
-                    ? canChoosePosition
-                      ? `Rounds run 1 to ${activeCount}. Changing this reorders the others.`
-                      : `Added to the end of the running order at round ${plan.position}.`
-                    : "Inactive categories have round 0 and are left out of the quiz."}
-                </p>
-              </div>
             </DetailCard>
+            </div>
 
             <DetailCard>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-line px-4 py-2.5 sm:px-5">
@@ -715,11 +721,12 @@ export default function QuizCategoriesClient({
                 </div>
                 <button
                   type="button"
-                  onClick={insertBuiltInPrompt}
-                  className="inline-flex h-9 items-center rounded-lg border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                  onClick={resetToBuiltInPrompt}
+                  disabled={draftIsBuiltIn && !draftIsBlank}
+                  className="inline-flex h-9 items-center rounded-lg border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-admin-card disabled:hover:text-admin-muted"
                 >
                   <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                  Insert built-in prompt
+                  Reset to built-in prompt
                 </button>
               </div>
 
@@ -741,13 +748,13 @@ export default function QuizCategoriesClient({
                 {draftKindMismatch ? (
                   <p className="text-[11px] font-semibold text-admin-warning">
                     Written for a {PROMPT_KIND_LABELS[promptDraft.kind].toLowerCase()} - check it
-                    still fits, or insert the built-in prompt for this round type.
+                    still fits, or reset to the built-in prompt for this round type.
                   </p>
                 ) : (
                   <p className="text-[11px] text-admin-muted">
-                    {draftIsBlank
-                      ? `This category uses the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt. Insert it to see the wording and amend it.`
-                      : "Sent to the model every time a round is generated for this category. Clear the box to go back to the built-in prompt."}
+                    {draftIsBuiltIn
+                      ? `This is the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt. Edit it to customise what this category asks the model for.`
+                      : "Customised for this category and sent to the model every time a round is generated. Reset to go back to the built-in wording."}
                   </p>
                 )}
 

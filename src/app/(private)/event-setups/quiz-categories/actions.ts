@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
-import { promptKindFor, promptOverride, unknownPromptTokens } from "@/lib/quiz/prompt-templates";
+import { promptKindFor, promptToStore, unknownPromptTokens } from "@/lib/quiz/prompt-templates";
+import { isRoundType, roundTypeFlags } from "@/lib/quiz/round-kind";
 import { planSave, planDelete, type OrderChange, type OrderRow } from "@/lib/merchandise-order";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -58,9 +59,10 @@ export async function saveQuizCategoryAction(formData: FormData) {
 
   const id = formData.get("id")?.toString();
   const is_active = formData.get("is_active") === "on";
-  const include_spotify = formData.get("include_spotify") === "on";
-  const is_picture = formData.get("is_picture") === "on";
-  const is_higher_lower = formData.get("is_higher_lower") === "on";
+  const roundTypeRaw = formData.get("round_type");
+  const { include_spotify, is_higher_lower, is_picture } = roundTypeFlags(
+    isRoundType(roundTypeRaw) ? roundTypeRaw : "default"
+  );
   /* A Higher-or-Lower round is numbered by the order it was picked in, because
      that order is the chain, so it never gets the choice. */
   const number_by_release_year =
@@ -85,8 +87,8 @@ export async function saveQuizCategoryAction(formData: FormData) {
     includeSpotify: include_spotify,
     isHigherLower: is_higher_lower,
   });
-  const ai_prompt = promptOverride(promptKind, formData.get("ai_prompt")?.toString());
-  const unknownTokens = ai_prompt ? unknownPromptTokens(promptKind, ai_prompt) : [];
+  const ai_prompt = promptToStore(promptKind, formData.get("ai_prompt")?.toString());
+  const unknownTokens = unknownPromptTokens(promptKind, ai_prompt);
   if (unknownTokens.length > 0) {
     return {
       error: `This prompt has no field called ${unknownTokens.map((t) => `{{${t}}}`).join(", ")}. Use one of the fields listed below the prompt, or remove it.`,

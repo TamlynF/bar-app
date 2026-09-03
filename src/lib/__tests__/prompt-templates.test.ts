@@ -4,7 +4,7 @@ import {
   PROMPT_KINDS,
   PROMPT_TOKENS,
   promptKindFor,
-  promptOverride,
+  promptToStore,
   promptTokensUsed,
   renderPrompt,
   resolvePrompt,
@@ -62,20 +62,20 @@ describe("built-in prompts", () => {
   });
 });
 
-describe("promptOverride", () => {
-  it("stores nothing for blank wording", () => {
-    expect(promptOverride("question", "")).toBeNull();
-    expect(promptOverride("question", "  \n ")).toBeNull();
-    expect(promptOverride("question", null)).toBeNull();
+describe("promptToStore", () => {
+  it("stores the built-in prompt for blank wording", () => {
+    expect(promptToStore("question", "")).toBe(DEFAULT_PROMPTS.question);
+    expect(promptToStore("question", "  \n ")).toBe(DEFAULT_PROMPTS.question);
+    expect(promptToStore("question", null)).toBe(DEFAULT_PROMPTS.question);
   });
 
-  it("stores nothing for the built-in wording however the textarea wraps it", () => {
+  it("stores the built-in wording as typed, with line endings normalised", () => {
     const crlf = DEFAULT_PROMPTS.song.replace(/\n/g, "\r\n") + "\r\n";
-    expect(promptOverride("song", crlf)).toBeNull();
+    expect(promptToStore("song", crlf)).toBe(DEFAULT_PROMPTS.song);
   });
 
   it("stores changed wording with line endings normalised", () => {
-    expect(promptOverride("question", "Ask {{count}} things.\r\nBe kind.\n")).toBe(
+    expect(promptToStore("question", "Ask {{count}} things.\r\nBe kind.\n")).toBe(
       "Ask {{count}} things.\nBe kind."
     );
   });
@@ -90,7 +90,14 @@ describe("resolvePrompt", () => {
     expect(resolvePrompt("picture", "   ").isCustomised).toBe(false);
   });
 
-  it("uses stored wording when there is some", () => {
+  it("treats stored built-in wording as built-in", () => {
+    expect(resolvePrompt("picture", DEFAULT_PROMPTS.picture + "\n")).toEqual({
+      template: DEFAULT_PROMPTS.picture,
+      isCustomised: false,
+    });
+  });
+
+  it("uses stored wording when it differs", () => {
     expect(resolvePrompt("picture", "Draw {{count}} things.")).toEqual({
       template: "Draw {{count}} things.",
       isCustomised: true,

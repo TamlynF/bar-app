@@ -491,17 +491,24 @@ export function FormRow({
   label,
   required,
   align = "center",
+  dense,
   children,
 }: {
   label: string;
   required?: boolean;
   align?: "center" | "start";
+  // The edit-mode twin of DetailCell's dense: same row height and rule, so a
+  // card reads the same whether it is being viewed or edited.
+  dense?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
       className={cn(
-        "flex gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4",
+        "flex gap-2 px-4 sm:gap-3 sm:px-5",
+        dense
+          ? "border-b border-admin-line py-1.5 last:border-0 sm:py-2"
+          : "py-2.5 sm:py-4",
         align === "start" ? "items-start" : "items-center",
       )}
     >

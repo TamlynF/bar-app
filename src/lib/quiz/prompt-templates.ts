@@ -269,20 +269,21 @@ export function normalisePrompt(text: string | null | undefined): string {
   return (text ?? "").replace(/\r\n?/g, "\n").trim();
 }
 
+/* The column holds the prompt in use, so the stored text wins. Null is only
+   ever a row from before the column existed, and means the built-in prompt.
+   "Customised" is a judgement about the wording, not about whether anything
+   is stored: a row holding the built-in text word for word is still built-in. */
 export function resolvePrompt(
   kind: PromptKind,
   stored: string | null | undefined
 ): { template: string; isCustomised: boolean } {
-  const custom = normalisePrompt(stored);
-  return custom
-    ? { template: custom, isCustomised: true }
-    : { template: DEFAULT_PROMPTS[kind], isCustomised: false };
+  const text = normalisePrompt(stored);
+  if (!text) return { template: DEFAULT_PROMPTS[kind], isCustomised: false };
+  return { template: text, isCustomised: text !== normalisePrompt(DEFAULT_PROMPTS[kind]) };
 }
 
-/* What to store: null for blank or for wording identical to the built-in
-   prompt, so a category goes on inheriting later changes to it. */
-export function promptOverride(kind: PromptKind, edited: string | null | undefined): string | null {
-  const text = normalisePrompt(edited);
-  if (!text || text === normalisePrompt(DEFAULT_PROMPTS[kind])) return null;
-  return text;
+/* What to store: the wording as typed, or the built-in prompt when the box
+   was left blank, so the column always says what the generator will send. */
+export function promptToStore(kind: PromptKind, edited: string | null | undefined): string {
+  return normalisePrompt(edited) || DEFAULT_PROMPTS[kind];
 }

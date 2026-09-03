@@ -9,6 +9,8 @@ export {
   type SystemInfo,
 } from "./record-sheet";
 
+export { FormToggle } from "./form-toggle";
+
 export {
   DateField,
   formatRecordDate,
