@@ -119,6 +119,7 @@ export type QuizCategoryConfig = {
 export type PictureRoundItem = {
   answer: string;
   imageUrl: string | null;
+  description?: string;
 }
 
 /* Without a deadline a stalled Gemini call hangs until the platform kills the
@@ -327,7 +328,8 @@ export async function updatePastQuestionAction(
   /* undefined leaves the year alone; null clears it. On a Higher-or-Lower round
      the year is what the whole chain is measured against, so changing one here
      re-chains everything after it. */
-  releaseYear?: number | null
+  releaseYear?: number | null,
+  imageDescription?: string | null
 ): Promise<{ success: true; image_url?: string | null }> {
   const supabase = await createClient()
   let currentEmployeeId: number | null = null;
@@ -347,35 +349,13 @@ export async function updatePastQuestionAction(
 
   if (imageData) {
     const adminClient = createAdminClient()
-    if (imageData.oldImageUrl) {
-      try {
-        const url = new URL(imageData.oldImageUrl)
-        const parts = url.pathname.split('/storage/v1/object/public/')
-        if (parts[1]) {
-          const [bucket, ...rest] = parts[1].split('/')
-          await adminClient.storage.from(bucket).remove([rest.join('/')])
-        }
-      } catch (err) {
-        console.error('Old image delete failed', err)
-      }
-    }
-    try {
-      const ext = imageData.mimeType === 'image/jpeg' ? 'jpg' : 'png'
-      const folder = eventId ? `quiz-pictures/${eventId}` : 'quiz-pictures'
-      const path = `${folder}/${crypto.randomUUID()}.${ext}`
-      const buffer = Buffer.from(imageData.base64, 'base64')
-      const { data: uploadData, error: uploadError } = await adminClient.storage
-        .from('gallery')
-        .upload(path, buffer, { contentType: imageData.mimeType })
-      if (!uploadError && uploadData) {
-        const { data: { publicUrl } } = adminClient.storage
-          .from('gallery')
-          .getPublicUrl(uploadData.path)
-        newImageUrl = publicUrl
-      }
-    } catch (err) {
-      console.error('New image upload failed', err)
-    }
+    await removeStoredImage(adminClient, imageData.oldImageUrl)
+    newImageUrl = await storePictureImage(
+      adminClient,
+      Buffer.from(imageData.base64, 'base64'),
+      imageData.mimeType,
+      eventId ?? null
+    )
   }
 
   const updateFields: Record<string, unknown> = {
@@ -388,6 +368,7 @@ export async function updatePastQuestionAction(
   /* undefined leaves the track alone; null clears it. */
   if (spotifyTrackId !== undefined) updateFields.spotify_track_id = spotifyTrackId
   if (releaseYear !== undefined) updateFields.release_year = releaseYear
+  if (imageDescription !== undefined) updateFields.image_description = imageDescription?.trim() || null
 
   if (newQuestionNo != null) {
     const { data: currentQ } = await supabase
@@ -587,6 +568,45 @@ export async function deletePastQuestionAction(id: string) {
 
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true };
+}
+
+async function removeStoredImage(adminClient: SupabaseClient, imageUrl: string | null | undefined) {
+  if (!imageUrl) return
+  try {
+    const parts = new URL(imageUrl).pathname.split('/storage/v1/object/public/')
+    if (!parts[1]) return
+    const [bucket, ...rest] = parts[1].split('/')
+    await adminClient.storage.from(bucket).remove([rest.join('/')])
+  } catch (err) {
+    console.error('Old image delete failed', err)
+  }
+}
+
+async function storePictureImage(
+  adminClient: SupabaseClient,
+  buffer: Buffer,
+  mimeType: string,
+  eventId: number | null
+): Promise<string | null> {
+  try {
+    const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png'
+    const folder = eventId ? `quiz-pictures/${eventId}` : 'quiz-pictures'
+    const path = `${folder}/${crypto.randomUUID()}.${ext}`
+    const { data, error } = await adminClient.storage
+      .from('gallery')
+      .upload(path, buffer, { contentType: mimeType })
+    if (error || !data) return null
+    return adminClient.storage.from('gallery').getPublicUrl(data.path).data.publicUrl
+  } catch (err) {
+    console.error('New image upload failed', err)
+    return null
+  }
+}
+
+function dataUrlToImage(dataUrl: string): { buffer: Buffer; mimeType: string } {
+  const [header, base64] = dataUrl.split(',')
+  const mimeType = header.match(/data:([^;]+);/)?.[1] ?? 'image/png'
+  return { buffer: Buffer.from(base64, 'base64'), mimeType }
 }
 
 /* Keeps a category's question numbers contiguous from 1 after a delete. */
@@ -1561,15 +1581,61 @@ const IMAGE_TIMEOUT_MS = 30_000
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /* The operator's notes never reach question_text, so they steer the picture
-   without ever reaching the printed sheet the guests answer on. */
-function pictureImagePrompt(answer: string, topic?: string, imageNotes?: string): string {
+   without ever reaching the printed sheet the guests answer on.
+
+   The answer alone is not enough: "Snowball" on a famous-pets round drew a
+   real white cat, not the Simpsons one. The description says which Snowball,
+   what it is and where it is from, so the image is of that subject and not a
+   plausible look-alike. */
+function pictureImagePrompt(
+  answer: string,
+  topic?: string,
+  imageNotes?: string,
+  description?: string
+): string {
   const round = topic?.trim() ? ` on the topic "${topic.trim()}"` : ''
+  const about = description?.trim() ? `${description.trim()} ` : ''
   const notes = imageNotes?.trim() ? `\n${imageNotes.trim()}` : ''
   return (
     `A clear, high-quality image of ${answer} for a pub quiz picture round${round}. ` +
+    about +
+    `Depict this exact subject as it is known, in its original art style if it is a cartoon or fictional character, ` +
+    `not a generic look-alike. ` +
     `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.` +
     notes
   )
+}
+
+/* A hand-typed answer arrives without the description the generator writes
+   alongside its own subjects, so the text model supplies one before the
+   picture is drawn. A miss here is not fatal - the image is still attempted
+   from the answer alone. */
+async function describePictureSubject(answer: string, topic?: string): Promise<string | undefined> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+  if (!apiKey) return undefined
+  const round = topic?.trim() ? ` in a pub quiz picture round on the topic "${topic.trim()}"` : ''
+  const prompt = `"${answer}" is the answer${round}. In one sentence, say what it is, where it is from (show, film, book, brand, real life) and what it looks like, so an artist could draw exactly the right one. Return only the sentence.`
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2 },
+        }),
+        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+      }
+    )
+    if (!res.ok) return undefined
+    const data = await res.json()
+    const text: unknown = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    return typeof text === 'string' && text.trim() ? text.trim() : undefined
+  } catch (err) {
+    console.error(`[img-gen] describe ${answer}:`, err)
+    return undefined
+  }
 }
 
 async function requestImage(prompt: string, label: string): Promise<string | null> {
@@ -1611,9 +1677,10 @@ async function requestImage(prompt: string, label: string): Promise<string | nul
 async function generateImageForAnswer(
   answer: string,
   topic?: string,
-  imageNotes?: string
+  imageNotes?: string,
+  description?: string
 ): Promise<string | null> {
-  const prompt = pictureImagePrompt(answer, topic, imageNotes)
+  const prompt = pictureImagePrompt(answer, topic, imageNotes, description)
   for (let attempt = 1; attempt <= IMAGE_ATTEMPTS; attempt++) {
     const image = await requestImage(prompt, answer)
     if (image) return image
@@ -1625,9 +1692,67 @@ async function generateImageForAnswer(
 export async function regeneratePictureImageAction(
   answer: string,
   topic?: string,
-  imageNotes?: string
-): Promise<{ imageUrl: string | null }> {
-  return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes) }
+  imageNotes?: string,
+  description?: string
+): Promise<{ imageUrl: string | null; description?: string }> {
+  const about = description?.trim() || (await describePictureSubject(answer, topic))
+  return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes, about), description: about }
+}
+
+/* A saved picture is redrawn from what the row already knows: the answer, the
+   round's topic and notes, and the description written when it was created. A
+   row saved without one gets described first, and keeps that description so
+   the next redraw and the printed sheet agree on what the picture shows. */
+export async function redrawPictureQuestionAction(
+  id: string
+): Promise<{ imageUrl: string | null; description: string | null }> {
+  const supabase = await createClient()
+  const { data: row, error } = await supabase
+    .from('past_quiz_questions')
+    .select('answer_text, image_url, image_description, image_notes, topic, events_id')
+    .eq('id', id)
+    .single()
+  if (error || !row) throw new Error('That question could not be found.')
+
+  const description =
+    row.image_description?.trim() || (await describePictureSubject(row.answer_text, row.topic ?? undefined)) || null
+  const dataUrl = await generateImageForAnswer(
+    row.answer_text,
+    row.topic ?? undefined,
+    row.image_notes ?? undefined,
+    description ?? undefined
+  )
+  if (!dataUrl) return { imageUrl: null, description }
+
+  const adminClient = createAdminClient()
+  const { buffer, mimeType } = dataUrlToImage(dataUrl)
+  const imageUrl = await storePictureImage(adminClient, buffer, mimeType, row.events_id ?? null)
+  if (!imageUrl) throw new Error('The new picture could not be stored.')
+  await removeStoredImage(adminClient, row.image_url)
+
+  let currentEmployeeId: number | null = null
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.email) {
+    const { data: emp } = await supabase.from('employees').select('id').eq('email', user.email).maybeSingle()
+    if (emp) currentEmployeeId = emp.id
+  }
+
+  const { error: updateError } = await supabase
+    .from('past_quiz_questions')
+    .update({
+      image_url: imageUrl,
+      image_description: description,
+      updated_by: currentEmployeeId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (updateError) {
+    console.error('Redraw update error:', updateError)
+    throw new Error('The new picture could not be saved.')
+  }
+
+  revalidatePath('/event-setups/events/[id]', 'page')
+  return { imageUrl, description }
 }
 
 export type PictureTopicUse = {
@@ -1683,6 +1808,29 @@ export async function pictureTopicUsageAction(
   }
 
   return [...byEvent.values()].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+}
+
+type PictureSubject = { answer: string; description?: string }
+
+/* The schema asks for objects, but a bare string per item is still accepted so
+   a model that ignores the shape degrades to the old answer-only picture. */
+function parsePictureSubjects(content: string): PictureSubject[] {
+  const raw: unknown = JSON.parse(content)
+  if (!Array.isArray(raw)) return []
+  const subjects: PictureSubject[] = []
+  for (const entry of raw) {
+    if (typeof entry === 'string' && entry.trim()) {
+      subjects.push({ answer: entry.trim() })
+    } else if (entry && typeof entry === 'object' && typeof (entry as PictureSubject).answer === 'string') {
+      const { answer, description } = entry as PictureSubject
+      if (!answer.trim()) continue
+      subjects.push({
+        answer: answer.trim(),
+        description: typeof description === 'string' && description.trim() ? description.trim() : undefined,
+      })
+    }
+  }
+  return subjects
 }
 
 export async function generatePictureRoundAction(
@@ -1742,11 +1890,13 @@ export async function generatePictureRoundAction(
     const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
 
 Rules:
-- Each item must be a specific named thing with a visually distinctive appearance (suitable for a single photograph)
+- Each item must be a specific named thing with a visually distinctive appearance (suitable for a single picture)
+- "answer" is the name guests write down, exactly as it should be marked
+- "description" is one sentence for the artist, never shown to guests: what it is, where it is from (show, film, book, brand, real life) and what it looks like, so the picture is of exactly that one and not a look-alike. Name the species, colours and art style where they matter
 - Vary across the topic - avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
 - Difficulty: ${difficultyGuide}${excludeRule}${notesRule}
-- Return ONLY a valid JSON array of strings. No markdown, no explanation.
-Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border Collie","Dalmatian","Dachshund"]`
+- Return ONLY a valid JSON array of objects. No markdown, no explanation.
+Example for topic "famous pets": [{"answer":"Snowball II","description":"The Simpson family's black cat with yellow eyes from the animated TV series The Simpsons, drawn in the show's flat cartoon style."},{"answer":"Hachiko","description":"The real cream-coloured Akita dog famous in Japan for waiting at Shibuya station for his late owner, shown as a photograph."}]`
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -1756,7 +1906,17 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
         generationConfig: {
           temperature: 0.85,
           responseMimeType: 'application/json',
-          responseSchema: { type: 'ARRAY', items: { type: 'STRING' } },
+          responseSchema: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                answer: { type: 'STRING' },
+                description: { type: 'STRING' },
+              },
+              required: ['answer', 'description'],
+            },
+          },
         },
       }),
       signal: AbortSignal.timeout(AI_TIMEOUT_MS),
@@ -1770,14 +1930,17 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
     const result = await response.json()
     const content = result.candidates?.[0]?.content?.parts?.[0]?.text
     if (!content) return { error: 'AI returned an empty response.' }
-    const answers = JSON.parse(content) as string[]
+    const subjects = parsePictureSubjects(content)
+    if (subjects.length === 0) return { error: 'AI returned an empty response.' }
 
     const items: PictureRoundItem[] = []
-    for (let i = 0; i < answers.length; i += IMAGE_BATCH_SIZE) {
+    for (let i = 0; i < subjects.length; i += IMAGE_BATCH_SIZE) {
       if (i > 0) await wait(IMAGE_BATCH_PAUSE_MS)
-      const batch = answers.slice(i, i + IMAGE_BATCH_SIZE)
-      const images = await Promise.all(batch.map((a) => generateImageForAnswer(a, topic, imageNotes)))
-      batch.forEach((answer, j) => items.push({ answer, imageUrl: images[j] }))
+      const batch = subjects.slice(i, i + IMAGE_BATCH_SIZE)
+      const images = await Promise.all(
+        batch.map((s) => generateImageForAnswer(s.answer, topic, imageNotes, s.description))
+      )
+      batch.forEach((subject, j) => items.push({ ...subject, imageUrl: images[j] }))
     }
 
     if (eventId && categoryConfigId && items.length) {
@@ -1869,6 +2032,7 @@ export async function savePictureRoundAction(
       topic: questionText,
       difficulty: difficulty.trim() || null,
       image_notes: imageNotes.trim() || null,
+      image_description: item.description?.trim() || null,
       image_url: storedImageUrl,
       asked_on: askedOn,
       events_id: eventId,

@@ -24,6 +24,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import {
   updatePastQuestionAction,
+  redrawPictureQuestionAction,
   deletePastQuestionAction,
   syncCategoryPlaylistAction,
   lookupSpotifyTrackAction,
@@ -47,6 +48,7 @@ type Question = {
   hint_year?: number | null;
   release_year?: number | null;
   image_url?: string | null;
+  image_description?: string | null;
   difficulty?: string | null;
 };
 
@@ -296,7 +298,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       setSpotifyAccount(account || null);
     }
   }, [spotifyRefreshKey]);
-  const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1, releaseYear: "" });
+  const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1, releaseYear: "", imageDescription: "" });
+  const [redrawingId, setRedrawingId] = useState<string | null>(null);
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -319,6 +322,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       answer: q.answer_text,
       questionNo: q.question_no ?? idx + 1,
       releaseYear: q.release_year != null ? String(q.release_year) : "",
+      imageDescription: q.image_description ?? "",
     });
     setNewImageFile(null);
     setNewImagePreview(null);
@@ -328,7 +332,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditForm({ question: "", answer: "", questionNo: 1, releaseYear: "" });
+    setEditForm({ question: "", answer: "", questionNo: 1, releaseYear: "", imageDescription: "" });
     if (newImagePreview) URL.revokeObjectURL(newImagePreview);
     setNewImageFile(null);
     setNewImagePreview(null);
@@ -430,6 +434,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       const trimmedYear = editForm.releaseYear.trim();
       const nextYear = trimmedYear === "" ? null : parseInt(trimmedYear, 10);
       const yearChanged = !!includeSpotify && nextYear !== (currentQ?.release_year ?? null);
+      const nextDescription = editForm.imageDescription.trim() || null;
+      const descriptionChanged = isPicture && nextDescription !== (currentQ?.image_description ?? null);
       const result = await updatePastQuestionAction(
         id,
         isPicture ? null : editForm.question,
@@ -438,7 +444,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         editForm.questionNo,
         eventId,
         trackChanged ? editTrackId : undefined,
-        yearChanged ? nextYear : undefined
+        yearChanged ? nextYear : undefined,
+        descriptionChanged ? nextDescription : undefined
       );
       const cacheBust = `?t=${Date.now()}`;
       setQuestions((prev) => {
@@ -449,6 +456,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           question_no: editForm.questionNo,
           ...(trackChanged ? { spotify_track_id: editTrackId } : {}),
           ...(yearChanged ? { release_year: nextYear } : {}),
+          ...(descriptionChanged ? { image_description: nextDescription } : {}),
           ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
         } : q);
         if (!numberChanged) return updated;
@@ -597,6 +605,29 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     const reordered = moveQuestion(questions, from, to);
     setQuestions(reordered);
     persistOrder(reordered, snapshot);
+  };
+
+  const redrawPicture = async (q: Question) => {
+    if (redrawingId) return;
+    setRedrawingId(q.id);
+    try {
+      const { imageUrl, description } = await redrawPictureQuestionAction(q.id);
+      if (!imageUrl) {
+        toast.error(`No picture came back for "${q.answer_text}" - try again, or upload one.`);
+        return;
+      }
+      const freshUrl = imageUrl.split("?")[0] + `?t=${Date.now()}`;
+      setQuestions((prev) =>
+        prev.map((item) =>
+          item.id === q.id ? { ...item, image_url: freshUrl, image_description: description } : item
+        )
+      );
+      toast.success("Picture redrawn");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not redraw that picture.");
+    } finally {
+      setRedrawingId(null);
+    }
   };
 
   const deleteQuestion = async (id: string) => {
@@ -1088,6 +1119,27 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             className="min-h-11 w-full resize-none rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 py-2.5 text-sm leading-snug font-semibold text-admin-primary outline-none focus:border-admin-primary"
                           />
                         </div>
+                        {isPicture && (
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`image-description-${q.id}`}
+                              className="ml-1 text-[13px] font-medium text-admin-muted"
+                            >
+                              What the picture shows
+                            </label>
+                            <textarea
+                              id={`image-description-${q.id}`}
+                              rows={2}
+                              placeholder="e.g. The Simpsons' black cat, not the rabbit from The Secret Life of Pets"
+                              value={editForm.imageDescription}
+                              onChange={(e) => setEditForm({ ...editForm, imageDescription: e.target.value })}
+                              className="w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-sm leading-relaxed text-admin-ink outline-none focus:border-admin-primary"
+                            />
+                            <p className="ml-1 text-[12px] leading-snug text-admin-muted">
+                              Steers Redraw picture and prints on your answer sheet. Guests never see it.
+                            </p>
+                          </div>
+                        )}
                         {includeSpotify && (
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-3">
@@ -1238,11 +1290,20 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-36">
+                            <DropdownMenuContent align="end" className="w-40">
                               <DropdownMenuItem onClick={() => startEditing(q)}>
                                 <Edit2 className="h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
+                              {isPicture && (
+                                <DropdownMenuItem
+                                  disabled={isPending || redrawingId !== null}
+                                  onClick={() => redrawPicture(q)}
+                                >
+                                  <ImageIcon className="h-4 w-4" />
+                                  Redraw picture
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 variant="destructive"
                                 disabled={isPending}
@@ -1288,7 +1349,12 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             </div>
                           ) : (
                             <>
-                              {q.image_url ? (
+                              {redrawingId === q.id ? (
+                                <div className="flex h-40 w-full flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-line bg-admin-surface sm:h-56">
+                                  <Loader2 className="h-6 w-6 animate-spin text-admin-primary" />
+                                  <p className="text-[13px] font-semibold text-admin-muted">Redrawing…</p>
+                                </div>
+                              ) : q.image_url ? (
                                 /* eslint-disable-next-line @next/next/no-img-element */
                                 <img
                                   src={q.image_url}
@@ -1311,6 +1377,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               )}
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
+                              )}
+                              {isPicture && q.image_description && (
+                                <p className="text-[13px] leading-snug text-admin-muted">{q.image_description}</p>
                               )}
                               <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">

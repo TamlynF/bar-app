@@ -612,8 +612,9 @@ export default function QuizRoundSheet({
     [swappingIndex, requestDrafts, noun, drafts, selected, kind, isHigherOrLower]
   );
 
-  // Swap replaces the subject, which is the wrong tool when the picture failed but
-  // the answer was the one you wanted. This asks for that same subject again.
+  // Swap replaces the subject, which is the wrong tool when the picture is the
+  // problem but the answer was the one you wanted. This draws that same
+  // subject again.
   const handleRetryPicture = useCallback(
     async (index: number) => {
       if (retryingIndex !== null) return;
@@ -622,18 +623,25 @@ export default function QuizRoundSheet({
 
       setRetryingIndex(index);
       try {
-        const { imageUrl } = await regeneratePictureImageAction(
+        const { imageUrl, description } = await regeneratePictureImageAction(
           draft.answer,
           effectiveTopic,
-          imageNotes
+          imageNotes,
+          draft.description
         );
 
         if (!imageUrl) {
-          toast.error(`Still no picture for "${draft.answer}" - try Swap instead.`);
+          toast.error(
+            draft.imageUrl
+              ? `No new picture came back for "${draft.answer}" - the old one is still there.`
+              : `Still no picture for "${draft.answer}" - try Swap instead.`
+          );
           return;
         }
 
-        setDrafts((prev) => prev.map((d, i) => (i === index ? { ...draft, imageUrl } : d)));
+        setDrafts((prev) =>
+          prev.map((d, i) => (i === index ? { ...draft, imageUrl, description: description ?? draft.description } : d))
+        );
       } catch (err) {
         console.error("Picture retry failed:", err);
         toast.error("Could not create that picture.");
@@ -1706,7 +1714,7 @@ export default function QuizRoundSheet({
 
                                 {!isSelected && (
                                   <span className="flex shrink-0 items-center gap-2">
-                                    {pictureMissing && (
+                                    {isPictureDraft(d) && (
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -1716,7 +1724,11 @@ export default function QuizRoundSheet({
                                         disabled={
                                           isApproving || retryingIndex !== null || swappingIndex !== null
                                         }
-                                        title="Try this picture again, same answer"
+                                        title={
+                                          pictureMissing
+                                            ? "Try this picture again, same answer"
+                                            : "Draw a different picture of the same answer"
+                                        }
                                         className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-primary bg-white px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
                                       >
                                         {isRetrying ? (
@@ -1724,7 +1736,7 @@ export default function QuizRoundSheet({
                                         ) : (
                                           <ImageIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         )}
-                                        Retry picture
+                                        {pictureMissing ? "Retry picture" : "Redraw"}
                                       </button>
                                     )}
 

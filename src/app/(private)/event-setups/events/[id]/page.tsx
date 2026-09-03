@@ -47,6 +47,7 @@ type Question = {
   hint_year?: number | null;
   release_year?: number | null;
   image_url?: string | null;
+  image_description?: string | null;
   difficulty?: string | null;
 };
 
@@ -99,7 +100,7 @@ export default async function EventQuizQuestionsPage({
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url, difficulty")
+      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url, image_description, difficulty")
       .eq("events_id", id)
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),

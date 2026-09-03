@@ -26,6 +26,7 @@ type Question = {
   hint_year: number | null;
   release_year: number | null;
   image_url: string | null;
+  image_description: string | null;
 };
 
 function formatDate(dateStr: string | null) {
@@ -70,7 +71,7 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url")
+      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url, image_description")
       .eq("events_id", id)
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),
@@ -185,6 +186,11 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
                       <span className="font-bold">{q.question_no ?? idx + 1}.</span>{" "}
                       <span className="font-semibold">{q.answer_text}</span>
                     </p>
+                    {/* The host's marking note - which Snowball this is. The
+                        guests' picture sheet never carries it. */}
+                    {q.image_description && (
+                      <p className="mt-0.5 text-[11px] leading-snug text-admin-muted">{q.image_description}</p>
+                    )}
                   </li>
                 ))}
               </ul>

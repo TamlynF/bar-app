@@ -77,6 +77,7 @@ export default function ManualEntry({
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [trackId, setTrackId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageDescription, setImageDescription] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
   const [isFinding, setIsFinding] = useState(false);
   const [isMakingPicture, setIsMakingPicture] = useState(false);
@@ -93,6 +94,7 @@ export default function ManualEntry({
     setSpotifyUrl("");
     setTrackId(null);
     setImageUrl(null);
+    setImageDescription(undefined);
   }, []);
 
   /* Nothing is added to a song round until Spotify has confirmed the track, so
@@ -136,7 +138,10 @@ export default function ManualEntry({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setImageUrl(typeof reader.result === "string" ? reader.result : null);
+    reader.onload = () => {
+      setImageUrl(typeof reader.result === "string" ? reader.result : null);
+      setImageDescription(undefined);
+    };
     reader.onerror = () => toast.error("Could not read that image.");
     reader.readAsDataURL(file);
   }, []);
@@ -149,7 +154,7 @@ export default function ManualEntry({
     }
     setIsMakingPicture(true);
     try {
-      const { imageUrl: made } = await regeneratePictureImageAction(
+      const { imageUrl: made, description } = await regeneratePictureImageAction(
         answer.trim(),
         topic,
         imageNotes
@@ -159,6 +164,7 @@ export default function ManualEntry({
         return;
       }
       setImageUrl(made);
+      setImageDescription(description);
     } catch {
       toast.error("Could not create that picture.");
     } finally {
@@ -249,7 +255,10 @@ export default function ManualEntry({
         }
 
         setIsSaving(true);
-        const uploaded = await uploadPictureDrafts([{ answer: answer.trim(), imageUrl }], eventId);
+        const uploaded = await uploadPictureDrafts(
+          [{ answer: answer.trim(), imageUrl, description: imageDescription }],
+          eventId
+        );
         await savePictureRoundAction(
           uploaded,
           eventId,
@@ -280,6 +289,7 @@ export default function ManualEntry({
     year,
     trackId,
     imageUrl,
+    imageDescription,
     isHigherOrLower,
     chainStart,
     gapRange,
