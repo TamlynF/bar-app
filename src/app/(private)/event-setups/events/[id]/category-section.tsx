@@ -92,42 +92,44 @@ type Props = {
   nextRound?: NextRoundSummary | null;
 };
 
-/* One sheet, always. Every band of the page is a fixed height in mm that adds
-   up to less than A4, and the sheet clips rather than spills - a picture round
-   that ran onto a second page would print nine boxes and a stray answer grid.
-   The answers block is pushed to the foot of the page by the auto margin, so
-   the pictures get the room that is left. */
+/* One sheet, always. Every band of the page is a fixed height in mm, and the
+   sum comes to roughly 250mm - deliberately well short of A4's 297mm. Mobile
+   Safari ignores a zero @page margin and adds its own printer margins plus a
+   URL/date footer, so a sheet sized to the full paper height ran onto a second
+   page there. Sizing to the content leaves room for whatever margins the device
+   imposes, and the sheet clips rather than spills - a picture round that ran
+   onto a second page would print nine boxes and a stray answer grid. */
 const printStyles = `
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; height: auto; overflow: visible; }
   body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000; }
-  /* The inset lives on the sheet, not on @page, so the grid keeps clear of the
-     paper edge even when the print dialog is set to "Margins: None". */
+  /* The inset lives on the sheet as well as @page, so the grid keeps clear of
+     the paper edge even when the print dialog is set to "Margins: None". */
   .sheet {
-    display: flex;
-    flex-direction: column;
     width: 100%;
-    height: 297mm;
-    padding: 12mm;
+    max-height: 260mm;
+    padding: 6mm;
     overflow: hidden;
+    break-inside: avoid;
     page-break-inside: avoid;
+    break-after: avoid;
     page-break-after: avoid;
   }
-  .hdr { margin-bottom: 8px; font-weight: 600; }
+  .hdr { margin-bottom: 3mm; font-weight: 600; }
   .hdr .fill { display: inline-block; min-width: 280px; border-bottom: 1px solid #000; }
-  .label { font-weight: 700; margin: 6px 0; text-align: center; }
+  .label { font-weight: 700; margin: 2mm 0; text-align: center; }
   .label .qtext { font-weight: 400; }
-  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
-  table.grid tr, table.grid td { page-break-inside: avoid; }
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; break-inside: avoid; page-break-inside: avoid; }
+  table.grid tr, table.grid td { break-inside: avoid; page-break-inside: avoid; }
   table.grid td { width: 33.33%; vertical-align: top; padding: 4px 6px; }
-  table.questions td { border: 1px solid #000; height: 56mm; }
-  table.answers td { border: none; height: 15mm; }
-  .answers-block { margin-top: auto; }
+  table.questions td { border: 1px solid #000; height: 54mm; }
+  table.answers td { border: none; height: 12mm; }
+  .answers-block { margin-top: 5mm; }
   .qn { font-weight: 700; }
-  .imgwrap { height: 46mm; margin-top: 3px; text-align: center; }
+  .imgwrap { height: 43mm; margin-top: 3px; text-align: center; }
   .imgwrap img { width: 100%; height: 100%; object-fit: contain; }
-  .answer { margin-top: 14px; height: 1.3em; border-bottom: 1px solid #000; }
-  @page { size: A4; margin: 0; }
+  .answer { margin-top: 10px; height: 1.3em; border-bottom: 1px solid #000; }
+  @page { size: A4 portrait; margin: 10mm; }
 `;
 
 export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, lastSettings, orderNo, includeSpotify, isPicture, isHigherLower, minYears, maxYears, playlistUrl: initialPlaylistUrl, playlistIsMine = false, playlistOwnerName = null, autoOpen, openSheet, nextRound }: Props) {
@@ -705,7 +707,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       toast.error("Allow pop-ups to print the sheet");
       return;
     }
-    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(category_name)} - Quiz Sheet</title>
+    win.document.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${escapeHtml(category_name)} - Quiz Sheet</title>
       <style>${printStyles}</style></head>
       <body>
         <div class="sheet">
