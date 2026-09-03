@@ -216,18 +216,15 @@ export async function setEventWinner(
     }
   }
 
-  // The event carries its own copy of the winning team, which is what the event
-  // sheet reads. Writing both here is what stops the two disagreeing.
+  // The event keeps a copy of the winning team's name for the sheet's Group
+  // Name field. Writing it here is what stops the two disagreeing.
   const { data: booking } = bookingId
     ? await supabase.from("bookings").select("group_name").eq("id", Number(bookingId)).maybeSingle()
     : { data: null };
 
   const { error: eventError } = await supabase
     .from("events")
-    .update({
-      booking_id: bookingId ? Number(bookingId) : null,
-      group_name: booking?.group_name ?? null,
-    })
+    .update({ group_name: booking?.group_name ?? null })
     .eq("id", Number(eventId));
 
   if (eventError) console.error("setEventWinner event error:", eventError);

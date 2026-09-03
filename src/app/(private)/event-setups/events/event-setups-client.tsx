@@ -142,7 +142,6 @@ export type EventRecord = {
   is_active: boolean | null;
   is_fully_booked: boolean | null;
   group_name: string | null;
-  booking_id: number | null;
   external_link: string | null;
   karaoke_request_url: string | null;
   is_bookable: boolean | null;
@@ -454,7 +453,6 @@ export default function EventsClient({
       end: `${y}-${mm}-${String(last).padStart(2, "0")}`,
     };
   });
-  const [formBookingId, setFormBookingId] = useState<string>("");
   const [formGroupName, setFormGroupName] = useState<string>("");
   const [formIsBookable, setFormIsBookable] = useState(false);
   const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
@@ -749,7 +747,6 @@ export default function EventsClient({
     setFormBookingPageUrl("");
     setBookingUrlManual(false);
     setFormKaraokeUrl("");
-    setFormBookingId("");
     setFormGroupName("");
     setFormCardTitle("");
     setFormCardTagline("");
@@ -802,7 +799,6 @@ export default function EventsClient({
     setFormStartTime("");
     setFormEndTime("");
     setFormKaraokeUrl("");
-    setFormBookingId("");
     setFormGroupName("");
     setFormActive(false);
     activeTouchedRef.current = false;
@@ -844,7 +840,6 @@ export default function EventsClient({
     setFormFullyBooked(selected.is_fully_booked ?? false);
     setFormDetailsOpen(true);
     setFormSettingsOpen(true);
-    setFormBookingId(selected.booking_id ? String(selected.booking_id) : "");
     setFormGroupName(selected.group_name ?? "");
     setFormIsBookable(!!selected.is_bookable);
     setFormBookingConfig(selected.booking_config ?? {});
@@ -2579,7 +2574,8 @@ export default function EventsClient({
               const posterNote = imageSourceLabel(poster.source, sub?.name);
               const eventEndStamp = `${selected.date}T${(selected.end_time ?? selected.start_time ?? "23:59").slice(0, 5)}`;
               const eventHasPassed = new Date(eventEndStamp).getTime() < loadedAtMs;
-              const showWinningTeam = type?.name === "games" && (selected.booking_id != null || eventHasPassed);
+              const winningTeamId = winnerByEvent[selected.id] ?? null;
+              const showWinningTeam = type?.name === "games" && (winningTeamId != null || eventHasPassed);
               const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
               return (
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
@@ -2612,7 +2608,7 @@ export default function EventsClient({
                             </div>
                           </div>
                           {showWinningTeam && (
-                            <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
+                            <DetailCell label="Winning Team" value={winningTeamId ? `#${winningTeamId}: ${bookings.find((b) => b.id === winningTeamId)?.group_name?.trim() || "Unnamed"}` : "-"} />
                           )}
                           <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
                             <Link
@@ -3076,43 +3072,12 @@ export default function EventsClient({
                         <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                       </FormRow>
 
-                      {selectedTypeForForm?.name === "games" && (() => {
-                        const eventBookings = formDefault ? bookings.filter(b => b.event_id === formDefault.id && b.status !== "cancelled") : [];
-                        return (
-                          <>
-                            <FormRow label="Linked Booking">
-                              <input type="hidden" name="booking_id" value={formBookingId} />
-                              <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                                <select
-                                  title="Linked Booking"
-                                  value={formBookingId}
-                                  onChange={(e) => {
-                                    const bId = e.target.value;
-                                    setFormBookingId(bId);
-                                    if (bId) {
-                                      const bk = eventBookings.find(b => String(b.id) === bId);
-                                      if (bk?.group_name) setFormGroupName(bk.group_name);
-                                    } else {
-                                      setFormGroupName("");
-                                    }
-                                  }}
-                                  className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
-                                >
-                                  <option value="">No booking</option>
-                                  {eventBookings.map(b => (
-                                    <option key={b.id} value={b.id}>#{b.id} - {b.group_name || "Unnamed"}</option>
-                                  ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
-                              </div>
-                            </FormRow>
-                            <FormRow label="Group Name">
-                              <input type="hidden" name="group_name" value={formGroupName} />
-                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
-                            </FormRow>
-                          </>
-                        );
-                      })()}
+                      {selectedTypeForForm?.name === "games" && (
+                        <FormRow label="Group Name">
+                          <input type="hidden" name="group_name" value={formGroupName} />
+                          <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
+                        </FormRow>
+                      )}
 
                       <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
                         <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />

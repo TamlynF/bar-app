@@ -163,9 +163,8 @@ export async function readContactActivity(
     if (c.email) byEmail.set(c.email.trim().toLowerCase(), c.id);
   });
 
-  // Read flat and join here. `events` sits on both sides of `bookings` -
-  // bookings.event_id points at it and events.booking_id points back - so an
-  // embedded select is ambiguous and fails for the whole table.
+  // Read flat and join here rather than through embedded selects, so one
+  // ambiguous relationship can't fail the read for the whole table.
   const [subtypeRows, typeRows, eventRows, bookingRows, scoreRows, bandRows, hireRows] =
     await Promise.all([
     fetchAll<SubtypeRow>("event subtypes", (from, to) =>
