@@ -88,5 +88,8 @@
       "C:\\Users\\tamly\\.claude\\skills",
       "c:\\Users\\tamly\\AppData\\Roaming\\Code\\User\\profiles\\-9def7b0"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
