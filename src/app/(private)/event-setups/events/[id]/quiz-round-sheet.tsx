@@ -209,11 +209,6 @@ const formatUseDate = (date: string) =>
     year: "numeric",
   });
 
-const clampYear = (value: string, fallback: number) => {
-  const parsed = parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
-
 export default function QuizRoundSheet({
   eventId,
   categoryConfigId,
@@ -270,11 +265,21 @@ export default function QuizRoundSheet({
   // ticked before it, not whichever sits above it in the list.
   const [pickOrder, setPickOrder] = useState<number[]>([]);
 
-  const [startYear, setStartYear] = useState(DEFAULT_START_YEAR);
-  const [gapRange, setGapRange] = useState<YearRange>({ minYears, maxYears });
-  // The year the host wants the next song to come from. Kept as typed so the
-  // field can sit empty until a year is chosen - there is no sensible default.
+  // The year fields hold what was typed, not a number, so a field can be
+  // cleared and retyped - parsing on every keystroke would snap an emptied box
+  // straight back to its old value.
+  const [startYearInput, setStartYearInput] = useState(String(DEFAULT_START_YEAR));
+  const [gapInput, setGapInput] = useState({ minYears: String(minYears), maxYears: String(maxYears) });
   const [releaseYear, setReleaseYear] = useState("");
+
+  const startYear = parseInt(startYearInput, 10);
+  const gapRange = useMemo<YearRange>(
+    () => ({
+      minYears: parseInt(gapInput.minYears, 10),
+      maxYears: parseInt(gapInput.maxYears, 10),
+    }),
+    [gapInput.minYears, gapInput.maxYears]
+  );
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -369,18 +374,25 @@ export default function QuizRoundSheet({
     : null;
   const startYearLocked = lastSavedYear != null;
   const chainStart = lastSavedYear ?? startYear;
-  const rangeInvalid = gapRange.minYears < 1 || gapRange.maxYears < gapRange.minYears;
+  const chainStartMissing = isHigherOrLower && !Number.isFinite(chainStart);
+  const rangeInvalid =
+    !Number.isFinite(gapRange.minYears) ||
+    !Number.isFinite(gapRange.maxYears) ||
+    gapRange.minYears < 1 ||
+    gapRange.maxYears < gapRange.minYears;
 
   /* The songs offered all come from this one year, so it has to be a legal step
      from the chain before anything is asked for. */
   const pickedYear = parseInt(releaseYear, 10);
   const releaseYearReason = !isHigherOrLower
     ? null
-    : !Number.isFinite(pickedYear)
-      ? "Enter the year the song should come from."
-      : describeStep(pickedYear, chainStart, gapRange);
+    : chainStartMissing
+      ? "Enter the year the first question compares against."
+      : !Number.isFinite(pickedYear)
+        ? "Enter the year the song should come from."
+        : describeStep(pickedYear, chainStart, gapRange);
   const yearWindows =
-    isHigherOrLower && !rangeInvalid
+    isHigherOrLower && !rangeInvalid && !chainStartMissing
       ? legalYearWindows(chainStart, gapRange, new Date().getFullYear())
       : null;
   const allowedYears = yearWindows ? formatYearWindows(yearWindows) : "";
@@ -1375,11 +1387,12 @@ export default function QuizRoundSheet({
                                 type="number"
                                 min={1900}
                                 max={new Date().getFullYear()}
-                                value={startYearLocked ? (lastSavedYear ?? startYear) : startYear}
-                                onChange={(e) => setStartYear(clampYear(e.target.value, startYear))}
+                                value={startYearLocked ? String(lastSavedYear) : startYearInput}
+                                onChange={(e) => setStartYearInput(e.target.value)}
                                 disabled={isGenerating || startYearLocked}
                                 className={cn(
-                                  "h-12 w-full rounded-xl border border-admin-line bg-white px-3.5 text-sm text-admin-ink outline-none focus:border-admin-primary",
+                                  "h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-admin-ink outline-none focus:border-admin-primary",
+                                  chainStartMissing ? "border-admin-warning" : "border-admin-line",
                                   startYearLocked &&
                                     "disabled:bg-admin-primary-soft disabled:font-semibold disabled:text-admin-primary"
                                 )}
@@ -1397,12 +1410,9 @@ export default function QuizRoundSheet({
                                 id={minYearsId}
                                 type="number"
                                 min={1}
-                                value={gapRange.minYears}
+                                value={gapInput.minYears}
                                 onChange={(e) =>
-                                  setGapRange((prev) => ({
-                                    ...prev,
-                                    minYears: clampYear(e.target.value, prev.minYears),
-                                  }))
+                                  setGapInput((prev) => ({ ...prev, minYears: e.target.value }))
                                 }
                                 disabled={isGenerating}
                                 className={cn(
@@ -1423,12 +1433,9 @@ export default function QuizRoundSheet({
                                 id={maxYearsId}
                                 type="number"
                                 min={1}
-                                value={gapRange.maxYears}
+                                value={gapInput.maxYears}
                                 onChange={(e) =>
-                                  setGapRange((prev) => ({
-                                    ...prev,
-                                    maxYears: clampYear(e.target.value, prev.maxYears),
-                                  }))
+                                  setGapInput((prev) => ({ ...prev, maxYears: e.target.value }))
                                 }
                                 disabled={isGenerating}
                                 className={cn(
@@ -1442,6 +1449,10 @@ export default function QuizRoundSheet({
                               {rangeInvalid ? (
                                 <p className="font-semibold text-admin-warning">
                                   Min years must be at least 1, and max years cannot be below it.
+                                </p>
+                              ) : chainStartMissing ? (
+                                <p className="font-semibold text-admin-warning">
+                                  Enter the year the first question compares against.
                                 </p>
                               ) : (
                                 <>
