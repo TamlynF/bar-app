@@ -36,6 +36,7 @@ import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
 import { renderPrompt, resolvePrompt } from '@/lib/quiz/prompt-templates'
+import { spotifySearchQueries } from '@/lib/quiz/spotify-search'
 
 export type QuizQuestion = {
   question: string;
@@ -901,18 +902,21 @@ async function searchSpotifyTrack(
   title: string,
   accessToken: string
 ): Promise<string | null> {
-  try {
-    const query = encodeURIComponent(`track:${title} artist:${artist}`)
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
-    if (!res.ok) return null
-    const data = await res.json()
-    return data.tracks?.items?.[0]?.id || null
-  } catch {
-    return null
+  for (const query of spotifySearchQueries(artist, title)) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      if (!res.ok) continue
+      const data = await res.json()
+      const id = data.tracks?.items?.[0]?.id
+      if (id) return id
+    } catch {
+      continue
+    }
   }
+  return null
 }
 
 export type SpotifyTrackLookup = {

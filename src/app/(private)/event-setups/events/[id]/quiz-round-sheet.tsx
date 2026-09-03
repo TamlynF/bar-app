@@ -49,6 +49,7 @@ import {
   Music,
   AlertTriangle,
   HelpCircle,
+  Star,
 } from "lucide-react";
 
 import { SiSpotify } from "react-icons/si";
@@ -1777,6 +1778,31 @@ export default function QuizRoundSheet({
                             !isSelected &&
                             ((atCap && !isHigherOrLower) || !!chainReason) &&
                             !pictureMissing;
+                          // A name-that-tune card has no answer chip, so its
+                          // Swap sits at the end of the title row instead of
+                          // on a row of its own.
+                          const swapInTopRow = !!song && !isHigherOrLower;
+                          const swapButton = !isSelected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSwap(i);
+                              }}
+                              disabled={
+                                isApproving || swappingIndex !== null || retryingIndex !== null
+                              }
+                              title={`Replace with a different ${noun}`}
+                              className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-line bg-white px-2.5 text-[12px] font-semibold text-admin-muted transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
+                            >
+                              {isSwapping ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              )}
+                              Swap
+                            </button>
+                          );
 
                           return (
                             <div
@@ -1864,19 +1890,7 @@ export default function QuizRoundSheet({
                                    question in the heading, so the card is just
                                    the song: what it is, and the year that
                                    decides the answer. */
-                                isHigherOrLower ? (
-                                  <div className="min-w-0">
-                                    <p className="text-sm leading-relaxed font-semibold text-admin-ink">
-                                      {song.title}
-                                    </p>
-                                    <p className="mt-0.5 text-[13px] text-admin-muted">
-                                      {song.artist} ·{" "}
-                                      <span className="font-bold text-admin-ink tabular-nums">
-                                        {song.year}
-                                      </span>
-                                    </p>
-                                  </div>
-                                ) : (
+                                <div className="flex items-start justify-between gap-3">
                                   <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-0.5">
                                     <dt className="text-[11px] font-semibold tracking-wide text-admin-muted">
                                       Song
@@ -1887,9 +1901,14 @@ export default function QuizRoundSheet({
                                     <dt className="text-[11px] font-semibold tracking-wide text-admin-muted">
                                       Artist
                                     </dt>
-                                    <dd className="text-[13px] text-admin-ink">{song.artist}</dd>
+                                    <dd className="flex items-center gap-1.5 text-[13px] text-admin-ink">
+                                      {song.artist}
+                                      <Star className="h-2.5 w-2.5 fill-current text-admin-muted" />
+                                      <span className="tabular-nums">{song.year}</span>
+                                    </dd>
                                   </dl>
-                                )
+                                  {swapInTopRow && swapButton}
+                                </div>
                               ) : (
                                 <p className="text-sm leading-relaxed font-semibold text-admin-ink">
                                   {isQuestionDraft(d) ? d.question : ""}
@@ -1918,6 +1937,7 @@ export default function QuizRoundSheet({
                                 </p>
                               )}
 
+                              {!swapInTopRow && (
                               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                                 <span className="flex flex-wrap items-center gap-2">
                                   {song ? (
@@ -1978,28 +1998,11 @@ export default function QuizRoundSheet({
                                       </button>
                                     )}
 
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSwap(i);
-                                      }}
-                                      disabled={
-                                        isApproving || swappingIndex !== null || retryingIndex !== null
-                                      }
-                                      title={`Replace with a different ${noun}`}
-                                      className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-line bg-white px-2.5 text-[12px] font-semibold text-admin-muted transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
-                                    >
-                                      {isSwapping ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
-                                      ) : (
-                                        <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                      )}
-                                      Swap
-                                    </button>
+                                    {swapButton}
                                   </span>
                                 )}
                               </div>
+                              )}
                             </div>
                           );
                         })}
