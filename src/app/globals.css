@@ -1971,7 +1971,13 @@ body {
 @media print {
   @page {
     size: A4;
-    margin: 1.4cm;
+    margin: 1.4cm 1.4cm 1.8cm;
+
+    @bottom-center {
+      content: "Page " counter(page) " of " counter(pages);
+      font: 600 10px/1 var(--font-ui), system-ui, sans-serif;
+      color: #5e6654;
+    }
   }
 
   html,
@@ -2010,6 +2016,25 @@ body {
   [data-admin-main] {
     max-width: none;
     padding: 0;
+  }
+
+  /* Anything positioned fixed and mounted outside the shell - a toast, a
+     dialog portal, a deployment toolbar, an extension's injected panel -
+     paints itself onto every printed page. */
+  body:has([data-print-sheet]) > :not(:has([data-print-sheet])) {
+    display: none !important;
+  }
+
+  /* Section layouts nest the page in flex wrappers with overflow: clip and a
+     100% tall inner div. Once page breaks are forced, the paginated content
+     grows taller than that wrapper's measured height and Chromium clips the
+     rest, so the last rounds never print. Every wrapper on the way down to
+     the sheet becomes a plain unclipped block instead. */
+  [data-admin-main] :has([data-print-sheet]) {
+    display: block;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   /* The inset is repeated on the sheet rather than left to @page alone, because
