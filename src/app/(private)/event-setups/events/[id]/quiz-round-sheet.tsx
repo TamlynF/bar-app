@@ -1864,30 +1864,32 @@ export default function QuizRoundSheet({
                                    question in the heading, so the card is just
                                    the song: what it is, and the year that
                                    decides the answer. */
-                                <div className="flex items-start gap-3">
-                                  {!isHigherOrLower && (
-                                    <span className="flex h-13 w-13 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-surface">
-                                      <Music className="h-5 w-5 text-admin-muted" />
-                                    </span>
-                                  )}
-                                  <div className="min-w-0 flex-1">
+                                isHigherOrLower ? (
+                                  <div className="min-w-0">
                                     <p className="text-sm leading-relaxed font-semibold text-admin-ink">
                                       {song.title}
                                     </p>
                                     <p className="mt-0.5 text-[13px] text-admin-muted">
-                                      {isHigherOrLower ? (
-                                        <>
-                                          {song.artist} ·{" "}
-                                          <span className="font-bold text-admin-ink tabular-nums">
-                                            {song.year}
-                                          </span>
-                                        </>
-                                      ) : (
-                                        `${song.artist} · ${song.year}`
-                                      )}
+                                      {song.artist} ·{" "}
+                                      <span className="font-bold text-admin-ink tabular-nums">
+                                        {song.year}
+                                      </span>
                                     </p>
                                   </div>
-                                </div>
+                                ) : (
+                                  <dl className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-0.5">
+                                    <dt className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                                      Song
+                                    </dt>
+                                    <dd className="text-sm leading-relaxed font-semibold text-admin-ink">
+                                      {song.title}
+                                    </dd>
+                                    <dt className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                                      Artist
+                                    </dt>
+                                    <dd className="text-[13px] text-admin-ink">{song.artist}</dd>
+                                  </dl>
+                                )
                               ) : (
                                 <p className="text-sm leading-relaxed font-semibold text-admin-ink">
                                   {isQuestionDraft(d) ? d.question : ""}
@@ -1930,11 +1932,7 @@ export default function QuizRoundSheet({
                                       >
                                         Answer: {stepAnswerText(song.year, hintYear ?? 0)}
                                       </span>
-                                    ) : (
-                                      <span className="rounded-lg border border-admin-line bg-white px-3 py-1.5 text-[13px] font-semibold text-admin-muted tabular-nums">
-                                        {song.year}
-                                      </span>
-                                    )
+                                    ) : null
                                   ) : (
                                     <span
                                       className={cn(
