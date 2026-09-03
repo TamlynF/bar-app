@@ -94,6 +94,12 @@ import {
 } from "@/lib/quiz/round-stages";
 import { uploadPictureDrafts } from "@/lib/quiz/picture-upload";
 import { roundKind, roundNoun } from "@/lib/quiz/round-kind";
+import {
+  describeExpectedWait,
+  expectedGenerationMs,
+  generationStageLabel,
+  progressAt,
+} from "@/lib/quiz/generation-progress";
 import { EMPTY_ROUND_SETTINGS, type RoundSettings } from "@/lib/quiz/round-defaults";
 import { AI_ORIGIN } from "@/lib/quiz/question-origin";
 import ManualEntry from "./manual-entry";
@@ -286,6 +292,9 @@ export default function QuizRoundSheet({
   );
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [toppingUp, setToppingUp] = useState(false);
+  const [generationStartedAt, setGenerationStartedAt] = useState(0);
+  const [generationNow, setGenerationNow] = useState(0);
   const [isApproving, setIsApproving] = useState(false);
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null);
   const [retryingIndex, setRetryingIndex] = useState<number | null>(null);
@@ -331,6 +340,20 @@ export default function QuizRoundSheet({
   const batchSize = isHigherOrLower
     ? HIGHER_LOWER_BATCH
     : generationCount(savedCount, question_count);
+
+  /* The generator answers in one go, so the bar is paced against an estimate
+     for this kind and size of batch rather than fed by real progress. */
+  useEffect(() => {
+    if (!isGenerating) return;
+    const timer = window.setInterval(() => setGenerationNow(Date.now()), 200);
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
+  const expectedGenerationDuration = expectedGenerationMs(kind, batchSize);
+  const generationElapsedMs = isGenerating ? Math.max(0, generationNow - generationStartedAt) : 0;
+  const generationPercent = Math.round(progressAt(generationElapsedMs, expectedGenerationDuration) * 100);
+  const generationStage = toppingUp
+    ? "Some pictures didn't come back - asking for more…"
+    : generationStageLabel(kind, generationElapsedMs, batchSize);
 
   // Every row in a picture round shares one question_text, so the first saved
   // picture fixes the topic for the rest of the round.
@@ -539,6 +562,10 @@ export default function QuizRoundSheet({
 
     setTopicMissing(false);
     setApproved(null);
+    const startedAt = Date.now();
+    setGenerationStartedAt(startedAt);
+    setGenerationNow(startedAt);
+    setToppingUp(false);
     setIsGenerating(true);
 
     try {
@@ -556,6 +583,7 @@ export default function QuizRoundSheet({
          needs. Ask for the shortfall again, a bounded number of times, rather
          than showing a set that cannot fill the round. */
       for (let topUp = 0; kind === "picture" && items.length < cap && topUp < PICTURE_TOP_UPS; topUp++) {
+        setToppingUp(true);
         const more = await requestDrafts(cap - items.length, items.map(draftIdentity));
         withoutPicture += more.withoutPicture ?? 0;
         if (more.error || !more.items?.length) break;
@@ -616,6 +644,7 @@ export default function QuizRoundSheet({
       console.error("Round generation failed:", err);
       toast.error("Could not reach the generator.");
     } finally {
+      setToppingUp(false);
       setIsGenerating(false);
     }
   }, [
@@ -1635,6 +1664,25 @@ export default function QuizRoundSheet({
                         <p className="text-[13px] font-semibold text-admin-muted">
                           Creating {batchSize} {noun}s…
                         </p>
+                        <div className="w-full max-w-xs">
+                          <div
+                            role="progressbar"
+                            aria-label={`Creating ${noun}s`}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={generationPercent}
+                            className="h-2 w-full overflow-hidden rounded-full bg-admin-surface"
+                          >
+                            <div
+                              style={{ "--progress": `${generationPercent}%` } as React.CSSProperties}
+                              className="h-full w-[var(--progress)] rounded-full bg-admin-primary transition-[width] duration-300 ease-out"
+                            />
+                          </div>
+                          <p className="mt-2 text-center text-[12px] font-medium text-admin-ink">{generationStage}</p>
+                          <p className="mt-0.5 text-center text-[11px] text-admin-muted">
+                            {describeExpectedWait(expectedGenerationDuration)}
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-3">
