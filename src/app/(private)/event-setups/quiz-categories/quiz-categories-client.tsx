@@ -7,15 +7,16 @@ import {
   ChevronDown,
   X,
   SearchX,
-  Music,
   Hash,
-  ImageIcon,
-  ArrowUpDown,
+  Camera,
+  ThumbsUp,
+  ThumbsDown,
   FileText,
   RotateCcw,
   Info,
   AlertTriangle,
 } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -75,8 +76,9 @@ const YEAR_INPUT =
 const PROMPT_TEXT = "font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap";
 const TWO_COLUMNS = "grid gap-4 sm:grid-cols-2 sm:items-start sm:gap-5";
 
-function roundLabel(config: QuizCategoryConfig): string {
-  return `${config.question_count} Q · ${config.points_per_question} pt`;
+function pointsLabel(config: QuizCategoryConfig): string {
+  const points = config.points_per_question;
+  return `${points} ${points === 1 ? "pt" : "pts"} / Q`;
 }
 
 function configPromptKind(config: QuizCategoryConfig): PromptKind {
@@ -378,8 +380,8 @@ export default function QuizCategoriesClient({
 
                   {/* Fixed tracks rather than content-sized ones, so the counts of
                       every row line up down the list. */}
-                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_6rem_8rem_minmax(0,1fr)] sm:items-center sm:gap-3">
-                    <div className="flex min-w-0 items-center gap-1.5">
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_7rem_6rem_minmax(0,1fr)] sm:items-center sm:gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
                       <p
                         className={cn(
                           "min-w-0 truncate text-sm leading-snug font-semibold",
@@ -388,43 +390,28 @@ export default function QuizCategoriesClient({
                       >
                         {config.category_name}
                       </p>
+                      <span className="flex shrink-0 items-center gap-1 sm:hidden">
+                        <TypePills config={config} />
+                      </span>
                     </div>
 
-                    <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]">
-                      Round {config.order_no}
-                    </p>
-
-                    <p className="hidden text-[12px] font-medium text-admin-muted tabular-nums sm:block">
-                      {roundLabel(config)}
-                    </p>
-
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:mt-0">
-                      <span className="text-[11px] font-medium text-admin-muted tabular-nums sm:hidden">
-                        {roundLabel(config)}
-                      </span>
+                    <div className="hidden sm:block">
                       {config.short_name && (
                         <InfoBadge icon={null}>{config.short_name}</InfoBadge>
                       )}
-                      {config.include_spotify && (
-                        <InfoBadge icon={<Music className="h-3 w-3" />}>
-                          <span className="hidden sm:inline">Spotify</span>
-                        </InfoBadge>
-                      )}
-                      {config.is_higher_lower && (
-                        <InfoBadge icon={<ArrowUpDown className="h-3 w-3" />}>
-                          <span className="hidden sm:inline">Higher/Lower</span>
-                        </InfoBadge>
-                      )}
-                      {config.is_picture && (
-                        <InfoBadge icon={<ImageIcon className="h-3 w-3" />}>
-                          <span className="hidden sm:inline">Picture</span>
-                        </InfoBadge>
-                      )}
-                      {resolvePrompt(configPromptKind(config), config.ai_prompt).isCustomised && (
-                        <InfoBadge icon={<FileText className="h-3 w-3" />}>
-                          <span className="hidden sm:inline">Custom prompt</span>
-                        </InfoBadge>
-                      )}
+                    </div>
+
+                    <p className="mt-0.5 text-[11px] font-medium text-admin-muted tabular-nums sm:mt-0 sm:text-[12px]">
+                      {config.question_count} Questions
+                      <span className="sm:hidden"> · {pointsLabel(config)}</span>
+                    </p>
+
+                    <p className="hidden text-[12px] font-medium text-admin-muted tabular-nums sm:block">
+                      {pointsLabel(config)}
+                    </p>
+
+                    <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
+                      <TypePills config={config} />
                     </div>
                   </div>
                 </ListRow>
@@ -842,6 +829,49 @@ export default function QuizCategoriesClient({
         )}
       </RecordSheet>
     </div>
+  );
+}
+
+/* Icon-only on phones, where they sit beside the name; labelled on desktop,
+   where they have a column of their own. */
+function TypePills({ config }: { config: QuizCategoryConfig }) {
+  return (
+    <>
+      {config.include_spotify && (
+        <InfoBadge
+          icon={<SiSpotify className="h-3.5 w-3.5" />}
+          className="border-[#1DB954] bg-[#1DB954] text-white"
+        >
+          <span className="hidden sm:inline">Spotify</span>
+        </InfoBadge>
+      )}
+      {config.is_higher_lower && (
+        <InfoBadge
+          icon={
+            <span className="inline-flex items-center gap-0.5">
+              <ThumbsUp className="h-3.5 w-3.5 text-green-600" />
+              <ThumbsDown className="h-3.5 w-3.5 text-red-600" />
+            </span>
+          }
+          className="border-green-300 bg-linear-to-r from-green-50 to-red-50 text-admin-ink"
+        >
+          <span className="hidden sm:inline">Higher/Lower</span>
+        </InfoBadge>
+      )}
+      {config.is_picture && (
+        <InfoBadge
+          icon={<Camera className="h-3.5 w-3.5" />}
+          className="border-fuchsia-300 bg-fuchsia-100 text-fuchsia-700"
+        >
+          <span className="hidden sm:inline">Picture</span>
+        </InfoBadge>
+      )}
+      {resolvePrompt(configPromptKind(config), config.ai_prompt).isCustomised && (
+        <InfoBadge icon={<FileText className="h-3 w-3" />}>
+          <span className="hidden sm:inline">Custom prompt</span>
+        </InfoBadge>
+      )}
+    </>
   );
 }
 
