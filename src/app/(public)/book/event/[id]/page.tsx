@@ -1,6 +1,5 @@
 import React from "react";
 import type { Viewport } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EventBookingForm from "./_components/event-booking-form";
@@ -13,6 +12,7 @@ import {
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { PublicNav } from "@/components/public-nav";
 import { MarqueeTicker } from "@/components/marquee-ticker";
+import { ExtrudedTitle } from "@/components/extruded-title";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -139,24 +139,17 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
               </div>
             </>
           ) : (
-            <div className="relative px-2 py-2 w-full max-h-[25vh]">
-              <div
-                aria-hidden
-                className="top-0 left-1/2 absolute bg-[#FDCC4B]/10 blur-[80px] rounded-full w-105 h-60 -translate-x-1/2 pointer-events-none"
-              />
-
-              <div className="inline-flex relative items-center gap-3 mb-2.5">
-                <span aria-hidden className="bg-[#FDCC4B]/30 w-7 h-px" />
-                <Image src="/logo.jpeg" alt="" width={26} height={26} className="rounded-lg" />
-                <span className="font-black text-[#FDCC4B] text-[10px] uppercase tracking-[0.25em]">
-                  Don Fenticas presents
-                </span>
-                <span aria-hidden className="bg-[#FDCC4B]/30 w-7 h-px" />
-              </div>
-
-              <h1 className="relative drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)] font-black text-[#FFF4CC] text-3xl sm:text-5xl uppercase leading-[0.95] tracking-tighter">
-                {eventTitle}
-              </h1>
+            <div className="relative px-2 py-2 w-full">
+              {/*
+                No poster uploaded, so the act's name IS the backdrop —
+                extruded and slowly turning, like a stage screen. The
+                component brings its own stage-light glow, so the old
+                blur blob and the "Don Fenticas presents" eyebrow go:
+                the brand is already in the nav (STYLE_GUIDE identity rule)
+                and the eyebrow was competing with the title for height.
+                Poster events keep the image branch above untouched.
+              */}
+              <ExtrudedTitle text={eventTitle} className="py-4 sm:py-8" />
 
               <div className="relative flex flex-wrap justify-center items-center gap-2.5 mt-3">
                 <span className="inline-flex items-center gap-2 bg-black/40 px-4 py-2 border border-white/10 rounded-full font-bold text-[#FFF4CC] text-xs">

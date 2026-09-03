@@ -1,0 +1,112 @@
+/*
+ * ExtrudedTitle — stage-backdrop 3D type.
+ *
+ * Pure CSS. No client JS, no Three.js, so it's safe in Server Components
+ * and costs nothing in the JS bundle (STYLE_GUIDE: Lighthouse mobile 90+).
+ *
+ * How the depth works: the text is stacked N times inside a preserve-3d
+ * wrapper, each copy pushed a little further back on Z. Only the front
+ * copy is legible (`.face`); the rest are `aria-hidden` slabs in the side
+ * colour. When the wrapper sways on Y, the slabs fan out and read as the
+ * extruded flank of the letters — same trick Geese's screen was doing,
+ * minus the GPU budget of a festival.
+ *
+ * Custom properties (set inline by the component — custom props only,
+ * never standard properties, per the Edge `no-inline-styles` rule):
+ *   --extrude-face    front colour
+ *   --extrude-side    flank colour
+ *   --extrude-depth   Z step between slabs (px)
+ *   --extrude-chars   longest word length, drives the clamp() font size
+ */
+
+.stage {
+  position: relative;
+  width: 100%;
+  perspective: 900px;
+  perspective-origin: 50% 40%;
+  /* Slabs poke outside the text box when turned; don't clip them. */
+  overflow: visible;
+}
+
+/* Warm stage-light pool behind the type (STYLE_GUIDE "Texture & atmosphere"). */
+.glow {
+  position: absolute;
+  inset: -20% 10%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    closest-side,
+    rgb(253 204 75 / 0.16),
+    rgb(122 31 31 / 0.08) 55%,
+    transparent 75%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+.rig {
+  position: relative;
+  display: grid;
+  transform-style: preserve-3d;
+  will-change: transform;
+  /* A full 360° spin shows mirrored letters for half the loop — a slow
+     ±22° sway is what actually reads as "the sign is turning". */
+  animation: extrude-sway 14s ease-in-out infinite;
+  transform: rotateY(-14deg) rotateX(6deg);
+}
+
+.rig > * {
+  grid-area: 1 / 1;
+  transform-style: preserve-3d;
+}
+
+.text {
+  margin: 0;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  line-height: 0.88;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  /* ~1.15 × viewport / longest word ≈ fits one word per line at 375px,
+     then stops growing at the desktop cap. */
+  font-size: clamp(2.25rem, calc(115vw / var(--extrude-chars, 8)), 6.5rem);
+  backface-visibility: hidden;
+}
+
+.face {
+  position: relative;
+  color: var(--extrude-face);
+  /* Thin dark keyline stops cream-on-olive bleeding at small sizes. */
+  -webkit-text-stroke: 1px rgb(26 32 8 / 0.6);
+  paint-order: stroke fill;
+}
+
+.slab {
+  color: var(--extrude-side);
+  /* Depth index is set per slab via --i in the component. */
+  transform: translateZ(calc(var(--i) * var(--extrude-depth, 2px) * -1));
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Compact variant for list/scroller cards — shallower, no glow, no sway. */
+.compact .text {
+  font-size: clamp(1.5rem, calc(70vw / var(--extrude-chars, 8)), 3rem);
+}
+.compact .rig {
+  animation: none;
+  transform: rotateY(-10deg) rotateX(4deg);
+}
+
+@keyframes extrude-sway {
+  0%   { transform: rotateY(-22deg) rotateX(7deg); }
+  50%  { transform: rotateY(22deg)  rotateX(5deg); }
+  100% { transform: rotateY(-22deg) rotateX(7deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rig {
+    animation: none;
+    transform: rotateY(-14deg) rotateX(6deg);
+  }
+}
