@@ -48,11 +48,13 @@ import {
   ImageIcon,
   Music,
   AlertTriangle,
+  HelpCircle,
 } from "lucide-react";
 
 import { SiSpotify } from "react-icons/si";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SpotifyPlayer } from "@/components/spotify-player";
 import { cn } from "@/lib/utils";
 
@@ -1373,21 +1375,86 @@ export default function QuizRoundSheet({
 
                         {isPicture && (
                           <div>
-                            <label
-                              htmlFor={imageNotesId}
-                              className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
-                            >
-                              Extra picture instructions{" "}
-                              <span className="font-medium normal-case">
-                                - optional, never printed or shown to guests
-                              </span>
-                            </label>
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                              <label
+                                htmlFor={imageNotesId}
+                                className="block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                              >
+                                Extra picture instructions{" "}
+                                <span className="font-medium normal-case">
+                                  - optional, never printed or shown to guests
+                                </span>
+                              </label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    aria-label="How to write picture instructions"
+                                    title="How to write picture instructions"
+                                    className="-my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                                  >
+                                    <HelpCircle className="h-4 w-4" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  align="end"
+                                  className="w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-admin-line bg-white p-4 text-admin-ink shadow-lg"
+                                >
+                                  <p className="text-sm font-bold">Writing picture instructions</p>
+                                  <p className="mt-1 text-[13px] text-admin-muted">
+                                    One instruction applies to every card in the round. It works in
+                                    two ways, so say which one you mean.
+                                  </p>
+                                  <div className="mt-3 space-y-3 text-[13px]">
+                                    <div>
+                                      <p className="font-semibold">Change how the picture looks</p>
+                                      <p className="mt-0.5 text-admin-muted">
+                                        The subject is still drawn as itself, with your twist added.
+                                      </p>
+                                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-admin-muted">
+                                        <li>show pets with a mustache</li>
+                                        <li>wearing sunglasses at the beach</li>
+                                        <li>drawn as a pencil sketch</li>
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold">Replace the picture with text</p>
+                                      <p className="mt-0.5 text-admin-muted">
+                                        Use &ldquo;only&rdquo; or &ldquo;instead of&rdquo; and the card
+                                        becomes plain black text on white.
+                                      </p>
+                                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-admin-muted">
+                                        <li>only show the text of the anagram</li>
+                                        <li>show a one-line cryptic clue instead of the pet</li>
+                                      </ul>
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold">Anagrams</p>
+                                      <p className="mt-0.5 text-admin-muted">
+                                        Include the word &ldquo;anagram&rdquo; and the letters are
+                                        scrambled for you: one run of capitals with the word count
+                                        underneath, always a true anagram of the answer.
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold">Good to know</p>
+                                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-admin-muted">
+                                        <li>The answer is never printed on the card.</li>
+                                        <li>Guests only ever see the topic, so keep the twist here.</li>
+                                        <li>Vague wording gets vague pictures. Say what to show, not what to avoid.</li>
+                                        <li>Changing this after creating a batch only affects the next batch.</li>
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                             <textarea
                               id={imageNotesId}
                               value={imageNotes}
                               onChange={(e) => setImageNotes(e.target.value)}
                               rows={2}
-                              placeholder="e.g. no band or artist name anywhere on the cover"
+                              placeholder="e.g. show pets with a mustache - or: only show the text of the anagram"
                               disabled={isGenerating}
                               className="w-full resize-none rounded-xl border border-admin-line bg-white px-3.5 py-3 text-sm text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary"
                             />

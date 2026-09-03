@@ -34,6 +34,7 @@ import {
 import { topicSearchTokens, topicsOverlap } from '@/lib/quiz/topic-match'
 import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
+import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
 
 export type QuizQuestion = {
   question: string;
@@ -1625,14 +1626,55 @@ function pictureImagePrompt(
 ): string {
   const round = topic?.trim() ? ` on the topic "${topic.trim()}"` : ''
   const about = description?.trim() ? `${description.trim()} ` : ''
-  const notes = imageNotes?.trim() ? `\n${imageNotes.trim()}` : ''
+  const notes = imageNotes?.trim()
+
+  /* With instructions, the host - not the answer - decides what the picture
+     is. "Only show the text of the anagram" has to beat the default of
+     drawing the band, or every card comes back as a photo of the band with
+     the letters mangled across it. "Pets with a mustache" must still draw
+     the right pet, and neither may caption the card with the answer. */
+  if (notes) {
+    return (
+      `Create one picture for a pub quiz picture round${round}. The answer guests write down for this card is "${answer}", ` +
+      `and it must not appear anywhere in the picture. ` +
+      `The quiz host's instructions for every picture in this round: "${notes}". ` +
+      `What this card must show, written to follow those instructions: ${about}` +
+      `Follow that brief exactly. If it calls for text instead of the subject, render that text and nothing else - large, clear, black capital letters ` +
+      `centred on a plain white background, reproduced letter for letter exactly as given, never corrected, unscrambled, completed or translated. ` +
+      `Otherwise depict exactly that subject as it is known, in its original art style if it is a cartoon or fictional character, ` +
+      `not a generic look-alike, with the host's change applied, clearly visible on a clean background. ` +
+      `No captions, no labels, no text naming the answer. No watermarks.`
+    )
+  }
+
   return (
     `A clear, high-quality image of ${answer} for a pub quiz picture round${round}. ` +
     about +
     `Depict this exact subject as it is known, in its original art style if it is a cartoon or fictional character, ` +
     `not a generic look-alike. ` +
-    `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.` +
-    notes
+    `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.`
+  )
+}
+
+/* The rule the subject writer follows for "description" once the host has
+   said what the pictures should be. Shared by the batch prompt and the
+   single-answer describer so a hand-typed answer gets the same treatment as
+   a generated one.
+
+   Anagrams are deliberately not spelled out here: given the recipe, the model
+   turned one card in every "pets with a mustache" batch into an anagram.
+   Rounds that ask for them get their scramble built in code instead. */
+function hostPictureBrief(imageNotes: string): string {
+  return (
+    `The quiz host's instructions for every picture in this round: "${imageNotes}". ` +
+    `Decide once, from those instructions alone, which of two kinds they are, and write every description the same way. ` +
+    `If they replace the picture with something else, such as text (a clue, a lyric, a definition), ` +
+    `the description gives exactly what to show instead of the subject, letter for letter, as plain black text on a white background and nothing else. ` +
+    `If they change how the subject is shown - a prop, a costume, a style, a setting, a colour - ` +
+    `the description names exactly which subject it is and where it is from (show, film, book, brand, real life), ` +
+    `what it looks like and its original art style if it is a cartoon or fictional character, so it stays recognisable as that exact one, ` +
+    `and then applies the host's change to it. ` +
+    `The picture never carries the answer or any caption.`
   )
 }
 
@@ -1640,11 +1682,15 @@ function pictureImagePrompt(
    alongside its own subjects, so the text model supplies one before the
    picture is drawn. A miss here is not fatal - the image is still attempted
    from the answer alone. */
-async function describePictureSubject(answer: string, topic?: string): Promise<string | undefined> {
+async function describePictureSubject(answer: string, topic?: string, imageNotes?: string): Promise<string | undefined> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return undefined
   const round = topic?.trim() ? ` in a pub quiz picture round on the topic "${topic.trim()}"` : ''
-  const prompt = `"${answer}" is the answer${round}. In one sentence, say what it is, where it is from (show, film, book, brand, real life) and what it looks like, so an artist could draw exactly the right one. Return only the sentence.`
+  const notes = imageNotes?.trim()
+  if (notes && wantsAnagram(notes)) return anagramBrief(answer, scrambleAnswer(answer))
+  const prompt = notes
+    ? `"${answer}" is the answer${round}. ${hostPictureBrief(notes)} Return only the description.`
+    : `"${answer}" is the answer${round}. In one sentence, say what it is, where it is from (show, film, book, brand, real life) and what it looks like, so an artist could draw exactly the right one. Return only the sentence.`
   try {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`,
@@ -1725,7 +1771,7 @@ export async function regeneratePictureImageAction(
   imageNotes?: string,
   description?: string
 ): Promise<{ imageUrl: string | null; description?: string }> {
-  const about = description?.trim() || (await describePictureSubject(answer, topic))
+  const about = description?.trim() || (await describePictureSubject(answer, topic, imageNotes))
   return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes, about), description: about }
 }
 
@@ -1745,7 +1791,9 @@ export async function redrawPictureQuestionAction(
   if (error || !row) throw new Error('That question could not be found.')
 
   const description =
-    row.image_description?.trim() || (await describePictureSubject(row.answer_text, row.topic ?? undefined)) || null
+    row.image_description?.trim() ||
+    (await describePictureSubject(row.answer_text, row.topic ?? undefined, row.image_notes ?? undefined)) ||
+    null
   const dataUrl = await generateImageForAnswer(
     row.answer_text,
     row.topic ?? undefined,
@@ -1911,22 +1959,30 @@ export async function generatePictureRoundAction(
       ? `\n- Do NOT include any of these already-used answers: ${JSON.stringify(existingAnswers)}`
       : ''
 
-    // The notes are written to steer the picture, but guidance like "UK artists
-    // only" belongs to the subject list too, so both prompts see them.
-    const notesRule = imageNotes?.trim()
-      ? `\n- Additional guidance from the quiz host: ${imageNotes.trim()}`
-      : ''
+    // The notes are written to steer the picture, but they also decide what
+    // "description" means: with none it describes the subject to draw, with
+    // some it is the brief the host asked for. The example shows only the
+    // "change the subject" kind - an anagram example alongside it turned
+    // "pets with a mustache" cards into anagrams, and anagram rounds get
+    // their scramble built below regardless of what the model writes.
+    const notes = imageNotes?.trim()
+    const descriptionRule = notes
+      ? `- "description" is the brief for the artist, never shown to guests. ${hostPictureBrief(notes)}`
+      : `- "description" is one sentence for the artist, never shown to guests: what it is, where it is from (show, film, book, brand, real life) and what it looks like, so the picture is of exactly that one and not a look-alike. Name the species, colours and art style where they matter`
+    const example = notes
+      ? `Example for topic "famous pets" with host instructions "show pets with a mustache": [{"answer":"Snoopy","description":"Snoopy, the white beagle with black ears from the Peanuts comic strip, drawn in Charles Schulz's flat cartoon style, lying on top of his red doghouse, wearing a bushy black handlebar mustache."},{"answer":"Grumpy Cat","description":"Grumpy Cat, the real internet-famous cat with a permanently downturned mouth, blue eyes and a white-and-brown tabby coat, shown as a photograph, wearing a thin curled black mustache."}]`
+      : `Example for topic "famous pets": [{"answer":"Snowball II","description":"The Simpson family's black cat with yellow eyes from the animated TV series The Simpsons, drawn in the show's flat cartoon style."},{"answer":"Hachiko","description":"The real cream-coloured Akita dog famous in Japan for waiting at Shibuya station for his late owner, shown as a photograph."}]`
 
     const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
 
 Rules:
-- Each item must be a specific named thing with a visually distinctive appearance (suitable for a single picture)
+- Each item must be a specific named thing (suitable for a single picture card)
 - "answer" is the name guests write down, exactly as it should be marked
-- "description" is one sentence for the artist, never shown to guests: what it is, where it is from (show, film, book, brand, real life) and what it looks like, so the picture is of exactly that one and not a look-alike. Name the species, colours and art style where they matter
+${descriptionRule}
 - Vary across the topic - avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
-- Difficulty: ${difficultyGuide}${excludeRule}${notesRule}
+- Difficulty: ${difficultyGuide}${excludeRule}
 - Return ONLY a valid JSON array of objects. No markdown, no explanation.
-Example for topic "famous pets": [{"answer":"Snowball II","description":"The Simpson family's black cat with yellow eyes from the animated TV series The Simpsons, drawn in the show's flat cartoon style."},{"answer":"Hachiko","description":"The real cream-coloured Akita dog famous in Japan for waiting at Shibuya station for his late owner, shown as a photograph."}]`
+${example}`
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -1960,8 +2016,13 @@ Example for topic "famous pets": [{"answer":"Snowball II","description":"The Sim
     const result = await response.json()
     const content = result.candidates?.[0]?.content?.parts?.[0]?.text
     if (!content) return { error: 'AI returned an empty response.' }
-    const subjects = parsePictureSubjects(content)
-    if (subjects.length === 0) return { error: 'AI returned an empty response.' }
+    const parsed = parsePictureSubjects(content)
+    if (parsed.length === 0) return { error: 'AI returned an empty response.' }
+    // The model picks the answers; the scramble is built here so every card is
+    // a true anagram, which the model cannot be trusted with on long names.
+    const subjects = wantsAnagram(notes)
+      ? parsed.map((s) => ({ ...s, description: anagramBrief(s.answer, scrambleAnswer(s.answer)) }))
+      : parsed
 
     const items: PictureRoundItem[] = []
     for (let i = 0; i < subjects.length; i += IMAGE_BATCH_SIZE) {
