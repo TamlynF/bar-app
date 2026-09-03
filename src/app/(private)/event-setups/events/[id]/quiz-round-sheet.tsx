@@ -202,6 +202,10 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 // One question is picked from each batch, so a short list beats a long one.
 const HIGHER_LOWER_BATCH = 5;
 
+// A picture batch loses cards when the image model refuses a subject. The
+// shortfall is asked for again this many times before the batch is shown short.
+const PICTURE_TOP_UPS = 2;
+
 const formatUseDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -448,7 +452,12 @@ export default function QuizRoundSheet({
   }, []);
 
   const requestDrafts = useCallback(
-    async (count: number): Promise<{ items?: DraftItem[]; error?: string; withoutPicture?: number }> => {
+    async (
+      count: number,
+      // Answers drafted moments ago that state has not caught up with yet, so a
+      // top-up request within the same run cannot hand the same subject back.
+      alsoExclude: string[] = []
+    ): Promise<{ items?: DraftItem[]; error?: string; withoutPicture?: number }> => {
       if (kind === "picture") {
         const result = await generatePictureRoundAction(
           count,
@@ -456,7 +465,7 @@ export default function QuizRoundSheet({
           difficulty,
           eventId,
           categoryConfigId,
-          draftedAnswers,
+          [...draftedAnswers, ...alsoExclude],
           imageNotes
         );
         const items = result.items?.filter((item) => !missingPicture(item));
@@ -533,11 +542,24 @@ export default function QuizRoundSheet({
     setIsGenerating(true);
 
     try {
-      const { items, error, withoutPicture = 0 } = await requestDrafts(batchSize);
+      const cap = needed > 0 ? needed : question_count;
+      const first = await requestDrafts(batchSize);
+      let items = first.items ?? [];
+      let withoutPicture = first.withoutPicture ?? 0;
 
-      if (error || !items?.length) {
-        toast.error(error || (withoutPicture > 0 ? "No pictures came back. Try again." : "Nothing came back. Try again."));
+      if (first.error || !items.length) {
+        toast.error(first.error || (withoutPicture > 0 ? "No pictures came back. Try again." : "Nothing came back. Try again."));
         return;
+      }
+
+      /* Pictures that fail to draw leave the batch short of what the round
+         needs. Ask for the shortfall again, a bounded number of times, rather
+         than showing a set that cannot fill the round. */
+      for (let topUp = 0; kind === "picture" && items.length < cap && topUp < PICTURE_TOP_UPS; topUp++) {
+        const more = await requestDrafts(cap - items.length, items.map(draftIdentity));
+        withoutPicture += more.withoutPicture ?? 0;
+        if (more.error || !more.items?.length) break;
+        items = [...items, ...more.items];
       }
 
       setDrafts(items);
@@ -550,7 +572,6 @@ export default function QuizRoundSheet({
         items.map((d) => ({ question: draftIdentity(d) })),
         previousIdentities
       );
-      const cap = needed > 0 ? needed : question_count;
 
       /* One song at a time: the year it turns on decides what the next question
          can be, so there is nothing to pre-tick and nothing to pick alongside
@@ -579,11 +600,16 @@ export default function QuizRoundSheet({
       setPickOrder([...preselect]);
       setAutoPickShown(preselect.size > 0);
 
-      if (withoutPicture > 0) {
+      if (withoutPicture > 0 && items.length < cap) {
         toast.warning(
-          `${plural(withoutPicture, "picture")} didn't come back and ${
-            withoutPicture === 1 ? "was" : "were"
-          } left out. Create more if you need ${withoutPicture === 1 ? "it" : "them"}.`
+          `${plural(withoutPicture, "picture")} didn't come back, even after asking again, so the batch is ${plural(
+            cap - items.length,
+            "card"
+          )} short. Create more if you need ${cap - items.length === 1 ? "it" : "them"}.`
+        );
+      } else if (withoutPicture > 0) {
+        toast.info(
+          `${plural(withoutPicture, "picture")} didn't come back, so we asked for more to make up the set.`
         );
       }
     } catch (err) {
@@ -601,6 +627,7 @@ export default function QuizRoundSheet({
     effectiveTopic,
     requestDrafts,
     batchSize,
+    kind,
     previousIdentities,
     needed,
     question_count,
