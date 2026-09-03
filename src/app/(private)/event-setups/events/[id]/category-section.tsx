@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { cn } from "@/lib/utils";
-import { buildPictureSheetPdf } from "@/lib/quiz/picture-sheet-pdf";
+import {
+  buildPictureSheetPdf,
+  pictureSheetFileName,
+  pictureSheetUsesShareSheet,
+  sharePictureSheet,
+} from "@/lib/quiz/picture-sheet-pdf";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -295,6 +300,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [isBuildingSheet, setIsBuildingSheet] = useState(false);
+  const [readySheet, setReadySheet] = useState<{ key: string; file: File } | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
@@ -631,37 +638,78 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
      @page rules that would remove it, and its print scaling kept pushing the
      answer grid onto a second sheet. A PDF prints as-is on every device.
 
-     The tab is opened synchronously from the click so pop-up blockers allow
-     it; the PDF is generated afterwards and the tab is pointed at it. */
-  const handlePrintPictureSheet = () => {
+     Desktop gets the PDF in a tab opened synchronously from the click, so
+     pop-up blockers allow it; the browser's viewer opens the print dialog
+     itself. Touch devices go through the system share sheet instead, which
+     carries Print - iOS Safari shows a blank tab for a blob: PDF it was
+     handed. Sharing needs a fresh tap, and the build can outlive the one that
+     started it, so a finished file is kept and the next tap shares it. */
+  const sheetKey = questions
+    .map((q) => `${q.id}:${q.question_no}:${q.image_url}:${q.question_text}`)
+    .join("|");
+  const sheetIsReady = readySheet?.key === sheetKey;
+
+  const handlePrintPictureSheet = async () => {
     const sorted = [...questions].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
     const firstQ = questions.find((q) => q.question_text)?.question_text ?? "";
     const total = 9; // fixed 3×3 grid to match the Word layout / fit one page
-    if (sorted.length > total) {
-      toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
-    }
     const cells = Array.from({ length: total }, (_, i) => {
       const q = sorted[i];
       return { no: q?.question_no ?? i + 1, imageUrl: q?.image_url ?? null };
     });
+    const title = `${category_name} - Picture sheet`;
+    const buildSheet = () => buildPictureSheetPdf({ title, question: firstQ, cells });
 
-    const win = window.open("", "_blank");
-    if (!win) {
-      toast.error("Allow pop-ups to print the sheet");
+    if (!pictureSheetUsesShareSheet()) {
+      const win = window.open("", "_blank");
+      if (!win) {
+        toast.error("Allow pop-ups to print the sheet");
+        return;
+      }
+      if (sorted.length > total) {
+        toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
+      }
+      win.document.title = title;
+      win.document.body.textContent = "Preparing picture sheet…";
+      buildSheet()
+        .then((blob) => {
+          win.location.href = URL.createObjectURL(blob);
+        })
+        .catch(() => {
+          win.close();
+          toast.error("Couldn't build the picture sheet");
+        });
       return;
     }
-    const title = `${category_name} - Picture sheet`;
-    win.document.title = title;
-    win.document.body.textContent = "Preparing picture sheet…";
 
-    buildPictureSheetPdf({ title, question: firstQ, cells })
-      .then((blob) => {
-        win.location.href = URL.createObjectURL(blob);
-      })
-      .catch(() => {
-        win.close();
-        toast.error("Couldn't build the picture sheet");
-      });
+    const shareOrHold = async (file: File) => {
+      const outcome = await sharePictureSheet(file, title);
+      if (outcome === "blocked") {
+        setReadySheet({ key: sheetKey, file });
+        toast.info("Sheet ready - tap Open Picture Sheet to print it");
+      } else {
+        setReadySheet(null);
+      }
+    };
+
+    if (readySheet && readySheet.key === sheetKey) {
+      await shareOrHold(readySheet.file);
+      return;
+    }
+
+    if (sorted.length > total) {
+      toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
+    }
+    setIsBuildingSheet(true);
+    try {
+      const blob = await buildSheet();
+      const file = new File([blob], pictureSheetFileName(title), { type: "application/pdf" });
+      await shareOrHold(file);
+    } catch {
+      toast.error("Couldn't build the picture sheet");
+    } finally {
+      setIsBuildingSheet(false);
+    }
   };
 
   /* The playlist is public and the link is shared by the round, not by whoever
@@ -908,10 +956,19 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 type="button"
                 variant="outline"
                 onClick={handlePrintPictureSheet}
+                disabled={isBuildingSheet}
                 className="h-10 w-full rounded-xl border-2 border-admin-line bg-slate-100 font-semibold text-[12px] tracking-wide text-admin-primary hover:bg-admin-bg"
               >
-                <Printer className="mr-2 h-3.5 w-3.5" />
-                Print Picture Sheet
+                {isBuildingSheet ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Printer className="mr-2 h-3.5 w-3.5" />
+                )}
+                {isBuildingSheet
+                  ? "Preparing sheet…"
+                  : sheetIsReady
+                    ? "Open Picture Sheet"
+                    : "Print Picture Sheet"}
               </Button>
             </div>
           )}

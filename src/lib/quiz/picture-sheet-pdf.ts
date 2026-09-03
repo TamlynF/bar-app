@@ -37,6 +37,29 @@ export function fitContain(
   };
 }
 
+export function pictureSheetUsesShareSheet(): boolean {
+  if (typeof navigator === "undefined" || typeof navigator.canShare !== "function") return false;
+  if (!window.matchMedia("(pointer: coarse)").matches) return false;
+  const probe = new File([new Blob()], "probe.pdf", { type: "application/pdf" });
+  return navigator.canShare({ files: [probe] });
+}
+
+export type ShareOutcome = "shared" | "dismissed" | "blocked";
+
+export async function sharePictureSheet(file: File, title: string): Promise<ShareOutcome> {
+  try {
+    await navigator.share({ files: [file], title });
+    return "shared";
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") return "dismissed";
+    return "blocked";
+  }
+}
+
+export function pictureSheetFileName(title: string): string {
+  return `${title.replace(/[\\/:*?"<>|]+/g, "-").trim()}.pdf`;
+}
+
 type LoadedImage = { data: string; width: number; height: number };
 
 async function loadImage(url: string): Promise<LoadedImage | null> {

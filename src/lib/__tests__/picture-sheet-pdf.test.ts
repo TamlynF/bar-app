@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { fitContain } from "../quiz/picture-sheet-pdf";
+import { fitContain, pictureSheetFileName } from "../quiz/picture-sheet-pdf";
+
+describe("pictureSheetFileName", () => {
+  it("keeps an ordinary title and adds the extension", () => {
+    expect(pictureSheetFileName("Picture - Picture sheet")).toBe("Picture - Picture sheet.pdf");
+  });
+
+  it("replaces characters a filesystem rejects", () => {
+    expect(pictureSheetFileName('Art/Film: "Posters"? - Picture sheet')).toBe(
+      "Art-Film- -Posters- - Picture sheet.pdf"
+    );
+  });
+});
 
 const box = { x: 10, y: 20, width: 56, height: 46 };
 
