@@ -633,17 +633,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   };
 
-  /* The sheet is built as a real PDF rather than a printed web page. iOS
-     Safari stamps a URL/date footer on every printed page and ignores the
-     @page rules that would remove it, and its print scaling kept pushing the
-     answer grid onto a second sheet. A PDF prints as-is on every device.
-
-     Desktop gets the PDF in a tab opened synchronously from the click, so
-     pop-up blockers allow it; the browser's viewer opens the print dialog
-     itself. Touch devices go through the system share sheet instead, which
-     carries Print - iOS Safari shows a blank tab for a blob: PDF it was
-     handed. Sharing needs a fresh tap, and the build can outlive the one that
-     started it, so a finished file is kept and the next tap shares it. */
   const sheetKey = questions
     .map((q) => `${q.id}:${q.question_no}:${q.image_url}:${q.question_text}`)
     .join("|");
