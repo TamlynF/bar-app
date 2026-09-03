@@ -197,7 +197,7 @@ export async function generateQuizAction(
   const subject = promptSubject(category);
 
   const { text: prompt } = renderPrompt(resolvePrompt('question', config?.ai_prompt).template, {
-    subject,
+    quiz_category_name: subject,
     topic_line: topic
       ? `Focus specifically on this theme within that category: "${topic}".`
       : `Provide a balanced variety of questions within the "${subject}" genre.`,

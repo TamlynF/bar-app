@@ -47,7 +47,7 @@ describe("renderPrompt", () => {
 
 describe("unknownPromptTokens", () => {
   it("flags tokens the round type does not supply", () => {
-    expect(unknownPromptTokens("question", "{{subject}} {{chain_year}}")).toEqual(["chain_year"]);
+    expect(unknownPromptTokens("question", "{{quiz_category_name}} {{chain_year}}")).toEqual(["chain_year"]);
   });
 });
 

@@ -43,7 +43,7 @@ const CATEGORY_EXCLUSIONS =
 export const PROMPT_TOKENS: Record<PromptKind, PromptToken[]> = {
   question: [
     {
-      token: "subject",
+      token: "quiz_category_name",
       label: "The category the round is about",
       source:
         "This category's name. A name that describes the scoring rather than a subject, such as High Stakes, is sent as General Knowledge.",
@@ -174,7 +174,7 @@ export const PROMPT_TOKENS: Record<PromptKind, PromptToken[]> = {
 
 export const DEFAULT_PROMPTS: Record<PromptKind, string> = {
   question: `Act as the Pub Quiz Master for "Don Fenticas".
-Generate a round for the category: "{{subject}}".
+Generate a round for the category: "{{quiz_category_name}}".
 {{topic_line}}
 
 Requirements:
