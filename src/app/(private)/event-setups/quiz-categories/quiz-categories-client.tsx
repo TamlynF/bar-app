@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Plus,
   Check,
@@ -11,6 +11,8 @@ import {
   Hash,
   ImageIcon,
   ArrowUpDown,
+  FileText,
+  RotateCcw,
 } from "lucide-react";
 import {
   saveQuizCategoryAction,
@@ -18,6 +20,15 @@ import {
   QuizCategoryConfig,
 } from "./actions";
 import { cn } from "@/lib/utils";
+import {
+  DEFAULT_PROMPTS,
+  PROMPT_KIND_LABELS,
+  PROMPT_TOKENS,
+  normalisePrompt,
+  promptKindFor,
+  resolvePrompt,
+  type PromptKind,
+} from "@/lib/quiz/prompt-templates";
 import {
   planSave,
   planDelete,
@@ -46,10 +57,27 @@ export type EmployeeOption = { id: number; full_name: string };
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 const CHECKBOX = "h-5 w-5 cursor-pointer rounded accent-admin-primary";
+const PROMPT_TEXT = "font-mono text-[12px] leading-relaxed break-words whitespace-pre-wrap";
 
 function roundLabel(config: QuizCategoryConfig): string {
   return `${config.question_count} Q · ${config.points_per_question} pt`;
 }
+
+function configPromptKind(config: QuizCategoryConfig): PromptKind {
+  return promptKindFor({
+    isPicture: config.is_picture,
+    includeSpotify: config.include_spotify,
+    isHigherLower: config.is_higher_lower,
+  });
+}
+
+/* The wording being typed, and the round type it was written for. The type is
+   fixed when the text first stops being blank, so flipping a checkbox later
+   can warn that the prompt no longer matches rather than silently replacing
+   what was typed. */
+type PromptDraft = { text: string; kind: PromptKind };
+
+const BLANK_DRAFT: PromptDraft = { text: "", kind: "question" };
 
 export default function QuizCategoriesClient({
   initialConfigs = [],
@@ -67,7 +95,45 @@ export default function QuizCategoriesClient({
   const [isActive, setIsActive] = useState(true);
   const [isHigherLower, setIsHigherLower] = useState(false);
   const [includeSpotify, setIncludeSpotify] = useState(false);
+  const [isPicture, setIsPicture] = useState(false);
   const [position, setPosition] = useState(1);
+  const [promptDraft, setPromptDraft] = useState<PromptDraft>(BLANK_DRAFT);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  const formKind = promptKindFor({ isPicture, includeSpotify, isHigherLower });
+  const draftIsBlank = normalisePrompt(promptDraft.text) === "";
+  const draftKindMismatch = !draftIsBlank && promptDraft.kind !== formKind;
+
+  const updatePromptDraft = (text: string) =>
+    setPromptDraft((prev) => ({
+      text,
+      kind: normalisePrompt(prev.text) === "" ? formKind : prev.kind,
+    }));
+
+  const insertBuiltInPrompt = async () => {
+    if (!draftIsBlank) {
+      const ok = await sheet.confirm({
+        title: "Replace what you've written?",
+        description: `The prompt box will be filled with the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt, and what is there now will be lost.`,
+        confirmLabel: "Insert built-in prompt",
+      });
+      if (!ok) return;
+    }
+    setPromptDraft({ text: DEFAULT_PROMPTS[formKind], kind: formKind });
+    promptRef.current?.focus();
+  };
+
+  const insertPromptToken = (token: string) => {
+    const el = promptRef.current;
+    const start = el?.selectionStart ?? promptDraft.text.length;
+    const end = el?.selectionEnd ?? start;
+    const snippet = `{{${token}}}`;
+    updatePromptDraft(promptDraft.text.slice(0, start) + snippet + promptDraft.text.slice(end));
+    setTimeout(() => {
+      el?.focus();
+      el?.setSelectionRange(start + snippet.length, start + snippet.length);
+    }, 0);
+  };
 
   const employeeName = (id?: number | null) =>
     employees.find((employee) => employee.id === id)?.full_name ?? "-";
@@ -84,6 +150,8 @@ export default function QuizCategoriesClient({
 
   const showForm = mode === "add" || mode === "edit";
   const formDefault = mode === "edit" ? selected : null;
+  const selectedKind = selected ? configPromptKind(selected) : "question";
+  const selectedPrompt = resolvePrompt(selectedKind, selected?.ai_prompt);
 
   // Rounds run 1..N across the active categories; an inactive one has no round
   // and sits at 0. The number is worked out from that rather than typed in.
@@ -108,6 +176,8 @@ export default function QuizCategoriesClient({
     setIsActive(true);
     setIsHigherLower(false);
     setIncludeSpotify(false);
+    setIsPicture(false);
+    setPromptDraft(BLANK_DRAFT);
     setPosition(nextPosition(orderRows));
     sheet.openAdd();
   };
@@ -117,6 +187,8 @@ export default function QuizCategoriesClient({
     setIsActive(selected.is_active);
     setIsHigherLower(selected.is_higher_lower);
     setIncludeSpotify(selected.include_spotify);
+    setIsPicture(selected.is_picture);
+    setPromptDraft({ text: selected.ai_prompt ?? "", kind: configPromptKind(selected) });
     setPosition(selected.order_no || nextPosition(orderRows));
     sheet.startEdit();
   };
@@ -298,6 +370,11 @@ export default function QuizCategoriesClient({
                           <span className="hidden sm:inline">Picture</span>
                         </InfoBadge>
                       )}
+                      {config.ai_prompt && (
+                        <InfoBadge icon={<FileText className="h-3 w-3" />}>
+                          <span className="hidden sm:inline">Custom prompt</span>
+                        </InfoBadge>
+                      )}
                     </div>
                   </div>
                 </ListRow>
@@ -391,6 +468,25 @@ export default function QuizCategoriesClient({
                 label="Picture round"
                 value={selected.is_picture ? "Yes" : "No"}
               />
+            </DetailCard>
+
+            <DetailCard>
+              <div className="flex items-center justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
+                    AI prompt
+                  </p>
+                  <p className="truncate text-sm font-semibold text-admin-ink">
+                    {PROMPT_KIND_LABELS[selectedKind]}
+                  </p>
+                </div>
+                <StatusPill tone={selectedPrompt.isCustomised ? "info" : "neutral"} showLabelOnMobile>
+                  {selectedPrompt.isCustomised ? "Customised" : "Built-in"}
+                </StatusPill>
+              </div>
+              <pre className={cn(PROMPT_TEXT, "max-h-96 overflow-y-auto px-4 py-3 text-admin-ink sm:px-5")}>
+                {selectedPrompt.template}
+              </pre>
             </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}
@@ -574,7 +670,8 @@ export default function QuizCategoriesClient({
                   name="is_picture"
                   type="checkbox"
                   aria-label="Picture round"
-                  defaultChecked={formDefault?.is_picture ?? false}
+                  checked={isPicture}
+                  onChange={(e) => setIsPicture(e.target.checked)}
                   className={CHECKBOX}
                 />
               </FormRow>
@@ -600,6 +697,79 @@ export default function QuizCategoriesClient({
                       : `Added to the end of the running order at round ${plan.position}.`
                     : "Inactive categories have round 0 and are left out of the quiz."}
                 </p>
+              </div>
+            </DetailCard>
+
+            <DetailCard>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-admin-line px-4 py-2.5 sm:px-5">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
+                    AI prompt
+                  </p>
+                  <p className="truncate text-sm font-semibold text-admin-ink">
+                    {PROMPT_KIND_LABELS[formKind]}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={insertBuiltInPrompt}
+                  className="inline-flex h-9 items-center rounded-lg border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                >
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                  Insert built-in prompt
+                </button>
+              </div>
+
+              <div className="space-y-2 px-4 py-3 sm:px-5">
+                <textarea
+                  ref={promptRef}
+                  name="ai_prompt"
+                  aria-label="AI prompt"
+                  rows={14}
+                  value={promptDraft.text}
+                  onChange={(e) => updatePromptDraft(e.target.value)}
+                  placeholder="Blank = the built-in prompt for this round type"
+                  className={cn(
+                    PROMPT_TEXT,
+                    "w-full resize-y rounded-xl border border-admin-line bg-white px-3 py-2.5 text-admin-ink outline-none placeholder:text-admin-muted/60 focus:border-admin-primary",
+                  )}
+                />
+
+                {draftKindMismatch ? (
+                  <p className="text-[11px] font-semibold text-admin-warning">
+                    Written for a {PROMPT_KIND_LABELS[promptDraft.kind].toLowerCase()} - check it
+                    still fits, or insert the built-in prompt for this round type.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-admin-muted">
+                    {draftIsBlank
+                      ? `This category uses the built-in ${PROMPT_KIND_LABELS[formKind].toLowerCase()} prompt. Insert it to see the wording and amend it.`
+                      : "Sent to the model every time a round is generated for this category. Clear the box to go back to the built-in prompt."}
+                  </p>
+                )}
+
+                <div className="rounded-2xl border border-admin-line bg-admin-surface p-3">
+                  <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                    Fields the generator fills in
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {PROMPT_TOKENS[formKind].map((field) => (
+                      <button
+                        key={field.token}
+                        type="button"
+                        onClick={() => insertPromptToken(field.token)}
+                        title={`${field.label} - e.g. ${field.sample}`}
+                        className="inline-flex h-8 items-center rounded-lg border border-admin-line bg-admin-card px-2.5 font-mono text-[11px] font-semibold text-admin-primary transition-colors hover:border-admin-primary/40 hover:bg-admin-primary-soft"
+                      >
+                        {`{{${field.token}}}`}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] text-admin-muted">
+                    Click a field to add it where the cursor is. Hover one to see what it fills
+                    in.
+                  </p>
+                </div>
               </div>
             </DetailCard>
 

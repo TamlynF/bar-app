@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
+import { promptKindFor, promptOverride, unknownPromptTokens } from "@/lib/quiz/prompt-templates";
 import { planSave, planDelete, type OrderChange, type OrderRow } from "@/lib/merchandise-order";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -45,6 +46,7 @@ export type QuizCategoryConfig = {
   number_by_release_year: boolean;
   min_years: number;
   max_years: number;
+  ai_prompt: string | null;
   created_at?: string;
   updated_at?: string | null;
   created_by?: number | null;
@@ -78,6 +80,19 @@ export async function saveQuizCategoryAction(formData: FormData) {
     return { error: "Category name is required." };
   }
 
+  const promptKind = promptKindFor({
+    isPicture: is_picture,
+    includeSpotify: include_spotify,
+    isHigherLower: is_higher_lower,
+  });
+  const ai_prompt = promptOverride(promptKind, formData.get("ai_prompt")?.toString());
+  const unknownTokens = ai_prompt ? unknownPromptTokens(promptKind, ai_prompt) : [];
+  if (unknownTokens.length > 0) {
+    return {
+      error: `This prompt has no field called ${unknownTokens.map((t) => `{{${t}}}`).join(", ")}. Use one of the fields listed below the prompt, or remove it.`,
+    };
+  }
+
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
 
@@ -102,6 +117,7 @@ export async function saveQuizCategoryAction(formData: FormData) {
       number_by_release_year,
       min_years,
       max_years,
+      ai_prompt,
     };
 
     if (id) {

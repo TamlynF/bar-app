@@ -35,6 +35,7 @@ import { topicSearchTokens, topicsOverlap } from '@/lib/quiz/topic-match'
 import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
+import { renderPrompt, resolvePrompt } from '@/lib/quiz/prompt-templates'
 
 export type QuizQuestion = {
   question: string;
@@ -117,6 +118,7 @@ export type QuizCategoryConfig = {
   min_years: number;
   max_years: number;
   order_no: number | null;
+  ai_prompt: string | null;
 }
 
 export type PictureRoundItem = {
@@ -158,7 +160,7 @@ export async function generateQuizAction(
 ): Promise<{ questions?: QuizQuestion[], error?: string }> {
   try {
   const supabase = await createClient()
-  const [{ data: approved }, { data: generated }] = await Promise.all([
+  const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
     supabase
       .from('past_quiz_questions')
       .select('question_text')
@@ -170,6 +172,11 @@ export async function generateQuizAction(
       .select('content_text')
       .eq('events_id', eventId)
       .eq('quiz_category_configs_id', categoryConfigId),
+    supabase
+      .from('quiz_category_configs')
+      .select('ai_prompt')
+      .eq('id', categoryConfigId)
+      .maybeSingle(),
   ]);
 
   const combinedExclusions = [
@@ -180,7 +187,7 @@ export async function generateQuizAction(
     ? combinedExclusions.join(' | ')
     : "None.";
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
     if (!apiKey) {
       return { error: "API Key is missing. Please check your environment variables." };
     }
@@ -189,17 +196,20 @@ export async function generateQuizAction(
 
   const subject = promptSubject(category);
 
- const prompt = `Act as the Pub Quiz Master for "Don Fenticas".
-  Generate a round for the category: "${subject}".
-  ${topic ? `Focus specifically on this theme within that category: "${topic}".` : `Provide a balanced variety of questions within the "${subject}" genre.`}
-  
-  Requirements:
-  - Exactly ${numberOfQuestions} unique questions.
-  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy - common knowledge that most people would know.' : difficulty === 'Hard' ? 'All questions should be challenging - obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
-  - Each question must be a direct, concise question only. No conversational filler, no preamble, no phrases like "Right then", "Here's one for you", "A proper head scratcher" etc. Just the question itself.
-  - Answers must be short and factual - just the answer, nothing else.
-  - Avoid these past questions: [${pastQuestionsList}].
-  - Format: JSON array.`;
+  const { text: prompt } = renderPrompt(resolvePrompt('question', config?.ai_prompt).template, {
+    subject,
+    topic_line: topic
+      ? `Focus specifically on this theme within that category: "${topic}".`
+      : `Provide a balanced variety of questions within the "${subject}" genre.`,
+    count: numberOfQuestions,
+    difficulty_line:
+      difficulty === 'Easy'
+        ? 'All questions should be easy - common knowledge that most people would know.'
+        : difficulty === 'Hard'
+          ? 'All questions should be challenging - obscure facts and "bar-room debate" level difficulty.'
+          : 'Mixture of easy, medium, and "bar-room debate" hard.',
+    exclusions: pastQuestionsList,
+  });
 
   const payload = {
     contents: [{ 
@@ -1027,7 +1037,7 @@ export async function generateMusicSnippetsAction(
         .eq('quiz_category_configs_id', categoryConfigId),
       supabase
         .from('quiz_category_configs')
-        .select('is_higher_lower, min_years, max_years')
+        .select('is_higher_lower, min_years, max_years, ai_prompt')
         .eq('id', categoryConfigId)
         .maybeSingle(),
       lastChainYear(supabase, eventId, categoryConfigId),
@@ -1083,52 +1093,34 @@ export async function generateMusicSnippetsAction(
       ? `between ${windows.lower.from} and ${windows.lower.to}, or between ${windows.higher.from} and ${windows.higher.to}`
       : `between ${windows.lower.from} and ${windows.lower.to}`
 
-    const prompt = pickedYear != null
-      ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
-The host reads out the year ${chainYear}, and the teams say whether the next song was released higher or lower than it. The host has decided this question's song comes from ${pickedYear}.
-Generate ${numberOfSongs} candidate songs, every one of them originally released in ${pickedYear}. Exactly one of them will be picked.
-
-Requirements:
-- The original release year MUST be ${pickedYear}. Judge the song's first release as a single or on an album - not a re-issue, remaster, live recording or cover version. A song first released in any other year is wrong however well it fits everything else.
-- Well-known, recognizable songs that a British pub audience would know.
-${topicLine}
-${difficultyLine}
-- Avoid these previously used songs: [${existingList}]
-- Return fewer than ${numberOfSongs} songs rather than including one not first released in ${pickedYear}.
-- Return a JSON array.`
-      : isHigherOrLower
-      ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
-The host reads out the year ${chainYear}, and the teams say whether the next song was released higher or lower than it.
-Generate ${numberOfSongs} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.
-
-Requirements:
-- The release year MUST be ${allowedYearsLine}. This is absolute: a song released outside ${windows.higher ? 'both of those ranges' : 'that range'} is wrong however well it fits everything else.
-- That means the release year is between ${range.minYears} and ${range.maxYears} years away from ${chainYear}, in either direction. Never ${chainYear} itself.
-- Offer a mix: some released before ${chainYear} and some after, so the answer is not obvious.
-- Every release year must be different from every other.
-- Give the year the song was originally released, not a re-issue or remaster.
-- Well-known, recognizable songs that a British pub audience would know.
-${topicLine}
-${difficultyLine}
-- Avoid these previously used songs: [${existingList}]
-- Return fewer than ${numberOfSongs} songs rather than including one outside the allowed years.
-- Return a JSON array.`
-      : `You are a music expert for a pub quiz at "Don Fenticas".
-Generate exactly ${numberOfSongs} songs whose studio recording opens with a purely instrumental intro.
-
-The intro rule is absolute and overrides every other requirement below:
-- The first 8 seconds must contain NO lead vocals, NO backing vocals, NO spoken word and NO wordless singing (no "ooh", "ahh", chanting or humming).
-- Judge the standard studio album or single version, timed from 0:00.
-- If you are not certain a song clears a full 8 seconds, leave it out and choose another. A famous intro whose singing starts at 0:05 does not qualify - "Good Vibrations" by The Beach Boys is exactly the kind of song to exclude.
-- Begin intro_description with the length of the instrumental intro, e.g. "0:12 - rising organ line before the vocal".
-
-Requirements:
-${snippetTopicLine}
-- Well-known, recognizable songs that a British pub audience would know.
-- The instrumental intro must be iconic and identifiable - think guitar riffs, piano intros, synth openings, drum patterns.
-${difficultyLine}
-- Avoid these previously used songs: [${existingList}]
-- Return a JSON array sorted by year ascending.`
+    const { text: prompt } = isHigherOrLower
+      ? renderPrompt(resolvePrompt('higher_lower', config?.ai_prompt).template, {
+          chain_year: chainYear,
+          brief: pickedYear != null
+            ? `The host has decided this question's song comes from ${pickedYear}.\nGenerate ${numberOfSongs} candidate songs, every one of them originally released in ${pickedYear}. Exactly one of them will be picked.`
+            : `Generate ${numberOfSongs} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.`,
+          year_rules: pickedYear != null
+            ? `- The original release year MUST be ${pickedYear}. Judge the song's first release as a single or on an album - not a re-issue, remaster, live recording or cover version. A song first released in any other year is wrong however well it fits everything else.`
+            : [
+                `- The release year MUST be ${allowedYearsLine}. This is absolute: a song released outside ${windows.higher ? 'both of those ranges' : 'that range'} is wrong however well it fits everything else.`,
+                `- That means the release year is between ${range.minYears} and ${range.maxYears} years away from ${chainYear}, in either direction. Never ${chainYear} itself.`,
+                `- Offer a mix: some released before ${chainYear} and some after, so the answer is not obvious.`,
+                '- Every release year must be different from every other.',
+                '- Give the year the song was originally released, not a re-issue or remaster.',
+              ].join('\n'),
+          topic_line: topicLine,
+          difficulty_line: difficultyLine,
+          exclusions: existingList,
+          return_rule: pickedYear != null
+            ? `- Return fewer than ${numberOfSongs} songs rather than including one not first released in ${pickedYear}.`
+            : `- Return fewer than ${numberOfSongs} songs rather than including one outside the allowed years.`,
+        })
+      : renderPrompt(resolvePrompt('song', config?.ai_prompt).template, {
+          count: numberOfSongs,
+          topic_line: snippetTopicLine,
+          difficulty_line: difficultyLine,
+          exclusions: existingList,
+        })
 
     const schemaProperties: Record<string, { type: string }> = {
       artist: { type: 'STRING' },
@@ -1926,8 +1918,9 @@ export async function generatePictureRoundAction(
   try {
     const supabase = await createClient()
     let existingAnswers: string[] = []
+    let storedPrompt: string | null = null
     if (eventId && categoryConfigId) {
-      const [{ data: approved }, { data: generated }] = await Promise.all([
+      const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
         supabase
           .from('past_quiz_questions')
           .select('answer_text')
@@ -1938,11 +1931,17 @@ export async function generatePictureRoundAction(
           .select('content_text')
           .eq('events_id', eventId)
           .eq('quiz_category_configs_id', categoryConfigId),
+        supabase
+          .from('quiz_category_configs')
+          .select('ai_prompt')
+          .eq('id', categoryConfigId)
+          .maybeSingle(),
       ])
       existingAnswers = [
         ...(approved?.map(q => q.answer_text) ?? []),
         ...(generated?.map(g => g.content_text) ?? []),
       ]
+      storedPrompt = config?.ai_prompt ?? null
     }
     if (excludeAnswers?.length) {
       existingAnswers = [...existingAnswers, ...excludeAnswers]
@@ -1973,16 +1972,14 @@ export async function generatePictureRoundAction(
       ? `Example for topic "famous pets" with host instructions "show pets with a mustache": [{"answer":"Snoopy","description":"Snoopy, the white beagle with black ears from the Peanuts comic strip, drawn in Charles Schulz's flat cartoon style, lying on top of his red doghouse, wearing a bushy black handlebar mustache."},{"answer":"Grumpy Cat","description":"Grumpy Cat, the real internet-famous cat with a permanently downturned mouth, blue eyes and a white-and-brown tabby coat, shown as a photograph, wearing a thin curled black mustache."}]`
       : `Example for topic "famous pets": [{"answer":"Snowball II","description":"The Simpson family's black cat with yellow eyes from the animated TV series The Simpsons, drawn in the show's flat cartoon style."},{"answer":"Hachiko","description":"The real cream-coloured Akita dog famous in Japan for waiting at Shibuya station for his late owner, shown as a photograph."}]`
 
-    const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
-
-Rules:
-- Each item must be a specific named thing (suitable for a single picture card)
-- "answer" is the name guests write down, exactly as it should be marked
-${descriptionRule}
-- Vary across the topic - avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
-- Difficulty: ${difficultyGuide}${excludeRule}
-- Return ONLY a valid JSON array of objects. No markdown, no explanation.
-${example}`
+    const { text: prompt } = renderPrompt(resolvePrompt('picture', storedPrompt).template, {
+      count: numberOfItems,
+      topic,
+      description_rule: descriptionRule,
+      difficulty_guide: difficultyGuide,
+      exclude_rule: excludeRule,
+      example,
+    })
 
     const response = await fetch(apiUrl, {
       method: 'POST',
