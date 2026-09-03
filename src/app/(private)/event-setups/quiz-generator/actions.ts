@@ -15,7 +15,9 @@ import {
   SpotifyNotConnectedError,
 } from '@/lib/spotify'
 import {
+  describeStep,
   isValidStep,
+  legalYearWindows,
   stepAnswerText,
   DEFAULT_START_YEAR,
   DEFAULT_YEAR_RANGE,
@@ -1002,7 +1004,11 @@ export async function generateMusicSnippetsAction(
   difficulty: string = 'Medium',
   eventId: number,
   categoryConfigId: number,
-  seedYear?: number
+  seedYear?: number,
+  /* On a Higher-or-Lower round the host names the year the next song comes
+     from; every candidate is then a song released in exactly that year. Left
+     out, the model picks years across the gap either side of the chain instead. */
+  releaseYear?: number
 ): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
   try {
     const supabase = await createClient()
@@ -1031,6 +1037,12 @@ export async function generateMusicSnippetsAction(
     /* A part-built round continues from the last song's year, whatever the sheet
        sent - the chain, not the caller, decides where the pool should sit. */
     const chainYear = lastYear ?? seedYear ?? DEFAULT_START_YEAR
+    const pickedYear = isHigherOrLower && Number.isFinite(releaseYear) ? (releaseYear as number) : null
+
+    if (pickedYear != null) {
+      const reason = describeStep(pickedYear, chainYear, range)
+      if (reason) return { error: reason }
+    }
 
     const combinedExclusions = [
       ...(approved?.map((q) => (isHigherOrLower ? q.answer_text_ext : q.answer_text)) ?? []),
@@ -1065,18 +1077,31 @@ export async function generateMusicSnippetsAction(
     /* Only one of these songs is going to be picked, and whichever it is gets
        compared against ${chainYear}. So every candidate has to be a legal step
        on its own - the two windows the gap allows, one either side. */
-    const lowerFrom = chainYear - range.maxYears
-    const lowerTo = chainYear - range.minYears
-    const higherFrom = chainYear + range.minYears
-    const higherTo = Math.min(currentYear, chainYear + range.maxYears)
+    const windows = legalYearWindows(chainYear, range, currentYear)
+    const allowedYearsLine = windows.higher
+      ? `between ${windows.lower.from} and ${windows.lower.to}, or between ${windows.higher.from} and ${windows.higher.to}`
+      : `between ${windows.lower.from} and ${windows.lower.to}`
 
-    const prompt = isHigherOrLower
+    const prompt = pickedYear != null
+      ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
+The host reads out the year ${chainYear}, and the teams say whether the next song was released higher or lower than it. The host has decided this question's song comes from ${pickedYear}.
+Generate ${numberOfSongs} candidate songs, every one of them originally released in ${pickedYear}. Exactly one of them will be picked.
+
+Requirements:
+- The original release year MUST be ${pickedYear}. Judge the song's first release as a single or on an album - not a re-issue, remaster, live recording or cover version. A song first released in any other year is wrong however well it fits everything else.
+- Well-known, recognizable songs that a British pub audience would know.
+${topicLine}
+${difficultyLine}
+- Avoid these previously used songs: [${existingList}]
+- Return fewer than ${numberOfSongs} songs rather than including one not first released in ${pickedYear}.
+- Return a JSON array.`
+      : isHigherOrLower
       ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
 The host reads out the year ${chainYear}, and the teams say whether the next song was released higher or lower than it.
 Generate ${numberOfSongs} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.
 
 Requirements:
-- The release year MUST be between ${lowerFrom} and ${lowerTo}, or between ${higherFrom} and ${higherTo}. This is absolute: a song released outside both of those ranges is wrong however well it fits everything else.
+- The release year MUST be ${allowedYearsLine}. This is absolute: a song released outside ${windows.higher ? 'both of those ranges' : 'that range'} is wrong however well it fits everything else.
 - That means the release year is between ${range.minYears} and ${range.maxYears} years away from ${chainYear}, in either direction. Never ${chainYear} itself.
 - Offer a mix: some released before ${chainYear} and some after, so the answer is not obvious.
 - Every release year must be different from every other.
@@ -1163,9 +1188,14 @@ ${difficultyLine}
       }
     }
 
-    /* The model is told the window; this is what makes it true. A song that is
-       not a legal step would only be offered to be refused. */
-    if (isHigherOrLower) {
+    /* The model is told the year or the window; this is what makes it true. A
+       song that is not a legal step would only be offered to be refused. */
+    if (pickedYear != null) {
+      candidates = candidates.filter((s) => s.year === pickedYear)
+      if (!candidates.length) {
+        return { error: `Nothing came back that was released in ${pickedYear}. Try again, or try a different topic.` }
+      }
+    } else if (isHigherOrLower) {
       candidates = candidates.filter((s) => isValidStep(s.year, chainYear, range))
       if (!candidates.length) {
         return {

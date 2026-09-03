@@ -56,6 +56,32 @@ export function describeStep(
   return `Needs to be ${minYears}-${maxYears} years from ${comparisonYear}.`;
 }
 
+export type YearWindow = { from: number; to: number };
+
+// The two runs of years a song may come from when it is compared against
+// `comparisonYear`: one below it and one above, each `minYears`-`maxYears`
+// away. The upper run is cut off at `currentYear` and dropped entirely when it
+// would start in the future.
+export function legalYearWindows(
+  comparisonYear: number,
+  range: YearRange,
+  currentYear: number
+): { lower: YearWindow; higher: YearWindow | null } {
+  const { minYears, maxYears } = normaliseRange(range);
+  const lower = { from: comparisonYear - maxYears, to: comparisonYear - minYears };
+  const higherFrom = comparisonYear + minYears;
+  const higher =
+    higherFrom > currentYear
+      ? null
+      : { from: higherFrom, to: Math.min(currentYear, comparisonYear + maxYears) };
+  return { lower, higher };
+}
+
+export function formatYearWindows(windows: { lower: YearWindow; higher: YearWindow | null }): string {
+  const show = (w: YearWindow) => (w.from === w.to ? `${w.from}` : `${w.from}-${w.to}`);
+  return windows.higher ? `${show(windows.lower)} or ${show(windows.higher)}` : show(windows.lower);
+}
+
 // The comparison year for each position: the seed first, then each song's
 // predecessor. Feeds the sheet preview, the insert and the repair alike.
 export function chainHintYears(years: number[], seedYear: number): number[] {

@@ -100,7 +100,9 @@ import ManualEntry from "./manual-entry";
 import {
   chainHintYears,
   describeStep,
+  formatYearWindows,
   isValidStep,
+  legalYearWindows,
   stepAnswerText,
   DEFAULT_START_YEAR,
   DEFAULT_YEAR_RANGE,
@@ -270,6 +272,9 @@ export default function QuizRoundSheet({
 
   const [startYear, setStartYear] = useState(DEFAULT_START_YEAR);
   const [gapRange, setGapRange] = useState<YearRange>({ minYears, maxYears });
+  // The year the host wants the next song to come from. Kept as typed so the
+  // field can sit empty until a year is chosen - there is no sensible default.
+  const [releaseYear, setReleaseYear] = useState("");
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -288,6 +293,7 @@ export default function QuizRoundSheet({
   const [draftedAnswers, setDraftedAnswers] = useState<string[]>([]);
 
   const topicRef = useRef<HTMLInputElement>(null);
+  const releaseYearRef = useRef<HTMLInputElement>(null);
 
   /* Creating pushes step 2 in below the setup form, off the bottom of a phone
      screen. The batch is the point of pressing the button, so the sheet moves
@@ -365,6 +371,20 @@ export default function QuizRoundSheet({
   const chainStart = lastSavedYear ?? startYear;
   const rangeInvalid = gapRange.minYears < 1 || gapRange.maxYears < gapRange.minYears;
 
+  /* The songs offered all come from this one year, so it has to be a legal step
+     from the chain before anything is asked for. */
+  const pickedYear = parseInt(releaseYear, 10);
+  const releaseYearReason = !isHigherOrLower
+    ? null
+    : !Number.isFinite(pickedYear)
+      ? "Enter the year the song should come from."
+      : describeStep(pickedYear, chainStart, gapRange);
+  const yearWindows =
+    isHigherOrLower && !rangeInvalid
+      ? legalYearWindows(chainStart, gapRange, new Date().getFullYear())
+      : null;
+  const allowedYears = yearWindows ? formatYearWindows(yearWindows) : "";
+
   const previousIdentities = useMemo(
     () =>
       savedQuestions.map((q) => {
@@ -404,6 +424,7 @@ export default function QuizRoundSheet({
   const topicId = `round-topic-${categoryConfigId}`;
   const imageNotesId = `round-image-notes-${categoryConfigId}`;
   const startYearId = `round-start-year-${categoryConfigId}`;
+  const releaseYearId = `round-release-year-${categoryConfigId}`;
   const minYearsId = `round-min-years-${categoryConfigId}`;
   const maxYearsId = `round-max-years-${categoryConfigId}`;
 
@@ -441,7 +462,8 @@ export default function QuizRoundSheet({
           difficulty,
           eventId,
           categoryConfigId,
-          chainStart
+          chainStart,
+          isHigherOrLower && Number.isFinite(pickedYear) ? pickedYear : undefined
         );
         return { items: result.songs, error: result.error };
       }
@@ -456,7 +478,19 @@ export default function QuizRoundSheet({
       );
       return { items: result.questions, error: result.error };
     },
-    [kind, effectiveTopic, difficulty, eventId, categoryConfigId, category_name, draftedAnswers, chainStart, imageNotes]
+    [
+      kind,
+      effectiveTopic,
+      difficulty,
+      eventId,
+      categoryConfigId,
+      category_name,
+      draftedAnswers,
+      chainStart,
+      imageNotes,
+      isHigherOrLower,
+      pickedYear,
+    ]
   );
 
   const handleGenerate = useCallback(async () => {
@@ -472,6 +506,13 @@ export default function QuizRoundSheet({
     if (isHigherOrLower && rangeInvalid) {
       setSetupOpen(true);
       toast.error("Min years must be at least 1, and max years cannot be below it.");
+      return;
+    }
+
+    if (isHigherOrLower && releaseYearReason) {
+      setSetupOpen(true);
+      toast.error(releaseYearReason);
+      releaseYearRef.current?.focus();
       return;
     }
 
@@ -544,6 +585,7 @@ export default function QuizRoundSheet({
     isPicture,
     isHigherOrLower,
     rangeInvalid,
+    releaseYearReason,
     effectiveTopic,
     requestDrafts,
     batchSize,
@@ -785,6 +827,9 @@ export default function QuizRoundSheet({
         playlistSynced,
       });
       resetDrafts();
+      // The next question is measured against the song just saved, so the year
+      // that was typed for this one has no bearing on it.
+      if (isHigherOrLower) setReleaseYear("");
       setSetupOpen(true);
       onApproved?.();
       router.refresh();
@@ -911,7 +956,9 @@ export default function QuizRoundSheet({
         : "Tap a question to pick or untick it. Don't like one? Press Swap to replace just that one.";
 
   const generateFootnote = isHigherOrLower
-    ? `We'll suggest ${batchSize} songs released ${gapRange.minYears}-${gapRange.maxYears} years either side of ${chainStart}. Pick one - its year is what the next question is measured against.`
+    ? releaseYearReason
+      ? `Enter a release year and we'll suggest ${batchSize} songs from it. Pick one - its year is what the next question is measured against.`
+      : `We'll suggest ${batchSize} songs released in ${pickedYear}. Pick one - it becomes this question, and ${pickedYear} is what the next question is measured against.`
     : needed > 0
       ? kind === "song"
         ? `We'll suggest ${batchSize} so you can pick your favourite ${needed}. Picked songs go straight onto the round's Spotify playlist.`
@@ -980,6 +1027,7 @@ export default function QuizRoundSheet({
             setTopicMissing(false);
             setDraftedAnswers([]);
             setImageNotes(lastSettings.imageNotes);
+            setReleaseYear("");
           }
         }}
       >
@@ -1283,13 +1331,44 @@ export default function QuizRoundSheet({
                         )}
 
                         {isHigherOrLower && (
-                          <div className="grid gap-4 sm:grid-cols-3">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <label
+                                htmlFor={releaseYearId}
+                                className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
+                              >
+                                Song release year{" "}
+                                <span className="font-medium normal-case">- the songs we suggest all come from this year</span>
+                              </label>
+                              <input
+                                id={releaseYearId}
+                                ref={releaseYearRef}
+                                type="number"
+                                inputMode="numeric"
+                                min={1900}
+                                max={new Date().getFullYear()}
+                                value={releaseYear}
+                                onChange={(e) => setReleaseYear(e.target.value)}
+                                placeholder={yearWindows ? `e.g. ${yearWindows.lower.to}` : "e.g. 1995"}
+                                disabled={isGenerating}
+                                className={cn(
+                                  "h-12 w-full rounded-xl border bg-white px-3.5 text-sm text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary",
+                                  releaseYear && releaseYearReason ? "border-admin-warning" : "border-admin-line"
+                                )}
+                              />
+                              {releaseYear && releaseYearReason && (
+                                <p className="mt-1.5 text-[13px] font-semibold text-admin-warning">
+                                  {releaseYearReason}
+                                </p>
+                              )}
+                            </div>
+
                             <div>
                               <label
                                 htmlFor={startYearId}
                                 className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
                               >
-                                Start year
+                                {startYearLocked ? "Compared against" : "First question compares against"}
                               </label>
                               <input
                                 id={startYearId}
@@ -1359,25 +1438,33 @@ export default function QuizRoundSheet({
                               />
                             </div>
 
-                            <p className="text-[13px] text-admin-muted sm:col-span-3">
+                            <div className="space-y-1.5 text-[13px] text-admin-muted sm:col-span-2">
                               {rangeInvalid ? (
-                                <span className="font-semibold text-admin-warning">
+                                <p className="font-semibold text-admin-warning">
                                   Min years must be at least 1, and max years cannot be below it.
-                                </span>
-                              ) : startYearLocked ? (
-                                <span className="flex items-start gap-1.5 font-medium">
-                                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                  This round already runs to {lastSavedYear} - the next song is compared
-                                  against that year, then each song against the one before it.
-                                </span>
+                                </p>
                               ) : (
                                 <>
-                                  Question 1 asks whether the song is higher or lower than {startYear}.
-                                  After that each song is compared against the previous answer, always{" "}
-                                  {gapRange.minYears}-{gapRange.maxYears} years away from it.
+                                  {startYearLocked ? (
+                                    <p className="flex items-start gap-1.5 font-medium">
+                                      <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                      This round already runs to {lastSavedYear} - the next song is compared
+                                      against that year, then each song against the one before it.
+                                    </p>
+                                  ) : (
+                                    <p>
+                                      Question 1 asks whether the song is higher or lower than {startYear}.
+                                      After that each song is compared against the previous answer.
+                                    </p>
+                                  )}
+                                  <p>
+                                    Type the year you want the next song to come from - {gapRange.minYears}-
+                                    {gapRange.maxYears} years away from {chainStart}, so {allowedYears}. We&apos;ll
+                                    suggest songs released in that year and you pick one.
+                                  </p>
                                 </>
                               )}
-                            </p>
+                            </div>
                           </div>
                         )}
 
@@ -1438,7 +1525,7 @@ export default function QuizRoundSheet({
                         onClick={() => setSetupOpen(true)}
                         className="relative ml-auto h-8 shrink-0 rounded-lg border border-admin-primary px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft sm:h-11 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
                       >
-                        Change topic or difficulty
+                        {isHigherOrLower ? "Change year or topic" : "Change topic or difficulty"}
                       </button>
                     </div>
                   )}

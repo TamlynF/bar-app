@@ -6,6 +6,8 @@ import {
   stepDirection,
   stepAnswerText,
   buildChain,
+  legalYearWindows,
+  formatYearWindows,
   type YearRange,
 } from "@/lib/quiz/higher-lower";
 
@@ -98,6 +100,43 @@ describe("stepAnswerText", () => {
   it("reads as the host says it, direction then release year", () => {
     expect(stepAnswerText(2002, 2000)).toBe("Higher - released 2002");
     expect(stepAnswerText(1998, 2000)).toBe("Lower - released 1998");
+  });
+});
+
+describe("legalYearWindows", () => {
+  it("gives a run of years either side of the comparison year", () => {
+    expect(legalYearWindows(1990, RANGE, 2026)).toEqual({
+      lower: { from: 1980, to: 1987 },
+      higher: { from: 1993, to: 2000 },
+    });
+  });
+
+  it("cuts the upper run off at the current year", () => {
+    expect(legalYearWindows(2020, RANGE, 2026).higher).toEqual({ from: 2023, to: 2026 });
+  });
+
+  it("drops the upper run when it would start in the future", () => {
+    expect(legalYearWindows(2025, RANGE, 2026).higher).toBeNull();
+  });
+
+  it("never lets the run touch the comparison year itself", () => {
+    const windows = legalYearWindows(1990, { minYears: 0, maxYears: 5 }, 2026);
+    expect(windows.lower.to).toBe(1989);
+    expect(windows.higher?.from).toBe(1991);
+  });
+});
+
+describe("formatYearWindows", () => {
+  it("reads as two ranges joined by or", () => {
+    expect(formatYearWindows(legalYearWindows(1990, RANGE, 2026))).toBe("1980-1987 or 1993-2000");
+  });
+
+  it("collapses a single-year run to the year alone", () => {
+    expect(formatYearWindows(legalYearWindows(2023, RANGE, 2026))).toBe("2013-2020 or 2026");
+  });
+
+  it("leaves out the upper run when there is none", () => {
+    expect(formatYearWindows(legalYearWindows(2025, RANGE, 2026))).toBe("2015-2022");
   });
 });
 
