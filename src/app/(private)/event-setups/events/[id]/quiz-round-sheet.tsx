@@ -415,7 +415,7 @@ export default function QuizRoundSheet({
   }, []);
 
   const requestDrafts = useCallback(
-    async (count: number): Promise<{ items?: DraftItem[]; error?: string }> => {
+    async (count: number): Promise<{ items?: DraftItem[]; error?: string; withoutPicture?: number }> => {
       if (kind === "picture") {
         const result = await generatePictureRoundAction(
           count,
@@ -426,7 +426,12 @@ export default function QuizRoundSheet({
           draftedAnswers,
           imageNotes
         );
-        return { items: result.items, error: result.error };
+        const items = result.items?.filter((item) => !missingPicture(item));
+        return {
+          items,
+          error: result.error,
+          withoutPicture: (result.items?.length ?? 0) - (items?.length ?? 0),
+        };
       }
 
       if (kind === "song") {
@@ -475,10 +480,10 @@ export default function QuizRoundSheet({
     setIsGenerating(true);
 
     try {
-      const { items, error } = await requestDrafts(batchSize);
+      const { items, error, withoutPicture = 0 } = await requestDrafts(batchSize);
 
       if (error || !items?.length) {
-        toast.error(error || "Nothing came back. Try again.");
+        toast.error(error || (withoutPicture > 0 ? "No pictures came back. Try again." : "Nothing came back. Try again."));
         return;
       }
 
@@ -514,19 +519,18 @@ export default function QuizRoundSheet({
       const preselect = new Set<number>();
       for (let i = 0; i < items.length; i++) {
         if (preselect.size >= cap) break;
-        if (dupes.has(i) || missingPicture(items[i])) continue;
+        if (dupes.has(i)) continue;
         preselect.add(i);
       }
       setSelected(preselect);
       setPickOrder([...preselect]);
       setAutoPickShown(preselect.size > 0);
 
-      const withoutPicture = items.filter(missingPicture).length;
       if (withoutPicture > 0) {
         toast.warning(
-          `${plural(withoutPicture, "picture")} didn't come back - retry ${
-            withoutPicture === 1 ? "it" : "them"
-          } or swap for a different subject.`
+          `${plural(withoutPicture, "picture")} didn't come back and ${
+            withoutPicture === 1 ? "was" : "were"
+          } left out. Create more if you need ${withoutPicture === 1 ? "it" : "them"}.`
         );
       }
     } catch (err) {
