@@ -28,101 +28,145 @@ export const PROMPT_KIND_LABELS: Record<PromptKind, string> = {
   higher_lower: "Higher or Lower round",
 };
 
-export type PromptToken = { token: string; label: string; sample: string };
+/* label - what the field is; source - where the generator gets it from, in
+   terms of the screens staff use; sample - what it might look like once
+   filled in. */
+export type PromptToken = { token: string; label: string; source: string; sample: string };
+
+const ROUND_SHEET_COUNT = "The number you ask for in the round sheet when you generate.";
+const ROUND_SHEET_TOPIC = "The topic typed in the round sheet when you generate.";
+const ROUND_SHEET_DIFFICULTY =
+  "The difficulty picked in the round sheet - Easy, Medium or Hard - turned into a sentence.";
+const CATEGORY_EXCLUSIONS =
+  "The last 100 items saved in this category, plus anything already generated for this event, so nothing comes back twice.";
 
 export const PROMPT_TOKENS: Record<PromptKind, PromptToken[]> = {
   question: [
-    { token: "subject", label: "The category the round is about", sample: "Movies" },
+    {
+      token: "subject",
+      label: "The category the round is about",
+      source:
+        "This category's name. A name that describes the scoring rather than a subject, such as High Stakes, is sent as General Knowledge.",
+      sample: "Movies",
+    },
     {
       token: "topic_line",
       label: "The theme sentence, or a request for variety when no topic was given",
+      source: `${ROUND_SHEET_TOPIC} Left blank, it asks for a balanced variety across the category instead.`,
       sample: 'Focus specifically on this theme within that category: "1980s action films".',
     },
-    { token: "count", label: "How many questions were asked for", sample: "10" },
+    { token: "count", label: "How many questions were asked for", source: ROUND_SHEET_COUNT, sample: "10" },
     {
       token: "difficulty_line",
       label: "The difficulty wording for Easy, Medium or Hard",
+      source: ROUND_SHEET_DIFFICULTY,
       sample: 'Mixture of easy, medium, and "bar-room debate" hard.',
     },
     {
       token: "exclusions",
       label: "Questions already asked in this category, so they are not repeated",
+      source: CATEGORY_EXCLUSIONS,
       sample: "What is the capital of Peru? | Who painted The Night Watch?",
     },
   ],
   picture: [
-    { token: "count", label: "How many pictures were asked for", sample: "10" },
-    { token: "topic", label: "The round's topic", sample: "Famous pets" },
+    { token: "count", label: "How many pictures were asked for", source: ROUND_SHEET_COUNT, sample: "10" },
+    { token: "topic", label: "The round's topic", source: ROUND_SHEET_TOPIC, sample: "Famous pets" },
     {
       token: "description_rule",
       label: "What the artist's description must contain, following the host's picture instructions",
+      source:
+        "Built from the picture instructions typed in the round sheet. With none, it asks for a one-sentence description of exactly which subject to draw.",
       sample: '- "description" is one sentence for the artist, never shown to guests: ...',
     },
     {
       token: "difficulty_guide",
       label: "The difficulty wording for Easy, Medium or Hard",
+      source: ROUND_SHEET_DIFFICULTY,
       sample: "a mix of well-known and moderately challenging",
     },
     {
       token: "exclude_rule",
       label: "A rule listing answers already used in this round, or nothing",
+      source:
+        "The answers already saved or generated for this round in this event. Nothing at all when there are none yet.",
       sample: '- Do NOT include any of these already-used answers: ["Snoopy"]',
     },
     {
       token: "example",
       label: "A worked example of the JSON the model should return",
+      source:
+        "A fixed example built into the app, one version for rounds with picture instructions and one without, so the model returns the right shape.",
       sample: 'Example for topic "famous pets": [{"answer":"Hachiko","description":"..."}]',
     },
   ],
   song: [
-    { token: "count", label: "How many songs were asked for", sample: "10" },
+    { token: "count", label: "How many songs were asked for", source: ROUND_SHEET_COUNT, sample: "10" },
     {
       token: "topic_line",
       label: "The binding topic rule, or a spread across decades when no topic was given",
+      source: `${ROUND_SHEET_TOPIC} A decade or year range in it is binding. Left blank, it asks for songs spread from 1960 to today.`,
       sample: '- Every song must fit the topic "90s Britpop", and this is binding. ...',
     },
     {
       token: "difficulty_line",
       label: "The difficulty wording for Easy, Medium or Hard",
+      source: ROUND_SHEET_DIFFICULTY,
       sample: "- Song difficulty: Mix of well-known hits and some lesser-known tracks.",
     },
     {
       token: "exclusions",
       label: "Songs already used in this category, so they are not repeated",
+      source: CATEGORY_EXCLUSIONS,
       sample: "Oasis - Wonderwall | Blur - Parklife",
     },
   ],
   higher_lower: [
-    { token: "chain_year", label: "The year the next song is compared against", sample: "1994" },
+    {
+      token: "chain_year",
+      label: "The year the next song is compared against",
+      source:
+        "The release year of the last song already in the round. For the first song it is the start year set in the round sheet.",
+      sample: "1994",
+    },
     {
       token: "brief",
       label: "What to generate - candidates from a host-picked year, or from the allowed windows",
+      source:
+        "Depends on whether you picked a release year for the next song in the round sheet. With one, every candidate must come from that year.",
       sample:
         "Generate 10 candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.",
     },
     {
       token: "year_rules",
       label: "The release-year rules for this step, worked out from the category's year gap",
+      source:
+        "Worked out from this category's min and max years apart and the year being compared against - or the release year you picked in the round sheet.",
       sample: "- The release year MUST be between 1984 and 1991, or between 1997 and 2004. ...",
     },
     {
       token: "topic_line",
       label: "The theme line, or a request for variety when no topic was given",
+      source: `${ROUND_SHEET_TOPIC} Left blank, it asks for a balanced variety across genres.`,
       sample: '- Focus on this theme/genre: "Rock".',
     },
     {
       token: "difficulty_line",
       label: "The difficulty wording for Easy, Medium or Hard",
+      source: ROUND_SHEET_DIFFICULTY,
       sample: "- Song difficulty: Mix of well-known hits and some lesser-known tracks.",
     },
     {
       token: "exclusions",
       label: "Songs already used in this category, so they are not repeated",
+      source: CATEGORY_EXCLUSIONS,
       sample: "Oasis - Wonderwall | Blur - Parklife",
     },
     {
       token: "return_rule",
       label: "The rule to return fewer songs rather than one outside the allowed years",
+      source:
+        "Depends on whether you picked a release year in the round sheet: it names that year, or the allowed windows.",
       sample: "- Return fewer than 10 songs rather than including one outside the allowed years.",
     },
   ],

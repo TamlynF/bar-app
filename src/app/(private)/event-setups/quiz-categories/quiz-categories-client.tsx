@@ -13,7 +13,10 @@ import {
   ArrowUpDown,
   FileText,
   RotateCcw,
+  Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   saveQuizCategoryAction,
   deleteQuizCategoryAction,
@@ -749,25 +752,79 @@ export default function QuizCategoriesClient({
                 )}
 
                 <div className="rounded-2xl border border-admin-line bg-admin-surface p-3">
-                  <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
-                    Fields the generator fills in
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {PROMPT_TOKENS[formKind].map((field) => (
-                      <button
-                        key={field.token}
-                        type="button"
-                        onClick={() => insertPromptToken(field.token)}
-                        title={`${field.label} - e.g. ${field.sample}`}
-                        className="inline-flex h-8 items-center rounded-lg border border-admin-line bg-admin-card px-2.5 font-mono text-[11px] font-semibold text-admin-primary transition-colors hover:border-admin-primary/40 hover:bg-admin-primary-soft"
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                      Fields the generator fills in
+                    </p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="Where these fields come from"
+                          className="-my-1 flex h-8 w-8 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-card hover:text-admin-ink"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="end"
+                        className="w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
                       >
-                        {`{{${field.token}}}`}
-                      </button>
-                    ))}
+                        <span className="block border-b border-admin-line bg-admin-surface px-4 py-2.5 text-[12px] font-bold text-admin-primary">
+                          Where these fields come from
+                        </span>
+                        <p className="px-4 pt-3 text-[11px] leading-snug text-admin-muted">
+                          The generator swaps each field for a value when a round is created, so the
+                          prompt can say things only known at that moment.
+                        </p>
+                        <ul className="max-h-80 divide-y divide-admin-line/60 overflow-y-auto px-4 pb-2">
+                          {PROMPT_TOKENS[formKind].map((field) => (
+                            <li key={field.token} className="py-2.5">
+                              <p className="font-mono text-[11px] font-semibold text-admin-primary">
+                                {`{{${field.token}}}`}
+                              </p>
+                              <p className="mt-0.5 text-[12px] leading-snug text-admin-ink">
+                                {field.source}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      </PopoverContent>
+                    </Popover>
                   </div>
+                  <TooltipProvider>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {PROMPT_TOKENS[formKind].map((field) => (
+                        <Tooltip key={field.token}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => insertPromptToken(field.token)}
+                              className="inline-flex h-8 items-center rounded-lg border border-admin-line bg-admin-card px-2.5 font-mono text-[11px] font-semibold text-admin-primary transition-colors hover:border-admin-primary/40 hover:bg-admin-primary-soft"
+                            >
+                              {`{{${field.token}}}`}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="space-y-1.5 p-3">
+                            <p className="text-[12px] font-semibold leading-snug text-admin-ink">
+                              {field.label}
+                            </p>
+                            <p className="text-[11px] leading-snug text-admin-muted">
+                              <span className="font-semibold text-admin-ink">Comes from: </span>
+                              {field.source}
+                            </p>
+                            <p className="text-[11px] leading-snug text-admin-muted">
+                              <span className="font-semibold text-admin-ink">Example: </span>
+                              <span className="font-mono">{field.sample}</span>
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </TooltipProvider>
                   <p className="mt-2 text-[11px] text-admin-muted">
-                    Click a field to add it where the cursor is. Hover one to see what it fills
-                    in.
+                    Click a field to add it where the cursor is. Hover one, or tap the info
+                    button, to see where it comes from.
                   </p>
                 </div>
               </div>
