@@ -25,12 +25,9 @@ import {
 } from '@/lib/quiz/higher-lower'
 import { parseTopicYearWindow, withinTopicYears } from '@/lib/quiz/topic-years'
 import { promptSubject } from '@/lib/quiz/prompt-subject'
-import {
-  originColumns,
-  QUIZ_TEXT_MODEL,
-  QUIZ_IMAGE_MODEL,
-  type QuestionOrigin,
-} from '@/lib/quiz/question-origin'
+import { aiOrigin, originColumns, type QuestionOrigin } from '@/lib/quiz/question-origin'
+import { aiImage, aiModelFor, aiText } from '@/lib/ai/client'
+import type { AiAreaKey } from '@/lib/ai/areas'
 import { topicSearchTokens, topicsOverlap } from '@/lib/quiz/topic-match'
 import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
@@ -128,13 +125,16 @@ export type PictureRoundItem = {
   description?: string;
 }
 
-/* Without a deadline a stalled Gemini call hangs until the platform kills the
-   whole request, which reaches the sheet as a rejected action rather than a
-   message it can show. */
-const AI_TIMEOUT_MS = 45_000
-
 const isTimeout = (error: unknown) =>
   error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+
+/* A saved question records the model that generated it. The client passes
+   that model along with the drafts; when it arrives without one, the area's
+   current model is the best available answer. */
+async function resolveOrigin(origin: QuestionOrigin, area: AiAreaKey): Promise<QuestionOrigin> {
+  if (origin.method !== 'ai' || origin.model?.trim()) return origin
+  return aiOrigin((await aiModelFor(area)).model)
+}
 
 export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
   const supabase = await createClient();
@@ -158,7 +158,7 @@ export async function generateQuizAction(
   difficulty: string = 'Medium',
   eventId: number,
   categoryConfigId: number
-): Promise<{ questions?: QuizQuestion[], error?: string }> {
+): Promise<{ questions?: QuizQuestion[], model?: string, error?: string }> {
   try {
   const supabase = await createClient()
   const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
@@ -188,13 +188,6 @@ export async function generateQuizAction(
     ? combinedExclusions.join(' | ')
     : "None.";
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-    if (!apiKey) {
-      return { error: "API Key is missing. Please check your environment variables." };
-    }
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`;
-
-
   const subject = promptSubject(category);
 
   const { text: prompt } = renderPrompt(resolvePrompt('question', config?.ai_prompt).template, {
@@ -212,13 +205,9 @@ export async function generateQuizAction(
     exclusions: pastQuestionsList,
   });
 
-  const payload = {
-    contents: [{ 
-      parts: [{ text: prompt }] 
-    }],
-    generationConfig: {
+    const ai = await aiText('quiz_questions', {
+      prompt,
       temperature: 0.85,
-      responseMimeType: "application/json",
       responseSchema: {
         type: "ARRAY",
         items: {
@@ -230,30 +219,11 @@ export async function generateQuizAction(
           },
           required: ["question", "answer", "category"]
         }
-      }
-    }
-  };
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS)
+      },
     });
+    if ('error' in ai) return { error: ai.error };
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return { error: `AI Error (${response.status}): ${errorData.error?.message || 'The Quiz Master is currently unavailable.'}` };
-    }
-
-    const result = await response.json();
-    const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!content) {
-      return { error: "The Quiz Master returned an empty script." };
-    }
-
-    const questions = JSON.parse(content) as QuizQuestion[];
+    const questions = JSON.parse(ai.text) as QuizQuestion[];
 
     if (questions.length) {
       const { error: logError } = await supabase
@@ -266,7 +236,7 @@ export async function generateQuizAction(
       if (logError) console.error("Failed to log generated questions:", logError);
     }
 
-    return { questions };
+    return { questions, model: ai.model };
 
   } catch (error: unknown) {
     console.error("AI Generation failed:", error);
@@ -795,9 +765,10 @@ export async function saveQuizToDatabase(
   eventId: number | null,
   topic: string,
   difficulty: string = '',
-  origin: QuestionOrigin
+  clientOrigin: QuestionOrigin
 ) {
   const supabase = await createClient()
+  const origin = await resolveOrigin(clientOrigin, 'quiz_questions')
 
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
@@ -1024,7 +995,7 @@ export async function generateMusicSnippetsAction(
      from; every candidate is then a song released in exactly that year. Left
      out, the model picks years across the gap either side of the chain instead. */
   releaseYear?: number
-): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
+): Promise<{ songs?: MusicSnippetCandidate[]; model?: string; error?: string }> {
   try {
     const supabase = await createClient()
     const [{ data: approved }, { data: generated }, { data: config }, lastYear] = await Promise.all([
@@ -1066,13 +1037,6 @@ export async function generateMusicSnippetsAction(
     const existingList = combinedExclusions.length
       ? combinedExclusions.join(' | ')
       : 'None.'
-
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-    if (!apiKey) {
-      return { error: 'API Key is missing. Please check your environment variables.' }
-    }
-
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`
 
     const topicLine = topic.trim()
       ? `- Focus on this theme/genre: "${topic.trim()}".`
@@ -1134,43 +1098,21 @@ export async function generateMusicSnippetsAction(
     }
     const requiredFields = ['artist', 'title', 'year', 'intro_description']
 
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.85,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'ARRAY',
-          items: {
-            type: 'OBJECT',
-            properties: schemaProperties,
-            required: requiredFields,
-          },
+    const ai = await aiText('quiz_songs', {
+      prompt,
+      temperature: 0.85,
+      responseSchema: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: schemaProperties,
+          required: requiredFields,
         },
       },
-    }
-
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     })
+    if ('error' in ai) return { error: ai.error }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      return {
-        error: `AI Error (${response.status}): ${errorData.error?.message || 'The Music Expert is currently unavailable.'}`,
-      }
-    }
-
-    const result = await response.json()
-    const content = result.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!content) {
-      return { error: 'The Music Expert returned an empty response.' }
-    }
-
-    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string }[]
+    const rawSongs = JSON.parse(ai.text) as { artist: string; title: string; year: number; intro_description: string }[]
 
     /* A Higher-or-Lower round needs years either side of the chain, so a period
        topic is only binding on a name-that-tune round. */
@@ -1228,7 +1170,7 @@ export async function generateMusicSnippetsAction(
       if (logError) console.error('Failed to log generated songs:', logError)
     }
 
-    return { songs }
+    return { songs, model: ai.model }
   } catch (error: unknown) {
     console.error('Music snippet generation failed:', error)
     return {
@@ -1247,9 +1189,10 @@ export async function saveMusicSnippetsAction(
   topic: string = '',
   difficulty: string = '',
   startYear: number | undefined,
-  origin: QuestionOrigin
+  clientOrigin: QuestionOrigin
 ) {
   const supabase = await createClient()
+  const origin = await resolveOrigin(clientOrigin, 'quiz_songs')
 
   let currentEmployeeId: number | null = null
   const { data: { user } } = await supabase.auth.getUser()
@@ -1679,69 +1622,27 @@ function hostPictureBrief(imageNotes: string): string {
    picture is drawn. A miss here is not fatal - the image is still attempted
    from the answer alone. */
 async function describePictureSubject(answer: string, topic?: string, imageNotes?: string): Promise<string | undefined> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-  if (!apiKey) return undefined
   const round = topic?.trim() ? ` in a pub quiz picture round on the topic "${topic.trim()}"` : ''
   const notes = imageNotes?.trim()
   if (notes && wantsAnagram(notes)) return anagramBrief(answer, scrambleAnswer(answer))
   const prompt = notes
     ? `"${answer}" is the answer${round}. ${hostPictureBrief(notes)} Return only the description.`
     : `"${answer}" is the answer${round}. In one sentence, say what it is, where it is from (show, film, book, brand, real life) and what it looks like, so an artist could draw exactly the right one. Return only the sentence.`
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2 },
-        }),
-        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-      }
-    )
-    if (!res.ok) return undefined
-    const data = await res.json()
-    const text: unknown = data?.candidates?.[0]?.content?.parts?.[0]?.text
-    return typeof text === 'string' && text.trim() ? text.trim() : undefined
-  } catch (err) {
-    console.error(`[img-gen] describe ${answer}:`, err)
+  const ai = await aiText('quiz_pictures', { prompt, temperature: 0.2, timeoutMs: IMAGE_TIMEOUT_MS })
+  if ('error' in ai) {
+    console.error(`[img-gen] describe ${answer}:`, ai.error)
     return undefined
   }
+  return ai.text.trim() || undefined
 }
 
 async function requestImage(prompt: string, label: string): Promise<string | null> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-  if (!apiKey) return null
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_IMAGE_MODEL}:generateContent?key=${apiKey}`
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
-      }),
-      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      const errBody = await res.text()
-      console.error(`[img-gen] ${label}: HTTP ${res.status}`, errBody)
-      return null
-    }
-    const data = await res.json()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parts: any[] = data?.candidates?.[0]?.content?.parts ?? []
-    const imagePart = parts.find((p) => p.inlineData?.data)
-    if (!imagePart) {
-      console.error(`[img-gen] ${label}: no inlineData in response`, JSON.stringify(data).slice(0, 300))
-      return null
-    }
-    return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
-  } catch (err) {
-    console.error(`[img-gen] ${label}:`, err)
+  const ai = await aiImage('quiz_images', { prompt, timeoutMs: IMAGE_TIMEOUT_MS })
+  if ('error' in ai) {
+    console.error(`[img-gen] ${label}:`, ai.error)
     return null
   }
+  return ai.dataUrl
 }
 
 /* A single miss is usually a rate limit or a one-off refusal rather than a
@@ -1766,9 +1667,10 @@ export async function regeneratePictureImageAction(
   topic?: string,
   imageNotes?: string,
   description?: string
-): Promise<{ imageUrl: string | null; description?: string }> {
+): Promise<{ imageUrl: string | null; description?: string; model: string }> {
   const about = description?.trim() || (await describePictureSubject(answer, topic, imageNotes))
-  return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes, about), description: about }
+  const { model } = await aiModelFor('quiz_images')
+  return { imageUrl: await generateImageForAnswer(answer, topic, imageNotes, about), description: about, model }
 }
 
 /* A saved picture is redrawn from what the row already knows: the answer, the
@@ -1777,7 +1679,8 @@ export async function regeneratePictureImageAction(
    the next redraw and the printed sheet agree on what the picture shows. */
 export async function redrawPictureQuestionAction(
   id: string
-): Promise<{ imageUrl: string | null; description: string | null }> {
+): Promise<{ imageUrl: string | null; description: string | null; model: string }> {
+  const { model } = await aiModelFor('quiz_images')
   const supabase = await createClient()
   const { data: row, error } = await supabase
     .from('past_quiz_questions')
@@ -1796,7 +1699,7 @@ export async function redrawPictureQuestionAction(
     row.image_notes ?? undefined,
     description ?? undefined
   )
-  if (!dataUrl) return { imageUrl: null, description }
+  if (!dataUrl) return { imageUrl: null, description, model }
 
   const adminClient = createAdminClient()
   const { buffer, mimeType } = dataUrlToImage(dataUrl)
@@ -1816,6 +1719,7 @@ export async function redrawPictureQuestionAction(
     .update({
       image_url: imageUrl,
       image_description: description,
+      ai_model: model,
       updated_by: currentEmployeeId,
       updated_at: new Date().toISOString(),
     })
@@ -1826,7 +1730,7 @@ export async function redrawPictureQuestionAction(
   }
 
   revalidatePath('/event-setups/events/[id]', 'page')
-  return { imageUrl, description }
+  return { imageUrl, description, model }
 }
 
 export type PictureTopicUse = {
@@ -1915,10 +1819,7 @@ export async function generatePictureRoundAction(
   categoryConfigId?: number,
   excludeAnswers?: string[],
   imageNotes?: string
-): Promise<{ items?: PictureRoundItem[]; error?: string }> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
-  if (!apiKey) return { error: 'API Key is missing.' }
-
+): Promise<{ items?: PictureRoundItem[]; model?: string; error?: string }> {
   try {
     const supabase = await createClient()
     let existingAnswers: string[] = []
@@ -1950,8 +1851,6 @@ export async function generatePictureRoundAction(
     if (excludeAnswers?.length) {
       existingAnswers = [...existingAnswers, ...excludeAnswers]
     }
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${QUIZ_TEXT_MODEL}:generateContent?key=${apiKey}`
-
     const difficultyGuide = difficulty === 'Easy'
       ? 'very well-known, instantly recognisable by almost everyone'
       : difficulty === 'Hard'
@@ -1985,39 +1884,23 @@ export async function generatePictureRoundAction(
       example,
     })
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.85,
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'ARRAY',
-            items: {
-              type: 'OBJECT',
-              properties: {
-                answer: { type: 'STRING' },
-                description: { type: 'STRING' },
-              },
-              required: ['answer', 'description'],
-            },
+    const ai = await aiText('quiz_pictures', {
+      prompt,
+      temperature: 0.85,
+      responseSchema: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            answer: { type: 'STRING' },
+            description: { type: 'STRING' },
           },
+          required: ['answer', 'description'],
         },
-      }),
-      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+      },
     })
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      return { error: `AI Error (${response.status}): ${err.error?.message || 'Generation failed.'}` }
-    }
-
-    const result = await response.json()
-    const content = result.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!content) return { error: 'AI returned an empty response.' }
-    const parsed = parsePictureSubjects(content)
+    if ('error' in ai) return { error: ai.error }
+    const parsed = parsePictureSubjects(ai.text)
     if (parsed.length === 0) return { error: 'AI returned an empty response.' }
     // The model picks the answers; the scramble is built here so every card is
     // a true anagram, which the model cannot be trusted with on long names.
@@ -2046,7 +1929,9 @@ export async function generatePictureRoundAction(
       if (logError) console.error('Failed to log generated picture answers:', logError)
     }
 
-    return { items }
+    // The cards are what guests see, so the round records the model that drew
+    // them rather than the one that chose the subjects.
+    return { items, model: (await aiModelFor('quiz_images')).model }
   } catch (err: unknown) {
     console.error('Picture round generation failed:', err)
     return {
@@ -2064,11 +1949,12 @@ export async function savePictureRoundAction(
   categoryConfigId: number,
   questionText: string,
   difficulty: string = '',
-  origin: QuestionOrigin,
+  clientOrigin: QuestionOrigin,
   imageNotes: string = ''
 ): Promise<void> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
+  const origin = await resolveOrigin(clientOrigin, 'quiz_images')
 
   let currentEmployeeId: number | null = null
   const { data: { user } } = await supabase.auth.getUser()

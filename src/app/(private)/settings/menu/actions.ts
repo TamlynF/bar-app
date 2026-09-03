@@ -21,7 +21,8 @@ import {
   type MenuItemPrice,
   type Serve,
 } from "@/lib/menu-price";
-import { generateFromFile, parseJsonLoose } from "@/lib/gemini";
+import { parseJsonLoose } from "@/lib/gemini";
+import { aiReadFile } from "@/lib/ai/client";
 import {
   cleanParsedMenu,
   diffMenu,
@@ -486,11 +487,11 @@ export async function parseMenuUploadAction(formData: FormData): Promise<ParseMe
 
   try {
     const bytes = Buffer.from(await file.arrayBuffer());
-    const result = await generateFromFile(
-      { base64: bytes.toString("base64"), mimeType: file.type },
-      EXTRACTION_PROMPT,
-      { responseSchema: EXTRACTION_SCHEMA },
-    );
+    const result = await aiReadFile("menu_import", {
+      file: { base64: bytes.toString("base64"), mimeType: file.type },
+      prompt: EXTRACTION_PROMPT,
+      responseSchema: EXTRACTION_SCHEMA,
+    });
     if ("error" in result) return { error: result.error };
 
     const parsed = parseJsonLoose<unknown>(result.text);

@@ -59,7 +59,7 @@ Always run `npm run build` successfully before committing.
 - **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)
 - **Email:** Resend. Never hardcode an address - `src/lib/email.ts` owns `EMAIL_FROM` (sender) and `ADMIN_EMAIL` (staff recipient), both env-overridable. The customer-facing contact address (replyTo, "questions?" copy, Square support) comes from `getContactEmail()` in `src/lib/company-info.ts`, which reads `company_information.email`. The sender is **not** DB-driven: Resend only sends from a verified domain
 - **Payments:** Square (sandbox + production envs)
-- **AI:** Google Gemini (quiz generation)
+- **AI:** Google Gemini today, behind a provider registry. Every AI feature is an *area* in `src/lib/ai/areas.ts` and calls `src/lib/ai/client.ts` (`aiText`, `aiSearch`, `aiReadFile`, `aiImage`) - never a provider URL directly. Staff choose the provider, model and API base URL per area on Settings → AI settings; providers are adapters under `src/lib/ai/providers/` (add one file + one registry entry for a new vendor). Keys stay in env, one per provider
 - **Storage:** Supabase Storage (`gallery`, `band-videos` buckets)
 - **Music:** Spotify Web Playback SDK (quiz integration only)
 - **Animations:** `tw-animate-css` + Tailwind animate utilities. No Framer Motion (yet) - ask before adding.
@@ -227,6 +227,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `private_hire_requests` | Private hire enquiries - status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
 | `quiz_category_configs` | Quiz rounds + question count targets. `ai_prompt` is the generator prompt in use for the round, with `{{tokens}}` the code fills in - the built-in text from `src/lib/quiz/prompt-templates.ts` until staff edit it; null (pre-column rows only) reads as built-in |
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
+| `ai_settings` | One row: `providers` and `areas` jsonb maps keyed by the code registries in `src/lib/ai/`, each entry carrying label, model, optional `api_base_url`, `active` and audit stamps. Reconciled against the code on every load/save of Settings → AI settings, so removed areas show as inactive rather than vanishing |
 | `gallery_images` | Media on the public gallery and homepage |
 | `specials` | Drink deals on the homepage |
 | `merchandise` | Branded goods shown on the homepage - display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |

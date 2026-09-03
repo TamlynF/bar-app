@@ -57,7 +57,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SpotifyPlayer, isSpotifyConnected } from '@/components/spotify-player'
-import { AI_ORIGIN } from '@/lib/quiz/question-origin'
+import { aiOrigin } from '@/lib/quiz/question-origin'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -111,6 +111,9 @@ export default function QuizGeneratorPage() {
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
   const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
   const [previousPictureAnswers, setPreviousPictureAnswers] = useState<string[]>([])
+  // The model that produced the drafts on screen, so what gets saved records
+  // that rather than whatever the settings say by the time Save is pressed.
+  const [draftModel, setDraftModel] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(true)
 
   useEffect(() => {
@@ -295,6 +298,7 @@ export default function QuizGeneratorPage() {
         } else if (result.items) {
           setPreviousPictureAnswers(prev => [...prev, ...result.items!.map(i => i.answer)])
           setPictureItems(result.items)
+          setDraftModel(result.model ?? null)
           setSelectedPictureIndices(selectedDraftIndices(result.items.length))
           setQuestions([])
           setMusicSnippets([])
@@ -308,6 +312,7 @@ export default function QuizGeneratorPage() {
           toast.error(result.error)
         } else if (result.songs) {
           setMusicSnippets(result.songs)
+          setDraftModel(result.model ?? null)
           setSelectedSnippetIndices(selectedDraftIndices(result.songs.length))
           setQuestions([])
           setFormOpen(false)
@@ -320,6 +325,7 @@ export default function QuizGeneratorPage() {
           toast.error(result.error)
         } else if (result && 'questions' in result && result.questions) {
           setQuestions(result.questions)
+          setDraftModel(result.model ?? null)
           setSelectedIndices(selectedDraftIndices(result.questions.length))
           setMusicSnippets([])
           setFormOpen(false)
@@ -371,7 +377,7 @@ export default function QuizGeneratorPage() {
       setIsSaving(true)
       try {
         const storedPictures = await uploadPictureDrafts(selectedData, parseInt(selectedEventId))
-        await savePictureRoundAction(storedPictures, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty, AI_ORIGIN)
+        await savePictureRoundAction(storedPictures, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty, aiOrigin(draftModel ?? ""))
         setPictureItems([])
         setSelectedPictureIndices(new Set())
         await finishApproval(selectedData.length)
@@ -402,7 +408,7 @@ export default function QuizGeneratorPage() {
           topic,
           difficulty,
           undefined,
-          AI_ORIGIN
+          aiOrigin(draftModel ?? "")
         )
         if (result?.needsConnect) {
           toast.warning("Connect Spotify on the event page to build the playlist.")
@@ -429,7 +435,7 @@ export default function QuizGeneratorPage() {
         parseInt(selectedEventId),
         topic,
         difficulty,
-        AI_ORIGIN
+        aiOrigin(draftModel ?? "")
       )
       setQuestions([])
       setSelectedIndices(new Set())

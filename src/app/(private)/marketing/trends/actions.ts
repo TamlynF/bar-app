@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { generateGrounded, parseJsonLoose } from "@/lib/gemini";
+import { parseJsonLoose } from "@/lib/gemini";
+import { aiSearch } from "@/lib/ai/client";
 import { formatGbp } from "@/lib/price";
 import { buildAdvertisingTrendsPrompt, buildEventIdeasPrompt, buildPriceTrendsPrompt } from "../lib/prompts";
 import { buildComparison } from "../lib/compare";
@@ -135,7 +136,7 @@ export async function refreshTrendsAction(
           ? buildPriceTrendsPrompt(area, settings?.comparison_radius ?? null, todayISO, priceContext, blocklist)
           : buildEventIdeasPrompt(area, todayISO, blocklist),
   }));
-  const results = await Promise.all(jobs.map((j) => generateGrounded(j.prompt)));
+  const results = await Promise.all(jobs.map((j) => aiSearch("marketing_trends", { prompt: j.prompt })));
 
   if (results.every((r) => "error" in r)) {
     const firstError = results.find((r) => "error" in r) as { error: string };

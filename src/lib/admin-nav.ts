@@ -122,6 +122,12 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
         icon: Mail,
         description: "Wording of every automatic email",
       },
+      {
+        label: "AI settings",
+        href: "/settings/ai",
+        icon: Sparkles,
+        description: "Which provider and model each part of the app uses",
+      },
     ],
   },
   {

@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { generateGrounded, parseJsonLoose } from "@/lib/gemini";
+import { parseJsonLoose } from "@/lib/gemini";
+import { aiSearch } from "@/lib/ai/client";
 import { parseGbp } from "@/lib/price";
 import { buildPricesPrompt } from "../lib/prompts";
 import { refreshTrendsAction } from "../trends/actions";
@@ -48,7 +49,9 @@ export async function refreshPricesAction(): Promise<
   const settings = await ensureMarketingSettings(supabase, deriveAreaFromAddress(address));
   const area = resolveComparisonArea(settings, address);
 
-  const res = await generateGrounded(buildPricesPrompt(area, settings?.comparison_radius ?? null, menuItems));
+  const res = await aiSearch("market_prices", {
+    prompt: buildPricesPrompt(area, settings?.comparison_radius ?? null, menuItems),
+  });
   if ("error" in res) return { error: res.error };
 
   const parsed = parseJsonLoose<AiCompetitorPrice[]>(res.text) ?? [];

@@ -104,7 +104,7 @@ import {
   progressAt,
 } from "@/lib/quiz/generation-progress";
 import { EMPTY_ROUND_SETTINGS, type RoundSettings } from "@/lib/quiz/round-defaults";
-import { AI_ORIGIN } from "@/lib/quiz/question-origin";
+import { aiOrigin } from "@/lib/quiz/question-origin";
 import ManualEntry from "./manual-entry";
 import {
   chainHintYears,
@@ -470,8 +470,13 @@ export default function QuizRoundSheet({
   const minYearsId = `round-min-years-${categoryConfigId}`;
   const maxYearsId = `round-max-years-${categoryConfigId}`;
 
+  // The model that produced the drafts on screen, so what gets saved records
+  // that rather than whatever the settings say by the time Add is pressed.
+  const [draftModel, setDraftModel] = useState<string | null>(null);
+
   const resetDrafts = useCallback(() => {
     setDrafts([]);
+    setDraftModel(null);
     setSelected(new Set());
     setPickOrder([]);
     setAutoPickShown(false);
@@ -495,6 +500,7 @@ export default function QuizRoundSheet({
           imageNotes
         );
         const items = result.items?.filter((item) => !missingPicture(item));
+        if (result.model) setDraftModel(result.model);
         return {
           items,
           error: result.error,
@@ -512,6 +518,7 @@ export default function QuizRoundSheet({
           chainStart,
           isHigherOrLower && Number.isFinite(pickedYear) ? pickedYear : undefined
         );
+        if (result.model) setDraftModel(result.model);
         return { items: result.songs, error: result.error };
       }
 
@@ -523,6 +530,7 @@ export default function QuizRoundSheet({
         eventId,
         categoryConfigId
       );
+      if (result.model) setDraftModel(result.model);
       return { items: result.questions, error: result.error };
     },
     [
@@ -851,7 +859,7 @@ export default function QuizRoundSheet({
           categoryConfigId,
           effectiveTopic,
           difficulty,
-          AI_ORIGIN,
+          aiOrigin(draftModel ?? ""),
           imageNotes
         );
       } else if (kind === "song") {
@@ -868,7 +876,7 @@ export default function QuizRoundSheet({
           effectiveTopic,
           difficulty,
           chainStart,
-          AI_ORIGIN
+          aiOrigin(draftModel ?? "")
         );
         playlistSynced = !result?.needsConnect && !!result?.ok;
         if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
@@ -887,7 +895,7 @@ export default function QuizRoundSheet({
           eventId,
           effectiveTopic,
           difficulty,
-          AI_ORIGIN
+          aiOrigin(draftModel ?? "")
         );
       }
 
@@ -912,6 +920,7 @@ export default function QuizRoundSheet({
     }
   }, [
     isApproving,
+    draftModel,
     selected,
     pickOrder,
     isHigherOrLower,

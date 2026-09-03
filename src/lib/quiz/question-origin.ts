@@ -16,9 +16,10 @@ export type QuestionOrigin = {
   model: string | null;
 };
 
-/* The models the quiz generator calls. Kept here rather than in the actions
-   file because a "use server" module can only export async functions, and the
-   client needs the name to record it alongside what it saves. */
+/* The models the quiz generator starts on. Which model actually runs is chosen
+   per area on Settings > AI settings (src/lib/ai/areas.ts); these are the
+   defaults those settings fall back to, and what a saved question records
+   when nothing more specific is known. */
 export const QUIZ_TEXT_MODEL = "gemini-2.5-flash";
 export const QUIZ_IMAGE_MODEL = "gemini-2.5-flash-image";
 
