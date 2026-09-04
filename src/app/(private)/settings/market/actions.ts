@@ -10,6 +10,13 @@ import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
 import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig } from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import {
+  EMPTY_OVERRIDES,
+  overridesFromRow,
+  overridesToRow,
+  type DrinkOverrideRow,
+  type DrinkOverrides,
+} from "@/lib/market/drink-overrides";
+import {
   buildCatalogUpsertPlan,
   variationIdsFromMappings,
   type ExistingCatalog,
@@ -74,7 +81,12 @@ function primaryPrice(item: ItemRow): PriceRow | null {
 
 async function openSession(
   supabase: ServerClient,
-  options: { config: MarketConfig; menuItemIds: number[]; stockMarketEventId: number }
+  options: {
+    config: MarketConfig;
+    menuItemIds: number[];
+    overridesByItem: Map<number, DrinkOverrides>;
+    stockMarketEventId: number;
+  }
 ) {
   const { data: existing } = await supabase
     .from("market_sessions")
@@ -118,18 +130,27 @@ async function openSession(
     return { error: sessionError?.message ?? "Could not open the market." };
   }
 
-  const instrumentRows = instruments.map(({ item, price }) => ({
-    session_id: session.id,
-    menu_item_price_id: price.id,
-    menu_item_id: item.id,
-    display_name: item.name,
-    serve: price.serve,
-    base_price: Number(price.amount),
-    opening_price: Number(price.amount),
-    current_price: Number(price.amount),
-    last_notified_price: Number(price.amount),
-    square_variation_id: price.square_variation_id,
-  }));
+  const instrumentRows = instruments.map(({ item, price }) => {
+    const overrides = options.overridesByItem.get(item.id) ?? EMPTY_OVERRIDES;
+    const opening = overrides.openingPrice ?? Number(price.amount);
+    return {
+      session_id: session.id,
+      menu_item_price_id: price.id,
+      menu_item_id: item.id,
+      display_name: item.name,
+      serve: price.serve,
+      base_price: Number(price.amount),
+      opening_price: opening,
+      current_price: opening,
+      last_notified_price: opening,
+      square_variation_id: price.square_variation_id,
+      min_price: overrides.minPrice,
+      max_price: overrides.maxPrice,
+      crash_price: overrides.crashPrice,
+      low_stock_at: overrides.lowStockAt,
+      alert_threshold: overrides.alertThreshold,
+    };
+  });
 
   const { data: inserted, error: instrumentError } = await supabase
     .from("market_instruments")
@@ -238,14 +259,29 @@ export async function saveStockMarketEventAction(formData: FormData) {
 
   const nightOnlyIds = await nightOnlyItemIds(supabase, eventId);
   const keep = [...new Set([...menuItemIds, ...nightOnlyIds])];
-  const { error: clearError } = await supabase
+  const { data: existingItems, error: existingError } = await supabase
     .from("stock_market_event_items")
-    .delete()
+    .select("menu_item_id")
     .eq("event_id", eventId);
-  if (clearError) return { error: clearError.message };
+  if (existingError) return { error: existingError.message };
+  const keepSet = new Set(keep);
+  const dropped = (existingItems ?? [])
+    .map((item) => item.menu_item_id as number)
+    .filter((menuItemId) => !keepSet.has(menuItemId));
+  if (dropped.length > 0) {
+    const { error: clearError } = await supabase
+      .from("stock_market_event_items")
+      .delete()
+      .eq("event_id", eventId)
+      .in("menu_item_id", dropped);
+    if (clearError) return { error: clearError.message };
+  }
   const { error: itemsError } = await supabase
     .from("stock_market_event_items")
-    .insert(keep.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })));
+    .upsert(
+      keep.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })),
+      { onConflict: "event_id,menu_item_id", ignoreDuplicates: true }
+    );
   if (itemsError) return { error: itemsError.message };
 
   revalidateMarket();
@@ -280,7 +316,9 @@ export async function openStockMarketEventAction(id: number) {
   const supabase = await createClient();
   const { data: event, error } = await supabase
     .from("stock_market_events")
-    .select("*, stock_market_event_items(menu_item_id)")
+    .select(
+      "*, stock_market_event_items(menu_item_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)"
+    )
     .eq("id", id)
     .eq("is_active", true)
     .maybeSingle();
@@ -288,14 +326,16 @@ export async function openStockMarketEventAction(id: number) {
   if (!event) return { error: "That event is no longer available." };
 
   const row = event as StockMarketEventRow & {
-    stock_market_event_items: { menu_item_id: number }[] | null;
+    stock_market_event_items: ({ menu_item_id: number } & DrinkOverrideRow)[] | null;
   };
-  const menuItemIds = (row.stock_market_event_items ?? []).map((item) => item.menu_item_id);
+  const items = row.stock_market_event_items ?? [];
+  const menuItemIds = items.map((item) => item.menu_item_id);
   if (menuItemIds.length === 0) return { error: "This event has no drinks - edit it and pick some." };
 
   const result = await openSession(supabase, {
     config: eventConfig(row),
     menuItemIds,
+    overridesByItem: new Map(items.map((item) => [item.menu_item_id, overridesFromRow(item)])),
     stockMarketEventId: row.id,
   });
   if ("error" in result) return result;
@@ -418,6 +458,82 @@ const nightDrinkSchema = z.object({
   amount: z.coerce.number().positive("Price must be more than zero.").max(9999),
 });
 
+const optionalMoney = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? null : value),
+  z.coerce.number().positive("Prices must be more than zero.").max(9999).nullable()
+);
+
+const drinkOverridesSchema = z
+  .object({
+    openingPrice: optionalMoney,
+    minPrice: optionalMoney,
+    maxPrice: optionalMoney,
+    crashPrice: optionalMoney,
+    lowStockAt: z.preprocess(
+      (value) => (value === "" || value === null || value === undefined ? null : value),
+      z.coerce.number().int("Low stock at must be a whole number.").min(0).max(1000).nullable()
+    ),
+    alertThreshold: z.preprocess(
+      (value) => (value === "" || value === null || value === undefined ? null : value),
+      z.coerce
+        .number()
+        .min(0.01, "Alert threshold must be at least 0.01.")
+        .max(0.5, "Alert threshold must be 0.5 or less.")
+        .nullable()
+    ),
+  })
+  .refine(
+    (values) => values.minPrice == null || values.maxPrice == null || values.minPrice <= values.maxPrice,
+    { message: "Min price must not be above max price.", path: ["minPrice"] }
+  );
+
+function readDrinkOverrides(formData: FormData): DrinkOverrides | { error: string } {
+  const parsed = drinkOverridesSchema.safeParse({
+    openingPrice: formData.get("opening_price"),
+    minPrice: formData.get("min_price"),
+    maxPrice: formData.get("max_price"),
+    crashPrice: formData.get("crash_price"),
+    lowStockAt: formData.get("low_stock_at"),
+    alertThreshold: formData.get("alert_threshold"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the pricing overrides." };
+  }
+  return parsed.data;
+}
+
+async function writeDrinkOverrides(
+  supabase: ServerClient,
+  eventId: number,
+  menuItemId: number,
+  overrides: DrinkOverrides
+): Promise<{ error: string } | null> {
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .upsert(
+      { event_id: eventId, menu_item_id: menuItemId, ...overridesToRow(overrides) },
+      { onConflict: "event_id,menu_item_id" }
+    );
+  return error ? { error: error.message } : null;
+}
+
+export async function saveEventDrinkPricingAction(formData: FormData) {
+  const supabase = await createClient();
+  const eventId = Number(formData.get("event_id"));
+  const menuItemId = Number(formData.get("id"));
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  if (!Number.isInteger(menuItemId) || menuItemId <= 0) return { error: "Missing drink." };
+  if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
+
+  const overrides = readDrinkOverrides(formData);
+  if ("error" in overrides) return overrides;
+
+  const writeError = await writeDrinkOverrides(supabase, eventId, menuItemId, overrides);
+  if (writeError) return writeError;
+  revalidateMarket();
+  return { success: true, id: menuItemId };
+}
+
 export async function saveNightOnlyDrinkAction(formData: FormData) {
   const supabase = await createClient();
   const eventId = Number(formData.get("event_id"));
@@ -433,6 +549,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Check the drink details." };
   }
   const { name, serve, amount } = parsed.data;
+  const overrides = readDrinkOverrides(formData);
+  if ("error" in overrides) return overrides;
   const idRaw = formData.get("id")?.toString();
   const id = idRaw ? Number(idRaw) : null;
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
@@ -483,6 +601,9 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
     const { error: priceError } = await priceWrite;
     if (priceError) return { error: priceError.message };
 
+    const overrideError = await writeDrinkOverrides(supabase, eventId, id, overrides);
+    if (overrideError) return overrideError;
+
     revalidateMarket();
     return { success: true, id };
   }
@@ -522,7 +643,7 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
 
   const { error: linkError } = await supabase
     .from("stock_market_event_items")
-    .insert({ event_id: eventId, menu_item_id: inserted.id });
+    .insert({ event_id: eventId, menu_item_id: inserted.id, ...overridesToRow(overrides) });
   if (linkError) return { error: linkError.message };
 
   revalidateMarket();
@@ -574,6 +695,41 @@ export async function crashMarketAction() {
     session_id: session.id,
     kind: "crash",
     payload: {},
+  });
+
+  revalidateMarket();
+  return { success: true };
+}
+
+export async function crashInstrumentAction(instrumentId: number) {
+  const supabase = await createClient();
+  const { data: session } = await supabase
+    .from("market_sessions")
+    .select("id, tick_no, config")
+    .eq("status", "live")
+    .maybeSingle();
+  if (!session) return { error: "No live market to crash." };
+
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("id, display_name, serve")
+    .eq("id", instrumentId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not trading on the live market." };
+
+  const config = resolveMarketConfig(session.config);
+  const { error } = await supabase
+    .from("market_instruments")
+    .update({ crash_until_tick: session.tick_no + config.crashDurationTicks })
+    .eq("id", instrument.id);
+  if (error) return { error: error.message };
+
+  await supabase.from("market_events").insert({
+    session_id: session.id,
+    instrument_id: instrument.id,
+    kind: "crash",
+    payload: { name: instrument.display_name, serve: instrument.serve },
   });
 
   revalidateMarket();

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { squareClient } from "@/lib/square";
-import { runTick } from "./engine";
+import { instrumentLimits, runTick } from "./engine";
+import { optionalNumber } from "./drink-overrides";
 import { tickRng } from "./rng";
 import {
   resolveMarketConfig,
@@ -36,7 +37,17 @@ export type MarketInstrumentRow = {
   stock_state: StockState;
   stock_override: StockState | null;
   square_variation_id: string | null;
+  min_price: number | string | null;
+  max_price: number | string | null;
+  crash_price: number | string | null;
+  low_stock_at: number | string | null;
+  alert_threshold: number | string | null;
+  crash_until_tick: number | null;
 };
+
+export function instrumentCrashActive(row: MarketInstrumentRow, tickNo: number): boolean {
+  return row.crash_until_tick != null && tickNo <= row.crash_until_tick;
+}
 
 export type MarketInstrumentPayload = {
   id: number;
@@ -116,6 +127,11 @@ function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
     stockState: row.stock_state,
     stockOverride: row.stock_override,
     squareVariationId: row.square_variation_id,
+    minPrice: optionalNumber(row.min_price),
+    maxPrice: optionalNumber(row.max_price),
+    crashPrice: optionalNumber(row.crash_price),
+    lowStockAt: optionalNumber(row.low_stock_at),
+    alertThreshold: optionalNumber(row.alert_threshold),
   };
 }
 
@@ -257,7 +273,11 @@ export async function maybeRunMarketTick(
     const crashActive =
       session.crash_until_tick != null && tickNo <= session.crash_until_tick;
 
-    const results = runTick(instruments.map(toInstrumentState), {
+    const states = instruments.map((row) => ({
+      ...toInstrumentState(row),
+      crashActive: instrumentCrashActive(row, tickNo),
+    }));
+    const results = runTick(states, {
       config,
       crashActive,
       newUnitsByInstrument,
@@ -390,6 +410,7 @@ export async function readMarketState(
       const spark = sparkByInstrument.get(row.id) ?? [];
       const previous = spark.length > 1 ? spark[spark.length - 2] : opening;
       const category = instrumentCategory(row);
+      const limits = instrumentLimits(toInstrumentState(row), config);
       return {
         id: row.id,
         name: row.display_name,
@@ -403,8 +424,8 @@ export async function readMarketState(
         category: category.name,
         categoryOrder: category.order,
         demandUnits: Number(row.demand_units),
-        floor: Math.round(basePrice * config.floorPct * 100) / 100,
-        ceil: Math.round(basePrice * config.ceilPct * 100) / 100,
+        floor: Math.round(limits.floor * 100) / 100,
+        ceil: Math.round(limits.ceil * 100) / 100,
       };
     }),
     events: (eventRows ?? [])

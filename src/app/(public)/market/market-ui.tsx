@@ -25,7 +25,7 @@ export function eventCopy(event: MarketEventPayload): string {
     case "restock":
       return `${name} back on the bar`;
     case "crash":
-      return "Market crash - prices tumbling";
+      return name ? `${name} crashing - buy the dip` : "Market crash - prices tumbling";
   }
 }
 

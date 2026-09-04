@@ -234,3 +234,65 @@ describe("runTick", () => {
     expect(results.map((r) => r.id)).toEqual([1, 2]);
   });
 });
+
+describe("per-drink overrides", () => {
+  it("clamps to absolute min/max prices instead of the config band", () => {
+    for (let tick = 1; tick <= 100; tick++) {
+      const capped = tickInstrument(
+        instrument({ currentPrice: 5.5, maxPrice: 5.5 }),
+        inputs({ rng: tickRng(4, tick), newUnitsByInstrument: new Map([[1, 50]]) })
+      );
+      expect(capped.price).toBeLessThanOrEqual(5.5);
+      const floored = tickInstrument(
+        instrument({ currentPrice: 4.5, minPrice: 4.5 }),
+        inputs({ rng: tickRng(6, tick) })
+      );
+      expect(floored.price).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("uses the drink's low stock threshold over the config one", () => {
+    const stock = new Map([["VAR1", 8]]);
+    const byConfig = tickInstrument(instrument(), inputs({ stockQtyByVariation: stock }));
+    expect(byConfig.stockState).toBe("ok");
+    const byDrink = tickInstrument(
+      instrument({ lowStockAt: 10 }),
+      inputs({ stockQtyByVariation: stock })
+    );
+    expect(byDrink.stockState).toBe("low");
+  });
+
+  it("pulls toward the drink's crash price during a crash", () => {
+    const result = tickInstrument(
+      instrument({ crashPrice: 3.5, minPrice: 3.5 }),
+      inputs({
+        crashActive: true,
+        config: { ...DEFAULT_MARKET_CONFIG, noiseSigma: 0 },
+        rng: tickRng(7, 1),
+      })
+    );
+    expect(result.price).toBeLessThan(5);
+    expect(result.price).toBeGreaterThanOrEqual(3.5);
+  });
+});
+
+describe("single-drink crash and manual sold out", () => {
+  it("crashes only the flagged instrument", () => {
+    const config = { ...DEFAULT_MARKET_CONFIG, noiseSigma: 0 };
+    const [crashed, steady] = runTick(
+      [instrument({ id: 1, crashActive: true }), instrument({ id: 2 })],
+      inputs({ config, rng: tickRng(8, 1) })
+    );
+    expect(crashed.price).toBeLessThan(5);
+    expect(steady.price).toBe(5);
+  });
+
+  it("freezes the price the same tick a sold-out override is set", () => {
+    const result = tickInstrument(
+      instrument({ currentPrice: 5.35, stockState: "ok", stockOverride: "out" }),
+      inputs({ newUnitsByInstrument: new Map([[1, 40]]) })
+    );
+    expect(result.price).toBe(5.35);
+    expect(result.stockState).toBe("out");
+  });
+});

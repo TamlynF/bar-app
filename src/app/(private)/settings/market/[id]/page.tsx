@@ -5,6 +5,12 @@ import {
   type StockMarketEventRow,
 } from "@/lib/market/stock-market-events";
 import type { StockState } from "@/lib/market/types";
+import {
+  EMPTY_OVERRIDES,
+  overridesFromRow,
+  type DrinkOverrideRow,
+  type DrinkOverrides,
+} from "@/lib/market/drink-overrides";
 import EventDetailClient, {
   type AvailableDrink,
   type EventDrink,
@@ -15,8 +21,11 @@ import EventDetailClient, {
 export const dynamic = "force-dynamic";
 
 type EventRow = StockMarketEventRow & {
-  stock_market_event_items: { menu_item_id: number }[] | null;
+  stock_market_event_items: ({ menu_item_id: number } & DrinkOverrideRow)[] | null;
 };
+
+const EVENT_SELECT =
+  "*, stock_market_event_items(menu_item_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)";
 
 type CategoryJoin = {
   id: number;
@@ -61,6 +70,7 @@ type InstrumentRow = {
   demand_units: number | string;
   stock_state: StockState;
   stock_override: StockState | null;
+  crash_until_tick: number | null;
 };
 
 const ITEM_SELECT =
@@ -87,15 +97,17 @@ export default async function StockMarketEventPage({
   const supabase = await createClient();
   const { data: eventRow } = await supabase
     .from("stock_market_events")
-    .select("*, stock_market_event_items(menu_item_id)")
+    .select(EVENT_SELECT)
     .eq("id", id)
     .eq("is_active", true)
     .maybeSingle();
   if (!eventRow) notFound();
 
   const row = eventRow as EventRow;
-  const menuItemIds = (row.stock_market_event_items ?? []).map(
-    (item) => item.menu_item_id,
+  const eventItems = row.stock_market_event_items ?? [];
+  const menuItemIds = eventItems.map((item) => item.menu_item_id);
+  const overridesByItem = new Map<number, DrinkOverrides>(
+    eventItems.map((item) => [item.menu_item_id, overridesFromRow(item)]),
   );
 
   const [
@@ -121,7 +133,7 @@ export default async function StockMarketEventPage({
       .order("started_at", { ascending: false }),
     supabase
       .from("market_sessions")
-      .select("id, stock_market_event_id")
+      .select("id, stock_market_event_id, tick_no")
       .eq("status", "live")
       .maybeSingle(),
   ]);
@@ -131,7 +143,7 @@ export default async function StockMarketEventPage({
     ? await supabase
         .from("market_instruments")
         .select(
-          "id, menu_item_id, opening_price, current_price, demand_units, stock_state, stock_override",
+          "id, menu_item_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick",
         )
         .eq("session_id", liveRow!.id)
     : { data: [] as InstrumentRow[] };
@@ -145,6 +157,9 @@ export default async function StockMarketEventPage({
         demandUnits: Number(instrument.demand_units),
         stockState: instrument.stock_state,
         stockOverride: instrument.stock_override,
+        crashing:
+          instrument.crash_until_tick != null &&
+          (liveRow?.tick_no ?? 0) <= instrument.crash_until_tick,
       },
     ]),
   );
@@ -169,6 +184,7 @@ export default async function StockMarketEventPage({
         serve: primary?.serve ?? null,
         basePrice: primary ? Number(primary.amount) : null,
         linked: Boolean(primary?.square_variation_id),
+        overrides: overridesByItem.get(item.id) ?? EMPTY_OVERRIDES,
         instrument: instrumentsByItem.get(item.id) ?? null,
       };
     })

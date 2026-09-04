@@ -70,7 +70,7 @@ function eventCopyText(kind: string, from: number | null, to: number | null, pct
     case "restock":
       return "Back on the bar";
     case "crash":
-      return "Market crash triggered";
+      return "Crash triggered";
     default:
       return kind.replace(/_/g, " ");
   }

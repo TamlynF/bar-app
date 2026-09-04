@@ -30,17 +30,25 @@ import {
   useRecordSheet,
 } from "@/components/admin";
 import { formatGbp } from "@/lib/price";
-import type { StockState } from "@/lib/market/types";
+import type { MarketConfig, StockState } from "@/lib/market/types";
 import {
   formatTimeWindow,
   type StockMarketEventSummary,
 } from "@/lib/market/stock-market-events";
 import {
+  defaultDrinkSettings,
+  effectiveDrinkSettings,
+  type DrinkOverrides,
+  type EffectiveDrinkSettings,
+} from "@/lib/market/drink-overrides";
+import {
   addEventDrinksAction,
+  crashInstrumentAction,
   crashMarketAction,
   endMarketAction,
   openStockMarketEventAction,
   removeEventDrinkAction,
+  saveEventDrinkPricingAction,
   saveNightOnlyDrinkAction,
   setStockOverrideAction,
 } from "../actions";
@@ -53,6 +61,7 @@ export type LiveInstrument = {
   demandUnits: number;
   stockState: StockState;
   stockOverride: StockState | null;
+  crashing: boolean;
 };
 
 export type EventDrink = {
@@ -65,6 +74,7 @@ export type EventDrink = {
   serve: string | null;
   basePrice: number | null;
   linked: boolean;
+  overrides: DrinkOverrides;
   instrument: LiveInstrument | null;
 };
 
@@ -159,65 +169,222 @@ function matches(
   return fields.some((field) => (field ?? "").toLowerCase().includes(needle));
 }
 
-function NightDrinkForm({
+function formatPct(fraction: number): string {
+  return `${Math.round(fraction * 1000) / 10}%`;
+}
+
+type OverrideField = {
+  key: keyof DrinkOverrides;
+  name: string;
+  label: string;
+  step: string;
+  min: string;
+  format: (value: number) => string;
+};
+
+const OVERRIDE_FIELDS: OverrideField[] = [
+  {
+    key: "openingPrice",
+    name: "opening_price",
+    label: "Opening price (£)",
+    step: "0.05",
+    min: "0.05",
+    format: formatGbp,
+  },
+  {
+    key: "minPrice",
+    name: "min_price",
+    label: "Min price (£)",
+    step: "0.05",
+    min: "0.05",
+    format: formatGbp,
+  },
+  {
+    key: "maxPrice",
+    name: "max_price",
+    label: "Max price (£)",
+    step: "0.05",
+    min: "0.05",
+    format: formatGbp,
+  },
+  {
+    key: "crashPrice",
+    name: "crash_price",
+    label: "Crash price (£)",
+    step: "0.05",
+    min: "0.05",
+    format: formatGbp,
+  },
+  {
+    key: "lowStockAt",
+    name: "low_stock_at",
+    label: "Low stock at",
+    step: "1",
+    min: "0",
+    format: (value) => String(value),
+  },
+  {
+    key: "alertThreshold",
+    name: "alert_threshold",
+    label: "Alert threshold",
+    step: "0.01",
+    min: "0.01",
+    format: formatPct,
+  },
+];
+
+function drinkSettings(
+  drink: EventDrink,
+  config: MarketConfig,
+): { effective: EffectiveDrinkSettings; defaults: EffectiveDrinkSettings } | null {
+  if (drink.basePrice == null) return null;
+  return {
+    effective: effectiveDrinkSettings(drink.basePrice, config, drink.overrides),
+    defaults: defaultDrinkSettings(drink.basePrice, config),
+  };
+}
+
+function OverrideCell({
+  drink,
+  config,
+  field,
+}: {
+  drink: EventDrink;
+  config: MarketConfig;
+  field: OverrideField;
+}) {
+  const settings = drinkSettings(drink, config);
+  if (!settings) return <>-</>;
+  const overridden = drink.overrides[field.key] != null;
+  return (
+    <span
+      className={cn(
+        "tabular-nums",
+        overridden ? "font-semibold text-admin-ink" : "text-admin-muted",
+      )}
+      title={overridden ? "Set on this drink" : "Event setting"}
+    >
+      {field.format(settings.effective[field.key])}
+    </span>
+  );
+}
+
+function OverrideFields({
+  drink,
+  basePrice,
+  config,
+}: {
+  drink: EventDrink | null;
+  basePrice: number | null;
+  config: MarketConfig;
+}) {
+  const defaults =
+    basePrice != null ? defaultDrinkSettings(basePrice, config) : null;
+  return (
+    <>
+      <DetailCard className="divide-y divide-admin-line/50">
+        {OVERRIDE_FIELDS.map((field) => (
+          <FormRow key={field.key} label={field.label} dense>
+            <input
+              type="number"
+              name={field.name}
+              min={field.min}
+              step={field.step}
+              aria-label={field.label}
+              placeholder={
+                defaults ? `Event: ${field.format(defaults[field.key])}` : ""
+              }
+              defaultValue={drink?.overrides[field.key] ?? ""}
+              className={FIELD_INPUT}
+            />
+          </FormRow>
+        ))}
+      </DetailCard>
+      <p className="px-1 text-[11px] text-admin-muted">
+        Leave a field blank to use the event setting. Opening price defaults to
+        the base price. Alert threshold is a fraction, so 0.05 alerts on a 5%
+        move. Changes apply the next time this event is opened.
+      </p>
+    </>
+  );
+}
+
+function DrinkForm({
   eventId,
   drink,
+  nightOnly,
+  config,
   formError,
   onSubmit,
 }: {
   eventId: number;
   drink: EventDrink | null;
+  nightOnly: boolean;
+  config: MarketConfig;
   formError: string | null;
   onSubmit: (formData: FormData) => void;
 }) {
+  const [amount, setAmount] = useState(drink?.basePrice ?? null);
   return (
     <form
-      id="night-drink-form"
+      id="event-drink-form"
       action={onSubmit}
       className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
     >
       <input type="hidden" name="event_id" value={eventId} />
       {drink && <input type="hidden" name="id" value={drink.id} />}
-      <DetailCard className="divide-y divide-admin-line/50">
-        <FormRow label="Name" required dense>
-          <input
-            name="name"
-            required
-            maxLength={80}
-            aria-label="Drink name"
-            placeholder="e.g. Pumpkin spiced ale"
-            defaultValue={drink?.name ?? ""}
-            className={FIELD_INPUT}
-          />
-        </FormRow>
-        <FormRow label="Serve" required dense>
-          <input
-            name="serve"
-            required
-            maxLength={40}
-            aria-label="Serve"
-            placeholder="pint, each, single…"
-            defaultValue={drink?.serve ?? "each"}
-            className={FIELD_INPUT}
-          />
-        </FormRow>
-        <FormRow label="Base price (£)" required dense>
-          <input
-            type="number"
-            name="amount"
-            required
-            min="0.05"
-            step="0.05"
-            aria-label="Base price"
-            defaultValue={drink?.basePrice ?? ""}
-            className={FIELD_INPUT}
-          />
-        </FormRow>
-      </DetailCard>
-      <p className="px-1 text-[11px] text-admin-muted">
-        Tonight-only drinks stay off the public menu and are deleted when
-        removed from their last event.
-      </p>
+      {nightOnly && (
+        <>
+          <DetailCard className="divide-y divide-admin-line/50">
+            <FormRow label="Name" required dense>
+              <input
+                name="name"
+                required
+                maxLength={80}
+                aria-label="Drink name"
+                placeholder="e.g. Pumpkin spiced ale"
+                defaultValue={drink?.name ?? ""}
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+            <FormRow label="Serve" required dense>
+              <input
+                name="serve"
+                required
+                maxLength={40}
+                aria-label="Serve"
+                placeholder="pint, each, single…"
+                defaultValue={drink?.serve ?? "each"}
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+            <FormRow label="Base price (£)" required dense>
+              <input
+                type="number"
+                name="amount"
+                required
+                min="0.05"
+                step="0.05"
+                aria-label="Base price"
+                defaultValue={drink?.basePrice ?? ""}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  setAmount(Number.isFinite(next) && next > 0 ? next : null);
+                }}
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+          </DetailCard>
+          <p className="px-1 text-[11px] text-admin-muted">
+            Tonight-only drinks stay off the public menu and are deleted when
+            removed from their last event.
+          </p>
+        </>
+      )}
+      <h4 className="px-1 text-[12px] font-semibold text-admin-ink">
+        Pricing on this event
+      </h4>
+      <OverrideFields drink={drink} basePrice={amount} config={config} />
       {formError && <ErrorBox message={formError} />}
     </form>
   );
@@ -382,6 +549,21 @@ export default function EventDetailClient({
     if (confirmed) run(endMarketAction, "Market closed.");
   }
 
+  async function handleCrashDrink(drink: EventDrink, instrument: LiveInstrument) {
+    const confirmed = await confirm({
+      title: `Crash ${drink.name}?`,
+      description:
+        "This drink's price tumbles toward its crash price for the next few ticks. Everything else keeps trading normally.",
+      confirmLabel: "Crash it",
+    });
+    if (confirmed) {
+      run(
+        () => crashInstrumentAction(instrument.id),
+        `${drink.name} is crashing - watch the board.`,
+      );
+    }
+  }
+
   async function handleCrash() {
     const confirmed = await confirm({
       title: "Crash the market?",
@@ -409,10 +591,14 @@ export default function EventDetailClient({
     });
   }
 
-  const submitNightDrink = drinkSheet.submit(async (formData) => {
-    const result = await saveNightOnlyDrinkAction(formData);
-    if (!result.error) router.refresh();
-    return result;
+  const submitDrink = drinkSheet.submit(async (formData) => {
+    const editingMenuDrink =
+      drinkSheet.mode === "edit" && drinkSheet.selected?.nightOnly === false;
+    const result = editingMenuDrink
+      ? await saveEventDrinkPricingAction(formData)
+      : await saveNightOnlyDrinkAction(formData);
+    if ("error" in result && result.error) return { error: result.error };
+    router.refresh();
   });
 
   const submitAddDrinks = addSheet.submit(async (formData) => {
@@ -436,8 +622,13 @@ export default function EventDetailClient({
     drinkMode === "add"
       ? "New tonight-only drink"
       : drinkMode === "edit"
-        ? "Edit drink"
+        ? selectedDrink?.nightOnly
+          ? "Edit drink"
+          : "Edit pricing"
         : "Drink";
+  const selectedSettings = selectedDrink
+    ? drinkSettings(selectedDrink, event.config)
+    : null;
 
   return (
     <div className="w-full space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
@@ -583,19 +774,27 @@ export default function EventDetailClient({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-200 text-left">
+            <table className="w-full min-w-300 text-left">
               <thead>
                 <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
                   <th className="py-2 pr-3">Drink</th>
                   <th className="py-2 pr-3">Category</th>
                   <th className="py-2 pr-3">Serve</th>
-                  <th className="py-2 pr-3 text-right">Base price</th>
+                  <th className="py-2 pr-3 text-right">Base</th>
                   <th className="py-2 pr-3 text-right">Opening</th>
                   <th className="py-2 pr-3 text-right">Now</th>
                   <th className="py-2 pr-3 text-right">Demand</th>
                   <th className="py-2 pr-3">Stock</th>
                   <th className="py-2 pr-3">Override</th>
-                  <th className="py-2">Square</th>
+                  <th className="py-2 pr-3 text-right">Min</th>
+                  <th className="py-2 pr-3 text-right">Max</th>
+                  <th className="py-2 pr-3 text-right">Crash</th>
+                  <th className="py-2 pr-3 text-right">Low stock at</th>
+                  <th className="py-2 pr-3 text-right">Alert</th>
+                  <th className="py-2 pr-3">Square</th>
+                  <th className="py-2 text-right">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -641,8 +840,18 @@ export default function EventDetailClient({
                           ? formatGbp(drink.basePrice)
                           : "-"}
                       </td>
-                      <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
-                        {instrument ? formatGbp(instrument.openingPrice) : "-"}
+                      <td className="py-2 pr-3 text-right text-[13px] tabular-nums">
+                        {instrument ? (
+                          <span className="text-admin-muted">
+                            {formatGbp(instrument.openingPrice)}
+                          </span>
+                        ) : (
+                          <OverrideCell
+                            drink={drink}
+                            config={event.config}
+                            field={OVERRIDE_FIELDS[0]}
+                          />
+                        )}
                       </td>
                       <td
                         className={cn(
@@ -693,7 +902,19 @@ export default function EventDetailClient({
                           "-"
                         )}
                       </td>
-                      <td className="py-2 text-[11px] font-semibold">
+                      {OVERRIDE_FIELDS.slice(1).map((field) => (
+                        <td
+                          key={field.key}
+                          className="py-2 pr-3 text-right text-[13px]"
+                        >
+                          <OverrideCell
+                            drink={drink}
+                            config={event.config}
+                            field={field}
+                          />
+                        </td>
+                      ))}
+                      <td className="py-2 pr-3 text-[11px] font-semibold">
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5",
@@ -704,6 +925,28 @@ export default function EventDetailClient({
                         >
                           {drink.linked ? "Linked" : "Not linked"}
                         </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        {instrument &&
+                          (instrument.crashing ? (
+                            <span className="rounded-full bg-admin-error-bg px-2 py-0.5 text-[11px] font-semibold text-admin-error">
+                              Crashing
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              aria-label={`Crash ${drink.name}`}
+                              title="Crash this drink"
+                              disabled={isPending || instrument.stockState === "out"}
+                              onClick={(clickEvent) => {
+                                clickEvent.stopPropagation();
+                                handleCrashDrink(drink, instrument);
+                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-admin-line text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          ))}
                       </td>
                     </tr>
                   );
@@ -720,9 +963,9 @@ export default function EventDetailClient({
         mode={drinkMode}
         title={drinkTitle}
         recordId={selectedDrink?.id}
-        formId="night-drink-form"
+        formId="event-drink-form"
         isPending={drinkSheet.isPending}
-        onEdit={selectedDrink?.nightOnly ? drinkSheet.startEdit : undefined}
+        onEdit={selectedDrink ? drinkSheet.startEdit : undefined}
         onDelete={selectedDrink ? handleRemove : undefined}
         onCancel={
           drinkMode === "add" || !selectedDrink
@@ -772,16 +1015,46 @@ export default function EventDetailClient({
                 value={selectedDrink.linked ? "Linked" : "Not linked"}
               />
             </DetailCard>
+            <h4 className="px-1 text-[12px] font-semibold text-admin-ink">
+              Pricing on this event
+            </h4>
+            <DetailCard>
+              {OVERRIDE_FIELDS.map((field) => {
+                const overridden = selectedDrink.overrides[field.key] != null;
+                return (
+                  <DetailCell
+                    key={field.key}
+                    dense
+                    label={field.label}
+                    value={
+                      selectedSettings ? (
+                        <span className="tabular-nums">
+                          {field.format(selectedSettings.effective[field.key])}
+                          {!overridden && (
+                            <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
+                              (event setting)
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        "-"
+                      )
+                    }
+                  />
+                );
+              })}
+            </DetailCard>
             {!selectedDrink.nightOnly && (
               <p className="px-1 text-[11px] text-admin-muted">
-                This is a menu drink. Change its name, serves or price on{" "}
+                This is a menu drink. Change its name, serves or base price on{" "}
                 <Link
                   href="/settings/menu"
                   className="font-semibold text-admin-primary underline"
                 >
                   Menu settings
                 </Link>
-                . Delete below takes it off this event only.
+                . Edit sets the pricing for this event only; Delete takes it
+                off this event.
               </p>
             )}
             {drinkSheet.formError && (
@@ -790,12 +1063,14 @@ export default function EventDetailClient({
           </div>
         )}
         {drinkShowForm && (
-          <NightDrinkForm
+          <DrinkForm
             key={`${drinkMode}-${selectedDrink?.id ?? "new"}`}
             eventId={event.id}
             drink={drinkMode === "edit" ? selectedDrink : null}
+            nightOnly={drinkMode === "add" || Boolean(selectedDrink?.nightOnly)}
+            config={event.config}
             formError={drinkSheet.formError}
-            onSubmit={submitNightDrink}
+            onSubmit={submitDrink}
           />
         )}
       </RecordSheet>

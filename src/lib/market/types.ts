@@ -59,6 +59,16 @@ export type InstrumentState = {
   stockState: StockState;
   stockOverride: StockState | null;
   squareVariationId: string | null;
+  /* Absolute per-drink limits set on the event; null falls back to the
+     session config multipliers against basePrice. */
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  crashPrice?: number | null;
+  lowStockAt?: number | null;
+  alertThreshold?: number | null;
+  /* True while this drink alone is crashing; the board-wide crash lives on
+     TickInputs. */
+  crashActive?: boolean;
 };
 
 export type EngineEvent = {

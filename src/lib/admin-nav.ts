@@ -208,8 +208,12 @@ export const WIDE_PATHS: string[] = [
   SCHEDULE_HREF,
 ];
 
+/* Dynamic routes whose every child fills the window. */
+export const WIDE_PREFIXES: string[] = ["/settings/market/"];
+
 export function isWidePath(pathname: string | null | undefined): boolean {
-  return WIDE_PATHS.includes(pathname ?? "");
+  const path = pathname ?? "";
+  return WIDE_PATHS.includes(path) || WIDE_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
 export const SETTINGS_NAV_ITEMS: AdminNavItem[] = SETTINGS_NAV_GROUPS.flatMap((group) => group.items);

@@ -15,6 +15,28 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+export type InstrumentLimits = {
+  floor: number;
+  ceil: number;
+  crashTarget: number;
+  lowStockAt: number;
+  moveNotifyPct: number;
+};
+
+export function instrumentLimits(
+  instrument: InstrumentState,
+  config: MarketConfig
+): InstrumentLimits {
+  const { basePrice } = instrument;
+  return {
+    floor: instrument.minPrice ?? basePrice * config.floorPct,
+    ceil: instrument.maxPrice ?? basePrice * config.ceilPct,
+    crashTarget: instrument.crashPrice ?? basePrice * config.crashFactor,
+    lowStockAt: instrument.lowStockAt ?? config.lowStockThreshold,
+    moveNotifyPct: instrument.alertThreshold ?? config.moveNotifyPct,
+  };
+}
+
 function nextPrice(
   instrument: InstrumentState,
   newUnits: number,
@@ -23,6 +45,7 @@ function nextPrice(
   rng: () => number
 ): number {
   const { basePrice, currentPrice } = instrument;
+  const limits = instrumentLimits(instrument, config);
 
   const demandBoost = config.demandK * Math.log1p(newUnits);
   const reversion = config.reversionK * ((currentPrice - basePrice) / basePrice);
@@ -33,12 +56,11 @@ function nextPrice(
   /* A crash drags every price halfway to the crash floor each tick, so the
      board visibly tumbles for crashDurationTicks then recovers naturally. */
   if (crashActive) {
-    const crashTarget = basePrice * config.crashFactor;
-    drift += 0.5 * ((crashTarget - currentPrice) / currentPrice);
+    drift += 0.5 * ((limits.crashTarget - currentPrice) / currentPrice);
   }
 
   const raw = currentPrice * (1 + drift);
-  const clamped = clamp(raw, basePrice * config.floorPct, basePrice * config.ceilPct);
+  const clamped = clamp(raw, limits.floor, limits.ceil);
   return roundToStep(clamped, config.roundStep);
 }
 
@@ -53,7 +75,7 @@ function nextStockState(
     : undefined;
   if (qty === undefined) return instrument.stockState;
   if (qty <= 0) return "out";
-  if (qty <= config.lowStockThreshold) return "low";
+  if (qty <= instrumentLimits(instrument, config).lowStockAt) return "low";
   return "ok";
 }
 
@@ -79,22 +101,26 @@ export function tickInstrument(
   const demandUnits =
     Math.round((instrument.demandUnits * config.decayK + newUnits) * 1000) / 1000;
 
-  /* Sold out freezes the quote - nobody trades what nobody can buy. */
-  const price =
-    stockState === "out"
-      ? instrument.currentPrice
-      : nextPrice(instrument, newUnits, config, inputs.crashActive, inputs.rng);
+  /* Sold out freezes the quote - nobody trades what nobody can buy. The
+     override is checked directly too, so a manual "sold out" freezes the very
+     tick it is set rather than one tick later. */
+  const frozen = stockState === "out" || instrument.stockOverride === "out";
+  const crashing = inputs.crashActive || instrument.crashActive === true;
+  const price = frozen
+    ? instrument.currentPrice
+    : nextPrice(instrument, newUnits, config, crashing, inputs.rng);
 
+  const { moveNotifyPct } = instrumentLimits(instrument, config);
   let lastNotifiedPrice = instrument.lastNotifiedPrice;
   const move = (price - lastNotifiedPrice) / lastNotifiedPrice;
-  if (move <= -config.moveNotifyPct && price < instrument.currentPrice) {
+  if (move <= -moveNotifyPct && price < instrument.currentPrice) {
     events.push({
       instrumentId: instrument.id,
       kind: "price_drop",
       payload: { from: lastNotifiedPrice, to: price, pct: Math.round(move * 1000) / 10 },
     });
     lastNotifiedPrice = price;
-  } else if (move >= config.moveNotifyPct && price > instrument.currentPrice) {
+  } else if (move >= moveNotifyPct && price > instrument.currentPrice) {
     events.push({
       instrumentId: instrument.id,
       kind: "surge",
