@@ -5,6 +5,7 @@ import { tickRng } from "./rng";
 import {
   resolveMarketConfig,
   type InstrumentState,
+  type MarketConfig,
   type MarketEventKind,
   type StockState,
 } from "./types";
@@ -47,6 +48,11 @@ export type MarketInstrumentPayload = {
   direction: "up" | "down" | "flat";
   stock: StockState;
   spark: number[];
+  category: string | null;
+  categoryOrder: number;
+  demandUnits: number;
+  floor: number;
+  ceil: number;
 };
 
 export type MarketEventPayload = {
@@ -66,9 +72,36 @@ export type MarketStatePayload = {
   tickNo?: number;
   tickIntervalSec?: number;
   crashActive?: boolean;
+  crashRemainingSec?: number;
   instruments?: MarketInstrumentPayload[];
   events?: MarketEventPayload[];
 };
+
+type MenuCategoryJoin = { name: string; display_order: number } | null;
+type MenuItemJoin = { menu_categories: MenuCategoryJoin | MenuCategoryJoin[] } | null;
+type MarketInstrumentWithCategoryRow = MarketInstrumentRow & {
+  menu_items: MenuItemJoin | MenuItemJoin[];
+};
+
+function instrumentCategory(row: MarketInstrumentWithCategoryRow): {
+  name: string | null;
+  order: number;
+} {
+  const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+  const raw = item?.menu_categories;
+  const category = Array.isArray(raw) ? raw[0] : raw;
+  if (!category) return { name: null, order: Number.MAX_SAFE_INTEGER };
+  return { name: category.name, order: Number(category.display_order) };
+}
+
+function crashRemainingSeconds(session: MarketSessionRow, config: MarketConfig, now: Date): number {
+  const ticksLeft = (session.crash_until_tick ?? session.tick_no) - session.tick_no;
+  const lastTick = session.last_tick_at ? new Date(session.last_tick_at).getTime() : now.getTime();
+  const sinceLastTick = Math.max(0, (now.getTime() - lastTick) / 1000);
+  return Math.round(
+    ticksLeft * config.tickIntervalSec + Math.max(0, config.tickIntervalSec - sinceLastTick)
+  );
+}
 
 const SPARK_TICKS = 30;
 const WATERMARK_OVERLAP_MS = 60 * 1000;
@@ -309,14 +342,16 @@ export async function readMarketState(
     supabase.from("market_sessions").select("*").eq("id", session.id).maybeSingle(),
     supabase
       .from("market_instruments")
-      .select("*")
+      .select("*, menu_items(menu_categories(name, display_order))")
       .eq("session_id", session.id)
       .order("display_name", { ascending: true }),
   ]);
   if (refreshed) session = refreshed as MarketSessionRow;
 
-  const instruments = (instrumentRows ?? []) as MarketInstrumentRow[];
+  const instruments = (instrumentRows ?? []) as MarketInstrumentWithCategoryRow[];
   const config = resolveMarketConfig(session.config);
+  const crashActive =
+    session.crash_until_tick != null && session.tick_no <= session.crash_until_tick;
 
   const { data: tickRows } = await supabase
     .from("market_ticks")
@@ -346,23 +381,30 @@ export async function readMarketState(
     sessionId: session.id,
     tickNo: session.tick_no,
     tickIntervalSec: config.tickIntervalSec,
-    crashActive:
-      session.crash_until_tick != null && session.tick_no <= session.crash_until_tick,
+    crashActive,
+    ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
     instruments: instruments.map((row) => {
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
+      const basePrice = Number(row.base_price);
       const spark = sparkByInstrument.get(row.id) ?? [];
       const previous = spark.length > 1 ? spark[spark.length - 2] : opening;
+      const category = instrumentCategory(row);
       return {
         id: row.id,
         name: row.display_name,
         serve: row.serve,
         price,
-        basePrice: Number(row.base_price),
+        basePrice,
         changePct: opening > 0 ? Math.round(((price - opening) / opening) * 1000) / 10 : 0,
         direction: price > previous ? "up" : price < previous ? "down" : "flat",
         stock: row.stock_state,
         spark,
+        category: category.name,
+        categoryOrder: category.order,
+        demandUnits: Number(row.demand_units),
+        floor: Math.round(basePrice * config.floorPct * 100) / 100,
+        ceil: Math.round(basePrice * config.ceilPct * 100) / 100,
       };
     }),
     events: (eventRows ?? [])

@@ -177,6 +177,8 @@
   --font-display: var(--font-display); /* Anton        */
   --font-ui: var(--font-ui); /* Archivo      */
   --font-black: var(--font-black); /* Archivo Black */
+  --font-board-display: var(--font-board-display);
+  --font-board-mono: var(--font-board-mono);
 }
 
 html,
@@ -270,6 +272,35 @@ body {
 }
 .ad-blink {
   animation: ad-blink 1.4s infinite;
+}
+
+@keyframes ad-shake {
+  25% {
+    transform: translateX(-0.3vw);
+  }
+  75% {
+    transform: translateX(0.3vw);
+  }
+}
+.ad-shake {
+  animation: ad-shake 0.3s infinite;
+}
+
+@keyframes ad-flap {
+  from {
+    transform: rotateX(-90deg);
+    opacity: 0.4;
+  }
+  to {
+    transform: rotateX(0deg);
+    opacity: 1;
+  }
+}
+.ad-flap {
+  display: inline-block;
+  transform-origin: top;
+  backface-visibility: hidden;
+  animation: ad-flap 80ms ease-out;
 }
 
 /* "On tonight" live equaliser - three bars bouncing off --eq-i */
@@ -389,7 +420,9 @@ body {
     animation: none;
   }
   .ad-ping,
-  .ad-blink {
+  .ad-blink,
+  .ad-shake,
+  .ad-flap {
     animation: none;
   }
   .ad-eq-bar {
