@@ -11,6 +11,7 @@ import {
   Loader2,
   MonitorPlay,
   Play,
+  RotateCcw,
   SearchX,
   TrendingDown,
   Upload,
@@ -47,6 +48,7 @@ import {
   loadCatalogVariationsAction,
   openStockMarketEventAction,
   pushMenuToSquareAction,
+  restoreTillPricesAction,
   saveMappingAction,
   saveStockMarketEventAction,
   setStockOverrideAction,
@@ -60,6 +62,15 @@ export type SessionSummary = {
   crashUntilTick: number | null;
   config: MarketConfig;
   stockMarketEventId: number | null;
+};
+
+/* A session (live or ended) whose linked drinks still carry market prices
+   in Square. Null means the till already shows the normal menu. */
+export type TillRestoreSummary = {
+  sessionId: number;
+  status: "live" | "ended";
+  endedAt: string | null;
+  count: number;
 };
 
 export type InstrumentSummary = {
@@ -354,6 +365,7 @@ export default function MarketClient({
   events,
   employees,
   mappingRows,
+  tillRestore,
   initialEditId,
 }: {
   session: SessionSummary | null;
@@ -363,6 +375,7 @@ export default function MarketClient({
   events: StockMarketEventSummary[];
   employees: EmployeeOption[];
   mappingRows: MappingRow[];
+  tillRestore: TillRestoreSummary | null;
   initialEditId: number | null;
 }) {
   const router = useRouter();
@@ -450,10 +463,26 @@ export default function MarketClient({
   async function handleEnd() {
     const confirmed = await confirm({
       title: "Close the market?",
-      description: "Trading stops and the board shows closed. Menu prices are untouched.",
+      description:
+        "Trading stops, the board shows closed, and every linked drink goes back to its normal price on the till.",
       confirmLabel: "Close market",
     });
-    if (confirmed) run(endMarketAction, "Market closed.");
+    if (confirmed) run(endMarketAction, "Market closed - till prices restored.");
+  }
+
+  async function handleRestoreTill() {
+    if (!tillRestore) return;
+    const confirmed = await confirm({
+      title: "Restore till prices?",
+      description:
+        tillRestore.status === "live"
+          ? `${tillRestore.count} linked drinks go back to their normal price on the till now. The market stays open and the next tick will move them again.`
+          : `${tillRestore.count} linked drinks still show market-night prices on the till. This puts the normal menu prices back.`,
+      confirmLabel: "Restore prices",
+    });
+    if (confirmed) {
+      run(() => restoreTillPricesAction(tillRestore.sessionId), "Till prices restored.");
+    }
   }
 
   async function handleCrash() {
@@ -907,6 +936,37 @@ export default function MarketClient({
             </button>
           </div>
         </div>
+
+        {/* Only rendered while Square still holds market prices, so after a
+            clean close it disappears on its own. Amber because it is a
+            pending decision, per the Requests/Bookings colour semantics. */}
+        {tillRestore && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-admin-warning/40 bg-admin-warning-bg px-3 py-2.5">
+            <p className="text-[13px] text-admin-ink">
+              <span className="font-semibold">
+                {tillRestore.count} drink{tillRestore.count === 1 ? "" : "s"} still at market price on the till
+              </span>
+              <span className="text-admin-muted">
+                {tillRestore.status === "live"
+                  ? " · market is live"
+                  : ` · market ended ${formatRunDate(tillRestore.endedAt)}`}
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={handleRestoreTill}
+              disabled={isPending}
+              className={OUTLINE_BUTTON}
+            >
+              {isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RotateCcw className="h-4 w-4" aria-hidden="true" />
+              )}
+              Restore till prices
+            </button>
+          </div>
+        )}
 
         {mappingOpen && (
           <div className="mt-4">

@@ -12,6 +12,7 @@ import MarketClient, {
   type InstrumentSummary,
   type MappingRow,
   type SessionSummary,
+  type TillRestoreSummary,
 } from "./market-client";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +104,30 @@ export default async function MarketSettingsPage({
     }));
   }
 
+  /* Any session (live or ended) whose drinks still hold a market price in
+     Square. Drives the "Restore till prices" button, which must remain
+     available after the market has ended in case the close-time restore
+     failed or the market was ended before price sync existed. */
+  const { data: staleRows } = await supabase
+    .from("market_instruments")
+    .select("session_id, market_sessions!inner(status, ended_at, started_at)")
+    .not("square_synced_price", "is", null)
+    .not("square_original_price", "is", null)
+    .order("started_at", { referencedTable: "market_sessions", ascending: false });
+  let tillRestore: TillRestoreSummary | null = null;
+  if (staleRows && staleRows.length > 0) {
+    const first = staleRows[0];
+    const joined = Array.isArray(first.market_sessions)
+      ? first.market_sessions[0]
+      : first.market_sessions;
+    tillRestore = {
+      sessionId: first.session_id,
+      status: joined?.status === "live" ? "live" : "ended",
+      endedAt: joined?.ended_at ?? null,
+      count: staleRows.filter((row) => row.session_id === first.session_id).length,
+    };
+  }
+
   const activeCategories = ((categoryRows ?? []) as CategoryRow[]).map((cat) => ({
     ...cat,
     menu_items: cat.menu_items.filter((item) => item.is_active),
@@ -164,6 +189,7 @@ export default async function MarketSettingsPage({
       events={events}
       employees={(employees ?? []) as EmployeeOption[]}
       mappingRows={mappingRows}
+      tillRestore={tillRestore}
       initialEditId={editId}
     />
   );

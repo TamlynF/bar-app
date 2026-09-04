@@ -3,6 +3,7 @@ import { squareClient } from "@/lib/square";
 import { instrumentLimits, runTick } from "./engine";
 import { optionalNumber } from "./drink-overrides";
 import { tickRng } from "./rng";
+import { syncMarketPricesToSquare } from "./square-price-sync";
 import {
   resolveMarketConfig,
   type InstrumentState,
@@ -43,6 +44,9 @@ export type MarketInstrumentRow = {
   low_stock_at: number | string | null;
   alert_threshold: number | string | null;
   crash_until_tick: number | null;
+  square_original_price: number | string | null;
+  square_synced_price: number | string | null;
+  square_sync_error: string | null;
 };
 
 export function instrumentCrashActive(row: MarketInstrumentRow, tickNo: number): boolean {
@@ -64,6 +68,11 @@ export type MarketInstrumentPayload = {
   demandUnits: number;
   floor: number;
   ceil: number;
+  /* Price Square last acknowledged (what the till charges). Null when the
+     drink is unlinked or the first write has not landed yet. Board/phone show
+     this as the headline and `price` as the pending move when they differ. */
+  tillPrice: number | null;
+  tillSyncError: string | null;
 };
 
 export type MarketEventPayload = {
@@ -338,6 +347,20 @@ export async function maybeRunMarketTick(
         .update({ orders_watermark: newWatermark.toISOString() })
         .eq("id", session.id);
     }
+
+    /* Write leg: push every price that moved this tick into Square in one
+       batched catalog write. Runs last so the board state above is already
+       committed, and is try/caught on its own so a Square outage can never
+       undo a tick that has already happened. */
+    try {
+      const sync = await syncMarketPricesToSquare(supabase, session.id);
+      if (sync.retryLater) console.warn("[market] Square busy (429) - prices retry next tick");
+      if (sync.errors.length > 0) {
+        console.error("[market] Square price sync errors:", sync.errors);
+      }
+    } catch (err) {
+      console.error("[market] Square price sync failed:", err);
+    }
   } catch (err) {
     console.error("[market] tick failed:", err);
   }
@@ -426,6 +449,8 @@ export async function readMarketState(
         demandUnits: Number(row.demand_units),
         floor: Math.round(limits.floor * 100) / 100,
         ceil: Math.round(limits.ceil * 100) / 100,
+        tillPrice: row.square_synced_price == null ? null : Number(row.square_synced_price),
+        tillSyncError: row.square_sync_error ?? null,
       };
     }),
     events: (eventRows ?? [])

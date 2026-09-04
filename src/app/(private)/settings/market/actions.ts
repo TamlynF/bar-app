@@ -17,6 +17,10 @@ import {
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
 import {
+  captureSquareOriginalPrices,
+  restoreSquarePrices,
+} from "@/lib/market/square-price-sync";
+import {
   buildCatalogUpsertPlan,
   variationIdsFromMappings,
   type ExistingCatalog,
@@ -170,6 +174,15 @@ async function openSession(
     }))
   );
   if (tickError) console.error("[market] opening tick insert failed:", tickError);
+
+  /* Snapshot the real Square prices before the first tick can overwrite them,
+     so ending the market puts the menu back exactly as it was. Non-fatal: an
+     unreachable Square just means nothing to restore later. */
+  try {
+    await captureSquareOriginalPrices(supabase, session.id);
+  } catch (err) {
+    console.error("[market] could not snapshot Square prices:", err);
+  }
 
   return { success: true, count: instrumentRows.length };
 }
@@ -666,9 +679,82 @@ export async function updateConfigAction(formData: FormData) {
 
 export async function endMarketAction() {
   const supabase = await createClient();
+  const { data: session } = await supabase
+    .from("market_sessions")
+    .select("id")
+    .eq("status", "live")
+    .maybeSingle();
+  if (!session) return { error: "No live market to end." };
+
+  /* Put the till back first. The market stays live if this fails, so the
+     control panel keeps showing the restore button rather than silently
+     leaving Saturday-night prices on the menu. */
+  let restored = 0;
+  try {
+    const restore = await restoreSquarePrices(supabase, session.id);
+    if (restore.errors.length > 0) {
+      return { error: `Till prices were NOT restored: ${restore.errors[0].message}` };
+    }
+    restored = restore.written;
+  } catch (err) {
+    console.error("[market] restore failed:", err);
+    return { error: "Could not reach Square to restore the till prices. Try again." };
+  }
+
   const { error } = await supabase
     .from("market_sessions")
     .update({ status: "ended", ended_at: new Date().toISOString() })
+    .eq("id", session.id);
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true, restored };
+}
+
+/* "Restore till prices" button. Works on the live market (engine misbehaved)
+   AND on an ended one (Square was unreachable when the market closed, or the
+   market was ended before this sync existed). With no id it targets whichever
+   session most recently left market prices on the till. */
+export async function restoreTillPricesAction(sessionId?: number) {
+  const supabase = await createClient();
+
+  let targetId = sessionId ?? null;
+  if (targetId == null) {
+    const { data: live } = await supabase
+      .from("market_sessions")
+      .select("id")
+      .eq("status", "live")
+      .maybeSingle();
+    targetId = live?.id ?? null;
+  }
+  if (targetId == null) {
+    const { data: stale } = await supabase
+      .from("market_instruments")
+      .select("session_id, market_sessions!inner(started_at)")
+      .not("square_synced_price", "is", null)
+      .not("square_original_price", "is", null)
+      .order("started_at", { referencedTable: "market_sessions", ascending: false })
+      .limit(1)
+      .maybeSingle();
+    targetId = stale?.session_id ?? null;
+  }
+  if (targetId == null) return { error: "Nothing to restore - the till already has its normal prices." };
+
+  try {
+    const restore = await restoreSquarePrices(supabase, targetId);
+    if (restore.errors.length > 0) return { error: restore.errors[0].message };
+    revalidateMarket();
+    return { success: true, restored: restore.written };
+  } catch (err) {
+    console.error("[market] restore failed:", err);
+    return { error: "Could not reach Square. Check the Square configuration." };
+  }
+}
+
+export async function setSquareSyncEnabledAction(enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("market_sessions")
+    .update({ square_sync_enabled: enabled })
     .eq("status", "live");
   if (error) return { error: error.message };
   revalidateMarket();
