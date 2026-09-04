@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Don Fenticas — Drinks Exchange (Mockup)</title>
+<title>Don Fenticas - Drinks Exchange (Mockup)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
@@ -188,8 +188,8 @@
 
   <div class="index-strip">
     <div class="index-chip"><span class="k">DFX Index</span><span class="v gold" id="dfx">100.0</span></div>
-    <div class="index-chip"><span class="k">Top Riser</span><span class="v up" id="riser">—</span></div>
-    <div class="index-chip"><span class="k">Top Faller</span><span class="v down" id="faller">—</span></div>
+    <div class="index-chip"><span class="k">Top Riser</span><span class="v up" id="riser">-</span></div>
+    <div class="index-chip"><span class="k">Top Faller</span><span class="v down" id="faller">-</span></div>
     <div class="index-chip"><span class="k">Trades Tonight</span><span class="v" id="trades">0</span></div>
     <div class="index-chip"><span class="k">Next Crash</span><span class="v down" id="crash-timer">??:??</span></div>
   </div>
@@ -215,12 +215,12 @@
     <div class="push-toast" id="push-toast">
       <div class="push-app"><span class="dot"></span> Don Fenticas · now</div>
       <div class="push-title" id="push-title">📉 Guinness (pint) down to £4.20</div>
-      <div class="push-body" id="push-body">Was £4.60 — get to the bar.</div>
+      <div class="push-body" id="push-body">Was £4.60 - get to the bar.</div>
     </div>
     <div class="phone-scroll">
       <div class="ph-eyebrow">Live · Friday Night Session</div>
       <div class="ph-title">Drinks Exchange</div>
-      <div class="ph-sub">Prices move with every drink sold at the bar. Star your favourites and we'll ping you when they drop — or when they're about to run out.</div>
+      <div class="ph-sub">Prices move with every drink sold at the bar. Star your favourites and we'll ping you when they drop - or when they're about to run out.</div>
       <button class="notify-cta" id="notify-cta">🔔 Notify me on price drops</button>
       <div class="ph-hint" id="ios-hint">On iPhone: add to Home Screen first to enable alerts.</div>
       <div class="ph-list" id="ph-list"></div>
@@ -230,7 +230,7 @@
 
 <div id="crash-overlay">
   <div class="big">💥 Market Crash</div>
-  <div class="sub" id="crash-sub">All prices down 25% — go go go</div>
+  <div class="sub" id="crash-sub">All prices down 25% - go go go</div>
 </div>
 
 <script>
@@ -407,7 +407,7 @@
     document.getElementById('tape').innerHTML =
       tapeMsgs.map(function (m) { return m; }).join('<span class="sep">◆</span>');
   }
-  tapePush('DFX OPENS AT 100.0 — GOOD LUCK OUT THERE');
+  tapePush('DFX OPENS AT 100.0 - GOOD LUCK OUT THERE');
 
   /* ── mock push notification (phone view) ── */
   var toastTimer = null;
@@ -423,11 +423,11 @@
 
   function checkAlerts(it, prev) {
     if (it.fav && it.price <= it.lastAlertPrice * 0.95) {
-      mockPush('📉 ' + it.name + ' (' + it.serve + ') down to ' + gbp(it.price), 'Was ' + gbp(it.lastAlertPrice) + ' — get to the bar.');
+      mockPush('📉 ' + it.name + ' (' + it.serve + ') down to ' + gbp(it.price), 'Was ' + gbp(it.lastAlertPrice) + ' - get to the bar.');
       it.lastAlertPrice = it.price;
     }
     if (prev !== 'low' && prev !== 'out' && it.status === 'low') {
-      tapePush('<b class="gold-t">⚠ ' + it.name.toUpperCase() + ' RUNNING LOW — ' + it.stock + ' LEFT</b>');
+      tapePush('<b class="gold-t">⚠ ' + it.name.toUpperCase() + ' RUNNING LOW - ' + it.stock + ' LEFT</b>');
       if (it.fav) mockPush('⚠️ Only ' + it.stock + ' ' + it.name + ' left', 'Running low at the bar right now.');
     }
     if (prev !== 'out' && it.status === 'out') {
@@ -456,7 +456,7 @@
     updateStock(it);
     if (it.price > before) {
       flash(it, 'up');
-      tapePush('<b class="up-t">▲ ' + qty + '× ' + it.name.toUpperCase() + ' SOLD — NOW ' + gbp(it.price) + '</b>');
+      tapePush('<b class="up-t">▲ ' + qty + '× ' + it.name.toUpperCase() + ' SOLD - NOW ' + gbp(it.price) + '</b>');
     }
     if (qty >= 3 && prev === it.status) {
       tapePush('<b class="gold-t">🔥 ' + it.name.toUpperCase() + ' IS ON A RUN</b>');
@@ -499,10 +499,10 @@
       it.hist.push(it.price); it.hist.shift();
       flash(it, 'down');
     });
-    tapePush('<b class="down-t">💥 MARKET CRASH — EVERYTHING DOWN ' + CRASH_PCT + '%</b>');
-    mockPush('💥 MARKET CRASH', 'Everything just dropped ' + CRASH_PCT + '% — run, don’t walk.');
+    tapePush('<b class="down-t">💥 MARKET CRASH - EVERYTHING DOWN ' + CRASH_PCT + '%</b>');
+    mockPush('💥 MARKET CRASH', 'Everything just dropped ' + CRASH_PCT + '% - run, don’t walk.');
     var ov = document.getElementById('crash-overlay');
-    document.getElementById('crash-sub').textContent = 'All prices down ' + CRASH_PCT + '% — go go go';
+    document.getElementById('crash-sub').textContent = 'All prices down ' + CRASH_PCT + '% - go go go';
     ov.classList.add('show');
     setTimeout(function () { ov.classList.remove('show'); }, 2600);
     items.forEach(renderItem);
@@ -548,7 +548,7 @@
   document.getElementById('notify-cta').addEventListener('click', function () {
     optedIn = !optedIn;
     this.classList.toggle('on', optedIn);
-    this.textContent = optedIn ? '🔔 Alerts on — you’ll hear it here first' : '🔔 Notify me on price drops';
+    this.textContent = optedIn ? '🔔 Alerts on - you’ll hear it here first' : '🔔 Notify me on price drops';
     if (optedIn) mockPush('🔔 The Drinks Market is OPEN', 'You’re on the list. Star drinks to track them.');
   });
 

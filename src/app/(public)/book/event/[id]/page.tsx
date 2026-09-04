@@ -141,7 +141,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           ) : (
             <div className="relative px-2 py-2 w-full">
               {/*
-                No poster uploaded, so the act's name IS the backdrop —
+                No poster uploaded, so the act's name IS the backdrop -
                 extruded and slowly turning, like a stage screen. The
                 component brings its own stage-light glow, so the old
                 blur blob and the "Don Fenticas presents" eyebrow go:

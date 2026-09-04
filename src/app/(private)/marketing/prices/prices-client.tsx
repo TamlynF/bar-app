@@ -64,7 +64,7 @@ function RoundDetail({
         </span>
       </p>
       <p className="mb-1.5 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
-        The breakdown — venue by venue
+        The breakdown - venue by venue
       </p>
       {breakdown.length === 0 ? (
         <p className="py-1 text-[12px] text-[#5E6654]/70">No venue prices matched this round yet.</p>
@@ -197,7 +197,7 @@ export default function PricesClient({
 
   const scoreLine =
     scored.length === 0
-      ? "No local prices yet — give the button below a smash and we'll go looking."
+      ? "No local prices yet - give the button below a smash and we'll go looking."
       : yourScore === scored.length
         ? `You're the cheaper round on all ${scored.length}. Clean sweep. 🎉`
         : yourScore === 0
@@ -439,7 +439,7 @@ export default function PricesClient({
                   <div className="max-h-72 overflow-y-auto p-1">
                     {menuByCategory.length === 0 ? (
                       <p className="px-3 py-4 text-[12px] text-[#5E6654]/70">
-                        No active menu items found — add them under Settings → Menu.
+                        No active menu items found - add them under Settings → Menu.
                       </p>
                     ) : (
                       menuByCategory.map(([category, rows]) => (
@@ -578,7 +578,7 @@ export default function PricesClient({
             {view === "byVenue" ? (
               matrix.venues.length === 0 ? (
                 <p className="px-5 py-6 text-[12px] text-[#5E6654]/70">
-                  No venue could be matched to your rounds yet — try the Average view or rerun the price-off.
+                  No venue could be matched to your rounds yet - try the Average view or rerun the price-off.
                 </p>
               ) : (
                 <div
@@ -610,14 +610,14 @@ export default function PricesClient({
                       </span>
                       <span className="text-right font-bold text-[15px] text-[#22613F] tabular-nums">
                         {row.ownPrice == null ? (
-                          <span className="text-[#5E6654]/45">—</span>
+                          <span className="text-[#5E6654]/45">-</span>
                         ) : (
                           formatGbp(row.ownPrice)
                         )}
                       </span>
                       {row.cells.map((c, i) => (
                         <span key={i} className="text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
-                          {c == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c)}
+                          {c == null ? <span className="text-[#5E6654]/45">-</span> : formatGbp(c)}
                         </span>
                       ))}
                     </div>
@@ -655,10 +655,10 @@ export default function PricesClient({
                           winning ? "text-[#22613F]" : "text-[#20231A]",
                         )}
                       >
-                        {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
+                        {c.ownPrice == null ? <span className="text-[#5E6654]/45">-</span> : formatGbp(c.ownPrice)}
                       </span>
                       <span className="w-24 text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
-                        {hasData ? `vs ${formatGbp(c.competitorMedian)}` : "—"}
+                        {hasData ? `vs ${formatGbp(c.competitorMedian)}` : "-"}
                       </span>
                       <span
                         className={cn(
@@ -722,10 +722,10 @@ export default function PricesClient({
                         winning ? "text-[#22613F]" : "text-[#20231A]",
                       )}
                     >
-                      {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
+                      {c.ownPrice == null ? <span className="text-[#5E6654]/45">-</span> : formatGbp(c.ownPrice)}
                     </span>
                     <span className="text-right font-medium text-[12.5px] text-[#5E6654] tabular-nums">
-                      {hasData ? formatGbp(c.competitorMedian) : <span className="text-[#5E6654]/45">—</span>}
+                      {hasData ? formatGbp(c.competitorMedian) : <span className="text-[#5E6654]/45">-</span>}
                     </span>
                     {hasData ? (
                       <ChevronDown
@@ -816,7 +816,7 @@ export default function PricesClient({
       )}
 
       <p className="text-center text-[11px] text-[#5E6654]/60">
-        Friendly competition only — prices are AI-estimated from the web. Empty cells mean no price found for that
+        Friendly competition only - prices are AI-estimated from the web. Empty cells mean no price found for that
         venue yet.
       </p>
 

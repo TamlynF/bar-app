@@ -204,7 +204,7 @@ export default function TrendsClient({
           {ignoredTrends.length > 0 && (
             <div className="space-y-3 pt-2">
               <p className="font-semibold text-[12px] text-[#5E6654]">
-                Binned ({ignoredTrends.length}) — put any of them back up
+                Binned ({ignoredTrends.length}) - put any of them back up
               </p>
               <div className="grid grid-cols-2 items-start gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 2xl:grid-cols-5">
                 {ignoredTrends.map((t, i) => (

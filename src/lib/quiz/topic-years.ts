@@ -27,7 +27,7 @@ const NAMED_DECADE: Record<string, number> = {
   noughties: 2000,
 }
 
-const RANGE = /\b((?:19|20)\d{2})\s*(?:-|–|—|to|until|through)\s*((?:19|20)\d{2})\b/
+const RANGE = /\b((?:19|20)\d{2})\s*(?:-|–|-|to|until|through)\s*((?:19|20)\d{2})\b/
 const FOUR_DIGIT_DECADE = /\b((?:19|20)\d0)s\b/g
 const TWO_DIGIT_DECADE = /(?:^|[^\d])'?(\d0)'?s\b/g
 const NAMED = /\b(fifties|sixties|seventies|eighties|nineties|noughties)\b/g

@@ -25,7 +25,7 @@ const FIELD_LABEL = "text-[11px] font-semibold text-[#5E6654]";
 const ALL_EVENTS = "all";
 
 function optionLabel(event: EventItem) {
-  return `${event.title || "Untitled event"} — ${format(parseISO(event.date), "eee d MMM")}`;
+  return `${event.title || "Untitled event"} - ${format(parseISO(event.date), "eee d MMM")}`;
 }
 
 function Chip({ label, children }: { label: string; children: React.ReactNode }) {
@@ -117,7 +117,7 @@ export default function EventPickerBanner({
                 onChange={e => handleChange(e.target.value)}
                 className="h-11 w-full appearance-none rounded-xl border-2 border-[#34451F] bg-white pr-11 pl-3.5 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:h-12 sm:w-auto sm:min-w-85 sm:rounded-[13px] sm:pl-4"
               >
-                <option value={ALL_EVENTS}>All events — full history</option>
+                <option value={ALL_EVENTS}>All events - full history</option>
                 {upcoming.length > 0 && (
                   <optgroup label="Upcoming">
                     {upcoming.map(e => (
@@ -167,7 +167,7 @@ export default function EventPickerBanner({
                   </span>
                 </>
               ) : (
-                "Showing every booking across all events — pick one above to focus on it."
+                "Showing every booking across all events - pick one above to focus on it."
               )}
             </p>
             <p className="mt-1 text-[13px] leading-snug font-medium text-[#5E6654] tabular-nums sm:hidden">

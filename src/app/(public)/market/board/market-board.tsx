@@ -296,7 +296,7 @@ function ChangePill({
       </span>
     );
   }
-  return <span className={`${base} bg-white/5 text-[#a9ae8d]`}>— 0.0%</span>;
+  return <span className={`${base} bg-white/5 text-[#a9ae8d]`}>- 0.0%</span>;
 }
 
 function sparkValues(instrument: MarketInstrumentPayload): number[] {
@@ -425,7 +425,7 @@ function FlatRow({
   return (
     <div className={`${FLAT_COLUMNS} border-t border-[#3a4520] py-[0.45vw]`}>
       <NameCell instrument={instrument} chevron={chevron} />
-      <span className="truncate text-[0.95vw] text-[#a9ae8d]">{instrument.category ?? "—"}</span>
+      <span className="truncate text-[0.95vw] text-[#a9ae8d]">{instrument.category ?? "-"}</span>
       <BoardSpark
         values={sparkValues(instrument)}
         floor={instrument.floor}
@@ -547,7 +547,7 @@ function TickerSegments({
     </span>,
     <span key="status">
       {crash
-        ? "MARKET CRASH — every drink at its floor price"
+        ? "MARKET CRASH - every drink at its floor price"
         : "prices move with what you buy · slow sellers get cheaper"}
     </span>,
   ];

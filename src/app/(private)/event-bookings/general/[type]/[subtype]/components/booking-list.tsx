@@ -809,12 +809,12 @@ export default function BookingList({
             </div>
             {showTableConfirmedHint && (
               <Hint tone="green" icon={<CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}>
-                Table picked — status will change to Confirmed.
+                Table picked - status will change to Confirmed.
               </Hint>
             )}
             {showTableCancelledHint && (
               <Hint tone="red" icon={<AlertCircle className="h-3.5 w-3.5 shrink-0" />}>
-                Table removed — status will change to Cancelled.
+                Table removed - status will change to Cancelled.
               </Hint>
             )}
           </div>
@@ -849,7 +849,7 @@ export default function BookingList({
               </div>
               {showStatusTableUnassignedHint && (
                 <Hint tone="amber" icon={<RefreshCw className="h-3.5 w-3.5 shrink-0" />}>
-                  Status changed — the table assignment will be cleared.
+                  Status changed - the table assignment will be cleared.
                 </Hint>
               )}
               <div>
@@ -923,7 +923,7 @@ export default function BookingList({
             {bookings.length === 0 ? (
               <tr>
                 <td colSpan={columnCount} className="px-4 py-8 text-center text-[13px] font-medium text-[#5E6654]">
-                  No bookings match — try another filter or clear the search.
+                  No bookings match - try another filter or clear the search.
                 </td>
               </tr>
             ) : (
@@ -986,7 +986,7 @@ export default function BookingList({
                       {seatingRequired && (
                         <td className={cn(bodyCell(open), secondaryCell)}>
                           {!bookingSeating ? (
-                            <span className="text-[#5E6654]">—</span>
+                            <span className="text-[#5E6654]">-</span>
                           ) : table?.tables_name ? (
                             <span className="text-[#20231A]">{table.tables_name}</span>
                           ) : (
@@ -997,7 +997,7 @@ export default function BookingList({
                       {showPayment && (
                         <td className={cn(bodyCell(open), secondaryCell)}>
                           {!hasPaymentFor(booking) ? (
-                            <span className="text-[#5E6654]">—</span>
+                            <span className="text-[#5E6654]">-</span>
                           ) : normStatus(booking.payment_status) === "refunded" ? (
                             <span className="text-[#5E6654] tabular-nums">
                               Refunded £{paid.toFixed(2)}

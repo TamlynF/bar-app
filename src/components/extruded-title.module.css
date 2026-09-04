@@ -1,5 +1,5 @@
 /*
- * ExtrudedTitle — stage-backdrop 3D type.
+ * ExtrudedTitle - stage-backdrop 3D type.
  *
  * Pure CSS. No client JS, no Three.js, so it's safe in Server Components
  * and costs nothing in the JS bundle (STYLE_GUIDE: Lighthouse mobile 90+).
@@ -8,10 +8,10 @@
  * wrapper, each copy pushed a little further back on Z. Only the front
  * copy is legible (`.face`); the rest are `aria-hidden` slabs in the side
  * colour. When the wrapper sways on Y, the slabs fan out and read as the
- * extruded flank of the letters — same trick Geese's screen was doing,
+ * extruded flank of the letters - same trick Geese's screen was doing,
  * minus the GPU budget of a festival.
  *
- * Custom properties (set inline by the component — custom props only,
+ * Custom properties (set inline by the component - custom props only,
  * never standard properties, per the Edge `no-inline-styles` rule):
  *   --extrude-face    front colour
  *   --extrude-side    flank colour
@@ -48,7 +48,7 @@
   display: grid;
   transform-style: preserve-3d;
   will-change: transform;
-  /* A full 360° spin shows mirrored letters for half the loop — a slow
+  /* A full 360° spin shows mirrored letters for half the loop - a slow
      ±22° sway is what actually reads as "the sign is turning". */
   animation: extrude-sway 14s ease-in-out infinite;
   transform: rotateY(-14deg) rotateX(6deg);
@@ -89,7 +89,7 @@
   pointer-events: none;
 }
 
-/* Compact variant for list/scroller cards — shallower, no glow, no sway. */
+/* Compact variant for list/scroller cards - shallower, no glow, no sway. */
 .compact .text {
   font-size: clamp(1.5rem, calc(70vw / var(--extrude-chars, 8)), 3rem);
 }

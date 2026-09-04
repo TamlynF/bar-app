@@ -2,12 +2,12 @@ import { cn } from "@/lib/utils";
 import styles from "./extruded-title.module.css";
 
 /**
- * ExtrudedTitle — the act's name as a slowly-turning 3D backdrop.
+ * ExtrudedTitle - the act's name as a slowly-turning 3D backdrop.
  *
  * Public surface only. Use it where the *content* is a name that deserves
  * stage treatment (headline act on an event page, tonight's act on the
  * home hero, the band's own name on the Request-to-Play form). Never for
- * the bar's own name — STYLE_GUIDE page-identity rule: the brand lives in
+ * the bar's own name - STYLE_GUIDE page-identity rule: the brand lives in
  * the nav, once.
  *
  * Server Component friendly: renders static markup + a CSS module. The
@@ -15,7 +15,7 @@ import styles from "./extruded-title.module.css";
  *
  * Colours default to the public palette (cream face on an olive flank).
  * Pass `face`/`side` to match an event-type badge colour if wanted, but
- * check contrast against #1a2008 first — neon on dark fails easily.
+ * check contrast against #1a2008 first - neon on dark fails easily.
  */
 
 type Variant = "hero" | "compact";
@@ -59,7 +59,7 @@ export function ExtrudedTitle({
   return (
     <div
       className={cn(styles.stage, variant === "compact" && styles.compact, className)}
-      // Custom properties only — Edge `no-inline-styles` allows these,
+      // Custom properties only - Edge `no-inline-styles` allows these,
       // and the CSS module reads them for size/colour/depth.
       style={
         {

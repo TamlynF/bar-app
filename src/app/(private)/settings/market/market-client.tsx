@@ -665,7 +665,7 @@ export default function MarketClient({
                       {(variations ?? []).map((variation) => (
                         <option key={variation.variationId} value={variation.variationId}>
                           {variation.itemName}
-                          {variation.variationName ? ` — ${variation.variationName}` : ""}
+                          {variation.variationName ? ` - ${variation.variationName}` : ""}
                         </option>
                       ))}
                     </select>
