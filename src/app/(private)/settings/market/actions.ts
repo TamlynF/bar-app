@@ -7,7 +7,8 @@ import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { squareClient } from "@/lib/square";
 import type { Square } from "square";
 import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
-import { resolveMarketConfig, DEFAULT_MARKET_CONFIG } from "@/lib/market/types";
+import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig } from "@/lib/market/types";
+import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import {
   buildCatalogUpsertPlan,
   variationIdsFromMappings,
@@ -19,9 +20,10 @@ import { randomUUID } from "crypto";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
-const MARKET_PATHS = ["/settings/market", "/market", "/market/board"] as const;
+const MARKET_PATHS = ["/market", "/market/board"] as const;
 
 function revalidateMarket() {
+  revalidatePath("/settings/market", "layout");
   for (const path of MARKET_PATHS) revalidatePath(path);
 }
 
@@ -70,27 +72,16 @@ function primaryPrice(item: ItemRow): PriceRow | null {
   return priced[0] ?? null;
 }
 
-export async function startMarketAction(formData: FormData) {
-  const supabase = await createClient();
-
-  const config = readConfig(formData);
-  if (!config) return { error: "Check the market settings - every number needs a sensible value." };
-
-  let categoryIds: number[];
-  try {
-    const raw = JSON.parse(formData.get("category_ids")?.toString() || "[]");
-    categoryIds = Array.isArray(raw) ? raw.map(Number).filter(Number.isFinite) : [];
-  } catch {
-    categoryIds = [];
-  }
-  if (categoryIds.length === 0) return { error: "Pick at least one category to trade." };
-
+async function openSession(
+  supabase: ServerClient,
+  options: { config: MarketConfig; menuItemIds: number[]; stockMarketEventId: number }
+) {
   const { data: existing } = await supabase
     .from("market_sessions")
     .select("id")
     .eq("status", "live")
     .maybeSingle();
-  if (existing) return { error: "A market is already live - end it before starting another." };
+  if (existing) return { error: "A market is already live - close it before opening another." };
 
   const { data: items, error: itemsError } = await supabase
     .from("menu_items")
@@ -98,14 +89,14 @@ export async function startMarketAction(formData: FormData) {
       "id, name, is_active, category_id, menu_item_prices(id, serve, amount, display_order, square_variation_id)"
     )
     .eq("is_active", true)
-    .in("category_id", categoryIds);
+    .in("id", options.menuItemIds);
   if (itemsError) return { error: itemsError.message };
 
   const instruments = ((items ?? []) as ItemRow[])
     .map((item) => ({ item, price: primaryPrice(item) }))
     .filter((entry): entry is { item: ItemRow; price: PriceRow } => entry.price !== null);
   if (instruments.length === 0) {
-    return { error: "No items in those categories have a numeric price to trade." };
+    return { error: "None of the drinks on this event have a numeric price to trade." };
   }
 
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
@@ -115,10 +106,11 @@ export async function startMarketAction(formData: FormData) {
     .from("market_sessions")
     .insert({
       status: "live",
-      config,
+      config: options.config,
       started_at: now,
       orders_watermark: now,
       created_by: currentEmployeeId,
+      stock_market_event_id: options.stockMarketEventId,
     })
     .select("id")
     .single();
@@ -148,7 +140,7 @@ export async function startMarketAction(formData: FormData) {
     return { error: instrumentError.message };
   }
 
-  await supabase.from("market_ticks").insert(
+  const { error: tickError } = await supabase.from("market_ticks").insert(
     (inserted ?? []).map((row) => ({
       session_id: session.id,
       instrument_id: row.id,
@@ -156,9 +148,385 @@ export async function startMarketAction(formData: FormData) {
       price: Number(row.current_price),
     }))
   );
+  if (tickError) console.error("[market] opening tick insert failed:", tickError);
+
+  return { success: true, count: instrumentRows.length };
+}
+
+const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+const eventSchema = configSchema.extend({
+  name: z.string().trim().min(1, "Name is required.").max(80),
+  open_time: z.string().regex(CLOCK, "Opening time is required."),
+  close_time: z.string().regex(CLOCK, "Closing time is required."),
+});
+
+function readMenuItemIds(formData: FormData): number[] {
+  try {
+    const raw = JSON.parse(formData.get("menu_item_ids")?.toString() || "[]");
+    return Array.isArray(raw)
+      ? [...new Set(raw.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function saveStockMarketEventAction(formData: FormData) {
+  const supabase = await createClient();
+
+  const parsed = eventSchema.safeParse({
+    name: formData.get("name"),
+    open_time: formData.get("open_time"),
+    close_time: formData.get("close_time"),
+    tickIntervalSec: formData.get("tickIntervalSec"),
+    noiseSigma: formData.get("noiseSigma"),
+    floorPct: formData.get("floorPct"),
+    ceilPct: formData.get("ceilPct"),
+    moveNotifyPct: formData.get("moveNotifyPct"),
+    lowStockThreshold: formData.get("lowStockThreshold"),
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const configKeys = Object.keys(configSchema.shape);
+    const message = configKeys.includes(String(issue?.path[0]))
+      ? "Check the market settings - every number needs a sensible value."
+      : (issue?.message ?? "Check the event details.");
+    return { error: message };
+  }
+
+  const menuItemIds = readMenuItemIds(formData);
+  if (menuItemIds.length === 0) return { error: "Pick at least one drink for this event." };
+
+  const idRaw = formData.get("id")?.toString();
+  const id = idRaw ? Number(idRaw) : null;
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const values = parsed.data;
+  const payload = {
+    name: values.name,
+    open_time: values.open_time,
+    close_time: values.close_time,
+    tick_interval_sec: values.tickIntervalSec,
+    noise_sigma: values.noiseSigma,
+    floor_pct: values.floorPct,
+    ceil_pct: values.ceilPct,
+    move_notify_pct: values.moveNotifyPct,
+    low_stock_threshold: values.lowStockThreshold,
+  };
+
+  let eventId: number;
+  if (id && Number.isFinite(id)) {
+    const { error } = await supabase
+      .from("stock_market_events")
+      .update({
+        ...payload,
+        updated_at: new Date().toISOString(),
+        updated_by: currentEmployeeId,
+      })
+      .eq("id", id);
+    if (error) return { error: error.message };
+    eventId = id;
+  } else {
+    const { data, error } = await supabase
+      .from("stock_market_events")
+      .insert({ ...payload, created_by: currentEmployeeId, updated_by: currentEmployeeId })
+      .select("id")
+      .single();
+    if (error || !data) return { error: error?.message ?? "Could not save the event." };
+    eventId = data.id;
+  }
+
+  const nightOnlyIds = await nightOnlyItemIds(supabase, eventId);
+  const keep = [...new Set([...menuItemIds, ...nightOnlyIds])];
+  const { error: clearError } = await supabase
+    .from("stock_market_event_items")
+    .delete()
+    .eq("event_id", eventId);
+  if (clearError) return { error: clearError.message };
+  const { error: itemsError } = await supabase
+    .from("stock_market_event_items")
+    .insert(keep.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })));
+  if (itemsError) return { error: itemsError.message };
 
   revalidateMarket();
-  return { success: true, count: instrumentRows.length };
+  return { success: true, id: eventId };
+}
+
+export async function deactivateStockMarketEventAction(id: number) {
+  const supabase = await createClient();
+  const { data: live } = await supabase
+    .from("market_sessions")
+    .select("id")
+    .eq("status", "live")
+    .eq("stock_market_event_id", id)
+    .maybeSingle();
+  if (live) return { error: "This event's market is live - close it before deactivating." };
+
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const { error } = await supabase
+    .from("stock_market_events")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+      updated_by: currentEmployeeId,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true };
+}
+
+export async function openStockMarketEventAction(id: number) {
+  const supabase = await createClient();
+  const { data: event, error } = await supabase
+    .from("stock_market_events")
+    .select("*, stock_market_event_items(menu_item_id)")
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!event) return { error: "That event is no longer available." };
+
+  const row = event as StockMarketEventRow & {
+    stock_market_event_items: { menu_item_id: number }[] | null;
+  };
+  const menuItemIds = (row.stock_market_event_items ?? []).map((item) => item.menu_item_id);
+  if (menuItemIds.length === 0) return { error: "This event has no drinks - edit it and pick some." };
+
+  const result = await openSession(supabase, {
+    config: eventConfig(row),
+    menuItemIds,
+    stockMarketEventId: row.id,
+  });
+  if ("error" in result) return result;
+  revalidateMarket();
+  return result;
+}
+
+type EventItemJoin = {
+  menu_item_id: number;
+  menu_items:
+    | { menu_categories: { market_only: boolean } | { market_only: boolean }[] | null }
+    | { menu_categories: { market_only: boolean } | { market_only: boolean }[] | null }[]
+    | null;
+};
+
+function isMarketOnlyJoin(row: EventItemJoin): boolean {
+  const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+  const raw = item?.menu_categories;
+  const category = Array.isArray(raw) ? raw[0] : raw;
+  return Boolean(category?.market_only);
+}
+
+async function nightOnlyItemIds(supabase: ServerClient, eventId: number): Promise<number[]> {
+  const { data } = await supabase
+    .from("stock_market_event_items")
+    .select("menu_item_id, menu_items(menu_categories(market_only))")
+    .eq("event_id", eventId);
+  return ((data ?? []) as EventItemJoin[])
+    .filter(isMarketOnlyJoin)
+    .map((row) => row.menu_item_id);
+}
+
+async function ensureMarketOnlyCategory(supabase: ServerClient): Promise<number | { error: string }> {
+  const { data: existing } = await supabase
+    .from("menu_categories")
+    .select("id")
+    .eq("market_only", true)
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (existing) return existing.id;
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .insert({
+      name: "Market night specials",
+      is_active: false,
+      market_only: true,
+      display_order: 999,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Could not create the market night category." };
+  return data.id;
+}
+
+async function eventExists(supabase: ServerClient, eventId: number): Promise<boolean> {
+  const { data } = await supabase
+    .from("stock_market_events")
+    .select("id")
+    .eq("id", eventId)
+    .eq("is_active", true)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+export async function addEventDrinksAction(eventId: number, menuItemIds: number[]) {
+  const supabase = await createClient();
+  const ids = [...new Set(menuItemIds.filter((id) => Number.isInteger(id) && id > 0))];
+  if (ids.length === 0) return { error: "Pick at least one drink to add." };
+  if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
+
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .upsert(
+      ids.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })),
+      { onConflict: "event_id,menu_item_id", ignoreDuplicates: true }
+    );
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true, count: ids.length };
+}
+
+export async function removeEventDrinkAction(eventId: number, menuItemId: number) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("menu_item_id", menuItemId);
+  if (error) return { error: error.message };
+
+  const { data: item } = await supabase
+    .from("menu_items")
+    .select("id, menu_categories(market_only)")
+    .eq("id", menuItemId)
+    .maybeSingle();
+  const category = item
+    ? Array.isArray(item.menu_categories)
+      ? item.menu_categories[0]
+      : item.menu_categories
+    : null;
+  if (category?.market_only) {
+    const { count } = await supabase
+      .from("stock_market_event_items")
+      .select("event_id", { count: "exact", head: true })
+      .eq("menu_item_id", menuItemId);
+    if (!count) {
+      const { error: deleteError } = await supabase.from("menu_items").delete().eq("id", menuItemId);
+      if (deleteError) return { error: deleteError.message };
+    }
+  }
+
+  revalidateMarket();
+  return { success: true };
+}
+
+const nightDrinkSchema = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(80),
+  serve: z.string().trim().min(1, "Serve is required.").max(40),
+  amount: z.coerce.number().positive("Price must be more than zero.").max(9999),
+});
+
+export async function saveNightOnlyDrinkAction(formData: FormData) {
+  const supabase = await createClient();
+  const eventId = Number(formData.get("event_id"));
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
+
+  const parsed = nightDrinkSchema.safeParse({
+    name: formData.get("name"),
+    serve: formData.get("serve"),
+    amount: formData.get("amount"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the drink details." };
+  }
+  const { name, serve, amount } = parsed.data;
+  const idRaw = formData.get("id")?.toString();
+  const id = idRaw ? Number(idRaw) : null;
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+  const priceText = `£${amount.toFixed(2)}`;
+
+  if (id && Number.isFinite(id)) {
+    const { data: item } = await supabase
+      .from("menu_items")
+      .select("id, menu_categories(market_only)")
+      .eq("id", id)
+      .maybeSingle();
+    const category = item
+      ? Array.isArray(item.menu_categories)
+        ? item.menu_categories[0]
+        : item.menu_categories
+      : null;
+    if (!item || !category?.market_only) {
+      return { error: "Only drinks created for a market night can be edited here." };
+    }
+    const { error } = await supabase
+      .from("menu_items")
+      .update({ name, price: priceText, updated_at: now, updated_by: currentEmployeeId })
+      .eq("id", id);
+    if (error) return { error: error.message };
+
+    const { data: price } = await supabase
+      .from("menu_item_prices")
+      .select("id")
+      .eq("menu_item_id", id)
+      .order("display_order", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const priceWrite = price
+      ? supabase
+          .from("menu_item_prices")
+          .update({ serve, amount, updated_at: now, updated_by: currentEmployeeId })
+          .eq("id", price.id)
+      : supabase.from("menu_item_prices").insert({
+          menu_item_id: id,
+          serve,
+          amount,
+          display_order: 0,
+          created_by: currentEmployeeId,
+          updated_by: currentEmployeeId,
+        });
+    const { error: priceError } = await priceWrite;
+    if (priceError) return { error: priceError.message };
+
+    revalidateMarket();
+    return { success: true, id };
+  }
+
+  const categoryId = await ensureMarketOnlyCategory(supabase);
+  if (typeof categoryId !== "number") return categoryId;
+
+  const { data: inserted, error } = await supabase
+    .from("menu_items")
+    .insert({
+      category_id: categoryId,
+      name,
+      price: priceText,
+      display_order: 0,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+      created_by: currentEmployeeId,
+      updated_by: currentEmployeeId,
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) return { error: error?.message ?? "Could not create the drink." };
+
+  const { error: priceError } = await supabase.from("menu_item_prices").insert({
+    menu_item_id: inserted.id,
+    serve,
+    amount,
+    display_order: 0,
+    created_by: currentEmployeeId,
+    updated_by: currentEmployeeId,
+  });
+  if (priceError) {
+    await supabase.from("menu_items").delete().eq("id", inserted.id);
+    return { error: priceError.message };
+  }
+
+  const { error: linkError } = await supabase
+    .from("stock_market_event_items")
+    .insert({ event_id: eventId, menu_item_id: inserted.id });
+  if (linkError) return { error: linkError.message };
+
+  revalidateMarket();
+  return { success: true, id: inserted.id };
 }
 
 export async function updateConfigAction(formData: FormData) {

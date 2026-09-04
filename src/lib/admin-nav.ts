@@ -8,6 +8,7 @@ import {
   Dices,
   Grid2X2,
   Guitar,
+  History,
   Image as ImageIcon,
   Mail,
   Medal,
@@ -152,6 +153,12 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
         description: "Live price board for market nights",
       },
       {
+        label: "Market history",
+        href: "/settings/market/history",
+        icon: History,
+        description: "Price and stock changes from past market nights",
+      },
+      {
         label: "Specials",
         href: "/settings/specials",
         icon: Sparkles,
@@ -195,6 +202,7 @@ export const WIDE_PATHS: string[] = [
   "/settings/gallery",
   "/settings/specials",
   "/settings/price-rounds",
+  "/settings/market/history",
   "/event-setups/quiz-categories",
   "/event-setups/quiz-leaderboards",
   SCHEDULE_HREF,

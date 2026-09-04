@@ -363,7 +363,37 @@ export default function PrivateLayoutClient({
                 return { title: "Quiz", subtitle: "Teams", backHref: QUIZ_HUB_HREF }
             }
 
+            if (segment === "market") {
+                const marketHref = "/settings/market"
+                const leaf = normalizedPath.split("/")[3]
+                if (leaf === "history") {
+                    return {
+                        title: "Market",
+                        subtitle: "History",
+                        backHref: marketHref,
+                        trail: [
+                            { label: "Settings", href: "/settings" },
+                            { label: "Market", href: marketHref },
+                            { label: "History" },
+                        ],
+                    }
+                }
+                if (leaf) {
+                    return {
+                        title: "Market",
+                        subtitle: `#${leaf}`,
+                        backHref: marketHref,
+                        trail: [
+                            { label: "Settings", href: "/settings" },
+                            { label: "Market", href: marketHref },
+                            { label: `#${leaf}` },
+                        ],
+                    }
+                }
+            }
+
             const settingsMap: Record<string, string> = {
+                "market": "Market",
                 "company": "Company Information",
                 "venue": "Venue layout",
                 "tables": "Seating plan",

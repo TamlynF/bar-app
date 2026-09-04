@@ -1,36 +1,57 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowRight,
   CandlestickChart,
-  ChevronDown,
-  Info,
+  Check,
   Link2,
   Loader2,
   MonitorPlay,
+  Play,
+  SearchX,
   TrendingDown,
   Upload,
   Wand2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  DetailCard,
+  DetailCell,
+  EmptyState,
+  ErrorBox,
+  FilterChip,
+  FormRow,
+  ListRow,
+  ListSearchInput,
+  RecordList,
+  RecordSheet,
+  StatusPill,
+  useRecordSheet,
+} from "@/components/admin";
 import { formatGbp } from "@/lib/price";
 import { DEFAULT_MARKET_CONFIG, type MarketConfig, type StockState } from "@/lib/market/types";
 import type { CatalogVariation } from "@/lib/market/mapping";
+import { formatTimeWindow, type StockMarketEventSummary } from "@/lib/market/stock-market-events";
 import {
   autoMatchMappingsAction,
   crashMarketAction,
+  deactivateStockMarketEventAction,
   endMarketAction,
   loadCatalogVariationsAction,
+  openStockMarketEventAction,
   pushMenuToSquareAction,
   saveMappingAction,
+  saveStockMarketEventAction,
   setStockOverrideAction,
-  startMarketAction,
-  updateConfigAction,
 } from "./actions";
+import { CONFIG_FIELDS, ConfigHelp } from "./config-fields";
 
 export type SessionSummary = {
   id: number;
@@ -38,6 +59,7 @@ export type SessionSummary = {
   startedAt: string;
   crashUntilTick: number | null;
   config: MarketConfig;
+  stockMarketEventId: number | null;
 };
 
 export type InstrumentSummary = {
@@ -58,6 +80,18 @@ export type CategoryOption = {
   tradeableCount: number;
 };
 
+export type DrinkOption = {
+  id: number;
+  name: string;
+  categoryId: number;
+  categoryName: string;
+};
+
+export type EmployeeOption = {
+  id: number;
+  full_name: string;
+};
+
 export type MappingRow = {
   menuItemPriceId: number;
   itemName: string;
@@ -68,125 +102,211 @@ export type MappingRow = {
   squareVariationId: string | null;
 };
 
+type EventFilter = "all" | "live" | "run" | "never";
+
 const CARD = "rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5";
 const PRIMARY_BUTTON =
-  "flex h-11 items-center justify-center gap-1.5 rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:opacity-50 sm:h-9";
+  "flex h-11 items-center justify-center gap-1.5 rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:cursor-not-allowed disabled:opacity-50 sm:h-9";
 const OUTLINE_BUTTON =
   "flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50 sm:h-9";
 const NEUTRAL_BUTTON =
   "flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-line px-4 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface disabled:opacity-50 sm:h-9";
-const FIELD =
-  "h-11 w-full rounded-lg border border-admin-line bg-admin-card px-3 text-sm font-semibold text-admin-ink outline-none focus:border-admin-primary sm:h-9";
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 
-const CONFIG_FIELDS: {
-  key: keyof MarketConfig;
-  label: string;
-  step: string;
-  hint: string;
-  help: string;
-}[] = [
-  {
-    key: "tickIntervalSec",
-    label: "Tick interval (seconds)",
-    step: "5",
-    hint: "How often prices move",
-    help: "How often prices are recalculated. A tick runs when the market page is loaded and at least this many seconds have passed since the last tick. Each tick pulls completed till sales since the previous tick to measure demand and refreshes stock counts.",
-  },
-  {
-    key: "noiseSigma",
-    label: "Volatility",
-    step: "0.005",
-    hint: "Random wobble per tick",
-    help: "The random nudge added to every price each tick, as a fraction of the current price. 0.015 means up to 1.5% either way, on top of demand from sales. Set to 0 and prices only move on actual sales.",
-  },
-  {
-    key: "floorPct",
-    label: "Price floor (x base)",
-    step: "0.05",
-    hint: "0.7 = never below 70%",
-    help: "The lowest a price can fall, as a multiple of the base price. At 0.7 a £4.00 drink never drops below £2.80. This also limits how far a market crash can push prices down.",
-  },
-  {
-    key: "ceilPct",
-    label: "Price ceiling (x base)",
-    step: "0.05",
-    hint: "1.5 = never above 150%",
-    help: "The highest a price can rise, as a multiple of the base price. At 1.5 a £4.00 drink tops out at £6.00 no matter how much demand there is.",
-  },
-  {
-    key: "moveNotifyPct",
-    label: "Alert threshold",
-    step: "0.01",
-    hint: "0.05 = alert on a 5% move",
-    help: "How far a price must move before the public feed announces it. Each drink remembers the price it was last announced at; when the price moves this fraction or more away from it, a price drop or surge alert fires and the reference point resets.",
-  },
-  {
-    key: "lowStockThreshold",
-    label: "Low stock at",
-    step: "1",
-    hint: "Units left before 'running low'",
-    help: "The Square inventory count at or below which a drink is marked running low and a low-stock alert goes out. Zero units marks it sold out and freezes its price until restocked. Only applies to drinks linked to a Square variation; the Override column bypasses it.",
-  },
-];
-
-function configSummary(config: MarketConfig): string {
-  return [
-    `${config.tickIntervalSec}s ticks`,
-    `volatility ${config.noiseSigma}`,
-    `${config.floorPct}x to ${config.ceilPct}x base`,
-    `alert at ${Math.round(config.moveNotifyPct * 100)}%`,
-    `low stock at ${config.lowStockThreshold}`,
-  ].join(" · ");
-}
-
-function ConfigFields({ config }: { config: MarketConfig }) {
+function ConfigFormRows({ config }: { config: MarketConfig }) {
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {CONFIG_FIELDS.map((field) => {
-          const inputId = `market-config-${field.key}`;
-          return (
-            <div key={field.key}>
-              <div className="mb-1 flex items-center gap-1">
-                <label
-                  htmlFor={inputId}
-                  className="text-[11px] font-semibold text-admin-muted"
-                >
-                  {field.label}
-                </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={`About ${field.label}`}
-                      className="inline-flex h-6 w-6 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
-                    >
-                      <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="start" className="space-y-1 p-3">
-                    <p className="text-[12px] font-semibold leading-snug text-admin-ink">
-                      {field.label}
-                    </p>
-                    <p className="text-[11px] leading-snug text-admin-muted">{field.hint}</p>
-                    <p className="text-[11px] leading-snug text-admin-muted">{field.help}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <input
-                id={inputId}
-                type="number"
-                name={field.key}
-                defaultValue={config[field.key]}
-                step={field.step}
-                min="0"
-                className={FIELD}
-              />
-            </div>
-          );
-        })}
-      </div>
+      {CONFIG_FIELDS.map((field) => (
+        <FormRow key={field.key} label={field.label} dense>
+          <ConfigHelp field={field} />
+          <input
+            type="number"
+            name={field.key}
+            aria-label={field.label}
+            defaultValue={config[field.key]}
+            step={field.step}
+            min="0"
+            required
+            className={FIELD_INPUT}
+          />
+        </FormRow>
+      ))}
     </TooltipProvider>
+  );
+}
+
+function DrinkPicker({
+  drinks,
+  selected,
+  onChange,
+}: {
+  drinks: DrinkOption[];
+  selected: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const groups = useMemo(() => {
+    const byCategory = new Map<number, { name: string; drinks: DrinkOption[] }>();
+    for (const drink of drinks) {
+      const group = byCategory.get(drink.categoryId) ?? { name: drink.categoryName, drinks: [] };
+      group.drinks.push(drink);
+      byCategory.set(drink.categoryId, group);
+    }
+    return [...byCategory.entries()].map(([id, group]) => ({ id, ...group }));
+  }, [drinks]);
+
+  const selectedSet = new Set(selected);
+
+  function toggleDrink(id: number) {
+    onChange(selectedSet.has(id) ? selected.filter((d) => d !== id) : [...selected, id]);
+  }
+
+  function toggleGroup(ids: number[], allOn: boolean) {
+    if (allOn) onChange(selected.filter((id) => !ids.includes(id)));
+    else onChange([...new Set([...selected, ...ids])]);
+  }
+
+  if (groups.length === 0) {
+    return (
+      <p className="px-4 py-3 text-[13px] text-admin-muted sm:px-5">
+        No priced drinks on the menu yet. Add menu items with a price first.
+      </p>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-admin-line/50">
+      {groups.map((group) => {
+        const ids = group.drinks.map((drink) => drink.id);
+        const onCount = ids.filter((id) => selectedSet.has(id)).length;
+        const allOn = onCount === ids.length;
+        return (
+          <div key={group.id} className="px-4 py-2 sm:px-5">
+            <label className="flex min-h-9 cursor-pointer items-center justify-between gap-3">
+              <span className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={allOn}
+                  onChange={() => toggleGroup(ids, allOn)}
+                  aria-label={`Select all ${group.name}`}
+                  className="h-4 w-4 cursor-pointer accent-admin-primary"
+                />
+                <span className="text-[13px] font-bold text-admin-ink">{group.name}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-admin-muted tabular-nums">
+                {onCount}/{ids.length}
+              </span>
+            </label>
+            <div className="mt-1 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+              {group.drinks.map((drink) => (
+                <label
+                  key={drink.id}
+                  className="flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-admin-ink"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSet.has(drink.id)}
+                    onChange={() => toggleDrink(drink.id)}
+                    aria-label={`Trade ${drink.name}`}
+                    className="h-4 w-4 cursor-pointer accent-admin-primary"
+                  />
+                  <span className="truncate">{drink.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventForm({
+  event,
+  drinks,
+  live,
+  formError,
+  onSubmit,
+}: {
+  event: StockMarketEventSummary | null;
+  drinks: DrinkOption[];
+  live: boolean;
+  formError: string | null;
+  onSubmit: (formData: FormData) => void;
+}) {
+  const [selectedDrinks, setSelectedDrinks] = useState<number[]>(event?.menuItemIds ?? []);
+  const config = event?.config ?? DEFAULT_MARKET_CONFIG;
+
+  return (
+    <form
+      id="stock-market-event-form"
+      action={onSubmit}
+      className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+    >
+      {event && <input type="hidden" name="id" value={event.id} />}
+      <input type="hidden" name="menu_item_ids" value={JSON.stringify(selectedDrinks)} />
+
+      <DetailCard className="divide-y divide-admin-line/50">
+        <FormRow label="Name" required dense>
+          <input
+            name="name"
+            required
+            maxLength={80}
+            aria-label="Name"
+            placeholder="e.g. Friday floor"
+            defaultValue={event?.name ?? ""}
+            className={FIELD_INPUT}
+          />
+        </FormRow>
+        <FormRow label="Opens at" required dense>
+          <input
+            type="time"
+            name="open_time"
+            required
+            aria-label="Opening time"
+            defaultValue={event?.openTime || "19:00"}
+            className={FIELD_INPUT}
+          />
+        </FormRow>
+        <FormRow label="Closes at" required dense>
+          <input
+            type="time"
+            name="close_time"
+            required
+            aria-label="Closing time"
+            defaultValue={event?.closeTime || "23:30"}
+            className={FIELD_INPUT}
+          />
+        </FormRow>
+      </DetailCard>
+
+      <div>
+        <p className="mb-2 px-1 text-[11px] font-semibold text-admin-muted">Market settings</p>
+        <DetailCard className="divide-y divide-admin-line/50">
+          <ConfigFormRows config={config} />
+        </DetailCard>
+        {live && (
+          <p className="mt-2 px-1 text-[11px] text-admin-muted">
+            This event&apos;s market is live. Changes here apply the next time it is opened; use
+            the live settings above to change the running market.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p className="text-[11px] font-semibold text-admin-muted">Drinks on the board</p>
+          <p className="text-[11px] font-semibold text-admin-muted tabular-nums">
+            {selectedDrinks.length} selected
+          </p>
+        </div>
+        <DetailCard>
+          <DrinkPicker drinks={drinks} selected={selectedDrinks} onChange={setSelectedDrinks} />
+        </DetailCard>
+      </div>
+
+      {formError && <ErrorBox message={formError} />}
+    </form>
   );
 }
 
@@ -221,26 +341,61 @@ function stockLabel(state: StockState): { label: string; className: string } {
   return { label: "In stock", className: "bg-admin-success-bg text-admin-success" };
 }
 
+function formatRunDate(iso: string | null): string {
+  if (!iso) return "Never run";
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export default function MarketClient({
   session,
   instruments,
   categories,
+  drinks,
+  events,
+  employees,
   mappingRows,
+  initialEditId,
 }: {
   session: SessionSummary | null;
   instruments: InstrumentSummary[];
   categories: CategoryOption[];
+  drinks: DrinkOption[];
+  events: StockMarketEventSummary[];
+  employees: EmployeeOption[];
   mappingRows: MappingRow[];
+  initialEditId: number | null;
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const [selectedCategories, setSelectedCategories] = useState<number[]>(
-    categories.filter((cat) => cat.tradeableCount > 0).map((cat) => cat.id)
-  );
   const [mappingOpen, setMappingOpen] = useState(false);
   const [variations, setVariations] = useState<CatalogVariation[] | null>(null);
   const [loadingVariations, setLoadingVariations] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<EventFilter>("all");
+
+  const sheet = useRecordSheet<StockMarketEventSummary>({
+    records: events,
+    getId: (record) => record.id,
+  });
+  const { selected, mode } = sheet;
+  const showForm = mode === "add" || mode === "edit";
+
+  const openedFromUrl = useRef(false);
+  const { openView, startEdit } = sheet;
+  useEffect(() => {
+    if (openedFromUrl.current || initialEditId == null) return;
+    const target = events.find((event) => event.id === initialEditId);
+    if (!target) return;
+    openedFromUrl.current = true;
+    openView(target);
+    startEdit();
+    router.replace("/settings/market");
+  }, [initialEditId, events, openView, startEdit, router]);
+
+  const live = session !== null;
+  const liveEventId = session?.stockMarketEventId ?? null;
+  const tradeableCount = categories.reduce((sum, cat) => sum + cat.tradeableCount, 0);
 
   const mappedCount = useMemo(
     () => mappingRows.filter((row) => row.isPrimary && row.squareVariationId).length,
@@ -250,6 +405,22 @@ export default function MarketClient({
     () => mappingRows.filter((row) => row.isPrimary).length,
     [mappingRows]
   );
+
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
+
+  const drinkNames = useMemo(() => new Map(drinks.map((drink) => [drink.id, drink])), [drinks]);
+
+  const shownEvents = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return events.filter((event) => {
+      if (needle && !event.name.toLowerCase().includes(needle)) return false;
+      if (filter === "live") return event.id === liveEventId;
+      if (filter === "run") return event.lastRunAt !== null;
+      if (filter === "never") return event.lastRunAt === null;
+      return true;
+    });
+  }, [events, query, filter, liveEventId]);
 
   function run(action: () => Promise<{ error?: string } | void>, success?: string) {
     startTransition(async () => {
@@ -263,28 +434,24 @@ export default function MarketClient({
     });
   }
 
-  function toggleCategory(id: number) {
-    setSelectedCategories((current) =>
-      current.includes(id) ? current.filter((c) => c !== id) : [...current, id]
-    );
-  }
-
-  async function handleStart(formData: FormData) {
-    formData.set("category_ids", JSON.stringify(selectedCategories));
-    const result = await startMarketAction(formData);
-    if (result?.error) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(`Market open - ${result?.count ?? 0} drinks trading.`);
-    router.refresh();
+  function handleOpen(event: StockMarketEventSummary) {
+    startTransition(async () => {
+      const result = await openStockMarketEventAction(event.id);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      const count = "count" in result ? result.count : 0;
+      toast.success(`${event.name} open - ${count} drinks trading.`);
+      router.refresh();
+    });
   }
 
   async function handleEnd() {
     const confirmed = await confirm({
-      title: "End the market?",
+      title: "Close the market?",
       description: "Trading stops and the board shows closed. Menu prices are untouched.",
-      confirmLabel: "End market",
+      confirmLabel: "Close market",
     });
     if (confirmed) run(endMarketAction, "Market closed.");
   }
@@ -297,6 +464,26 @@ export default function MarketClient({
     });
     if (confirmed) run(crashMarketAction, "Crash triggered - watch the board.");
   }
+
+  function handleDeactivate() {
+    if (!selected) return;
+    sheet.confirmDelete({
+      title: "Deactivate event",
+      description: `"${selected.name}" will disappear from this list. Past market nights run under it stay in the history.`,
+      confirmLabel: "Deactivate",
+      action: async () => {
+        const result = await deactivateStockMarketEventAction(selected.id);
+        if (!result.error) router.refresh();
+        return result;
+      },
+    });
+  }
+
+  const submitEvent = sheet.submit(async (formData) => {
+    const result = await saveStockMarketEventAction(formData);
+    if (!result.error) router.refresh();
+    return result;
+  });
 
   async function openMappings() {
     setMappingOpen((open) => !open);
@@ -348,153 +535,262 @@ export default function MarketClient({
     });
   }
 
-  const live = session !== null;
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const sheetTitle =
+    mode === "add" ? "New stock market event" : mode === "edit" ? "Edit event" : "View event";
+  const selectedIsLive = selected != null && selected.id === liveEventId;
+
+  const selectedDrinksByCategory = useMemo(() => {
+    if (!selected) return [];
+    const groups = new Map<string, string[]>();
+    for (const id of selected.menuItemIds) {
+      const drink = drinkNames.get(id);
+      if (!drink) continue;
+      groups.set(drink.categoryName, [...(groups.get(drink.categoryName) ?? []), drink.name]);
+    }
+    return [...groups.entries()];
+  }, [selected, drinkNames]);
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
       {ConfirmDialogUI}
 
-      <section className={CARD}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <CandlestickChart className="h-5 w-5 text-admin-primary" aria-hidden="true" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-admin-ink">Drinks market</h2>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
-                    live
-                      ? "bg-admin-success-bg text-admin-success"
-                      : "bg-admin-surface text-admin-muted"
-                  )}
-                >
-                  {live ? "Live" : "Closed"}
-                </span>
-              </div>
-              <p className="text-[11px] text-admin-muted">
-                {live
-                  ? `Live since ${new Date(session.startedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} · tick ${session.tickNo}`
-                  : "Prices trade like stocks on the big screen while the night runs"}
-              </p>
-            </div>
+
+      <RecordList
+        variant="panel"
+        title="Stock market events"
+        count={shownEvents.length}
+        onAdd={sheet.openAdd}
+        addLabel="New event"
+        activeFilterCount={filter === "all" ? 0 : 1}
+        toolbar={
+          <ListSearchInput
+            value={query}
+            onChange={setQuery}
+            label="Search events"
+            placeholder="Search by name"
+          />
+        }
+        filters={
+          <div className="flex flex-wrap items-center gap-1.5">
+            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+              All
+            </FilterChip>
+            <FilterChip active={filter === "live"} onClick={() => setFilter("live")}>
+              Live now
+            </FilterChip>
+            <FilterChip active={filter === "run"} onClick={() => setFilter("run")}>
+              Has been run
+            </FilterChip>
+            <FilterChip active={filter === "never"} onClick={() => setFilter("never")}>
+              Never run
+            </FilterChip>
           </div>
-          {live && (
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="/market/board"
-                target="_blank"
-                rel="noreferrer"
-                className={NEUTRAL_BUTTON}
-              >
-                <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-                Open big screen
-              </a>
-              <button
-                type="button"
-                onClick={handleCrash}
-                disabled={isPending}
-                className={OUTLINE_BUTTON}
-              >
-                <TrendingDown className="h-4 w-4" aria-hidden="true" />
-                Crash the market
-              </button>
-              <button
-                type="button"
-                onClick={handleEnd}
-                disabled={isPending}
-                className={NEUTRAL_BUTTON}
-              >
-                End market
-              </button>
-            </div>
-          )}
-        </div>
-
-        {!live ? (
-          <form action={handleStart} className="mt-4 space-y-4">
-            <div>
-              <p className="mb-2 text-[11px] font-semibold text-admin-muted">
-                Categories on the board
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <label
-                    key={cat.id}
-                    className={cn(
-                      "flex h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition-colors sm:h-9",
-                      selectedCategories.includes(cat.id)
-                        ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
-                        : "border-admin-line text-admin-muted hover:bg-admin-surface"
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(cat.id)}
-                      onChange={() => toggleCategory(cat.id)}
-                      className="sr-only"
-                      aria-label={`Trade ${cat.name}`}
-                    />
-                    {cat.name}
-                    <span className="text-[11px] font-medium opacity-70">{cat.tradeableCount}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <ConfigFields config={DEFAULT_MARKET_CONFIG} />
-
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] text-admin-muted">
-                {mappedCount}/{primaryCount} lead serves linked to Square - unlinked drinks
-                random-walk only.
-              </p>
-              <button type="submit" disabled={isPending} className={PRIMARY_BUTTON}>
-                {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                Start market
-              </button>
-            </div>
-          </form>
+        }
+      >
+        {events.length === 0 ? (
+          <EmptyState
+            icon={CandlestickChart}
+            title="No stock market events yet"
+            description={
+              tradeableCount === 0
+                ? "Add priced menu items first, then create an event to trade them."
+                : "Create an event to choose the drinks and settings for a market night."
+            }
+          />
+        ) : shownEvents.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+            <SearchX className="h-6 w-6 text-admin-muted" aria-hidden="true" />
+            <p className="text-[13px] font-semibold text-admin-ink">No events match</p>
+            <p className="text-[11px] text-admin-muted">Try a different search or filter.</p>
+          </div>
         ) : (
-          <div className="mt-3 border-t border-admin-line pt-3">
+          shownEvents.map((event) => {
+            const isLive = event.id === liveEventId;
+            return (
+              <ListRow
+                key={event.id}
+                onClick={() => sheet.openView(event)}
+                selected={selected?.id === event.id}
+                status={
+                  <StatusPill
+                    tone={isLive ? "success" : "neutral"}
+                    icon={isLive ? <Check className="h-3 w-3" /> : undefined}
+                    className="sm:w-20 sm:justify-center"
+                  >
+                    {isLive ? "Live" : "Ready"}
+                  </StatusPill>
+                }
+                actions={
+                  <div
+                    className="flex flex-wrap items-center gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {isLive ? (
+                      <>
+                        <a
+                          href="/market/board"
+                          target="_blank"
+                          rel="noreferrer"
+                          className={NEUTRAL_BUTTON}
+                        >
+                          <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">Open big screen</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={handleEnd}
+                          disabled={isPending}
+                          className={NEUTRAL_BUTTON}
+                        >
+                          <X className="h-4 w-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">Close market</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCrash}
+                          disabled={isPending}
+                          className={OUTLINE_BUTTON}
+                        >
+                          <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">Crash market</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleOpen(event)}
+                        disabled={isPending || live}
+                        title={live ? "Close the live market first" : undefined}
+                        className={PRIMARY_BUTTON}
+                      >
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                        <span className="hidden sm:inline">Open market</span>
+                      </button>
+                    )}
+                  </div>
+                }
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold text-admin-ink">{event.name}</p>
+                  <p className="text-[11px] text-admin-muted">
+                    {formatTimeWindow(event.openTime, event.closeTime)} · {event.menuItemIds.length}{" "}
+                    {event.menuItemIds.length === 1 ? "drink" : "drinks"} ·{" "}
+                    {event.lastRunAt ? `Last run ${formatRunDate(event.lastRunAt)}` : "Never run"}
+                  </p>
+                </div>
+              </ListRow>
+            );
+          })
+        )}
+      </RecordList>
+
+      <RecordSheet
+        open={sheet.open}
+        onClose={sheet.close}
+        mode={mode}
+        title={sheetTitle}
+        recordId={selected?.id}
+        formId="stock-market-event-form"
+        isPending={sheet.isPending}
+        onEdit={sheet.startEdit}
+        onCancel={mode === "add" || !selected ? sheet.close : () => sheet.openView(selected)}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill tone={selectedIsLive ? "success" : "neutral"} showLabelOnMobile>
+              {selectedIsLive ? "Live now" : "Ready to open"}
+            </StatusPill>
+          )
+        }
+        actions={
+          mode === "view" && selected && !selectedIsLive ? (
             <button
               type="button"
-              onClick={() => setSettingsOpen((open) => !open)}
-              aria-expanded={settingsOpen}
-              className="flex min-h-11 w-full items-center justify-between gap-3 text-left sm:min-h-9"
+              onClick={handleDeactivate}
+              disabled={sheet.isPending}
+              className="flex h-9 items-center gap-1.5 rounded-lg border border-admin-line px-3 text-[12px] font-semibold text-admin-error transition-colors hover:bg-admin-error-bg disabled:opacity-50"
             >
-              <span className="text-[11px] text-admin-muted">
-                <span className="font-semibold text-admin-ink">Settings</span>
-                {!settingsOpen && ` · ${configSummary(session.config)}`}
-              </span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 shrink-0 text-admin-muted transition-transform",
-                  settingsOpen && "rotate-180"
-                )}
-                aria-hidden="true"
-              />
+              Deactivate
             </button>
-            {settingsOpen && (
-              <form
-                action={(formData) => {
-                  run(() => updateConfigAction(formData), "Market settings updated.");
-                }}
-                className="mt-3 space-y-3"
-              >
-                <ConfigFields config={session.config} />
-                <div className="flex justify-end">
-                  <button type="submit" disabled={isPending} className={PRIMARY_BUTTON}>
-                    {isPending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                    Save settings
-                  </button>
-                </div>
-              </form>
-            )}
+          ) : undefined
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.createdAt,
+                createdBy: employeeName(selected.createdBy),
+                updatedAt: selected.updatedAt,
+                updatedBy: employeeName(selected.updatedBy),
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell dense label="Name" value={selected.name} />
+              <DetailCell dense label="Opens at" value={selected.openTime} />
+              <DetailCell dense label="Closes at" value={selected.closeTime} />
+            </DetailCard>
+            <DetailCard>
+              {CONFIG_FIELDS.map((field) => (
+                <DetailCell
+                  key={field.key}
+                  dense
+                  label={field.label}
+                  value={String(selected.config[field.key])}
+                />
+              ))}
+            </DetailCard>
+            <DetailCard>
+              <DetailCell
+                dense
+                label="Last run"
+                value={selected.lastRunAt ? formatRunDate(selected.lastRunAt) : "Never"}
+              />
+              <DetailCell
+                multiline
+                label="Drinks"
+                value={
+                  selectedDrinksByCategory.length === 0 ? (
+                    "None selected"
+                  ) : (
+                    <span className="block space-y-1 text-left">
+                      {selectedDrinksByCategory.map(([category, names]) => (
+                        <span key={category} className="block">
+                          <span className="text-[11px] font-semibold text-admin-muted">
+                            {category}:{" "}
+                          </span>
+                          {names.join(", ")}
+                        </span>
+                      ))}
+                    </span>
+                  )
+                }
+              />
+            </DetailCard>
+            <Link
+              href={`/settings/market/${selected.id}`}
+              className="flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-primary text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
+            >
+              Full details and past nights
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>
         )}
-      </section>
+
+        {showForm && (
+          <EventForm
+            key={`${mode}-${selected?.id ?? "new"}`}
+            event={mode === "edit" ? selected : null}
+            drinks={drinks}
+            live={selectedIsLive}
+            formError={sheet.formError}
+            onSubmit={submitEvent}
+          />
+        )}
+      </RecordSheet>
 
       {live && (
         <section className={CARD}>
@@ -519,9 +815,7 @@ export default function MarketClient({
                   return (
                     <tr key={instrument.id} className="border-b border-admin-line/60">
                       <td className="py-2 pr-3">
-                        <p className="text-[13px] font-semibold text-admin-ink">
-                          {instrument.name}
-                        </p>
+                        <p className="text-[13px] font-semibold text-admin-ink">{instrument.name}</p>
                         <p className="text-[11px] text-admin-muted">
                           {instrument.serve}
                           {!instrument.mapped && " · not linked to Square"}
@@ -576,7 +870,8 @@ export default function MarketClient({
             <div>
               <h3 className="text-sm font-bold text-admin-ink">Square links</h3>
               <p className="text-[11px] text-admin-muted">
-                Till sales drive demand for linked serves; inventory drives sold-out alerts
+                Till sales drive demand for linked serves; inventory drives sold-out alerts ·{" "}
+                {mappedCount}/{primaryCount} lead serves linked
               </p>
             </div>
           </div>
