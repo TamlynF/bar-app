@@ -74,7 +74,7 @@ export function PosterCard({
             <p className="truncate text-[13px] font-bold text-ink tabular-nums sm:text-sm">{whenLabel}</p>
             <p className="truncate text-[11px] text-ink-2 sm:text-xs">{entryText(event)}</p>
           </div>
-          <div className="w-34 shrink-0 [&_a]:h-11 [&_a]:text-xs [&_a]:whitespace-nowrap [&_span]:h-11 [&_span]:text-xs sm:w-40 sm:[&_a]:h-12 sm:[&_a]:text-sm sm:[&_span]:h-12 sm:[&_span]:text-sm">
+          <div className="shrink-0 [&_a]:h-11 [&_a]:w-auto [&_a]:px-4 [&_a]:text-xs [&_span]:h-11 [&_span]:w-auto [&_span]:px-3.5 [&_span]:text-xs sm:[&_a]:h-12 sm:[&_a]:px-5 sm:[&_a]:text-sm sm:[&_span]:h-12 sm:[&_span]:text-sm">
             <BookingButton event={event} />
           </div>
         </div>

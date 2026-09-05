@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function SectionHeading({
   eyebrow,
   title,
   action,
   id,
+  actionOnMobile = true,
 }: {
   eyebrow: string;
   title: string;
   action?: { href: string; label: string };
   id?: string;
+  /* false = the section renders its own action below the content on phones */
+  actionOnMobile?: boolean;
 }) {
   return (
     <div
@@ -28,7 +32,10 @@ export function SectionHeading({
       {action && (
         <Link
           href={action.href}
-          className="group inline-flex min-h-11 shrink-0 items-center gap-1.5 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white sm:min-h-0 sm:pb-1 sm:text-xs"
+          className={cn(
+            "group inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:border-gold/60 hover:text-gold sm:text-[11px]",
+            !actionOnMobile && "hidden sm:inline-flex"
+          )}
         >
           {action.label}
           <ArrowRight
