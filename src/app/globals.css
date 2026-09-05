@@ -150,6 +150,7 @@
   --hairline: rgb(255 255 255 / 0.1);
   --gold: #fdcc4b; /* accent - CTAs, eyebrows, prices    */
   --on-gold: #1a2008; /* text/icon placed ON gold           */
+  --wordmark: #f8c828; /* yellow sampled from CompanyName.png - for anything sitting against the nav wordmark */
   --neon: #ff6b35; /* live / "on tonight" urgency        */
   --burgundy: #7a1f1f; /* ambient glow only                  */
 }
@@ -172,6 +173,7 @@
   --color-hairline: var(--hairline);
   --color-gold: var(--gold);
   --color-on-gold: var(--on-gold);
+  --color-wordmark: var(--wordmark);
   --color-neon: var(--neon);
 
   --font-display: var(--font-display); /* Anton        */
@@ -327,6 +329,171 @@ body {
   -webkit-text-stroke: 0.045em #fff4cc;
 }
 
+/* Hard "print block" extrusion for the home headline - stacked 1px
+   text-shadows in a flank colour, straight down so a letter's flank never
+   paints over its neighbour. Depth scales with the type size. */
+.ad-extrude {
+  --extrude-c: #2a3411;
+  --extrude-d: 4px;
+  text-shadow:
+    0 1px 0 var(--extrude-c),
+    0 2px 0 var(--extrude-c),
+    0 3px 0 var(--extrude-c),
+    0 4px 0 var(--extrude-c),
+    0 5px 0 var(--extrude-c),
+    0 6px 0 var(--extrude-c),
+    0 7px 0 var(--extrude-c),
+    0 8px 0 var(--extrude-c),
+    0 calc(var(--extrude-d) + 10px) 24px rgba(0, 0, 0, 0.45);
+}
+@media (max-width: 639px) {
+  .ad-extrude {
+    text-shadow:
+      0 1px 0 var(--extrude-c),
+      0 2px 0 var(--extrude-c),
+      0 3px 0 var(--extrude-c),
+      0 4px 0 var(--extrude-c),
+      0 12px 18px rgba(0, 0, 0, 0.4);
+  }
+}
+.ad-extrude-gold {
+  --extrude-c: #9a5b00;
+}
+
+/* Kinetic headline - each letter drops in with a spring overshoot, staggered by --i */
+@keyframes ad-drop {
+  from {
+    transform: translateY(-110%) rotate(-7deg);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.ad-letter {
+  animation: ad-drop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--i, 0) * 38ms + 120ms);
+}
+
+/* Live ticker dot - soft red pulse ring */
+@keyframes ad-live-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(230, 57, 46, 0.65);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(230, 57, 46, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(230, 57, 46, 0);
+  }
+}
+.ad-live-dot {
+  animation: ad-live-dot 1.4s ease-out infinite;
+}
+
+/* Hero backdrop - slow Ken Burns drift so the room feels alive */
+@keyframes ad-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.07);
+  }
+}
+.ad-drift {
+  transform-origin: 60% 40%;
+  animation: ad-drift 26s ease-in-out infinite alternate;
+}
+
+/* Market nav link while the drinks market is trading - sparks burst out
+   from the centre every few seconds, staggered so it reads as fireworks */
+@keyframes ad-spark {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--spark-a)) translateX(0) scale(0.4);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  35% {
+    transform: translate(-50%, -50%) rotate(var(--spark-a))
+      translateX(calc(var(--spark-d, 34px) * 0.76)) scale(1);
+    opacity: 1;
+  }
+  55%,
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--spark-a)) translateX(var(--spark-d, 34px))
+      scale(0.3);
+    opacity: 0;
+  }
+}
+.ad-spark {
+  animation: ad-spark 3.2s ease-out infinite;
+  animation-delay: calc(var(--spark-i, 0) * 45ms);
+  box-shadow: 0 0 6px var(--spark-c, #fdcc4b);
+}
+@keyframes ad-market-live {
+  0%,
+  100% {
+    text-shadow: 0 0 0 rgba(253, 204, 75, 0);
+  }
+  12% {
+    text-shadow: 0 0 14px rgba(253, 204, 75, 0.9);
+  }
+}
+.ad-market-live {
+  animation: ad-market-live 3.2s ease-out infinite;
+}
+
+/* Market CTA - the one gradient on the public surface, reserved for the live
+   drinks market. Shimmer sweeps every few seconds; odometer flips on a price
+   change; crash state shifts the gradient towards red. */
+.ad-market-cta {
+  background: linear-gradient(115deg, #fdcc4b 0%, #ffb347 55%, #ff6b35 100%);
+}
+.ad-market-cta-crash {
+  background: linear-gradient(115deg, #ff6b35 0%, #e6392e 60%, #7a1f1f 100%);
+  color: #fff4cc;
+}
+@keyframes ad-shimmer {
+  0%,
+  55% {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(130%) skewX(-18deg);
+  }
+}
+.ad-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  width: 60%;
+  animation: ad-shimmer 3.6s ease-in-out infinite;
+}
+@keyframes ad-odometer {
+  from {
+    transform: translateY(70%);
+    opacity: 0;
+    filter: blur(2px);
+  }
+  to {
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
+}
+.ad-odometer {
+  animation: ad-odometer 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Staggered entrance for schedule rows */
 @keyframes ad-rise {
   from {
@@ -432,6 +599,20 @@ body {
   .ad-rise {
     opacity: 1;
     animation: none;
+  }
+  .ad-letter,
+  .ad-live-dot,
+  .ad-drift,
+  .ad-market-live,
+  .ad-shimmer,
+  .ad-odometer {
+    animation: none;
+  }
+  .ad-shimmer {
+    display: none;
+  }
+  .ad-spark {
+    display: none;
   }
   .ad-row:hover,
   .ad-card:hover {

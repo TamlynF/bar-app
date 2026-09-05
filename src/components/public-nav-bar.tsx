@@ -7,6 +7,8 @@ import { Menu as MenuIcon, X } from "lucide-react";
 import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
+import { useMarketLive } from "@/hooks/use-market-live";
+import { Fireworks } from "@/components/fireworks";
 
 export function PublicNavBar({
   currentPath,
@@ -19,6 +21,7 @@ export function PublicNavBar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const marketLive = useMarketLive();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -75,12 +78,14 @@ export function PublicNavBar({
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex items-center py-2 text-[11px] font-bold tracking-[0.14em] whitespace-nowrap uppercase transition-colors lg:text-xs",
+                  "relative inline-flex items-center py-2 text-[11px] font-bold tracking-[0.14em] whitespace-nowrap uppercase transition-colors lg:text-xs",
                   currentPath === link.href ? "text-[#FDCC4B]" : "hover:text-ink",
                   currentPath !== link.href && (solid ? "text-stone-400" : "text-ink"),
-                  !solid && "drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
+                  !solid && "drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]",
+                  marketLive && link.href === "/market" && "ad-market-live text-[#FDCC4B]"
                 )}
               >
+                {marketLive && link.href === "/market" && <Fireworks />}
                 {link.label}
               </Link>
             ))}
@@ -149,13 +154,19 @@ export function PublicNavBar({
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "rounded-xl px-3 py-3 text-sm font-bold tracking-wide uppercase transition-colors",
+                    "relative flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold tracking-wide uppercase transition-colors",
                     currentPath === link.href
                       ? "bg-canvas-2 text-[#FDCC4B]"
                       : "text-stone-400 hover:bg-canvas-2 hover:text-ink"
                   )}
                 >
                   {link.label}
+                  {marketLive && link.href === "/market" && (
+                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 font-black text-[9px] tracking-[0.2em] text-[#FDCC4B]">
+                      <Fireworks />
+                      Live now
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

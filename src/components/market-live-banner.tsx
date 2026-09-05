@@ -1,23 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { ArrowRight, TrendingUp } from "lucide-react";
+import { useMarketLive } from "@/hooks/use-market-live";
 
 /* The homepage caches for five minutes and reads with the anon key, so
    whether a market is trading is asked client-side through the state
    endpoint - the banner is always current and shows nothing when closed. */
 export function MarketLiveBanner() {
-  const [live, setLive] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/market/state", { signal: controller.signal, cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setLive(data?.status === "live"))
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
+  const live = useMarketLive();
 
   if (!live) return null;
 

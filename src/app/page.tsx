@@ -5,13 +5,13 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
-import { MarqueeTicker } from "@/components/marquee-ticker";
+import { LiveTicker, MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
-import { MarketLiveBanner } from "@/components/market-live-banner";
 import {
+  entryText,
   getEventType,
   serializeEvent,
   BOOKED_BAND_FILTER,
@@ -72,6 +72,11 @@ export default async function HomePage() {
   const isTonight = tonight.length > 0;
   const tonightEvents = isTonight ? tonight : highlightedEvents.slice(0, 1);
   const heroIds = new Set(tonightEvents.map((e) => e.id));
+  const liveTickerItems = tonight.flatMap((e) => [
+    e.title,
+    e.startTimeLabel ? `${e.startTimeLabel}${e.endTimeLabel ? ` – ${e.endTimeLabel}` : ""}` : null,
+    entryText(e),
+  ]).filter((x): x is string => Boolean(x));
   const weekEndStr = format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
   const remainingEvents = highlightedEvents.filter((e) => !heroIds.has(e.id));
   const thisWeekEvents = remainingEvents.filter((e) => e.date <= weekEndStr);
@@ -108,18 +113,20 @@ export default async function HomePage() {
               fill
               priority
               sizes="100vw"
-              className="scale-105 object-cover object-center brightness-115"
+              className="ad-drift object-cover object-center"
             />
             <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F]/35 via-[#4A2A14]/25 to-[#26300D]/40 mix-blend-multiply" />
-            <div className="absolute inset-0 bg-linear-to-b from-[#FDCC4B]/12 to-transparent mix-blend-overlay" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_58%_52%_at_50%_45%,rgba(20,24,10,0.5)_0%,rgba(20,24,10,0.12)_55%,transparent_100%)]" />
-            <div className="absolute inset-0 bg-linear-to-b from-black/20 via-transparent to-canvas" />
+            <div className="absolute inset-0 bg-linear-to-b from-canvas/70 via-canvas/50 via-35% to-canvas" />
           </div>
         )}
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-14 sm:px-6 sm:pt-16 lg:px-10">
+        <div className="relative z-10 pt-14 sm:pt-16">
+          {isTonight && <LiveTicker items={liveTickerItems} />}
+        </div>
+
+        <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-6 sm:px-6 sm:pt-10 lg:px-10">
           <HomeHero
             tagline={tagline}
             accentWord={taglineAccent}
@@ -134,8 +141,6 @@ export default async function HomePage() {
       </div>
 
       <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
-        <MarketLiveBanner />
-
         <HighlightedEvents events={scheduleEvents} upcoming={showUpcoming} />
 
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">

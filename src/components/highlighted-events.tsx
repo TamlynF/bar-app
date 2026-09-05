@@ -9,6 +9,7 @@ import {
   PosterHoverHint,
   PriceChip,
 } from "@/components/editorial/event-poster";
+import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
 const HOMEPAGE_EVENT_LIMIT = 8;
@@ -45,10 +46,10 @@ export function HighlightedEvents({
             scroll-px-4 items-center gap-3.5 overflow-x-auto
             px-4 pb-3
 
-            sm:mx-0 sm:snap-none sm:flex-wrap sm:items-stretch
-            sm:justify-center sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0
+            sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:items-stretch
+            sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0
 
-            lg:gap-5
+            lg:grid-cols-4 lg:gap-5
 
             xl:gap-6
           "
@@ -58,6 +59,7 @@ export function HighlightedEvents({
               key={event.id}
               event={event}
               index={index}
+              featured={index === 0 && visibleEvents.length > 1}
             />
           ))}
         </ul>
@@ -84,9 +86,11 @@ export function HighlightedEvents({
 function ScheduleCard({
   event,
   index,
+  featured = false,
 }: {
   event: SerializedEvent;
   index: number;
+  featured?: boolean;
 }) {
   const dateObj = parseDate(event.date);
 
@@ -98,19 +102,10 @@ function ScheduleCard({
 
   return (
     <li
-      className="
-        ad-card ad-rise group relative flex
-        w-[min(86vw,340px)] shrink-0 snap-start flex-col
-        overflow-hidden rounded-3xl border border-hairline
-        bg-canvas-2
-
-        sm:w-auto sm:min-w-0 sm:shrink sm:snap-none
-        sm:basis-[calc(50%-0.5rem)]
-
-        lg:basis-[calc(33.333%-0.834rem)]
-
-        xl:basis-[calc(25%-1.125rem)]
-      "
+      className={cn(
+        "ad-card ad-rise group relative flex w-[min(86vw,340px)] shrink-0 snap-start flex-col overflow-hidden rounded-3xl border border-hairline bg-canvas-2 sm:w-auto sm:min-w-0 sm:shrink sm:snap-none",
+        featured && "sm:col-span-2"
+      )}
       style={
         {
           "--ev-c": event.color,
@@ -131,19 +126,17 @@ function ScheduleCard({
       <EventPoster
         event={event}
         aspect="aspect-auto"
-        className="
-          h-47.5 shrink-0
-          sm:h-50
-          lg:h-46.25
-          xl:h-47.5
-        "
+        className={
+          featured
+            ? "h-47.5 shrink-0 sm:h-64 lg:h-72"
+            : "h-47.5 shrink-0 sm:h-50 lg:h-46.25 xl:h-47.5"
+        }
         zoomOnHover
-        sizes="
-          (max-width: 640px) 340px,
-          (max-width: 1024px) 50vw,
-          (max-width: 1280px) 33vw,
-          25vw
-        "
+        sizes={
+          featured
+            ? "(max-width: 640px) 340px, (max-width: 1024px) 100vw, 50vw"
+            : "(max-width: 640px) 340px, (max-width: 1024px) 50vw, 25vw"
+        }
       >
         <PosterChip event={event} />
         <PriceChip event={event} />
@@ -152,7 +145,11 @@ function ScheduleCard({
       </EventPoster>
 
       <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 sm:px-5">
-        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+        <h3
+          className={`line-clamp-2 font-black leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold ${
+            featured ? "text-lg sm:text-2xl lg:text-3xl" : "text-lg"
+          }`}
+        >
           {event.title}
         </h3>
 
