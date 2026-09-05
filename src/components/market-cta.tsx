@@ -44,13 +44,13 @@ export function MarketCta({ fallback = null }: { fallback?: React.ReactNode }) {
           : "Drinks market is open"
       }
       className={cn(
-        "ad-market-cta group relative inline-flex w-full min-h-14 items-center gap-3 overflow-hidden rounded-2xl pr-4 pl-3.5 sm:w-auto text-on-gold shadow-[0_18px_40px_-12px_rgba(255,107,53,0.65)] transition-transform hover:-translate-y-0.5 active:scale-[0.98] sm:min-h-16 sm:gap-4 sm:pr-5 sm:pl-4",
+        "ad-market-cta group relative inline-flex w-full min-h-12 items-center gap-2.5 overflow-hidden rounded-xl pr-3 pl-2.5 sm:w-auto text-on-gold shadow-[0_14px_32px_-12px_rgba(255,107,53,0.6)] transition-transform hover:-translate-y-0.5 active:scale-[0.98] sm:min-h-16 sm:gap-4 sm:rounded-2xl sm:pr-5 sm:pl-4",
         crash && "ad-market-cta-crash"
       )}
     >
       <span className="ad-shimmer pointer-events-none absolute inset-0" aria-hidden="true" />
 
-      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas/85 text-gold sm:h-10 sm:w-10">
+      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-canvas/85 text-gold sm:h-10 sm:w-10">
         <Fireworks distance={22} />
         {crash ? (
           <Zap className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
@@ -60,11 +60,11 @@ export function MarketCta({ fallback = null }: { fallback?: React.ReactNode }) {
       </span>
 
       <span className="relative flex min-w-0 flex-col items-start leading-none">
-        <span className="mb-1 inline-flex items-center gap-1.5 font-black text-[9px] tracking-[0.24em] uppercase opacity-80 sm:text-[10px]">
+        <span className="mb-0.5 inline-flex items-center gap-1.5 font-black text-[8px] tracking-[0.2em] uppercase opacity-80 sm:mb-1 sm:text-[10px] sm:tracking-[0.24em]">
           <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
           {crash ? `Crash on${crashMins ? ` · ${crashMins} min left` : ""}` : "Drinks market open"}
         </span>
-        <span className="flex items-baseline gap-2 font-black text-sm tracking-tight uppercase sm:text-base">
+        <span className="flex items-baseline gap-1.5 font-black text-[13px] tracking-tight uppercase sm:gap-2 sm:text-base">
           {deal ? (
             <>
               <span className="max-w-[9rem] truncate sm:max-w-[13rem]">{deal.name}</span>

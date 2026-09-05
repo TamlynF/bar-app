@@ -1,4 +1,3 @@
-import { endOfWeek, format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
@@ -6,7 +5,8 @@ import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { LiveTicker, MarqueeTicker } from "@/components/marquee-ticker";
-import { HighlightedEvents } from "@/components/highlighted-events";
+import { MarketPill } from "@/components/market-pill";
+import { WeekNights } from "@/components/week-nights";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
@@ -71,20 +71,11 @@ export default async function HomePage() {
   const tonight = highlightedEvents.filter((e) => e.date === todayStr);
   const isTonight = tonight.length > 0;
   const tonightEvents = isTonight ? tonight : highlightedEvents.slice(0, 1);
-  const heroIds = new Set(tonightEvents.map((e) => e.id));
   const liveTickerItems = tonight.flatMap((e) => [
     e.title,
     e.startTimeLabel ? `${e.startTimeLabel}${e.endTimeLabel ? ` – ${e.endTimeLabel}` : ""}` : null,
     entryText(e),
   ]).filter((x): x is string => Boolean(x));
-  const weekEndStr = format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
-  const remainingEvents = highlightedEvents.filter((e) => !heroIds.has(e.id));
-  const thisWeekEvents = remainingEvents.filter((e) => e.date <= weekEndStr);
-  const showUpcoming = thisWeekEvents.length === 0;
-  const scheduleEvents = showUpcoming
-    ? remainingEvents.slice(0, 5)
-    : thisWeekEvents;
-
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
     (s) =>
       (!s.start_date || s.start_date <= todayStr) &&
@@ -103,6 +94,7 @@ export default async function HomePage() {
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
       <PublicNav currentPath="/" overlay />
+      <MarketPill />
 
       <div className="relative overflow-hidden">
         {backdropUrl && (
@@ -123,7 +115,7 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
         <div className="relative z-10 pt-14 sm:pt-16">
-          {isTonight && <LiveTicker items={liveTickerItems} />}
+          <MarqueeTicker straight />
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-6 sm:px-6 sm:pt-10 lg:px-10">
@@ -136,12 +128,16 @@ export default async function HomePage() {
         </div>
 
         <div className="relative z-10 mt-10 pb-8 sm:mt-14">
-          <MarqueeTicker />
+          {isTonight && <LiveTicker items={liveTickerItems} />}
         </div>
       </div>
 
       <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
-        <HighlightedEvents events={scheduleEvents} upcoming={showUpcoming} />
+        <WeekNights
+          events={highlightedEvents}
+          today={today}
+          openingHours={companyInfo?.opening_hours ?? null}
+        />
 
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
           {specials.length > 0 && <SpecialsSection specials={specials} />}

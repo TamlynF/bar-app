@@ -8,7 +8,6 @@ import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
 import { useMarketLive } from "@/hooks/use-market-live";
-import { Fireworks } from "@/components/fireworks";
 
 export function PublicNavBar({
   currentPath,
@@ -82,11 +81,20 @@ export function PublicNavBar({
                   currentPath === link.href ? "text-[#FDCC4B]" : "hover:text-ink",
                   currentPath !== link.href && (solid ? "text-stone-400" : "text-ink"),
                   !solid && "drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]",
-                  marketLive && link.href === "/market" && "ad-market-live text-[#FDCC4B]"
+                  marketLive &&
+                    link.href === "/market" &&
+                    "ad-market-live -my-1 gap-2 rounded-full bg-[#FDCC4B]/12 px-3 py-1.5 text-[#FDCC4B] ring-1 ring-[#FDCC4B]/45 drop-shadow-none hover:bg-[#FDCC4B]/20 hover:text-[#FDCC4B]"
                 )}
               >
-                {marketLive && link.href === "/market" && <Fireworks />}
+                {marketLive && link.href === "/market" && (
+                  <span className="ad-live-dot h-1.5 w-1.5 shrink-0 rounded-full bg-[#E6392E]" aria-hidden="true" />
+                )}
                 {link.label}
+                {marketLive && link.href === "/market" && (
+                  <span className="rounded-full bg-[#FDCC4B] px-1.5 py-0.5 font-black text-[8px] leading-none tracking-[0.18em] text-[#1a2008]">
+                    Open
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -119,18 +127,24 @@ export function PublicNavBar({
 
             <button
               type="button"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-label={menuOpen ? "Close menu" : marketLive ? "Open menu (drinks market is open)" : "Open menu"}
               aria-expanded={menuOpen}
               aria-controls="public-nav-drawer"
               onClick={() => setMenuOpen((o) => !o)}
               className={cn(
-                "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-canvas-2 hover:text-ink active:scale-95 sm:hidden",
+                "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-canvas-2 hover:text-ink active:scale-95 sm:hidden",
                 solid
                   ? "text-ink-2"
                   : "text-ink drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
               )}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+              {marketLive && !menuOpen && (
+                <span
+                  className="ad-live-dot absolute top-2 right-2 h-2 w-2 rounded-full bg-[#E6392E] ring-2 ring-canvas"
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </div>
         </div>
@@ -162,9 +176,9 @@ export function PublicNavBar({
                 >
                   {link.label}
                   {marketLive && link.href === "/market" && (
-                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 font-black text-[9px] tracking-[0.2em] text-[#FDCC4B]">
-                      <Fireworks />
-                      Live now
+                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 font-black text-[9px] tracking-[0.2em] text-[#FDCC4B] ring-1 ring-[#FDCC4B]/40">
+                      <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
+                      Open now
                     </span>
                   )}
                 </Link>

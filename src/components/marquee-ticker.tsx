@@ -17,9 +17,12 @@ const REPEATS_PER_HALF = 4;
 export function MarqueeTicker({
   items,
   straight = false,
+  tone = "gold",
 }: {
   items?: MarqueeItem[];
   straight?: boolean;
+  /* market = the live drinks-market takeover (gold-to-orange) */
+  tone?: "gold" | "market";
 }) {
   const entries = items?.length ? items : PHRASES;
 
@@ -36,7 +39,8 @@ export function MarqueeTicker({
       <div
         aria-hidden="true"
         className={
-          "relative overflow-hidden bg-[#FDCC4B] py-1.5 shadow-md shadow-black/25 " +
+          "relative overflow-hidden py-1.5 shadow-md shadow-black/25 " +
+          (tone === "market" ? "ad-market-cta " : "bg-[#FDCC4B] ") +
           (straight ? "w-full" : "-mx-[6%] w-[112%] -rotate-[1.5deg]")
         }
       >
@@ -83,9 +87,11 @@ export function LiveTicker({
       aria-label={`${label}: ${items.join(", ")}`}
       className="relative z-30 flex h-9 items-stretch overflow-hidden border-y border-(--wordmark)/25 bg-(--canvas) text-(--wordmark) shadow-lg shadow-black/35 sm:h-10"
     >
-      <span className="relative z-10 flex shrink-0 items-center gap-2 bg-(--burgundy) pr-3.5 pl-4 font-black text-xs tracking-[0.18em] text-(--ink) uppercase sm:pl-6 sm:text-sm">
+      <span className="relative z-10 flex shrink-0 items-center gap-1.5 bg-(--burgundy) pr-2.5 pl-3 font-black text-[11px] tracking-[0.16em] text-(--ink) uppercase sm:gap-2 sm:pr-3.5 sm:pl-6 sm:text-sm sm:tracking-[0.18em]">
         <span className="ad-live-dot h-2 w-2 rounded-full bg-(--neon) sm:h-2.5 sm:w-2.5" aria-hidden="true" />
-        {label}
+        {/* Phones get the short tab so the strip itself stays readable */}
+        <span className="sm:hidden">Live</span>
+        <span className="hidden sm:inline">{label}</span>
         <span
           aria-hidden="true"
           className="absolute top-0 -right-3 bottom-0 w-3 bg-(--burgundy) [clip-path:polygon(0_0,100%_0,0_100%)]"

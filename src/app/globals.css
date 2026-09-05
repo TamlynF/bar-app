@@ -439,14 +439,14 @@ body {
 @keyframes ad-market-live {
   0%,
   100% {
-    text-shadow: 0 0 0 rgba(253, 204, 75, 0);
+    box-shadow: 0 0 0 0 rgba(253, 204, 75, 0.45);
   }
-  12% {
-    text-shadow: 0 0 14px rgba(253, 204, 75, 0.9);
+  60% {
+    box-shadow: 0 0 0 7px rgba(253, 204, 75, 0);
   }
 }
 .ad-market-live {
-  animation: ad-market-live 3.2s ease-out infinite;
+  animation: ad-market-live 2.4s ease-out infinite;
 }
 
 /* Market CTA - the one gradient on the public surface, reserved for the live
@@ -458,6 +458,39 @@ body {
 .ad-market-cta-crash {
   background: linear-gradient(115deg, #ff6b35 0%, #e6392e 60%, #7a1f1f 100%);
   color: #fff4cc;
+}
+/* Phone "live activity" pill - dark glass with the market gradient as a ring */
+.ad-market-pill {
+  background: color-mix(in oklab, var(--canvas) 88%, transparent);
+  box-shadow:
+    0 0 0 1.5px transparent,
+    0 18px 40px -10px rgba(0, 0, 0, 0.75);
+  border: 1.5px solid transparent;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--canvas) 90%, transparent), color-mix(in oklab, var(--canvas) 90%, transparent)),
+    linear-gradient(115deg, #fdcc4b, #ff6b35);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+.ad-market-pill-crash {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--canvas) 90%, transparent), color-mix(in oklab, var(--canvas) 90%, transparent)),
+    linear-gradient(115deg, #ff6b35, #7a1f1f);
+}
+/* Market pill opening from the round icon */
+@keyframes ad-pill-expand {
+  from {
+    transform: translateX(8px) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.ad-pill-expand {
+  transform-origin: right center;
+  animation: ad-pill-expand 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes ad-shimmer {
   0%,
@@ -605,7 +638,8 @@ body {
   .ad-drift,
   .ad-market-live,
   .ad-shimmer,
-  .ad-odometer {
+  .ad-odometer,
+  .ad-pill-expand {
     animation: none;
   }
   .ad-shimmer {
