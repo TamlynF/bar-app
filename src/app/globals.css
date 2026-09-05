@@ -360,6 +360,118 @@ body {
   --extrude-c: #9a5b00;
 }
 
+/* Neon sign - the bar's offer as tubes on a dark slatted board */
+.ad-neon-board {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25)),
+    repeating-linear-gradient(90deg, #2a2419 0 2px, #221d13 2px 26px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ad-neon-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(60% 120% at 50% 100%, rgba(0, 0, 0, 0.5), transparent 70%);
+}
+.ad-tube {
+  color: color-mix(in oklab, var(--tube-c, #fdcc4b) 38%, transparent);
+  text-shadow: 0 0 6px color-mix(in oklab, var(--tube-c, #fdcc4b) 25%, transparent);
+  transition: color 0.35s ease, text-shadow 0.35s ease;
+}
+.ad-tube-on {
+  color: #fff;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 6px var(--tube-c, #fdcc4b),
+    0 0 14px var(--tube-c, #fdcc4b),
+    0 0 28px var(--tube-c, #fdcc4b),
+    0 0 52px color-mix(in oklab, var(--tube-c, #fdcc4b) 70%, transparent);
+}
+@keyframes ad-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  7% {
+    opacity: 0.75;
+  }
+  9% {
+    opacity: 1;
+  }
+  44% {
+    opacity: 0.6;
+  }
+  46% {
+    opacity: 1;
+  }
+  47% {
+    opacity: 0.85;
+  }
+  49% {
+    opacity: 1;
+  }
+}
+.ad-tube-flicker {
+  animation: ad-flicker 3.1s steps(1, end) infinite;
+}
+
+/* Rolling-digit price (stock-ticker style) + up/down flash */
+.ad-roll-strip {
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes ad-flash-down {
+  0% {
+    color: #6ee7b7;
+    text-shadow: 0 0 12px rgba(110, 231, 183, 0.8);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+@keyframes ad-flash-up {
+  0% {
+    color: #ff6b6b;
+    text-shadow: 0 0 12px rgba(255, 107, 107, 0.8);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+.ad-flash-down {
+  animation: ad-flash-down 0.9s ease-out both;
+}
+.ad-flash-up {
+  animation: ad-flash-up 0.9s ease-out both;
+}
+
+/* Market bottom sheet */
+@keyframes ad-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes ad-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.ad-sheet {
+  animation: ad-sheet-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ad-sheet-backdrop {
+  animation: ad-fade-in 0.25s ease-out both;
+}
+
 /* Kinetic headline - each letter drops in with a spring overshoot, staggered by --i */
 @keyframes ad-drop {
   from {
@@ -636,11 +748,19 @@ body {
   .ad-letter,
   .ad-live-dot,
   .ad-drift,
+  .ad-tube-flicker,
+  .ad-flash-down,
+  .ad-flash-up,
+  .ad-sheet,
+  .ad-sheet-backdrop,
   .ad-market-live,
   .ad-shimmer,
   .ad-odometer,
   .ad-pill-expand {
     animation: none;
+  }
+  .ad-roll-strip {
+    transition: none;
   }
   .ad-shimmer {
     display: none;

@@ -4,7 +4,8 @@ import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
-import { LiveTicker, MarqueeTicker } from "@/components/marquee-ticker";
+import { LiveTicker } from "@/components/marquee-ticker";
+import { NeonSign } from "@/components/neon-sign";
 import { MarketPill } from "@/components/market-pill";
 import { WeekNights } from "@/components/week-nights";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
@@ -87,6 +88,11 @@ export default async function HomePage() {
   const backdropUrl = HERO_BACKDROP;
 
   const companyInfo = info;
+  const offerWords = (companyInfo?.tagline ?? "")
+    .replace(/\.$/, "")
+    .split(/,|·/)
+    .map((w) => w.trim())
+    .filter(Boolean);
   const tagline = companyInfo?.tagline?.trim() || null;
   const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
 
@@ -115,7 +121,7 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
         <div className="relative z-10 pt-14 sm:pt-16">
-          <MarqueeTicker straight />
+          {isTonight && <LiveTicker items={liveTickerItems} />}
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-6 sm:px-6 sm:pt-10 lg:px-10">
@@ -127,8 +133,8 @@ export default async function HomePage() {
           />
         </div>
 
-        <div className="relative z-10 mt-10 pb-8 sm:mt-14">
-          {isTonight && <LiveTicker items={liveTickerItems} />}
+        <div className="relative z-10 mt-10 sm:mt-14">
+          <NeonSign words={offerWords} />
         </div>
       </div>
 

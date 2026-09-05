@@ -46,7 +46,7 @@ export function KineticHeadline({
                 style={{ "--i": i } as React.CSSProperties}
                 className={cn("ad-letter block", ch === " " && "w-[0.22em]")}
               >
-                {ch === " " ? " " : ch}
+                {ch === " " ? "\u00a0" : ch}
               </span>
             );
           })}
