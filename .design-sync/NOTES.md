@@ -91,6 +91,18 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-09-07 re-sync, second run (bundled skill 2.1.263) - UPLOADED.** After `/design-login`
+  from an interactive session, `DesignSync` worked again. Re-fetched the remote anchor: it was
+  exactly the 2026-08-03 upload (`scriptsSha` `0f1e261b…`, `styleSha` `43850e9d…`), i.e. the
+  cached copy the morning's headless run diffed against was accurate. Staged scripts already
+  matched 2.1.263. Mini-package rebuilt, styles.css recompiled (**415 KB**, Tailwind 4.3.1).
+  Driver: both components **verification-unchanged** (`empty_worklist`), render check 2/2
+  clean, `upload.any:true` with `styling:true`/`aux:true`, `components:[]`/`bundle:false`/
+  `deletePaths:[]`. Toolchain churn moved `scriptsSha` → `eac254b8…` and `auxSha` →
+  `e8af8a56…`. Conventions header re-validated: all 15 token DEFINITIONS in the shipped
+  `_ds_bundle.css` match the table, utilities resolve - no rewrite, no rebuild. Uploaded all
+  18 DS files on the atomic path (`deletes:[]`), post-upload `list_files` confirmed them.
+  `[TOKENS_MISSING]` 43 vars, `[FONT_MISSING] Cambria` - both known.
 - **2026-09-07 re-sync attempt (bundled skill 2.1.263) - built + verified locally, upload
   NOT done.** `DesignSync` refused every call: the session was headless and the machine
   had no design-system authorization ("run /design-login once from an interactive Claude
