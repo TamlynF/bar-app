@@ -189,6 +189,15 @@ body {
   overflow-x: clip;
 }
 
+/* Admin pages: paint the document itself cream, not just the shell div.
+   iOS home-screen apps colour the status bar from the page background, so
+   the public olive-black above would otherwise show as a dark band over
+   the cream admin header. */
+html:has([data-admin-shell]),
+html:has([data-admin-shell]) body {
+  background-color: #f4f1e8;
+}
+
 /* Choreographed hero text reveal (slides up + fades in on load) */
 @keyframes reveal {
   from {
