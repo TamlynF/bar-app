@@ -14,6 +14,7 @@ export const viewport: Viewport = {
    which is ~200px of the phone screen back, and it's the only way iOS lets
    a web app receive push notifications (needed for "new band request" pings). */
 export const metadata: Metadata = {
+    title: { default: "DF Admin", template: "%s | DF Admin" },
     manifest: "/admin-manifest.json",
     appleWebApp: {
         capable: true,
