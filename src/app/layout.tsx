@@ -36,9 +36,14 @@ export const metadata: Metadata = {
   description:
     "Don Fenticas, Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
   icons: {
-    icon: "/df-mark.jpg",
-    shortcut: "/df-mark.jpg",
-    apple: "/df-mark.jpg",
+    // PNGs generated from the 2000px logo.jpeg - df-mark.jpg was 150px and
+    // went soft when iOS/Android upscaled it for the home screen.
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icon-192.png",
+    apple: "/apple-touch-icon.png", // 180x180 - what iOS actually uses for Add to Home Screen
   },
   manifest: "/manifest.json",
   appleWebApp: {
