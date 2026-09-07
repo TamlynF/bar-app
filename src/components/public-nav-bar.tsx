@@ -52,7 +52,7 @@ export function PublicNavBar({
             : "border-transparent bg-transparent"
         )}
       >
-        <div className="pt-[env(safe-area-inset-top)] mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-4 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
+        <div className="mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-4 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
           <Link
             href="/"
             className="inline-flex w-fit shrink-0 flex-col items-start gap-1"
