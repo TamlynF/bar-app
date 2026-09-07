@@ -132,6 +132,25 @@ describe("readVapidKeys", () => {
     expect(readVapidKeys({ NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub" })).toBeNull();
   });
 
+  it("drops a pasted trailing comment from the subject", () => {
+    const keys = readVapidKeys({
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",
+      VAPID_PRIVATE_KEY: "priv",
+      VAPID_SUBJECT: "mailto:admin@example.test   # or your https:// site URL",
+    });
+    expect(keys?.subject).toBe("mailto:admin@example.test");
+  });
+
+  it("ignores an invalid subject in favour of the site URL", () => {
+    const keys = readVapidKeys({
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",
+      VAPID_PRIVATE_KEY: "priv",
+      VAPID_SUBJECT: "admin@example.test",
+      NEXT_PUBLIC_SITE_URL: "https://example.test",
+    });
+    expect(keys?.subject).toBe("https://example.test");
+  });
+
   it("falls back to the site URL as the subject", () => {
     const keys = readVapidKeys({
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: "pub",

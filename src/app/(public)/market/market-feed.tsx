@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
 import { useMarketState } from "./use-market-state";
-import { saveMarketPushSubscription } from "./actions";
+import { removeMarketPushSubscription, saveMarketPushSubscription } from "./actions";
 import {
   DirectionArrow,
   Sparkline,
@@ -16,14 +16,40 @@ import {
   formatChangePct,
 } from "./market-ui";
 
-function systemNotify(events: MarketEventPayload[]) {
+/* iOS (and some Android browsers) refuse `new Notification()` from page
+   script and only show notifications raised through the service worker, so
+   prefer the registration when one is available. */
+async function systemNotify(events: MarketEventPayload[]) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-  for (const event of events) {
-    if (event.kind !== "price_drop" && event.kind !== "out_of_stock" && event.kind !== "low_stock" && event.kind !== "crash") continue;
+  const alerts = events.filter(
+    (event) =>
+      event.kind === "price_drop" || event.kind === "out_of_stock" || event.kind === "low_stock" || event.kind === "crash"
+  );
+  if (alerts.length === 0) return;
+
+  let registration: ServiceWorkerRegistration | null = null;
+  if ("serviceWorker" in navigator) {
     try {
-      new Notification("Market Night", { body: eventCopy(event) });
+      registration = await navigator.serviceWorker.ready;
     } catch {
-      /* some mobile browsers only allow notifications via a service worker */
+      registration = null;
+    }
+  }
+  for (const event of alerts) {
+    try {
+      if (registration) {
+        await registration.showNotification("Market Night", {
+          body: eventCopy(event),
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: `market-${event.id}`,
+          data: { url: "/market" },
+        });
+      } else {
+        new Notification("Market Night", { body: eventCopy(event) });
+      }
+    } catch {
+      /* notification blocked by the platform - the toast already showed */
     }
   }
 }
@@ -96,6 +122,42 @@ async function registerPush(watched: number[]): Promise<boolean> {
 
 const WATCH_KEY = "df-market-watch";
 const WATCH_EVENT = "df-market-watch-change";
+const MUTE_KEY = "df-market-alerts-muted";
+const MUTE_EVENT = "df-market-alerts-muted-change";
+
+function readMutedRaw(): string {
+  try {
+    return localStorage.getItem(MUTE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function subscribeMuted(onChange: () => void): () => void {
+  window.addEventListener(MUTE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(MUTE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/* Browser permission can't be handed back from a page, so "Turn off" is a
+   local mute on top of it: nothing fires while set, and re-enabling skips the
+   permission prompt because the grant is still there. */
+function useAlertsMuted(): [boolean, (muted: boolean) => void] {
+  const raw = useSyncExternalStore(subscribeMuted, readMutedRaw, () => "");
+  const setMuted = (muted: boolean) => {
+    try {
+      if (muted) localStorage.setItem(MUTE_KEY, "1");
+      else localStorage.removeItem(MUTE_KEY);
+    } catch {
+      /* private mode - the event still updates this page load */
+    }
+    window.dispatchEvent(new Event(MUTE_EVENT));
+  };
+  return [raw === "1", setMuted];
+}
 
 function readWatchedRaw(): string {
   try {
@@ -145,7 +207,8 @@ export default function MarketFeed() {
   const { state, feed, fresh } = useMarketState();
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
-  const notifyEnabled = alreadyGranted || justGranted;
+  const [muted, setMuted] = useAlertsMuted();
+  const notifyEnabled = (alreadyGranted || justGranted) && !muted;
   const announcedRef = useRef(0);
   const [watched, toggleWatched] = useWatchedDrinks();
   const [pushState, setPushState] = useState<PushState>("unknown");
@@ -190,6 +253,7 @@ export default function MarketFeed() {
     const newest = fresh[fresh.length - 1];
     if (newest.id <= announcedRef.current) return;
     announcedRef.current = newest.id;
+    if (muted) return;
 
     const watchedNames = new Set(watchedNamesKey ? watchedNamesKey.split("\u0000") : []);
     const relevant =
@@ -207,11 +271,11 @@ export default function MarketFeed() {
         toast(eventCopy(event));
       }
     }
-    systemNotify(relevant);
+    void systemNotify(relevant);
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(150);
     }
-  }, [fresh, watchedNamesKey]);
+  }, [fresh, watchedNamesKey, muted]);
 
   async function enableNotifications() {
     if (typeof Notification === "undefined") {
@@ -221,6 +285,7 @@ export default function MarketFeed() {
     const permission = await Notification.requestPermission();
     setJustGranted(permission === "granted");
     if (permission !== "granted") return;
+    setMuted(false);
 
     if (pushSupported()) {
       try {
@@ -235,6 +300,24 @@ export default function MarketFeed() {
       }
     }
     toast.success("You'll be pinged when prices drop while this page is open.");
+  }
+
+  async function disableNotifications() {
+    setMuted(true);
+    if (pushSupported()) {
+      try {
+        const subscription = await currentPushSubscription();
+        if (subscription) {
+          const endpoint = subscription.endpoint;
+          await subscription.unsubscribe();
+          await removeMarketPushSubscription(endpoint);
+        }
+        setPushState("page-only");
+      } catch {
+        /* the local mute already silences this phone; the server row expires on its own */
+      }
+    }
+    toast("Alerts off.");
   }
 
   if (!state) {
@@ -281,6 +364,13 @@ export default function MarketFeed() {
               ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
               : "Tap the bell on a drink to only hear about that one."}
           </p>
+          <button
+            type="button"
+            onClick={disableNotifications}
+            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
+          >
+            Turn off
+          </button>
         </div>
       ) : (
         <>

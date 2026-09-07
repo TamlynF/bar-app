@@ -13,4 +13,7 @@ const publicKey = Buffer.concat([
 
 console.log(`NEXT_PUBLIC_VAPID_PUBLIC_KEY=${publicKey}`);
 console.log(`VAPID_PRIVATE_KEY=${jwk.d}`);
-console.log(`VAPID_SUBJECT=mailto:you@example.com   # or your https:// site URL`);
+console.log("VAPID_SUBJECT=mailto:you@example.com");
+console.log("");
+console.log("Replace the VAPID_SUBJECT address with a monitored inbox (or use your https:// site URL).");
+console.log("Paste only the three KEY=value lines - no trailing comments, push services reject them.");

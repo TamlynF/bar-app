@@ -47,12 +47,25 @@ function fromBase64Url(value: string): Buffer {
   return Buffer.from(value, "base64url");
 }
 
+const SUBJECT_PATTERN = /^(mailto:[^\s@]+@[^\s@]+|https:\/\/\S+)$/;
+
+/* Push services reject the whole JWT when `sub` is not a clean mailto: or
+   https: URL, so take only the first token of the configured value (a pasted
+   trailing comment is the usual culprit) and fall back to the site URL. */
+export function vapidSubject(env: NodeJS.ProcessEnv = process.env): string {
+  const candidates = [env.VAPID_SUBJECT, env.NEXT_PUBLIC_SITE_URL];
+  for (const raw of candidates) {
+    const token = raw?.trim().split(/\s+/)[0];
+    if (token && SUBJECT_PATTERN.test(token)) return token;
+  }
+  return "https://localhost";
+}
+
 export function readVapidKeys(env: NodeJS.ProcessEnv = process.env): VapidKeys | null {
-  const publicKey = env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = env.VAPID_PRIVATE_KEY;
+  const publicKey = env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = env.VAPID_PRIVATE_KEY?.trim();
   if (!publicKey || !privateKey) return null;
-  const subject = env.VAPID_SUBJECT || env.NEXT_PUBLIC_SITE_URL || "https://localhost";
-  return { publicKey, privateKey, subject };
+  return { publicKey, privateKey, subject: vapidSubject(env) };
 }
 
 function vapidPrivateKeyObject(keys: VapidKeys): KeyObject {

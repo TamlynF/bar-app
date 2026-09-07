@@ -74,11 +74,14 @@ export async function sendMarketPushAlerts(
   events: MarketPushEvent[]
 ): Promise<{ sent: number; removed: number; failed: number }> {
   const summary = { sent: 0, removed: 0, failed: 0 };
-  const keys = readVapidKeys();
-  if (!keys) return summary;
-
   const alerts = events.filter((event) => PUSH_KINDS.has(event.kind));
   if (alerts.length === 0) return summary;
+
+  const keys = readVapidKeys();
+  if (!keys) {
+    console.warn("[market] push alerts skipped - VAPID keys not configured");
+    return summary;
+  }
 
   const { data, error } = await supabase
     .from("market_push_subscriptions")
@@ -121,6 +124,9 @@ export async function sendMarketPushAlerts(
         console.error("[market] push send failed:", err);
       }
     })
+  );
+  console.info(
+    `[market] push alerts: ${alerts.length} event(s), ${subscriptions.length} phone(s), sent ${summary.sent}, removed ${summary.removed}, failed ${summary.failed}`
   );
   return summary;
 }
