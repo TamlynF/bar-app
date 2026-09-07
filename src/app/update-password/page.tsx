@@ -1,6 +1,21 @@
+import type { Metadata, Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UpdatePasswordForm } from "./update-password-form";
+
+export const metadata: Metadata = {
+  title: "Update Password | DF Admin",
+  manifest: "/admin-manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "DF Admin",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F7F4EA",
+};
 
 export default async function UpdatePasswordPage() {
   const supabase = await createClient();

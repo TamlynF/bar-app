@@ -1,11 +1,27 @@
 import React from "react";
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signIn } from "./actions";
 import LoginForm from "./_components/login-form";
 
-export const metadata = {
+/* Staff only ever reach this page on their way into the admin, and it is
+   where an expired-session launch of the installed "DF Admin" app lands.
+   iOS bakes the status-bar style and manifest into the home-screen icon at
+   install time, so this page has to advertise the admin app, not the public
+   site, or the installed admin inherits the public dark translucent bar. */
+export const metadata: Metadata = {
   title: "Staff Login | Don Fenticas",
+  manifest: "/admin-manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "DF Admin",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#26300D",
 };
 
 export default async function LoginPage() {
