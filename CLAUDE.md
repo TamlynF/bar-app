@@ -126,6 +126,9 @@ SQUARE_WEBHOOK_SIGNATURE_KEY
 SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
 GOOGLE_MAPS_API_KEY                      # Static Maps image on /contact, proxied via /api/static-map (never sent to the browser)
+NEXT_PUBLIC_VAPID_PUBLIC_KEY             # Web Push (Market Night phone alerts) - browser subscribes with this
+VAPID_PRIVATE_KEY                        # Signs push requests server-side, never NEXT_PUBLIC_. Generate both: node scripts/generate-vapid-keys.mjs
+VAPID_SUBJECT                            # mailto: or https: contact for push services; falls back to NEXT_PUBLIC_SITE_URL
 ```
 
 ---
@@ -234,6 +237,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `promo_content` | Social-style promo cards on the homepage |
 | `menu_categories` / `menu_items` | Public menu |
 | `company_information` | Address, socials, opening hours, capacity |
+| `market_push_subscriptions` | Web Push endpoints from the public Market Night page - one row per phone, `watched_instrument_ids` empty = alert on every drop. Written only via the admin client from `src/app/(public)/market/actions.ts`; sent to after each tick by `src/lib/market/push-alerts.ts`, dead endpoints (404/410) self-delete |
 | `employees` | Staff records, separate from Supabase Auth users |
 
 ---

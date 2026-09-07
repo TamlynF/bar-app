@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
@@ -161,57 +162,11 @@ function FlipPrice({ value, className }: { value: string; className?: string }) 
   );
 }
 
-function BoardSpark({
-  values,
-  floor,
-  ceil,
-  trend,
-  crash,
-  className,
-}: {
-  values: number[];
-  floor: number;
-  ceil: number;
-  trend: Trend;
-  crash: boolean;
-  className?: string;
-}) {
-  const width = 100;
-  const height = 30;
-  const range = ceil - floor || 1;
-  const points = values.map((value, index) => {
-    const clamped = Math.min(Math.max(value, floor), ceil);
-    const x = (index / (values.length - 1)) * width;
-    const y = height - ((clamped - floor) / range) * height;
-    return [Number(x.toFixed(2)), Number(y.toFixed(2))] as const;
-  });
-  const line = points.map((point) => point.join(",")).join(" ");
-  const [lastX, lastY] = points[points.length - 1];
-  const colour = crash
-    ? "#ffffff"
-    : trend === "up"
-      ? "#8CFF6A"
-      : trend === "down"
-        ? "#FF4D6D"
-        : "#a9ae8d";
-
+function OpenCell({ instrument }: { instrument: MarketInstrumentPayload }) {
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className={`w-full overflow-visible ${className ?? ""}`}
-      aria-hidden="true"
-    >
-      <polygon points={`0,${height} ${line} ${width},${height}`} fill={colour} opacity=".12" />
-      <polyline
-        points={line}
-        fill="none"
-        stroke={colour}
-        strokeWidth="1.6"
-        vectorEffect="non-scaling-stroke"
-      />
-      <circle cx={lastX} cy={lastY} r="2.4" fill={colour} />
-    </svg>
+    <span className="block font-board-mono text-[1.35vw] leading-none text-right text-[#a9ae8d] tabular-nums">
+      {formatGbp(instrument.openingPrice)}
+    </span>
   );
 }
 
@@ -299,9 +254,7 @@ function ChangePill({
   return <span className={`${base} bg-white/5 text-[#a9ae8d]`}>- 0.0%</span>;
 }
 
-function sparkValues(instrument: MarketInstrumentPayload): number[] {
-  return instrument.spark.length < 2 ? [instrument.price, instrument.price] : instrument.spark;
-}
+const CATEGORY_COLUMNS = "grid grid-cols-[1.2fr_6.5vw_9vw_6vw] items-center gap-[1vw]";
 
 function CategoryRow({
   instrument,
@@ -313,16 +266,9 @@ function CategoryRow({
   const trend = trendOf(instrument.changePct);
   const atFloor = isAtFloor(instrument);
   return (
-    <div className="grid grid-cols-[1.2fr_9vw_6.6vw_6vw] items-center gap-[1vw] border-t border-[#3a4520] py-[0.55vw]">
+    <div className={`${CATEGORY_COLUMNS} border-t border-[#3a4520] py-[0.55vw]`}>
       <NameCell instrument={instrument} />
-      <BoardSpark
-        values={sparkValues(instrument)}
-        floor={instrument.floor}
-        ceil={instrument.ceil}
-        trend={trend}
-        crash={crash}
-        className="h-[2.6vw]"
-      />
+      <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
       <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
     </div>
@@ -385,6 +331,14 @@ function CategoriesView({
                 </span>
               )}
             </h2>
+            <div
+              className={`${CATEGORY_COLUMNS} pb-[0.2vw] text-[0.75vw] tracking-[0.18em] text-[#a9ae8d] uppercase`}
+            >
+              <span />
+              <span className="text-right">Open</span>
+              <span className="text-right">Now</span>
+              <span className="text-right">Change</span>
+            </div>
             {section.instruments.map((instrument) => (
               <CategoryRow key={instrument.id} instrument={instrument} crash={crash} />
             ))}
@@ -395,7 +349,7 @@ function CategoriesView({
   );
 }
 
-const FLAT_COLUMNS = "grid grid-cols-[1.4fr_8vw_9vw_6.6vw_6vw] items-center gap-[1vw]";
+const FLAT_COLUMNS = "grid grid-cols-[1.4fr_8vw_6.5vw_9vw_6vw] items-center gap-[1vw]";
 
 function FlatHeader({ firstColumn }: { firstColumn: string }) {
   return (
@@ -404,8 +358,8 @@ function FlatHeader({ firstColumn }: { firstColumn: string }) {
     >
       <span>{firstColumn}</span>
       <span>Category</span>
-      <span>Trend</span>
-      <span className="text-right">Price</span>
+      <span className="text-right">Open</span>
+      <span className="text-right">Now</span>
       <span className="text-right">Change</span>
     </div>
   );
@@ -426,14 +380,7 @@ function FlatRow({
     <div className={`${FLAT_COLUMNS} border-t border-[#3a4520] py-[0.45vw]`}>
       <NameCell instrument={instrument} chevron={chevron} />
       <span className="truncate text-[0.95vw] text-[#a9ae8d]">{instrument.category ?? "-"}</span>
-      <BoardSpark
-        values={sparkValues(instrument)}
-        floor={instrument.floor}
-        ceil={instrument.ceil}
-        trend={trend}
-        crash={crash}
-        className="h-[2.2vw]"
-      />
+      <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
       <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
     </div>
@@ -583,16 +530,15 @@ function TickerSegments({
   );
 }
 
-function useCrashCountdown(crash: boolean, crashRemainingSec: number | undefined): string {
+function useCountdown(remainingSec: number | undefined): string {
   const endsAtRef = useRef<number | null>(null);
   const [countdown, setCountdown] = useState("0:00");
 
   useEffect(() => {
-    if (crashRemainingSec != null) endsAtRef.current = Date.now() + crashRemainingSec * 1000;
-  }, [crashRemainingSec]);
+    if (remainingSec != null) endsAtRef.current = Date.now() + remainingSec * 1000;
+  }, [remainingSec]);
 
   useEffect(() => {
-    if (!crash) return;
     const update = () => {
       const endsAt = endsAtRef.current ?? Date.now();
       setCountdown(formatCountdown(endsAt - Date.now()));
@@ -600,16 +546,23 @@ function useCrashCountdown(crash: boolean, crashRemainingSec: number | undefined
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [crash]);
+  }, []);
 
   return countdown;
 }
 
-export default function MarketBoard({ initialView }: { initialView: BoardView }) {
+export default function MarketBoard({
+  initialView,
+  qrDataUrl,
+}: {
+  initialView: BoardView;
+  qrDataUrl: string | null;
+}) {
   const { state, feed } = useMarketState(5000);
   const [view, setView] = useState<BoardView>(initialView);
   const crash = state?.crashActive === true;
-  const countdown = useCrashCountdown(crash, state?.crashRemainingSec);
+  const crashCountdown = useCountdown(state?.crashRemainingSec);
+  const nextTickCountdown = useCountdown(state?.nextTickInSec);
 
   if (!state || state.status === "closed") {
     return (
@@ -634,7 +587,7 @@ export default function MarketBoard({ initialView }: { initialView: BoardView })
       }`}
     >
       <header
-        className={`grid grid-cols-[1fr_auto_auto] items-end gap-[2vw] border-b-2 pb-[0.8vw] ${
+        className={`grid grid-cols-[1fr_auto_auto_auto] items-end gap-[2vw] border-b-2 pb-[0.8vw] ${
           crash ? "border-white" : "border-[#FDCC4B]"
         }`}
       >
@@ -662,16 +615,32 @@ export default function MarketBoard({ initialView }: { initialView: BoardView })
         </div>
         <div className="text-right">
           <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">
-            {crash ? "Recovery in" : "Tick"}
+            {crash ? "Recovery in" : "Next update"}
           </p>
           <p
             className={`font-board-display text-[3.4vw] leading-none ${
               crash ? "ad-blink text-white" : "text-[#FDCC4B]"
             }`}
           >
-            {crash ? countdown : state.tickNo}
+            {crash ? crashCountdown : nextTickCountdown}
           </p>
         </div>
+        {qrDataUrl && (
+          <div className="flex items-center gap-[0.9vw] self-center border-l border-[#3a4520] pl-[1.8vw]">
+            <Image
+              src={qrDataUrl}
+              alt="QR code linking to the Market Night page"
+              width={384}
+              height={384}
+              unoptimized
+              className="h-[6.2vw] w-[6.2vw] rounded-[0.4vw] bg-white p-[0.3vw]"
+            />
+            <div className="max-w-[12vw] text-[0.8vw] leading-[1.4] tracking-[0.1em] uppercase">
+              <p className="font-semibold text-[#f3f0dc]">Scan for the market on your phone</p>
+              <p className="text-[#a9ae8d]">Get alerts on the drinks you watch</p>
+            </div>
+          </div>
+        )}
       </header>
 
       {instruments.length === 0 ? (

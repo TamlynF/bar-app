@@ -1,4 +1,5 @@
 import { Bebas_Neue, IBM_Plex_Mono } from "next/font/google";
+import QRCode from "qrcode";
 import MarketBoard, { type BoardView } from "./market-board";
 
 const bebas = Bebas_Neue({
@@ -33,6 +34,13 @@ export default async function MarketBoardPage({
 }) {
   const { view } = await searchParams;
   const initialView = resolveView(view);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bookingsdonfenticas.co.uk";
+  const qrDataUrl = await QRCode.toDataURL(`${siteUrl}/market`, {
+    width: 384,
+    margin: 1,
+    errorCorrectionLevel: "M",
+    color: { dark: "#1a2008", light: "#ffffff" },
+  }).catch(() => null);
   return (
     <main
       className={`${bebas.variable} ${plexMono.variable} h-dvh w-full overflow-hidden bg-[#1a2008] text-[#f3f0dc] antialiased`}
@@ -42,7 +50,7 @@ export default async function MarketBoardPage({
           __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow: hidden; }`,
         }}
       />
-      <MarketBoard initialView={initialView} />
+      <MarketBoard initialView={initialView} qrDataUrl={qrDataUrl} />
     </main>
   );
 }

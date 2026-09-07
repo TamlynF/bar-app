@@ -11,6 +11,7 @@ import {
   type MarketEventKind,
   type StockState,
 } from "./types";
+import { sendMarketPushAlerts } from "./push-alerts";
 
 export type MarketSessionRow = {
   id: number;
@@ -59,6 +60,7 @@ export type MarketInstrumentPayload = {
   serve: string;
   price: number;
   basePrice: number;
+  openingPrice: number;
   changePct: number;
   direction: "up" | "down" | "flat";
   stock: StockState;
@@ -91,6 +93,7 @@ export type MarketStatePayload = {
   sessionId?: number;
   tickNo?: number;
   tickIntervalSec?: number;
+  nextTickInSec?: number;
   crashActive?: boolean;
   crashRemainingSec?: number;
   instruments?: MarketInstrumentPayload[];
@@ -112,6 +115,12 @@ function instrumentCategory(row: MarketInstrumentWithCategoryRow): {
   const category = Array.isArray(raw) ? raw[0] : raw;
   if (!category) return { name: null, order: Number.MAX_SAFE_INTEGER };
   return { name: category.name, order: Number(category.display_order) };
+}
+
+function secondsUntilNextTick(session: MarketSessionRow, config: MarketConfig, now: Date): number {
+  if (!session.last_tick_at) return config.tickIntervalSec;
+  const sinceLastTick = (now.getTime() - new Date(session.last_tick_at).getTime()) / 1000;
+  return Math.max(0, Math.ceil(config.tickIntervalSec - sinceLastTick));
 }
 
 function crashRemainingSeconds(session: MarketSessionRow, config: MarketConfig, now: Date): number {
@@ -339,6 +348,11 @@ export async function maybeRunMarketTick(
     if (events.length > 0) {
       const { error: eventError } = await supabase.from("market_events").insert(events);
       if (eventError) throw eventError;
+      try {
+        await sendMarketPushAlerts(supabase, events);
+      } catch (err) {
+        console.error("[market] push alerts failed:", err);
+      }
     }
 
     if (newWatermark) {
@@ -424,6 +438,7 @@ export async function readMarketState(
     sessionId: session.id,
     tickNo: session.tick_no,
     tickIntervalSec: config.tickIntervalSec,
+    nextTickInSec: secondsUntilNextTick(session, config, now),
     crashActive,
     ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
     instruments: instruments.map((row) => {
@@ -440,6 +455,7 @@ export async function readMarketState(
         serve: row.serve,
         price,
         basePrice,
+        openingPrice: opening,
         changePct: opening > 0 ? Math.round(((price - opening) / opening) * 1000) / 10 : 0,
         direction: price > previous ? "up" : price < previous ? "down" : "flat",
         stock: row.stock_state,
