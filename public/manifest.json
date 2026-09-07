@@ -2,7 +2,7 @@
   "name": "Don Fenticas",
   "short_name": "Don Fenticas",
   "description": "Book your quiz night",
-  "start_url": "/book",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#26300D",
   "theme_color": "#26300D",
