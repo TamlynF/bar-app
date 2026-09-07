@@ -7,6 +7,7 @@ export {
   ErrorBox,
   type SheetMode,
   type SystemInfo,
+  type RecordSheetAction,
 } from "./record-sheet";
 
 export { FormToggle } from "./form-toggle";

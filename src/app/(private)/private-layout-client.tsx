@@ -21,7 +21,8 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     MoreHorizontal,
-    Users
+    Users,
+    X
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import InstallPrompt from "@/components/admin/install-prompt"
@@ -937,8 +938,19 @@ export default function PrivateLayoutClient({
                         className="gap-0 rounded-t-3xl border-t border-nav-line bg-nav-bg p-0 pb-[calc(12px+env(safe-area-inset-bottom))] sm:hidden"
                     >
                         <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-nav-muted/40" aria-hidden="true" />
-                        <SheetTitle className="px-5 pt-3 pb-1 text-base font-bold text-nav-ink">More</SheetTitle>
-                        <SheetDescription className="px-5 pb-2 text-[13px] font-normal text-nav-muted">
+                        <div className="flex h-12 items-center gap-1 px-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setMoreOpen(false)}
+                                aria-label="Close"
+                                title="Close"
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-nav-muted transition-colors hover:bg-nav-selected hover:text-nav-ink"
+                            >
+                                <X className="h-5 w-5 shrink-0" />
+                            </button>
+                            <SheetTitle className="min-w-0 flex-1 truncate px-1 text-base font-bold text-nav-ink">More</SheetTitle>
+                        </div>
+                        <SheetDescription className="sr-only">
                             Trends, settings and your account.
                         </SheetDescription>
                         <div className="flex flex-col p-2">

@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useCallback, useState, useTransition } from "react";
+import React, { useCallback, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -14,6 +21,8 @@ import {
   Trash2,
   AlertCircle,
   Info,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 
 export type SheetMode = "closed" | "add" | "view" | "edit";
@@ -149,6 +158,17 @@ export type SystemInfo = {
   rows?: { label: string; value: React.ReactNode }[];
 };
 
+export type RecordSheetAction = {
+  label: string;
+  icon?: React.ReactNode;
+  onSelect?: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+  // Instead of firing onSelect, opens this in a panel hanging off the menu
+  // button. The callback closes the panel again once the panel is done.
+  panel?: (close: () => void) => React.ReactNode;
+};
+
 function formatSystemDate(iso?: string | null) {
   if (!iso) return "-";
   return new Date(iso).toLocaleString("en-GB", {
@@ -169,49 +189,42 @@ function SystemInfoRow({ label, value }: { label: string; value: React.ReactNode
   );
 }
 
-function SystemInfoPopover({
+function SystemInfoPanel({
   recordId,
   info,
 }: {
   recordId?: number | string;
   info: SystemInfo;
 }) {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="System information"
-          title="Creation and modification details"
-          className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-2.5 text-admin-ink transition-colors hover:bg-admin-line sm:px-3"
-        >
-          <Info className="h-4.5 w-4.5 shrink-0" />
-          <span className="hidden text-[13px] font-semibold sm:inline">System</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-80 overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
-      >
-        <span className="block border-b border-admin-line bg-admin-line px-4 py-2.5 text-[12px] font-semibold text-admin-primary">
-          System information
-        </span>
-        {recordId != null && (
-          <SystemInfoRow label="ID" value={<span className="tabular-nums">#{recordId}</span>} />
-        )}
-        {(info.rows ?? []).map((row) => (
-          <SystemInfoRow key={row.label} label={row.label} value={row.value} />
-        ))}
-        <SystemInfoRow label="Created" value={formatSystemDate(info.createdAt)} />
-        <SystemInfoRow label="Created by" value={info.createdBy} />
-        <SystemInfoRow label="Last modified" value={formatSystemDate(info.updatedAt)} />
-        <SystemInfoRow label="Modified by" value={info.updatedBy} />
-      </PopoverContent>
-    </Popover>
+    <>
+      <span className="block border-b border-admin-line bg-admin-line px-4 py-2.5 text-[12px] font-semibold text-admin-primary">
+        System information
+      </span>
+      {recordId != null && (
+        <SystemInfoRow label="ID" value={<span className="tabular-nums">#{recordId}</span>} />
+      )}
+      {(info.rows ?? []).map((row) => (
+        <SystemInfoRow key={row.label} label={row.label} value={row.value} />
+      ))}
+      <SystemInfoRow label="Created" value={formatSystemDate(info.createdAt)} />
+      <SystemInfoRow label="Created by" value={info.createdBy} />
+      <SystemInfoRow label="Last modified" value={formatSystemDate(info.updatedAt)} />
+      <SystemInfoRow label="Modified by" value={info.updatedBy} />
+    </>
   );
 }
+
+const HEADER_BUTTON =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none";
+
+const MENU_ITEM =
+  "min-h-11 gap-2.5 rounded-xl px-3 text-[13px] font-semibold text-admin-ink focus:bg-admin-surface focus:text-admin-ink sm:min-h-9 [&_svg:not([class*='text-'])]:text-admin-muted";
+
+const DESTRUCTIVE_ITEM =
+  "data-[variant=destructive]:text-admin-error data-[variant=destructive]:focus:bg-admin-error-bg data-[variant=destructive]:focus:text-admin-error";
+
+type OpenPanel = { kind: "system" } | { kind: "action"; index: number } | null;
 
 export function RecordSheet({
   open,
@@ -237,136 +250,205 @@ export function RecordSheet({
   onClose: () => void;
   mode: SheetMode;
   title: string;
+  // Shown at the top of the System information panel, not in the header.
   recordId?: number | string;
   formId: string;
   isPending: boolean;
   saveDisabled?: boolean;
-  // Left off for a record that can only be read, which drops the view footer.
+  // Left off for a record that can only be read, which drops the footer.
   onEdit?: () => void;
+  // Lands in the header menu, not the footer, so the footer stays one button.
   onDelete?: () => void;
   onCancel?: () => void;
   confirmUI?: React.ReactNode;
-  // Audit trail behind an "i" in the header. Hidden while adding, since a
-  // record that does not exist yet has nothing to report.
+  // Audit trail behind "System info" in the header menu. Hidden while adding,
+  // since a record that does not exist yet has nothing to report.
   systemInfo?: SystemInfo;
-  // Status pills, shown under the title so the state of the record reads the
-  // same whether you are looking at it or editing it. Hidden while adding.
+  // Status pills, shown as the first line of the body so the state of the
+  // record reads the same whether you are looking at it or editing it. Hidden
+  // while adding.
   status?: React.ReactNode;
-  // Record-level controls that sit beside the "i" button - things you toggle
-  // rather than fill in, so they read the same in view and edit.
-  actions?: React.ReactNode;
+  // Record-level controls in the header menu - things you toggle rather than
+  // fill in, so they read the same in view and edit.
+  actions?: RecordSheetAction[];
   // "split" keeps the bottom sheet on phones and tablets but shows the record
   // beside the list from 1280px up.
   layout?: "sheet" | "split";
   emptyState?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  // A record with nothing to change still needs a way out, since the sheet has
-  // no close button of its own.
-  const readOnly = mode === "view" && !onEdit && !onDelete;
   const isWide = useMediaQuery(SPLIT_QUERY);
   const split = layout === "split" && isWide;
   const TitleTag: React.ElementType = split ? "h2" : SheetTitle;
+  const { confirm, ConfirmDialogUI } = useConfirm();
+  const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
+  // The menu hands focus back to its button as it closes, which the panel
+  // would read as a click outside itself and shut straight away.
+  const panelPending = useRef(false);
+
+  const dismiss = async () => {
+    if (mode === "view") {
+      onClose();
+      return;
+    }
+    const ok = await confirm({
+      title: "Discard changes?",
+      description:
+        mode === "add"
+          ? "This record hasn't been saved yet and will be lost."
+          : "Anything you've changed on this record will be lost.",
+      confirmLabel: "Discard",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    (onCancel ?? onClose)();
+  };
+
+  const showPanel = (panel: OpenPanel) => {
+    panelPending.current = true;
+    setOpenPanel(panel);
+  };
+  const closePanel = () => setOpenPanel(null);
+
+  const menuActions = actions ?? [];
+  const showSystem = !!systemInfo && mode !== "add";
+  const showDelete = mode === "view" && !!onDelete;
+  const hasMenu = menuActions.length > 0 || showSystem || showDelete;
+  const hasFooter = mode !== "view" || !!onEdit;
+
+  const panelContent =
+    openPanel?.kind === "system" && systemInfo ? (
+      <SystemInfoPanel recordId={recordId} info={systemInfo} />
+    ) : openPanel?.kind === "action" ? (
+      menuActions[openPanel.index]?.panel?.(closePanel)
+    ) : null;
 
   const panel = (
     <>
-      <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 px-4 py-3 backdrop-blur-md sm:rounded-t-4xl">
-        <div className="flex items-center justify-between gap-3">
-          <TitleTag className="flex min-w-0 items-baseline gap-2 text-xl leading-tight font-bold tracking-tight text-admin-ink">
-            <span className="truncate">{title}</span>
-            {recordId != null && (
-              <span className="shrink-0 text-[13px] font-semibold text-admin-muted italic tabular-nums">
-                (#ID: {recordId})
-              </span>
-            )}
-          </TitleTag>
-          {(actions || (systemInfo && mode !== "add")) && (
-            <div className="flex shrink-0 items-center gap-1.5">
-              {actions}
-              {systemInfo && mode !== "add" && (
-                <SystemInfoPopover recordId={recordId} info={systemInfo} />
-              )}
-            </div>
-          )}
-        </div>
-        {status && mode !== "add" && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">{status}</div>
+      <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1 border-b border-admin-line bg-admin-card/80 px-2 backdrop-blur-md sm:rounded-t-4xl">
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label={mode === "view" ? "Close" : "Cancel"}
+          title={mode === "view" ? "Close" : "Cancel"}
+          className={HEADER_BUTTON}
+        >
+          <X className="h-5 w-5 shrink-0" />
+        </button>
+        <TitleTag className="min-w-0 flex-1 truncate px-1 text-base leading-tight font-bold tracking-tight text-admin-ink">
+          {title}
+        </TitleTag>
+        {hasMenu ? (
+          <Popover open={openPanel !== null} onOpenChange={(next) => { if (!next) closePanel(); }}>
+            <PopoverAnchor asChild>
+              <div className="shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="More actions"
+                      title="More actions"
+                      className={HEADER_BUTTON}
+                    >
+                      <MoreHorizontal className="h-5 w-5 shrink-0" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 rounded-2xl border-2 border-admin-line bg-admin-card p-1.5 shadow-xl"
+                    onCloseAutoFocus={(e) => {
+                      if (panelPending.current) {
+                        e.preventDefault();
+                        panelPending.current = false;
+                      }
+                    }}
+                  >
+                    {menuActions.map((action, index) => (
+                      <DropdownMenuItem
+                        key={action.label}
+                        disabled={action.disabled}
+                        variant={action.destructive ? "destructive" : "default"}
+                        onSelect={() => {
+                          if (action.panel) showPanel({ kind: "action", index });
+                          else action.onSelect?.();
+                        }}
+                        className={cn(MENU_ITEM, action.destructive && DESTRUCTIVE_ITEM)}
+                      >
+                        {action.icon}
+                        {action.label}
+                      </DropdownMenuItem>
+                    ))}
+                    {showSystem && (
+                      <DropdownMenuItem
+                        onSelect={() => showPanel({ kind: "system" })}
+                        className={MENU_ITEM}
+                      >
+                        <Info className="h-4 w-4" />
+                        System info
+                      </DropdownMenuItem>
+                    )}
+                    {showDelete && (menuActions.length > 0 || showSystem) && (
+                      <DropdownMenuSeparator className="my-1.5 bg-admin-line" />
+                    )}
+                    {showDelete && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={isPending}
+                        onSelect={onDelete}
+                        className={cn(MENU_ITEM, DESTRUCTIVE_ITEM)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </PopoverAnchor>
+            <PopoverContent
+              align="end"
+              className="w-80 overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
+            >
+              {panelContent}
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div className="h-10 w-10 shrink-0" aria-hidden="true" />
         )}
       </div>
 
       <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
+        {status && mode !== "add" && (
+          <div className="flex flex-wrap items-center gap-1.5">{status}</div>
+        )}
         {children}
         <div className="h-4" />
       </div>
 
-      <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
-        {/* The two footers are keyed apart so React tears one down and builds the
-            other. Reconciled in place, the button under the pointer would turn
-            into Save mid-click and the browser would submit the form it now
-            points at. */}
-        {mode === "view" ? (
-          readOnly ? (
+      {hasFooter && (
+        <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-4 py-3 pb-8 sm:rounded-b-4xl sm:pb-3">
+          {/* The two footers are keyed apart so React tears one down and builds the
+              other. Reconciled in place, the button under the pointer would turn
+              into Save mid-click and the browser would submit the form it now
+              points at. */}
+          {mode === "view" ? (
             <Button
               key="view-actions"
               type="button"
-              variant="outline"
-              onClick={onClose}
-              className="h-14 w-full rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
+              variant="ghost"
+              onClick={onEdit}
+              className="h-12 w-full rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
             >
-              Close
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
             </Button>
           ) : (
-            <div
-              key="view-actions"
-              className={cn("grid gap-3", onEdit && onDelete ? "grid-cols-2" : "grid-cols-1")}
-            >
-              {onDelete && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onDelete}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
-              )}
-              {onEdit && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onEdit}
-                  className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          )
-        ) : (
-          <div key="form-actions" className="grid grid-cols-2 gap-3">
             <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isPending}
-              // The footer is admin-line, so an admin-line border on it is
-              // invisible. Needs its own edge and a lift off the background.
-              className="h-14 rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
-            >
-              Cancel
-            </Button>
-            <Button
+              key="form-actions"
               type="submit"
               form={formId}
               disabled={isPending || saveDisabled}
-              className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
+              className="h-12 w-full rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -377,9 +459,9 @@ export function RecordSheet({
                 </>
               )}
             </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </>
   );
 
@@ -401,6 +483,7 @@ export function RecordSheet({
           </div>
         )}
         {confirmUI}
+        {ConfirmDialogUI}
       </aside>
     );
   }
@@ -419,6 +502,7 @@ export function RecordSheet({
       >
         {panel}
         {confirmUI}
+        {ConfirmDialogUI}
       </SheetContent>
     </Sheet>
   );

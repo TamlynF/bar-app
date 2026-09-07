@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, ChevronDown, Filter } from "lucide-react";
+import { TrendingUp, ChevronDown, Filter, X } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
@@ -399,11 +399,20 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               showCloseButton={false}
               className="flex max-h-[85vh] flex-col gap-0 rounded-t-3xl border-t-2 border-[#D8D5C8] bg-white p-0"
             >
-              <div className="shrink-0 border-b border-[#D8D5C8] px-4 py-3">
-                <SheetTitle className="text-base leading-tight font-bold text-[#20231A]">
+              <div className="flex h-12 shrink-0 items-center gap-1 border-b border-[#D8D5C8] px-2">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  title="Close"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                >
+                  <X className="h-5 w-5 shrink-0" />
+                </button>
+                <SheetTitle className="min-w-0 flex-1 truncate px-1 text-base leading-tight font-bold text-[#20231A]">
                   Filter bookings
                 </SheetTitle>
-                <SheetDescription className="mt-0.5 text-[13px] font-medium text-[#5E6654]">
+                <SheetDescription className="sr-only">
                   Pick an event type, then narrow it to a sub-type.
                 </SheetDescription>
               </div>

@@ -28,7 +28,7 @@ import { createClient } from "@/lib/supabase/client";
 import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import type { MusicActRow, SocialLinks } from "@/lib/music-acts";
-import MusicActNotesPopover from "./music-act-notes-popover";
+import MusicActNotesPopover, { MusicActNotesPanel } from "./music-act-notes-popover";
 import {
   saveMusicActAction,
   deleteMusicActAction,
@@ -616,27 +616,33 @@ export default function MusicActsClient({
             </>
           )
         }
-        actions={
-          <>
-            <FavoriteButton
-              active={sheetFavorite}
-              disabled={recordPending}
-              onToggle={() => {
-                if (showForm) set("is_favorite", !form.is_favorite);
-                else if (selected) toggleFavorite(selected);
-              }}
-            />
-            <MusicActNotesPopover
-              value={sheetNotes}
-              onSave={(notes) => {
-                if (showForm) set("internal_notes", notes);
-                else if (selected) return saveNotes(selected, notes);
-              }}
-            >
-              <NotesButton hasNotes={!!sheetNotes.trim()} name={selected?.group_name} />
-            </MusicActNotesPopover>
-          </>
-        }
+        actions={[
+          {
+            label: sheetFavorite ? "Remove from favourites" : "Add to favourites",
+            icon: (
+              <Heart className={cn("h-4 w-4", sheetFavorite && "fill-current text-admin-gold")} />
+            ),
+            disabled: recordPending,
+            onSelect: () => {
+              if (showForm) set("is_favorite", !form.is_favorite);
+              else if (selected) toggleFavorite(selected);
+            },
+          },
+          {
+            label: sheetNotes.trim() ? "Internal notes" : "Add internal notes",
+            icon: <NotebookPen className="h-4 w-4" />,
+            panel: (close) => (
+              <MusicActNotesPanel
+                value={sheetNotes}
+                onSave={(notes) => {
+                  if (showForm) set("internal_notes", notes);
+                  else if (selected) return saveNotes(selected, notes);
+                }}
+                onDone={close}
+              />
+            ),
+          },
+        ]}
         systemInfo={
           selected == null
             ? undefined

@@ -11,6 +11,7 @@ import {
   Loader2,
   MonitorPlay,
   Play,
+  PowerOff,
   RotateCcw,
   SearchX,
   TrendingDown,
@@ -732,16 +733,17 @@ export default function MarketClient({
           )
         }
         actions={
-          mode === "view" && selected && !selectedIsLive ? (
-            <button
-              type="button"
-              onClick={handleDeactivate}
-              disabled={sheet.isPending}
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-admin-line px-3 text-[12px] font-semibold text-admin-error transition-colors hover:bg-admin-error-bg disabled:opacity-50"
-            >
-              Deactivate
-            </button>
-          ) : undefined
+          mode === "view" && selected && !selectedIsLive
+            ? [
+                {
+                  label: "Deactivate",
+                  icon: <PowerOff className="h-4 w-4" />,
+                  onSelect: handleDeactivate,
+                  disabled: sheet.isPending,
+                  destructive: true,
+                },
+              ]
+            : undefined
         }
         systemInfo={
           selected == null

@@ -2,7 +2,6 @@
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Mail, MailX } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   DetailCard,
   DetailCell,
@@ -254,21 +253,16 @@ export default function EmailTemplatesClient({
           )
         }
         actions={
-          selected && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={toggleActive}
-              disabled={sheet.isPending}
-              title={selected.isActive ? "Stop sending this email" : "Start sending this email"}
-              aria-label={
-                selected.isActive ? "Stop sending this email" : "Start sending this email"
-              }
-              className="h-9 w-9 rounded-lg border border-admin-line bg-admin-card p-0 text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
-            >
-              {selected.isActive ? <MailX className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
-            </Button>
-          )
+          selected
+            ? [
+                {
+                  label: selected.isActive ? "Stop sending this email" : "Start sending this email",
+                  icon: selected.isActive ? <MailX className="h-4 w-4" /> : <Mail className="h-4 w-4" />,
+                  onSelect: toggleActive,
+                  disabled: sheet.isPending,
+                },
+              ]
+            : undefined
         }
         systemInfo={
           selected?.row
