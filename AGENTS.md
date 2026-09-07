@@ -1,0 +1,259 @@
+# AGENTS.md
+
+This file is read by Codex on every session. Treat it as authoritative. If a request would cause you to break something in here, **stop and ask** rather than guessing.
+
+For visual / design decisions, also read `STYLE_GUIDE.md`. The two files together are the source of truth.
+
+---
+
+## Commands
+
+```bash
+npm run dev          # Dev server
+npm run build        # Production build (also runs TypeScript check)
+npm run lint         # ESLint
+npm run start        # Start production server
+
+npm test             # Unit tests (Vitest) - pure logic in src/lib
+npm run test:e2e     # End-to-end (Playwright) - runs on phone + desktop viewports
+npm run db:start     # Start local Supabase (Docker, Linux containers) for E2E
+npm run db:reset     # Rebuild local DB from supabase/migrations + supabase/seed.sql
+npm run db:stop      # Stop local Supabase
+```
+
+**Testing** (see `TESTING.md` for the full guide):
+- **Unit tests** (Vitest) live beside the code in `src/lib/__tests__/*.test.ts` - pure functions only; don't unit-test Server Components.
+- **E2E tests** (Playwright) live in `e2e/` and run against a **local** Supabase stack (`supabase/` migrations + seed), never production. Every spec runs on both a mobile and a desktop viewport.
+- Always run `npm test` before committing; run the E2E suite when touching booking/event flows.
+- The schema migration in `supabase/migrations/` is a local **test** schema (RLS off) introspected from prod - don't treat it as the production source of truth.
+
+## Git workflow
+
+**Do not commit or push changes.** All git operations (staging, committing, pushing) are done manually by the user.
+
+**Commit message conventions (for reference):**
+- `add: <thing>` - new feature or file
+- `fix: <thing>` - bug fix
+- `update: <thing>` - enhancement to existing feature
+- `refactor: <thing>` - restructure without behaviour change
+
+Always run `npm run build` successfully before committing.
+
+---
+
+## Tech stack - do not deviate without asking
+
+- **Framework:** Next.js 16 (App Router, Server Components by default, React 19, React Compiler enabled)
+- **Language:** TypeScript, strict mode
+- **Styling:** Tailwind CSS 4 only - no CSS modules in new code (existing `.module.css` files are tolerated, but don't add more). No styled-components. **No inline `style` props** - this triggers Edge DevTools `no-inline-styles` warnings. **Utility generation is now ON**: `src/app/globals.css` starts with `@import "tailwindcss";` (+ `@import "tw-animate-css";`) and `@source` globs, so Tailwind auto-generates any utility/arbitrary value you use - no need to hand-add utilities. Only genuinely custom semantic classes (`.olive-bg`, `.neon-*`, `.swatch-*`, the `[style*="--ev-c"]` colour hooks, `.rich-content`, etc.) live hand-written under `@layer utilities` at the bottom of `globals.css`; add new ones there only when a class can't be expressed as a Tailwind utility. (Historical note: this file used to be committed as pre-compiled CSS with utilities hand-maintained; that's no longer the case.) For dynamic values that can't be expressed as static Tailwind classes:
+  1. **Preferred:** Set a CSS custom property via `style` and consume it via Tailwind arbitrary value - e.g. `style={{ "--badge-color": color } as React.CSSProperties}` + `className="bg-[var(--badge-color)]"`. This keeps the actual styling in classes.
+  2. **Acceptable:** Use `style` only for CSS custom properties (`--var-name`), never for standard CSS properties like `backgroundColor`, `color`, `borderColor`, `minWidth`, etc.
+  3. When refactoring existing inline styles, convert `style={{ backgroundColor: x, color: y }}` → `style={{ "--c": x, "--bg": y } as React.CSSProperties}` + Tailwind `text-[var(--c)] bg-[var(--bg)]`.
+
+  Also **prefer the canonical scale token over an arbitrary px value** when the value is on the scale (`min-w-50` not `min-w-[200px]`) - see the "Prefer canonical Tailwind classes" rule under Visual standards below.
+- **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us - edit freely.
+- **Primitives:** Radix UI (via shadcn)
+- **Icons:** Lucide React for UI/interface icons. For brand/social logos (Instagram, Facebook, YouTube, X, TikTok, etc.), use Simple Icons via `react-icons/si` (`SiInstagram`, `SiFacebook`, `SiYoutube`, …) - Lucide's brand icons are deprecated and being removed in v1.0. Don't add other icon libraries without asking.
+- **Forms:** react-hook-form + zod where validation is non-trivial; plain `useState` is fine for simple forms
+- **Auth:** Supabase Auth via `@supabase/ssr`
+- **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)
+- **Email:** Resend. Never hardcode an address - `src/lib/email.ts` owns `EMAIL_FROM` (sender) and `ADMIN_EMAIL` (staff recipient), both env-overridable. The customer-facing contact address (replyTo, "questions?" copy, Square support) comes from `getContactEmail()` in `src/lib/company-info.ts`, which reads `company_information.email`. The sender is **not** DB-driven: Resend only sends from a verified domain
+- **Payments:** Square (sandbox + production envs)
+- **AI:** Google Gemini today, behind a provider registry. Every AI feature is an *area* in `src/lib/ai/areas.ts` and calls `src/lib/ai/client.ts` (`aiText`, `aiSearch`, `aiReadFile`, `aiImage`) - never a provider URL directly. Staff choose the provider, model and API base URL per area on Settings → AI settings; providers are adapters under `src/lib/ai/providers/` (add one file + one registry entry for a new vendor). Keys stay in env, one per provider
+- **Storage:** Supabase Storage (`gallery`, `band-videos` buckets)
+- **Music:** Spotify Web Playback SDK (quiz integration only)
+- **Animations:** `tw-animate-css` + Tailwind animate utilities. No Framer Motion (yet) - ask before adding.
+- **Toasts:** `sonner`
+- **Date handling:** `date-fns` only
+- **Charts/tables:** none currently; ask before adding
+
+If you think a new dependency is needed, **stop and ask** before installing.
+
+---
+
+## Route structure
+
+```
+src/app/
+├── (public)/              # No auth required, public-facing
+│   ├── book/              # Hub → quiz/band/private/bingo + per-event pages
+│   ├── gallery/
+│   ├── menu/
+│   ├── contact/
+│   ├── manage-booking/[id]
+│   └── _actions/          # Server actions for public forms
+├── (private)/             # Protected by src/proxy.ts (NOT middleware.ts)
+│   ├── dashboard/
+│   ├── event-bookings/    # Quiz, music, bingo, private, per-event
+│   ├── event-setups/      # Events, event types, quiz config, quiz generator
+│   └── settings/          # Company, customers, teams, tables, menu, gallery, users, etc.
+├── login/
+├── accept-invite/
+├── update-password/
+├── auth/callback/
+├── api/                   # Route handlers (Spotify, Square webhook)
+└── page.tsx               # Public home
+```
+
+**Important Next.js 16 conventions in this project:**
+- Middleware is in `src/proxy.ts` and the exported function is named `proxy`, not `middleware`.
+- `params` and `searchParams` are async. Always `await` them: `const { id } = await params;`.
+- Server Actions live in `actions.ts` files co-located with the route, marked `"use server"`.
+
+---
+
+## Supabase clients - pick the right one
+
+- **Server** (`@/lib/supabase/server.ts`) → Server Components, Server Actions, `proxy.ts`. Reads cookies via `next/headers`.
+- **Browser** (`@/lib/supabase/client.ts`) → Client Components that need direct access (e.g. Storage uploads).
+- **Admin** (`@/lib/supabase/admin.ts`) → Service role key, server-only, use sparingly (currently for invite acceptance flow).
+
+Required env vars:
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY            # JWT - used in proxy.ts and browser client
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY     # New Supabase publishable key format
+SUPABASE_SERVICE_ROLE_KEY                # Admin client only, never NEXT_PUBLIC_
+RESEND_API_KEY
+EMAIL_FROM                               # Resend sender, RFC 5322 e.g. 'Don Fenticas <admin@…>' - domain must be verified in Resend
+ADMIN_EMAIL                              # Where internal staff notifications land
+NEXT_PUBLIC_GEMINI_API_KEY
+NEXT_PUBLIC_SITE_URL                     # e.g. https://bar-app-tau.vercel.app
+SQUARE_ACCESS_TOKEN
+SQUARE_ENVIRONMENT                       # 'sandbox' | 'production'
+SQUARE_LOCATION_ID
+SQUARE_WEBHOOK_SIGNATURE_KEY
+SPOTIFY_CLIENT_ID
+SPOTIFY_CLIENT_SECRET
+GOOGLE_MAPS_API_KEY                      # Static Maps image on /contact, proxied via /api/static-map (never sent to the browser)
+```
+
+---
+
+## Data fetching & mutations
+
+- **Reads** happen in async Server Components via the server Supabase client. Don't fetch in `useEffect` unless there's a specific client-side reason.
+- **Writes** go through Server Actions co-located with the route (`actions.ts`). No API routes for mutations unless there's a specific reason (webhooks, third-party callbacks like Square).
+- **Email sending** fires from Server Actions - never from client code.
+
+For unauthenticated/public mutations (booking forms, manage-booking page), Server Actions are still fine; they don't require an authenticated session.
+
+---
+
+## Two distinct UI surfaces
+
+This app has two faces and they look intentionally different. **Don't mix them.**
+
+### Public site (`/`, `/book`, `/menu`, `/gallery`, `/contact`)
+- Dark theme: `#26300D` (deep olive) background, `#FDCC4B` (gold) accent
+- "Gritty bar" aesthetic - see `STYLE_GUIDE.md` for the full palette and rules
+- Mobile-first; design at 375px width and scale up
+- Bottom-sheet style nav at the top is acceptable; no persistent bottom nav on public pages
+- Big, confident typography; lots of uppercase tracking; serif or bold display vibes welcome
+- Real photography over illustration
+
+### Admin portal (`/dashboard`, `/event-bookings/*`, `/event-setups/*`, `/settings/*`)
+- Light/warm theme: `#F4F1E8` canvas, `#FFFEFA` cards, `#ECE9DE` subtle surface, `#D8D5C8` borders, `#20231A` text, `#5E6654` muted text, `#34451F` primary olive (hover `#283719`, soft `#E5EBD8`), `#D7A928` brand gold. Use the `admin-*` Tailwind tokens in new code (`bg-admin-card`, `text-admin-muted`, `border-admin-line`, …) rather than raw hex - see `STYLE_GUIDE.md`. The old espresso palette (`#5C4033`/`#F7F4EA`/`#E6DFC8`/`#1F1F1A`/`#5F624F`) is retired on admin; it still appears on public pages, where it's unrelated
+- Semantic colour is for meaning only - success `#22613F`/`#E7F3EC`, warning `#9A5B00`/`#FFF4D6`, error `#B33A32`/`#FDECEA`, info `#28608F`/`#EAF2F8` (`admin-success`, `admin-warning`, `admin-error`, `admin-info` + `-bg`). **Don't give ordinary categories their own blue/purple/orange/red backgrounds** - neutral `bg-admin-surface` or `bg-admin-primary-soft` instead. The user-picked event-type swatches in `src/lib/event-type-colors.ts` are the one exception
+- Card-based information density - this is a working tool, not a marketing surface
+- Sidebar nav on desktop (≥sm), persistent bottom nav on mobile (≤sm)
+- **Nav chrome is dark olive, not cream.** The sidebar and bottom nav use the `nav-*` tokens: `bg-nav-bg` (`#263019`), `text-nav-ink` (`#DDE2D1`), `text-nav-muted` (`#AEB69D`), `bg-nav-selected` (`#34451F`), `border-nav-indicator` (`#D7A928`), `border-nav-line`. Selected item = `bg-nav-selected` + a thin `border-l-2 border-nav-indicator` - never a full gold fill. Navigation-only: don't put `nav-*` on cards, sheets or forms, and don't use espresso for nav state. Full rules in `STYLE_GUIDE.md`
+- Sheet-based detail/edit views (bottom sheet on mobile, centered on desktop)
+
+If you find yourself styling a public page with espresso/cream tones, or an admin page with olive/gold, **stop**. You're on the wrong surface.
+
+---
+
+## Visual standards (summary - full version in `STYLE_GUIDE.md`)
+
+- **Touch targets ≥ 44×44px** on anything tappable on mobile (WCAG)
+- **Icon-only buttons/links need `aria-label` or `title`** - a `<button>`/`<a>` containing only a Lucide icon must have an accessible name, or Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). Same class of Edge DevTools warning as `no-inline-styles`. See STYLE_GUIDE Accessibility.
+- **Every form element needs a label** - `<input>`/`<select>`/`<textarea>`, including checkboxes, need a `<label htmlFor>` or `aria-label`. A `<span>` sitting next to the input is not a label. Missing → Edge DevTools `axe/forms` ("Form elements must have labels"). See STYLE_GUIDE Accessibility.
+- **Prefer canonical Tailwind classes over arbitrary values.** If a value sits on the spacing/size scale, use the token, not the bracket form: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `p-4` not `p-[16px]`, `text-sm` not `text-[14px]`, `w-px` not `w-[1px]`. (Scale token `N` = `N × 0.25rem` = `N × 4px` at the 16px root, so `px ÷ 4` gives the token.) This is exactly what the IntelliSense `suggestCanonicalClasses` hint flags. Arbitrary `[...]` is **reserved** for: values with no canonical token (`text-[10px]`, `text-[13px]`), non-spacing units (`h-[85vh]`, `w-[90%]`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars (`bg-[var(--badge-color)]`). Don't invent off-scale px values just to use a bracket.
+- **Type scale (public surface):** Tailwind defaults. Display headings get `font-black uppercase tracking-tight` or `tracking-tighter`. Eyebrows/labels get `text-[10px] font-black uppercase tracking-widest`.
+- **Type scale (admin surface):** Archivo only - **`font-black` (Archivo Black), `uppercase` and `tracking-widest` are retired on admin.** Hierarchy comes from size and weight: `font-bold` is the heaviest, ordinary interface text is sentence case, and nothing that carries meaning goes below 11px. Uppercase survives only on compact labels (status pills, date abbreviations, table column headers) at `text-[11px] font-semibold tracking-wide`. Full table in `STYLE_GUIDE.md` → "Typography on admin".
+- **Colour usage:** Public pages use the olive/gold palette plus deep burgundy and a neon accent (see STYLE_GUIDE). Admin pages stay on the espresso/cream palette - except the sidebar and bottom nav, which use the dark-olive `nav-*` tokens.
+- **Admin action buttons - solid olive means "this writes a record".** Label type is `text-[13px] font-semibold` in sentence case on all of them (see the admin type scale above - no `font-black`, no `uppercase`, no `tracking-widest`); only the colour changes. **Save / Create / Add / New / Upload** must contain `bg-[#34451F] hover:bg-[#283719] text-white`. **Edit** is an olive *outline*: `border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8]`. **Cancel** is a neutral outline (`border border-[#D8D5C8] text-[#5E6654] hover:bg-[#ECE9DE]`). **Delete** is red `#B33A32` and only behind a confirmation. Compose sizing/radius around these. At most one solid olive button per view - a second primary makes neither read as primary. **Gold `#D7A928` is never a button colour** (focus rings, selection and small brand details only). The retired amber Edit (`#B45309`) and green Create (`#1B4332`) must not come back. See STYLE_GUIDE "Action buttons".
+- **Card radii:** `rounded-2xl` (cards) and `rounded-3xl` (sheets) are the defaults. Don't introduce new radius values without a reason.
+- **Borders are visible but soft:** `border-[#E6DFC8]` on admin, `border-white/10` on public dark theme.
+- **No emojis in production UI** unless explicitly requested by the user (some legacy emoji exist in emails; that's fine).
+
+---
+
+## Code style
+
+- **Do not add comments to code.** The code should be self-documenting - prefer a clearer name or a small extracted function over a comment explaining what something does.
+- **Never add change-narration comments** (`// added X`, `// new`, `// updated to handle Y`, `// removed old handler`). The diff already says this.
+- Only write a comment when the user explicitly asks for one, or when the surrounding file already comments that exact kind of construct and omitting it would be inconsistent.
+- **Keep existing comments** - don't strip comments already in the file unless the code they describe is being deleted or the comment has become wrong.
+
+---
+
+## Booking page route map
+
+The booking pages share a public dark theme but each has its own logic:
+
+- `/book` - hub, lists quiz/bingo/band/private + upcoming bookable events
+- `/book/quiz` - Thursday quiz booking form (free, lazy event creation, waitlist when full)
+- `/book/bingo` - Music Bingo (paid via Square, pay upfront)
+- `/book/band` - band/artist stage application (review queue)
+- `/book/private` - private hire enquiry (review queue)
+- `/book/event/[id]` - generic ticketed event booking (paid via Square)
+- `/manage-booking/[id]` - public self-service (view, modify, cancel)
+
+---
+
+## Common pitfalls - known issues to avoid
+
+- **`use client` directives:** Server Components are the default. Don't add `"use client"` unless you actually need state, effects, or browser APIs. Layouts (`layout.tsx`) under `(private)/` and `(public)/` are currently marked `"use client"` because they use `usePathname` - that's deliberate, don't change without thinking.
+- **Cookie/JWT mismatch:** `proxy.ts` and the browser client use `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the JWT). The server client uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Don't swap them.
+- **`event_types` joins:** Supabase joins can return as array OR object depending on the query. Always handle both: `const et = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types`.
+- **Square BigInt:** Square payment amounts use `BigInt`. Don't try to `JSON.stringify` a payment link response without handling it.
+- **Date strings vs Date objects:** DB stores `date` as `YYYY-MM-DD` strings. When parsing in JS, always use `new Date(dateStr + "T00:00:00")` to avoid timezone shifts.
+- **`is_active` vs `is_bookable`:** An event can be `is_active: true` (visible on the schedule) but `is_bookable: false` (no booking form). Don't conflate them.
+
+---
+
+## Database tables (key ones)
+
+| Table | Purpose |
+|---|---|
+| `bookings` | Quiz / bingo / event bookings - status: `confirmed`, `waitlisted`, `pending`, `cancelled` |
+| `contacts` | Customer details (shared across booking types, keyed on email) |
+| `events` / `event_types` / `event_subtypes` | Schedule. Events are created from exactly three places: the admin event sheet, the band `booked` transition, and private-hire `confirmed` - there is no lazy creation on booking. Poster images resolve at render (`src/lib/event-image.ts`): `events.image_url` → the booked act's `music_acts.cover_image_url` → `event_subtypes.default_image_url`. A null `events.image_url` means "inherit", so changing a subtype default updates every non-overridden event; nothing is ever copied between rows |
+| `booking_table_mappings` | Seating assignment for confirmed bookings |
+| `tables` | Physical tables with `max_capacity` |
+| `band_booking_requests` | Stage applications - five-stage pipeline: `new` → `reviewing` → `offered` → `booked` → `declined`. `booked` (with a date) places an active `events` row; every other status deactivates the linked event. `offered` emails an offer, `booked`/`declined` email the outcome; reschedule sends a request back to `offered`. Separate `payment_status` (`no_payment`/`unpaid`/`partially_paid`/`paid`/`over_paid`, derived from amounts) tracks the fee |
+| `private_hire_requests` | Private hire enquiries - status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
+| `quiz_category_configs` | Quiz rounds + question count targets. `ai_prompt` is the generator prompt in use for the round, with `{{tokens}}` the code fills in - the built-in text from `src/lib/quiz/prompt-templates.ts` until staff edit it; null (pre-column rows only) reads as built-in |
+| `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
+| `ai_settings` | One row: `providers` and `areas` jsonb maps keyed by the code registries in `src/lib/ai/`, each entry carrying label, model, optional `api_base_url`, `active` and audit stamps. Reconciled against the code on every load/save of Settings → AI settings, so removed areas show as inactive rather than vanishing |
+| `gallery_images` | Media on the public gallery and homepage |
+| `specials` | Drink deals on the homepage |
+| `merchandise` | Branded goods shown on the homepage - display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
+| `promo_content` | Social-style promo cards on the homepage |
+| `menu_categories` / `menu_items` | Public menu |
+| `company_information` | Address, socials, opening hours, capacity |
+| `employees` | Staff records, separate from Supabase Auth users |
+
+---
+
+## What to do when unsure
+
+1. Read this file and `STYLE_GUIDE.md`.
+2. If a question isn't covered, look at existing patterns in the codebase and match them.
+3. If there's no precedent and the choice is significant, **stop and ask**.
+4. Never install a new dependency, change the theme, or introduce a new architectural pattern without flagging it.
+
+## Things to never do without explicit permission
+
+- Add a new dependency (npm package)
+- Change the fonts on either surface
+- Move files out of the established folder structure
+- Add CSS outside Tailwind (no new `.module.css`, no styled-components)
+- Refactor `proxy.ts` to `middleware.ts` or rename the exported function
+- Use API routes for mutations that could be Server Actions
+- Disable TypeScript or ESLint rules
+- Commit secrets - `.env.local` only, never committed
+- Use `git add .` or `git add -A`
+- Touch the admin theme when working on public pages, or vice versa

@@ -55,7 +55,7 @@ export function PublicNavBar({
         <div className="pt-safe-top mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-4 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
           <Link
             href="/"
-            className="inline-flex w-fit shrink-0 items-center"
+            className="inline-flex w-fit shrink-0 flex-col items-start gap-1"
             onClick={() => setMenuOpen(false)}
             aria-label="Don Fenticas - home"
           >
@@ -65,14 +65,20 @@ export function PublicNavBar({
               width={869}
               height={176}
               className={cn(
-                "h-10 w-auto object-contain transition-[opacity,transform] duration-300 sm:h-12",
-                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]",
-                // Home page: the identity block below already carries the wordmark,
-                // so the nav copy stays hidden until the page is scrolled.
-                currentPath === "/" && !solid && "pointer-events-none -translate-y-1 opacity-0"
+                "h-8 w-auto object-contain sm:h-10",
+                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]"
               )}
               priority
             />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 font-black text-[7px] leading-none tracking-[0.28em] text-ink uppercase sm:text-[9px]",
+                !solid && "drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]"
+              )}
+            >
+              <span className="inline-block h-px w-2.5 bg-ink" aria-hidden="true" />
+              Live music bar
+            </span>
           </Link>
 
           <div className="hidden items-center gap-7 sm:flex lg:gap-9">

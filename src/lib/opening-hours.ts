@@ -1,4 +1,4 @@
-export type DayHours = { open?: string; close?: string };
+export type DayHours = { open?: string | null; close?: string | null };
 export type OpeningHours = Partial<Record<string, DayHours>>;
 
 export type OpenState = {
@@ -107,4 +107,39 @@ export function shortLocation(address: string | null | undefined): string | null
     .filter(Boolean);
   if (parts.length === 0) return null;
   return parts.slice(-2).join(", ");
+}
+
+const WEEK_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const WEEK_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function sessionLabel(day: DayHours | undefined): string | null {
+  const open = toMinutes(day?.open);
+  const close = toMinutes(day?.close);
+  if (open == null || close == null) return null;
+  return `${formatClock(open)}–${formatClock(close)}`;
+}
+
+/* "Mon–Thu 5pm–12am", "Fri–Sat 5pm–2am", "Sun 5pm–11pm": consecutive days
+   with the same session collapse into one range; closed days are skipped. */
+export function summariseOpeningHours(hours: OpeningHours | null | undefined): string[] {
+  if (!hours) return [];
+  const out: string[] = [];
+  let runStart = -1;
+  let runLabel: string | null = null;
+
+  const flush = (end: number) => {
+    if (runStart < 0 || !runLabel) return;
+    const days = runStart === end ? WEEK_SHORT[runStart] : `${WEEK_SHORT[runStart]}–${WEEK_SHORT[end]}`;
+    out.push(`${days} ${runLabel}`);
+  };
+
+  WEEK_ORDER.forEach((key, i) => {
+    const label = sessionLabel(hours[key]);
+    if (label && label === runLabel) return;
+    flush(i - 1);
+    runStart = label ? i : -1;
+    runLabel = label;
+  });
+  flush(WEEK_ORDER.length - 1);
+  return out;
 }

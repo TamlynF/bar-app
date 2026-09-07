@@ -48,7 +48,7 @@ export function ComingUpList({
     const next = events[0];
     return (
       <p className={cn("px-1 py-4 text-sm text-ink-2", className)}>
-        {next ? `Next event: ${format(parseDate(next.date), "EEE d MMM")} — ${next.title}` : "Nothing booked yet - check back soon."}
+        {next ? `Next event: ${format(parseDate(next.date), "EEE d MMM")} - ${next.title}` : "Nothing booked yet - check back soon."}
       </p>
     );
   }

@@ -91,6 +91,21 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-09-07 re-sync attempt (bundled skill 2.1.263) - built + verified locally, upload
+  NOT done.** `DesignSync` refused every call: the session was headless and the machine
+  had no design-system authorization ("run /design-login once from an interactive Claude
+  Code session on this machine"). Everything up to the upload ran: staged scripts
+  re-copied (2.1.220 → 2.1.263), mini-package rebuilt, styles.css recompiled
+  (**325 KB → 385 KB**, homepage/market-board/print work), driver run against the
+  *cached* anchor (`.cache/remote-sync.json` from 2026-08-03 - could not re-fetch).
+  Both components **verification-unchanged**, render check 2/2 clean, verdict
+  `upload.any:true` with `styling:true`/`aux:true`, `components:[]`/`bundle:false`/
+  `deletePaths:[]`. Conventions header re-validated against the fresh build: all ten
+  token DEFINITIONS still match, utilities/components resolve - no rewrite, no rebuild.
+  `[TOKENS_MISSING]` listed **43 vars** (validator truncates the list; same inline
+  runtime family). **Next run: after `/design-login`, re-fetch `_ds_sync.json` into
+  `.cache/remote-sync.json` and re-run the driver before `finalize_plan`** - the
+  cached anchor may be stale if any other sync touched the project.
 - **2026-08-03 re-sync (bundled skill 2.1.220).** Remote anchor was exactly what the
   2026-07-31 run uploaded (re-checked immediately before `finalize_plan`, still
   unmoved). Both components **verification-unchanged** (`sourceKeys` matched → capture
@@ -284,3 +299,10 @@ as a known warn, do not chase.**
   the remote on bundle/aux/scripts (so the project is being managed with the current bundled
   skill version too). If you see bundle/aux/scriptsSha move with identical source again, it's
   a concurrent sync, not a real change - re-fetch the anchor and trust the driver's diff.
+
+## Authorization quirk (2026-09-07)
+- **`DesignSync` needs a one-time `/design-login` from an INTERACTIVE Claude Code session
+  on this machine.** A headless/SDK session (VS Code extension autonomous run, `-p`) cannot
+  run the OAuth flow and every `DesignSync` method fails with an authorization error. The
+  local pipeline (stage → minipkg → tailwind → driver) still works without it; only the
+  anchor fetch and upload are blocked. Once authorized interactively, headless runs reuse it.

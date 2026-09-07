@@ -431,11 +431,31 @@ body {
 /* Pint glass icon for the market button: idle = upright, head sloshing,
    bubbles rising; pouring = glass tips and a stream falls with drops */
 .ad-pint .ad-pint-glass {
-  transform-origin: 16px 28px;
+  transform-origin: 18px 33px;
   transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 .ad-pint-pouring .ad-pint-glass {
-  transform: rotate(-58deg) translate(0, 2px) scale(0.92);
+  transform: rotate(48deg) translate(0, 1px) scale(0.88);
+}
+/* The beer stays level while the glass tips: the liquid counter-rotates
+   inside the clip, sloshes to the low side and drops as it "pours". */
+.ad-pint .ad-pint-liquid {
+  transform-origin: 20px 24px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.ad-pint-pouring .ad-pint-liquid {
+  animation: ad-pint-level 1.6s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+@keyframes ad-pint-level {
+  0% {
+    transform: rotate(0deg) translate(0, 0);
+  }
+  45% {
+    transform: rotate(-52deg) translate(2px, 1px);
+  }
+  100% {
+    transform: rotate(-48deg) translate(3px, 5px);
+  }
 }
 @keyframes ad-pint-slosh {
   0%,
@@ -2675,5 +2695,47 @@ body {
   [data-round-break] {
     break-before: page;
     page-break-before: always;
+  }
+}
+
+/* Poster-wall home: ticket-stub perforation and the scroll-cue nudge. */
+@layer utilities {
+  .ad-ticket-perf {
+    position: relative;
+    height: 0;
+    border-top: 1px dashed rgb(255 244 204 / 0.3);
+  }
+  .ad-ticket-perf::before,
+  .ad-ticket-perf::after {
+    content: "";
+    position: absolute;
+    top: -8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--canvas);
+  }
+  .ad-ticket-perf::before {
+    left: -20px;
+  }
+  .ad-ticket-perf::after {
+    right: -20px;
+  }
+  @keyframes ad-nudge {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(3px);
+    }
+  }
+  .ad-nudge {
+    animation: ad-nudge 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ad-nudge {
+      animation: none;
+    }
   }
 }

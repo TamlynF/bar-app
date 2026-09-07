@@ -119,13 +119,24 @@ export function MarketPill() {
             aria-hidden="true"
           />
 
+          {/* Icon leads on the left, tipped as if pouring - tap to collapse */}
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-label="Hide market details"
+            aria-expanded={true}
+            className={cn(iconClass, "active:scale-95")}
+          >
+            {icon}
+          </button>
+
           {/* Body: the deal - tap for the market at a glance */}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label={`${label}. Show the market`}
             aria-haspopup="dialog"
-            className="group relative flex min-w-0 items-center gap-2 py-1.5 pr-2 pl-3.5 text-left active:scale-[0.98]"
+            className="group relative flex min-w-0 items-center gap-2 py-1.5 pr-3 pl-2 text-left active:scale-[0.98]"
           >
             <span className="relative flex min-w-0 flex-col leading-none">
               <span className="inline-flex items-center gap-1.5 font-black text-[8px] tracking-[0.22em] text-gold uppercase">
@@ -157,16 +168,6 @@ export function MarketPill() {
             />
           </button>
 
-          {/* Icon stays in the corner - tap to collapse */}
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            aria-label="Hide market details"
-            aria-expanded={true}
-            className={cn(iconClass, "active:scale-95")}
-          >
-            {icon}
-          </button>
         </div>
       </div>
     </>

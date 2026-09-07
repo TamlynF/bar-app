@@ -10,7 +10,7 @@ import type { MarketInstrumentPayload } from "@/lib/market/tick";
 
 /* The best deal on the board right now: the drink furthest below its base
    price. Falls back to the cheapest drink when nothing has dropped yet. */
-function headlineDeal(instruments: MarketInstrumentPayload[] | undefined) {
+export function headlineDeal(instruments: MarketInstrumentPayload[] | undefined) {
   if (!instruments?.length) return null;
   const inStock = instruments.filter((i) => i.stock !== "out");
   const pool = inStock.length ? inStock : instruments;

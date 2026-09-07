@@ -1,172 +1,148 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
-import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
-import { HomeHero } from "@/components/home-hero";
-import { LiveTicker } from "@/components/marquee-ticker";
-import { IdentityBlock } from "@/components/identity-block";
 import { MarketPill } from "@/components/market-pill";
 import { MarketSection } from "@/components/market-section";
-import { WeekNights } from "@/components/week-nights";
+import { PosterHero } from "@/components/poster-hero";
+import { AlsoOnList } from "@/components/also-on-list";
+import { NextUpList } from "@/components/next-up-list";
+import { TicketStrip } from "@/components/ticket-strip";
+import { SpecialsBand } from "@/components/specials-band";
+import { FloorStrip } from "@/components/floor-strip";
+import { VisitFooter } from "@/components/visit-footer";
 import type { SpecialRow } from "@/components/specials-section";
-import { SpecialsPicks } from "@/components/specials-picks";
-import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
-import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
+import type { MerchandiseRow } from "@/components/merchandise-section";
+import type { PromoRow } from "@/components/instagram-strip";
+import { formatClock, toMinutes } from "@/lib/opening-hours";
 import {
-  entryText,
   getEventType,
+  parseDate,
   serializeEvent,
   BOOKED_BAND_FILTER,
   PUBLIC_EVENT_SELECT,
   type EventRow,
 } from "@/lib/events-display";
-import Image from "next/image";
+import { format } from "date-fns";
 
 export const revalidate = 300;
 
-const HERO_BACKDROP = "/backdrop.jpeg";
+const NEXT_NIGHTS = 3;
+const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+function clock(hhmm: string | null | undefined) {
+  const m = toMinutes(hhmm);
+  return m == null ? null : formatClock(m);
+}
 
 export default async function HomePage() {
   const supabase = await createClient();
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = format(today, "yyyy-MM-dd");
 
-  const [
-    { data: rawEvents },
-    { data: rawSpecials },
-    { data: rawMerchandise },
-    { data: rawPromos },
-    info,
-  ] = await Promise.all([
-    supabase
-      .from("events")
-      .select(PUBLIC_EVENT_SELECT)
-      .eq(BOOKED_BAND_FILTER, "booked")
-      .eq("is_active", true)
-      .gte("date", todayStr)
-      .order("date", { ascending: true })
-      .order("start_time", { ascending: true })
-      .limit(16),
-    supabase
-      .from("specials")
-      .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true }),
-    supabase
-      .from("merchandise")
-      .select("id, name, description, image_url, price, display_order")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true })
-      .limit(8),
-    supabase
-      .from("promo_content")
-      .select("id, title, description, media_url, media_type, external_url")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true })
-      .limit(6),
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawPromos }, info] =
+    await Promise.all([
+      supabase
+        .from("events")
+        .select(PUBLIC_EVENT_SELECT)
+        .eq(BOOKED_BAND_FILTER, "booked")
+        .eq("is_active", true)
+        .gte("date", todayStr)
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(16),
+      supabase
+        .from("specials")
+        .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("merchandise")
+        .select("id, name, description, image_url, price, display_order")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true })
+        .limit(8),
+      supabase
+        .from("promo_content")
+        .select("id, title, description, media_url, media_type, external_url")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true })
+        .limit(6),
       getCompanyInfo(),
     ]);
 
-  const highlightedEvents = ((rawEvents ?? []) as EventRow[])
+  const events = ((rawEvents ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
     .map((e) => serializeEvent(e));
-  const tonight = highlightedEvents.filter((e) => e.date === todayStr);
-  const isTonight = tonight.length > 0;
-  const tonightEvents = isTonight ? tonight : highlightedEvents.slice(0, 1);
-  const liveTickerItems = tonight.flatMap((e) => [
-    e.title,
-    e.startTimeLabel ? `${e.startTimeLabel}${e.endTimeLabel ? ` – ${e.endTimeLabel}` : ""}` : null,
-    entryText(e),
-  ]).filter((x): x is string => Boolean(x));
+
+  const featuredDate = events.find((e) => e.date === todayStr)?.date ?? events[0]?.date ?? null;
+  const isTonight = featuredDate === todayStr;
+  const nightEvents = featuredDate ? events.filter((e) => e.date === featuredDate) : [];
+  const later = featuredDate ? events.filter((e) => e.date > featuredDate) : events;
+  const nextDates = Array.from(new Set(later.map((e) => e.date))).slice(0, NEXT_NIGHTS);
+  const nextUp = later.filter((e) => nextDates.includes(e.date));
+  const moreNights = new Set(later.map((e) => e.date)).size;
+  const rangeLabel =
+    nextUp.length > 1
+      ? `${format(parseDate(nextUp[0].date), "d MMM")} – ${format(parseDate(nextUp[nextUp.length - 1].date), "d MMM")}`
+      : nextUp.length === 1
+        ? format(parseDate(nextUp[0].date), "EEEE d MMM")
+        : null;
+
+  const hours = info?.opening_hours ?? null;
+  const featuredDay = featuredDate ? DOW_KEYS[parseDate(featuredDate).getDay()] : DOW_KEYS[today.getDay()];
+  const doorsFor = (date: string) => clock(hours?.[DOW_KEYS[parseDate(date).getDay()]]?.open);
+  const doors = clock(hours?.[featuredDay]?.open);
+  const todayOpen = clock(hours?.[DOW_KEYS[today.getDay()]]?.open);
+  const todayClose = clock(hours?.[DOW_KEYS[today.getDay()]]?.close);
+  const openTonight = todayOpen ? `Bar open tonight ${todayOpen}${todayClose ? ` – ${todayClose}` : ""} · walk in` : null;
+
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
-    (s) =>
-      (!s.start_date || s.start_date <= todayStr) &&
-      (!s.end_date || s.end_date >= todayStr)
+    (s) => (!s.start_date || s.start_date <= todayStr) && (!s.end_date || s.end_date >= todayStr)
   );
   const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
   const promos = (rawPromos ?? []) as PromoRow[];
 
-  const backdropUrl = HERO_BACKDROP;
-
-  const companyInfo = info;
-  const weekday = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][today.getDay()];
-  const doorsRaw = companyInfo?.opening_hours?.[weekday]?.open ?? null;
-  const doorsToday = doorsRaw
-    ? (() => {
-        const [h, m] = doorsRaw.split(":").map(Number);
-        if (!Number.isFinite(h)) return null;
-        const hour = h % 12 === 0 ? 12 : h % 12;
-        return `${hour}${m ? `:${String(m).padStart(2, "0")}` : ""}${h >= 12 ? "pm" : "am"}`;
-      })()
-    : null;
-  const tagline = companyInfo?.tagline?.trim() || null;
-  const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
-
   return (
-    <main className="relative isolate min-h-dvh w-full bg-canvas pb-32 text-ink-2 sm:pb-24 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
+    <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
       <SmoothScroll />
       <PublicNav currentPath="/" overlay />
       <MarketPill />
 
-      <div className="relative overflow-hidden">
-        {backdropUrl && (
-          <div className="pointer-events-none absolute inset-0 isolate" aria-hidden="true">
-            <Image
-              src={backdropUrl}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="ad-drift object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F]/35 via-[#4A2A14]/25 to-[#26300D]/40 mix-blend-multiply" />
-            <div className="absolute inset-0 bg-linear-to-b from-canvas/70 via-canvas/50 via-35% to-canvas" />
-          </div>
-        )}
-        <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
-        <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
-
-        <div className="relative z-10 pt-14 pb-8 sm:pt-16 sm:pb-10 lg:pt-16 lg:pb-14">
-          <IdentityBlock events={highlightedEvents} todayStr={todayStr} tagline={tagline} />
-        </div>
-
-        <div className="relative z-10">
-          {isTonight && <LiveTicker items={liveTickerItems} />}
-        </div>
-
-        <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-6 sm:px-6 sm:pt-10 lg:px-10">
-          <HomeHero
-            tagline={tagline}
-            accentWord={taglineAccent}
-            tonightEvents={tonightEvents}
+      {nightEvents.length > 0 ? (
+        <>
+          <PosterHero
+            nightEvents={nightEvents}
             isTonight={isTonight}
-            doors={doorsToday}
+            doors={doors}
+            openTonight={openTonight}
+            moreNights={moreNights}
           />
-        </div>
+          <div className="md:hidden">
+            <AlsoOnList
+              events={nightEvents.slice(1)}
+              when={isTonight ? "tonight" : format(parseDate(featuredDate as string), "EEEE")}
+            />
+          </div>
+        </>
+      ) : (
+        <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
+          <h1 className="m-0 font-black text-5xl leading-[0.9] tracking-tighter text-ink uppercase">What&apos;s on</h1>
+          <p className="mt-4 max-w-sm text-sm text-ink-2">
+            Nothing booked yet - {openTonight ? openTonight.toLowerCase() : "check back soon"}.
+          </p>
+        </section>
+      )}
 
-      </div>
-
-      <div className="-mt-4 space-y-12 sm:-mt-6 sm:space-y-24">
-        {specials.length > 0 && <SpecialsPicks specials={specials} today={today} />}
-
-        <WeekNights
-          events={highlightedEvents}
-          today={today}
-          openingHours={companyInfo?.opening_hours ?? null}
-        />
-
-        <div className="mx-auto w-full max-w-400 space-y-12 px-4 sm:space-y-24 sm:px-6 lg:px-10">
+      <div className="mx-auto w-full max-w-400">
+        <NextUpList events={nextUp} />
+        <TicketStrip events={nextUp} rangeLabel={rangeLabel} doorsFor={doorsFor} />
+        <div className="mt-14 hidden px-6 sm:block lg:px-10">
           <MarketSection />
-
-          {merchandise.length > 0 && (
-            <MerchandiseSection merchandise={merchandise} />
-          )}
-
-          <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
-
-          <PublicFooter info={companyInfo} />
         </div>
+        <SpecialsBand specials={specials} today={today} />
+        <FloorStrip posts={promos} merchandise={merchandise} instagram={info?.instagram ?? null} />
+        <VisitFooter info={info} />
       </div>
     </main>
   );
