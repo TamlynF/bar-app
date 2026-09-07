@@ -1,14 +1,16 @@
 "use client"
 
 import { useEffect, useState, useSyncExternalStore } from "react"
-import { Share, SquarePlus, X, Download } from "lucide-react"
+import { Share, SquarePlus, X, Download, Compass } from "lucide-react"
 
 /* Install-to-home-screen nudge for the admin.
    - Hidden entirely once the app is running standalone (already installed).
    - Android/Chrome: `beforeinstallprompt` fires, so we can show a real
      Install button that opens the native prompt.
-   - iOS: there is no install API and no prompt, so the only option is to
-     tell the user the two taps (Share → Add to Home Screen).
+   - iOS Safari: there is no install API and no prompt, so the only option is
+     to tell the user the taps (Share → Add to Home Screen → Add).
+   - iOS in another browser or an in-app webview (Instagram, Gmail, Facebook…):
+     Add to Home Screen isn't available there, so send them to Safari first.
    - "Not now" hides it for 14 days so it isn't nagging every visit.
 
    Platform detection goes through useSyncExternalStore rather than an
@@ -20,12 +22,15 @@ import { Share, SquarePlus, X, Download } from "lucide-react"
 const DISMISS_KEY = "df-admin-install-dismissed-until"
 const DISMISS_DAYS = 14
 
-type Platform = "ssr" | "installed" | "dismissed" | "ios" | "other"
+type Platform = "ssr" | "installed" | "dismissed" | "ios-safari" | "ios-other" | "other"
 
 type BeforeInstallPromptEvent = Event & {
     prompt: () => Promise<void>
     userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
+
+const IOS_IN_APP_BROWSER = /Instagram|FBAN|FBAV|FB_IAB|GSA\/|Gmail|Twitter|LinkedInApp|Line\/|MicroMessenger|Snapchat|TikTok|musical_ly/i
+const IOS_THIRD_PARTY_BROWSER = /CriOS|FxiOS|EdgiOS|OPT\/|DuckDuckGo|Brave/
 
 function detectPlatform(): Platform {
     if (typeof window === "undefined") return "ssr"
@@ -42,12 +47,32 @@ function detectPlatform(): Platform {
     const ua = navigator.userAgent
     // iPadOS reports as Mac; the touch-points check catches it.
     const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1)
-    return ios ? "ios" : "other"
+    if (!ios) return "other"
+
+    // Real Safari carries "Safari" but none of the other browsers' markers.
+    // In-app webviews usually drop the "Safari" token altogether.
+    const inAppWebview = IOS_IN_APP_BROWSER.test(ua) || !/Safari/.test(ua)
+    const thirdPartyBrowser = IOS_THIRD_PARTY_BROWSER.test(ua)
+    return inAppWebview || thirdPartyBrowser ? "ios-other" : "ios-safari"
+}
+
+function isIpad(): boolean {
+    if (typeof navigator === "undefined") return false
+    const ua = navigator.userAgent
+    return /iPad/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1)
 }
 
 // Nothing to subscribe to - the snapshot only changes on reload.
 const subscribeNoop = () => () => {}
 const getServerSnapshot = (): Platform => "ssr"
+
+function StepNumber({ n }: { n: number }) {
+    return (
+        <span className="mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-admin-surface text-[11px] font-semibold">
+            {n}
+        </span>
+    )
+}
 
 export default function InstallPrompt() {
     const platform = useSyncExternalStore(subscribeNoop, detectPlatform, getServerSnapshot)
@@ -89,12 +114,14 @@ export default function InstallPrompt() {
 
     // iOS: always show the instructions. Other: only once Chrome has told us
     // the site is installable, otherwise there's no button to offer.
-    const visible =
-        !dismissed && (platform === "ios" || (platform === "other" && installEvent !== null))
+    const ios = platform === "ios-safari" || platform === "ios-other"
+    const visible = !dismissed && (ios || (platform === "other" && installEvent !== null))
 
     if (!visible) return null
 
-    const ios = platform === "ios"
+    const iosSafari = platform === "ios-safari"
+    const iosOther = platform === "ios-other"
+    const shareLocation = isIpad() ? "at the top of the screen, next to the address bar" : "at the bottom of the screen, next to the address bar"
 
     return (
         <div
@@ -114,17 +141,57 @@ export default function InstallPrompt() {
                         Opens full-screen without the browser bar, and you can get notifications for new requests.
                     </p>
 
-                    {ios && (
-                        /* iOS can't prompt, so spell out the two taps with the
+                    {iosSafari && (
+                        /* iOS can't prompt, so spell out the taps with the
                            same glyphs iOS uses, so they're recognisable. */
-                        <ol className="mt-3 space-y-1.5 text-[13px] text-admin-ink">
-                            <li className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-admin-surface text-[11px] font-semibold">1</span>
-                                Tap <Share className="inline h-4 w-4 text-admin-info" aria-hidden="true" /> <span className="font-semibold">Share</span> in the browser bar
+                        <ol className="mt-3 space-y-2 text-[13px] leading-snug text-admin-ink">
+                            <li className="flex items-start gap-2">
+                                <StepNumber n={1} />
+                                <span>
+                                    Tap the <span className="font-semibold">Share</span> button{" "}
+                                    <Share className="inline h-4 w-4 align-text-bottom text-admin-info" aria-hidden="true" />{" "}
+                                    (a square with an arrow pointing up) {shareLocation}.
+                                </span>
                             </li>
-                            <li className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-admin-surface text-[11px] font-semibold">2</span>
-                                Choose <SquarePlus className="inline h-4 w-4" aria-hidden="true" /> <span className="font-semibold">Add to Home Screen</span>
+                            <li className="flex items-start gap-2">
+                                <StepNumber n={2} />
+                                <span>
+                                    Scroll down the list and tap{" "}
+                                    <SquarePlus className="inline h-4 w-4 align-text-bottom" aria-hidden="true" />{" "}
+                                    <span className="font-semibold">Add to Home Screen</span>.
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <StepNumber n={3} />
+                                <span>
+                                    Tap <span className="font-semibold">Add</span> in the top-right corner. DF Admin will appear on your home screen like any other app.
+                                </span>
+                            </li>
+                        </ol>
+                    )}
+
+                    {iosOther && (
+                        /* Add to Home Screen only works from Safari - in-app
+                           browsers and most third-party browsers don't offer it. */
+                        <ol className="mt-3 space-y-2 text-[13px] leading-snug text-admin-ink">
+                            <li className="flex items-start gap-2">
+                                <StepNumber n={1} />
+                                <span>
+                                    Open this page in{" "}
+                                    <Compass className="inline h-4 w-4 align-text-bottom text-admin-info" aria-hidden="true" />{" "}
+                                    <span className="font-semibold">Safari</span>. Tap the{" "}
+                                    <span className="font-semibold">…</span> or{" "}
+                                    <Share className="inline h-4 w-4 align-text-bottom" aria-hidden="true" /> menu in this browser and choose{" "}
+                                    <span className="font-semibold">Open in Safari</span>, or copy the link and paste it into Safari.
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <StepNumber n={2} />
+                                <span>
+                                    In Safari, tap <span className="font-semibold">Share</span>{" "}
+                                    <Share className="inline h-4 w-4 align-text-bottom text-admin-info" aria-hidden="true" />{" "}
+                                    then <span className="font-semibold">Add to Home Screen</span>, then <span className="font-semibold">Add</span>.
+                                </span>
                             </li>
                         </ol>
                     )}
