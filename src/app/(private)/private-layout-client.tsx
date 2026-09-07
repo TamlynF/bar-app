@@ -24,6 +24,7 @@ import {
     Users
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import InstallPrompt from "@/components/admin/install-prompt"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
@@ -844,6 +845,8 @@ export default function PrivateLayoutClient({
                     "mx-auto w-full flex-1 px-2 pt-2 pb-28 sm:min-h-0 sm:px-0 sm:py-6 sm:pb-16",
                     widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
+                    {/* Home-screen install nudge - renders nothing once installed. */}
+                    <InstallPrompt />
                     {children}
                 </main>
 

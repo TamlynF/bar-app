@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Anton, Archivo, Archivo_Black } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
+import ServiceWorkerRegister from "@/components/service-worker-register";
 import "./globals.css";
 
 const anton = Anton({
@@ -105,6 +106,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <Analytics />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
