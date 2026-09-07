@@ -11,7 +11,8 @@ import { Share, SquarePlus, X, Download, Compass } from "lucide-react"
      to tell the user the taps (Share → Add to Home Screen → Add).
    - iOS in another browser or an in-app webview (Instagram, Gmail, Facebook…):
      Add to Home Screen isn't available there, so send them to Safari first.
-   - "Not now" hides it for 14 days so it isn't nagging every visit.
+   - "Not now" hides it for 14 days so it isn't nagging every visit;
+     "Don't show again" hides it permanently on this device.
 
    Platform detection goes through useSyncExternalStore rather than an
    effect + setState: the server snapshot is "ssr" (renders nothing), the
@@ -20,6 +21,7 @@ import { Share, SquarePlus, X, Download, Compass } from "lucide-react"
    (react-hooks/set-state-in-effect) happy and avoids a flash on load. */
 
 const DISMISS_KEY = "df-admin-install-dismissed-until"
+const NEVER_KEY = "df-admin-install-never"
 const DISMISS_DAYS = 14
 
 type Platform = "ssr" | "installed" | "dismissed" | "ios-safari" | "ios-other" | "other"
@@ -40,6 +42,8 @@ function detectPlatform(): Platform {
         // Older iOS exposes this non-standard flag instead.
         (navigator as Navigator & { standalone?: boolean }).standalone === true
     if (standalone) return "installed"
+
+    if (localStorage.getItem(NEVER_KEY) === "1") return "dismissed"
 
     const until = Number(localStorage.getItem(DISMISS_KEY) ?? 0)
     if (until > Date.now()) return "dismissed"
@@ -101,6 +105,11 @@ export default function InstallPrompt() {
 
     const dismiss = () => {
         localStorage.setItem(DISMISS_KEY, String(Date.now() + DISMISS_DAYS * 86_400_000))
+        setDismissed(true)
+    }
+
+    const dismissForever = () => {
+        localStorage.setItem(NEVER_KEY, "1")
         setDismissed(true)
     }
 
@@ -212,6 +221,13 @@ export default function InstallPrompt() {
                             className="rounded-xl border border-[#D8D5C8] px-4 py-2 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE]"
                         >
                             Not now
+                        </button>
+                        <button
+                            type="button"
+                            onClick={dismissForever}
+                            className="rounded-xl px-3 py-2 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] hover:text-admin-ink"
+                        >
+                            Don&apos;t show again
                         </button>
                     </div>
                 </div>
