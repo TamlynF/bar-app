@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { refreshTrendsAction, setTrendStateAction } from "./actions";
 import { TrendCard } from "./trend-card";
+import { AddIdeaSheet } from "./add-idea-sheet";
 import PricesClient from "../prices/prices-client";
 import type { BenchmarkComparison } from "../lib/compare";
 import type {
@@ -61,6 +62,7 @@ export default function TrendsClient({
   const [isRefreshing, startRefresh] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startMutate] = useTransition();
+  const [addOpen, setAddOpen] = useState(false);
 
   const savedTrends = initialTrends.filter((t) => t.state === "saved");
   const ignoredTrends = initialTrends.filter((t) => t.state === "ignored");
@@ -124,6 +126,24 @@ export default function TrendsClient({
     </div>
   );
 
+  // "Write your own" sits beside the AI button on both layouts so a staff idea
+  // is one tap away from the board, not buried in a menu.
+  const ownIdeaButton = (className: string) => (
+    <button
+      type="button"
+      onClick={() => setAddOpen(true)}
+      className={cn(
+        "flex shrink-0 items-center justify-center gap-1.5 border border-[#D8D5C8] bg-white font-semibold text-[#5E6654] transition-colors hover:bg-[#FFFEFA] active:scale-[0.98]",
+        className,
+      )}
+      aria-label="Pin up my own idea"
+      title="Pin up my own idea"
+    >
+      <span aria-hidden="true">✍️</span>
+      <span className="hidden sm:inline">My own</span>
+    </button>
+  );
+
   const pinButton = (className: string) => (
     <button
       type="button"
@@ -146,6 +166,7 @@ export default function TrendsClient({
         {tabRow}
         <div className="hidden flex-1 justify-end gap-2 sm:flex">
           {trendTab !== "prices" && pinButton("h-11 rounded-xl px-4.5 text-[13.5px]")}
+          {trendTab !== "prices" && ownIdeaButton("h-11 rounded-xl px-3.5 text-[12.5px]")}
           <button
             type="button"
             onClick={() => setShowSaved((s) => !s)}
@@ -237,6 +258,7 @@ export default function TrendsClient({
         <>
           <div className="flex gap-2 sm:hidden">
             {pinButton("h-13 flex-1 rounded-[14px] text-[14.5px]")}
+            {ownIdeaButton("h-13 w-13 rounded-[14px] text-[18px]")}
             <button
               type="button"
               onClick={() => setShowSaved(true)}
@@ -286,6 +308,12 @@ export default function TrendsClient({
           </p>
         </>
       )}
+
+      <AddIdeaSheet
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        kind={trendTab === "events" ? "event_idea" : "advertising"}
+      />
     </div>
   );
 }

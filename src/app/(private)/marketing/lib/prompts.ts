@@ -18,8 +18,22 @@ const TONE = `VOICE - write like the bar's own switched-on social manager talkin
 - Keep sentences short and lively. One idea per sentence, no padding.
 - BANNED words/phrases (never use): leverage, utilise, engagement, content strategy, elevate, curate, synergy, "in today's fast-paced", "short-form video content that…", "reacts humorously to", "creating content that". Just say the thing plainly.`;
 
+// What actually moves the needle for a small venue on social in 2026. This steers
+// every refresh rather than showing up as cards - a principle shown as a card gets
+// dismissed once and is gone; a principle in the prompt shapes everything after it.
+// Sources: Joli State of Social 2026 (hospitality benchmarks), Brew hospitality
+// trend reports 2026, Music Venue Trust 2026 annual report.
+const WHAT_WORKS_2026 = `WHAT WORKS IN 2026 - rank and shape every idea by these, in this order:
+1. SENDABLE beats likeable. Instagram now ranks by shares/sends, not follower count. Ask of each idea: would a regular DM this to a mate with "we should go"? If not, drop it or sharpen it.
+2. Short video first. Reels get roughly double the engagement of static posts for hospitality. Only suggest a static or carousel when it is a poster-style event announcement or a list people will save.
+3. Social is search. People type "live music Hinckley", "karaoke near me", "pub quiz Thursday" into Instagram and TikTok. Every action must include a caption opener or Highlight name written as a plain search phrase.
+4. Pull people somewhere you own. Ideas that grow a broadcast channel, WhatsApp community or mailing list (early access, first dibs on tables/tickets) rank above ideas that just chase reach.
+5. Organic over paid. Do not suggest paid ads unless the idea genuinely cannot work without them.
+6. Events are the footfall engine for pubs. Anticipation post the day of + recap post the morning after; the recurring weekly nights (quiz, karaoke, bands) are the backbone, not the exception.
+7. Context: over half of UK grassroots music venues made no profit last year. This venue's edge is the mix - café by day, quiz, karaoke, DJ and bands by night. Favour ideas that show the mix.`;
+
 const ACTION_EFFORT_SCHEMA =
-  '  "action": "ONE concrete sentence: exactly what to film/post/run THIS WEEK - the specific shot, overlay text, audio or offer, and when to post it",\n' +
+  '  "action": "ONE concrete sentence: exactly what to film/post/run THIS WEEK - the specific shot, overlay text, audio or offer, when to post it, and the plain search-phrase caption opener (e.g. \'Live music Hinckley Friday\')",\n' +
   '  "effort": "exactly one of: Easy, Medium, Big",';
 
 const PRICE_ACTION_EFFORT_SCHEMA =
@@ -35,6 +49,8 @@ Find 6 current advertising / social-media trends the venue could ride on. Priori
 - Trends tied to CURRENT events happening in the world/UK this week (news, sport, seasonal moments, viral memes).
 - Ideas clearly relevant to ${SECTORS}.
 Prefer things happening near ${area} where relevant, but global viral trends are fine too.${blocklistLine(blocklist)}
+
+${WHAT_WORKS_2026}
 
 ${TONE}
 
@@ -58,6 +74,9 @@ Today's date is ${todayISO}. Use web search for the latest, real examples.
 Find 6 event / function ideas that other businesses in ${SECTORS} are currently running,
 especially near ${area}. Favour concrete, currently-advertised events (theme nights, live
 music formats, quizzes, tasting events, seasonal functions) over generic advice.${blocklistLine(blocklist)}
+
+${WHAT_WORKS_2026}
+For event ideas, points 4, 6 and 7 matter most: favour formats that build a regular crowd, that slot into an existing weekly night, and that show off the café/quiz/karaoke/bands mix.
 
 ${TONE}
 

@@ -70,6 +70,7 @@ import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { FormToggle } from "@/components/admin";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
+import { ShareEventButton } from "@/components/admin/share-event-button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, badgeSelectedClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { findActiveEventClashes, isOvernightEnd } from "@/lib/event-form-validation";
@@ -2415,6 +2416,28 @@ export default function EventsClient({
                       <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "-") : "-"} />
                     </PopoverContent>
                   </Popover>
+
+                  {/* Poster + caption + /whats-on link to the phone's share sheet.
+                      Resolved the same way the details card does further down. */}
+                  <ShareEventButton
+                    event={{
+                      title: selected.title ?? subtypeById.get(selected.event_subtypes_id)?.name ?? "Event",
+                      date: selected.date,
+                      startTime: selected.start_time,
+                      endTime: selected.end_time,
+                      price: selected.payment_amount,
+                      searchPhrase: subtypeById.get(selected.event_subtypes_id)?.name ?? null,
+                      posterUrl: resolveEventImage({
+                        eventImageUrl: selected.image_url,
+                        actCoverUrl: actCoverByEvent[selected.id],
+                        subtypeDefaultUrl: subtypeById.get(selected.event_subtypes_id)?.default_image_url,
+                      }).url,
+                      publicUrl:
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/whats-on/${selected.id}`
+                          : `/whats-on/${selected.id}`,
+                    }}
+                  />
 
                   {canCopy(selected) && (
                     <button

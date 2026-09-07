@@ -3,6 +3,18 @@
     {
       "path": "/api/square/sync",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/marketing/trends/refresh?kind=advertising",
+      "schedule": "0 6 * * 1,4"
+    },
+    {
+      "path": "/api/marketing/trends/refresh?kind=event_idea",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/marketing/trends/refresh?kind=price",
+      "schedule": "0 6 1 * *"
     }
   ]
 }
