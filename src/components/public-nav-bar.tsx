@@ -44,6 +44,10 @@ export function PublicNavBar({
 
   return (
     <>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[calc(env(safe-area-inset-top)+3.5rem)] bg-linear-to-b from-canvas via-canvas/55 to-canvas/0 sm:h-[calc(env(safe-area-inset-top)+4rem)]"
+      />
       <nav
         className={cn(
           "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-350",
