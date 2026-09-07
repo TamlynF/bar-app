@@ -456,7 +456,7 @@ export default function PrivateLayoutClient({
     const headerHidden = useHideHeaderOnScroll()
 
     return (
-        <div data-admin-shell className="pt-safe-top flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
+        <div data-admin-shell className="pt-[env(safe-area-inset-top)] flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
             <aside data-print-hide className={cn(
                 "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-nav-line bg-nav-bg transition-[width] duration-300 sm:flex",
                 collapsed ? "w-16" : "w-72"
