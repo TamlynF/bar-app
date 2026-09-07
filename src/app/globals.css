@@ -227,6 +227,17 @@ body {
   width: max-content;
   animation: ad-marquee var(--marquee-duration, 30s) linear infinite;
 }
+/* Pause while a finger or pointer is on the strip; ~30% slower on phones */
+.ad-marquee-track:hover,
+.ad-marquee-track:active,
+:active > .ad-marquee-track {
+  animation-play-state: paused;
+}
+@media (max-width: 639px) {
+  .ad-marquee-track {
+    animation-duration: calc(var(--marquee-duration, 30s) * 1.3);
+  }
+}
 
 /* Specials rail - drifts horizontally so every card is seen without the
    visitor scrolling. Pauses on hover, on keyboard focus, and while a card
@@ -417,6 +428,88 @@ body {
   animation: ad-flicker 3.1s steps(1, end) infinite;
 }
 
+/* Pint glass icon for the market button: idle = upright, head sloshing,
+   bubbles rising; pouring = glass tips and a stream falls with drops */
+.ad-pint .ad-pint-glass {
+  transform-origin: 16px 28px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.ad-pint-pouring .ad-pint-glass {
+  transform: rotate(-58deg) translate(0, 2px) scale(0.92);
+}
+@keyframes ad-pint-slosh {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-4px);
+  }
+}
+.ad-pint-head {
+  animation: ad-pint-slosh 2.6s ease-in-out infinite;
+}
+.ad-pint-pouring .ad-pint-head {
+  animation-duration: 0.9s;
+}
+@keyframes ad-pint-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-9px);
+    opacity: 0;
+  }
+}
+.ad-pint-bubble {
+  animation: ad-pint-rise 2.2s ease-in infinite;
+}
+.ad-pint-bubble-2 {
+  animation-delay: 0.7s;
+}
+.ad-pint-bubble-3 {
+  animation-delay: 1.4s;
+  animation-duration: 1.8s;
+}
+.ad-pint-stream {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.ad-pint-pouring .ad-pint-stream {
+  opacity: 1;
+  transition-delay: 0.25s;
+}
+.ad-pint-stream-line {
+  stroke-dasharray: 3 3;
+  animation: ad-pint-flow 0.5s linear infinite;
+}
+@keyframes ad-pint-flow {
+  to {
+    stroke-dashoffset: -6;
+  }
+}
+@keyframes ad-pint-splash {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-2px) scale(1.3);
+    opacity: 0.4;
+  }
+}
+.ad-pint-drop {
+  animation: ad-pint-splash 0.7s ease-in-out infinite;
+}
+.ad-pint-drop-2 {
+  animation-delay: 0.35s;
+}
+
 /* Rolling-digit price (stock-ticker style) + up/down flash */
 .ad-roll-strip {
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
@@ -470,6 +563,163 @@ body {
 }
 .ad-sheet-backdrop {
   animation: ad-fade-in 0.25s ease-out both;
+}
+
+/* "What's on" sign: near-black interior, subtle bright rim, thin inner
+   highlight line, tight glow only at the edges, shadow underneath. */
+.ad-sign {
+  --accent: var(--g, #fdcc4b);
+  position: relative;
+  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 82%, #000);
+  background:
+    /* wet film: a smooth sheen over the top half with a soft defined edge, no droplets */
+    linear-gradient(180deg, rgba(255, 248, 232, 0.2) 0%, rgba(255, 248, 232, 0.1) 30%, rgba(255, 248, 232, 0.035) 46%, rgba(255, 248, 232, 0) 50%),
+    /* indirect light catching the top-left, falling off fast */
+    radial-gradient(70% 60% at 16% -12%, rgba(255, 245, 225, 0.3), rgba(255, 245, 225, 0.06) 45%, transparent 70%),
+    /* faint diagonal sheen across the glass */
+    linear-gradient(112deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0) 60%),
+    /* wet lip: the tube colour reflected along the bottom edge */
+    linear-gradient(0deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 18%),
+    /* the tube's colour barely bleeding into the shade */
+    radial-gradient(85% 160% at 50% 50%, transparent 45%, color-mix(in srgb, var(--accent) 18%, transparent) 100%),
+    linear-gradient(180deg, #14120e 0%, #080706 100%);
+  box-shadow:
+    /* neon tube, dimmed by the shade */
+    0 0 1px color-mix(in srgb, var(--accent) 90%, #fff),
+    0 0 6px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 0 14px color-mix(in srgb, var(--accent) 24%, transparent),
+    /* sitting in shadow */
+    0 6px 14px rgba(0, 0, 0, 0.7),
+    /* low light on the inside of the glass */
+    inset 0 0 12px color-mix(in srgb, var(--accent) 20%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    /* thin catch of light along the top edge, and a wet line along the bottom */
+    inset 0 1px 0 rgba(255, 245, 225, 0.24),
+    inset 0 -1px 0 rgba(255, 245, 225, 0.07),
+    /* recessed centre */
+    inset 0 -6px 14px rgba(0, 0, 0, 0.5);
+  color: #e9dcc0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  transition: box-shadow 0.2s ease, transform 0.15s ease, border-color 0.2s ease;
+}
+/* second, fainter line just inside the edge */
+.ad-sign::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  pointer-events: none;
+}
+.ad-sign::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 10%;
+  width: 34%;
+  height: 38%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 246, 228, 0.22), rgba(255, 246, 228, 0));
+  filter: blur(2.5px);
+  pointer-events: none;
+}
+.ad-sign svg {
+  color: var(--accent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+/* Lit tonight: rim a touch brighter, slow breath - glow stays at the edge */
+@keyframes ad-sign-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 1px #fff,
+      0 0 8px color-mix(in srgb, var(--accent) 75%, transparent),
+      0 0 18px color-mix(in srgb, var(--accent) 32%, transparent),
+      0 6px 14px rgba(0, 0, 0, 0.7),
+      inset 0 0 14px color-mix(in srgb, var(--accent) 26%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+      inset 0 1px 0 rgba(255, 245, 225, 0.22),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 2px #fff,
+      0 0 11px color-mix(in srgb, var(--accent) 90%, transparent),
+      0 0 24px color-mix(in srgb, var(--accent) 42%, transparent),
+      0 6px 14px rgba(0, 0, 0, 0.7),
+      inset 0 0 18px color-mix(in srgb, var(--accent) 34%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--accent) 38%, transparent),
+      inset 0 1px 0 rgba(255, 245, 225, 0.26),
+      inset 0 -6px 14px rgba(0, 0, 0, 0.5);
+  }
+}
+.ad-sign-on {
+  border-color: var(--accent);
+  animation: ad-sign-breathe 3.2s ease-in-out infinite;
+}
+.ad-sign:hover,
+.ad-sign:active {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 1px #fff,
+    0 0 8px color-mix(in srgb, var(--accent) 75%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 32%, transparent),
+    0 6px 14px rgba(0, 0, 0, 0.7),
+    inset 0 0 14px color-mix(in srgb, var(--accent) 26%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    inset 0 1px 0 rgba(255, 245, 225, 0.22),
+    inset 0 -6px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Phone neon-tube ribbon under the identity strapline */
+.ad-neon-ribbon {
+  mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 28px), transparent 100%);
+}
+/* Lit neon tube: near-white core, coloured halo (like a Soho sign) */
+.ad-tube-mini {
+  color: color-mix(in oklab, var(--g, #fdcc4b) 35%, #fff);
+  text-shadow:
+    0 0 1px #fff,
+    0 0 4px var(--g, #fdcc4b),
+    0 0 10px var(--g, #fdcc4b),
+    0 0 22px color-mix(in oklab, var(--g, #fdcc4b) 75%, transparent),
+    0 0 40px color-mix(in oklab, var(--g, #fdcc4b) 45%, transparent);
+}
+.ad-tube-mini svg {
+  color: var(--g, #fdcc4b);
+  filter: drop-shadow(0 0 3px var(--g, #fdcc4b)) drop-shadow(0 0 8px color-mix(in oklab, var(--g, #fdcc4b) 60%, transparent));
+}
+
+/* Guitar-pick shape for the Specials tabs / folder tabs */
+.ad-pick {
+  border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+}
+@keyframes ad-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.ad-fade-in {
+  animation: ad-fade-in 0.15s ease-out both;
+}
+
+/* Playbill rules draw in from the centre */
+@keyframes ad-rule-in {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+.ad-rule-in {
+  animation: ad-rule-in 0.7s 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Kinetic headline - each letter drops in with a spring overshoot, staggered by --i */
@@ -746,11 +996,17 @@ body {
     animation: none;
   }
   .ad-letter,
+  .ad-rule-in,
+  .ad-sign-on,
   .ad-live-dot,
   .ad-drift,
   .ad-tube-flicker,
   .ad-flash-down,
   .ad-flash-up,
+  .ad-pint-head,
+  .ad-pint-bubble,
+  .ad-pint-stream-line,
+  .ad-pint-drop,
   .ad-sheet,
   .ad-sheet-backdrop,
   .ad-market-live,

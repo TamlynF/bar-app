@@ -16,7 +16,7 @@ const REPEATS_PER_HALF = 4;
 
 export function MarqueeTicker({
   items,
-  straight = false,
+  straight = true,
   tone = "gold",
 }: {
   items?: MarqueeItem[];
@@ -92,10 +92,6 @@ export function LiveTicker({
         {/* Phones get the short tab so the strip itself stays readable */}
         <span className="sm:hidden">Live</span>
         <span className="hidden sm:inline">{label}</span>
-        <span
-          aria-hidden="true"
-          className="absolute top-0 -right-3 bottom-0 w-3 bg-(--burgundy) [clip-path:polygon(0_0,100%_0,0_100%)]"
-        />
       </span>
 
       <div

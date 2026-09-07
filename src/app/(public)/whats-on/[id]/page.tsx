@@ -168,7 +168,7 @@ export default async function WhatsOnEventPage({
   const shareTitle = `${event.title} · ${format(dateObj, "d MMM yyyy")} · ${venueName}`;
 
   return (
-    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
+    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-32 text-ink-2 sm:pb-24 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <div
         className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]"
         aria-hidden="true"

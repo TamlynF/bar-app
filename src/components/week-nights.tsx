@@ -5,6 +5,8 @@ import { ArrowRight, Clock } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { PosterCard } from "@/components/poster-card";
+import { EventActions } from "@/components/event-actions";
+import { ComingUpList } from "@/components/coming-up-list";
 import { cn } from "@/lib/utils";
 import { entryText, type SerializedEvent } from "@/lib/events-display";
 import type { OpeningHours } from "@/lib/company-info";
@@ -24,7 +26,15 @@ type Night = {
 
 /* The next three dates after tonight that have something on. Tonight lives
    in the hero; nights with nothing booked are skipped. */
-const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const DOW_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
 
 function nextEventNights(today: Date, events: SerializedEvent[]) {
   const todayStr = format(startOfDay(today), "yyyy-MM-dd");
@@ -40,11 +50,16 @@ function formatClock(hhmm?: string | null) {
   if (!Number.isFinite(h)) return null;
   const suffix = h >= 12 ? "pm" : "am";
   const hour = h % 12 === 0 ? 12 : h % 12;
-  return m ? `${hour}:${String(m).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
+  return m
+    ? `${hour}:${String(m).padStart(2, "0")}${suffix}`
+    : `${hour}${suffix}`;
 }
 
 function relativeLabel(night: Night, today: Date) {
-  const diff = Math.round((startOfDay(night.date).getTime() - startOfDay(today).getTime()) / 86_400_000);
+  const diff = Math.round(
+    (startOfDay(night.date).getTime() - startOfDay(today).getTime()) /
+      86_400_000,
+  );
   return diff === 1 ? "Tomorrow" : `In ${diff} days`;
 }
 
@@ -88,12 +103,17 @@ export function WeekNights({
       />
 
       {nights.length === 0 && (
-        <p className="rounded-3xl border border-dashed border-white/12 px-6 py-10 text-center text-sm text-ink-2">
-          Nothing booked after tonight yet - check the full schedule or follow us for announcements.
+        <p className="hidden rounded-3xl border border-dashed border-white/12 px-6 py-10 text-center text-sm text-ink-2 md:block">
+          Nothing booked after tonight yet - check the full schedule or follow
+          us for announcements.
         </p>
       )}
 
-      <ol className="grid gap-6 md:grid-cols-3 md:gap-5 lg:gap-6">
+      {/* Phones: three-row agenda list */}
+      <ComingUpList events={events} today={today} className="md:hidden" />
+
+      {/* Tablet/desktop: night columns */}
+      <ol className="hidden gap-6 md:grid md:grid-cols-3 md:gap-5 lg:gap-6">
         {nights.map((night, i) => (
           <li
             key={night.key}
@@ -116,7 +136,10 @@ export function WeekNights({
         className="group mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-white/15 font-black text-[11px] tracking-[0.16em] text-ink uppercase transition-colors hover:border-gold/60 hover:text-gold sm:hidden"
       >
         See the full schedule
-        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+        <ArrowRight
+          className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
       </Link>
     </section>
   );
@@ -144,7 +167,7 @@ function NightColumn({
         "flex h-full flex-col gap-3 rounded-3xl border p-3 sm:p-4",
         isNext
           ? "border-gold/35 bg-gold/5 shadow-[0_0_60px_-28px_rgba(253,204,75,0.5)]"
-          : "border-white/12 bg-white/4"
+          : "border-white/12 bg-white/4",
       )}
     >
       {/* Night header */}
@@ -153,7 +176,9 @@ function NightColumn({
           <span
             className={cn(
               "inline-block -rotate-2 rounded-lg px-3 py-2 font-black text-base leading-none tracking-[0.12em] uppercase shadow-lg shadow-black/40",
-              isNext ? "bg-gold text-on-gold" : "bg-canvas-2 text-ink ring-1 ring-hairline"
+              isNext
+                ? "bg-gold text-on-gold"
+                : "bg-canvas-2 text-ink ring-1 ring-hairline",
             )}
           >
             {format(night.date, "EEE")}
@@ -168,7 +193,7 @@ function NightColumn({
         <span
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-black text-[9px] tracking-[0.2em] uppercase",
-            isNext ? "bg-canvas text-gold" : "bg-white/6 text-ink-2"
+            isNext ? "bg-canvas text-gold" : "bg-white/6 text-ink-2",
           )}
         >
           {relativeLabel(night, today)}
@@ -208,7 +233,9 @@ function NightColumn({
           </p>
           <p className="inline-flex items-center justify-center gap-1.5 text-xs text-ink-2 tabular-nums">
             <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            {open ? `Doors ${open}${close ? ` · till ${close}` : ""}` : "Walk in · no booking needed"}
+            {open
+              ? `Doors ${open}${close ? ` · till ${close}` : ""}`
+              : "Walk in · no booking needed"}
           </p>
         </div>
       )}
@@ -239,9 +266,18 @@ function SplitRow({ event }: { event: SerializedEvent }) {
         className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-canvas"
       >
         {event.imageUrl ? (
-          <Image src={event.imageUrl} alt="" fill sizes="96px" className="object-cover" />
+          <Image
+            src={event.imageUrl}
+            alt=""
+            fill
+            sizes="96px"
+            className="object-cover"
+          />
         ) : (
-          <div className="absolute inset-0 bg-linear-to-br from-(--ev-c)/45 to-canvas" aria-hidden="true" />
+          <div
+            className="absolute inset-0 bg-linear-to-br from-(--ev-c)/45 to-canvas"
+            aria-hidden="true"
+          />
         )}
         {event.subType && (
           <span className="absolute bottom-1.5 left-1.5 rounded-md bg-(--ev-c) px-1.5 py-0.5 font-black text-[8px] tracking-[0.14em] text-canvas uppercase shadow-md shadow-black/40">
@@ -260,8 +296,11 @@ function SplitRow({ event }: { event: SerializedEvent }) {
             {[timeLabel, entryText(event)].filter(Boolean).join(" · ")}
           </p>
         </div>
-        <div className="mt-2.5 w-full [&_a]:h-10 [&_a]:rounded-lg [&_a]:text-[11px] [&_span]:h-10 [&_span]:rounded-lg [&_span]:text-[10px]">
-          <BookingButton event={event} />
+        <div className="mt-2.5 flex items-center gap-2">
+          <EventActions event={event} />
+          <div className="min-w-0 flex-1 [&_a]:h-9 [&_a]:rounded-lg [&_a]:text-[11px] [&_span]:h-9 [&_span]:rounded-lg [&_span]:text-[10px]">
+            <BookingButton event={event} />
+          </div>
         </div>
       </div>
     </li>
@@ -277,13 +316,19 @@ function EventRow({ event }: { event: SerializedEvent }) {
       className="flex items-center gap-3 rounded-2xl border border-hairline bg-canvas-2/80 py-2.5 pr-2.5 pl-3.5"
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
-      <span className="h-2 w-2 shrink-0 rounded-full bg-(--ev-c)" aria-hidden="true" />
+      <span
+        className="h-2 w-2 shrink-0 rounded-full bg-(--ev-c)"
+        aria-hidden="true"
+      />
       <Link href={`/whats-on/${event.id}`} className="min-w-0 flex-1">
-        <p className="truncate font-black text-sm tracking-tight text-ink uppercase">{event.title}</p>
+        <p className="truncate font-black text-sm tracking-tight text-ink uppercase">
+          {event.title}
+        </p>
         <p className="truncate text-[11px] font-bold tracking-wide text-ink-2 uppercase tabular-nums">
           {[event.subType, timeLabel].filter(Boolean).join(" · ")}
         </p>
       </Link>
+      <EventActions event={event} className="hidden shrink-0 xl:inline-flex" />
       <div className="shrink-0 [&_a]:h-10 [&_a]:w-auto [&_a]:rounded-xl [&_a]:px-3.5 [&_a]:text-[11px] [&_span]:h-10 [&_span]:w-auto [&_span]:rounded-xl [&_span]:px-3 [&_span]:text-[10px]">
         <BookingButton event={event} />
       </div>

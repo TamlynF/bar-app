@@ -2,7 +2,8 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, TrendingDown, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { PintIcon } from "@/components/pint-icon";
 import { MarketSheet } from "@/components/market-sheet";
 import { RollingPrice } from "@/components/rolling-price";
 import { useMarketState } from "@/hooks/use-market-live";
@@ -20,8 +21,8 @@ function headlineDeal(instruments: MarketInstrumentPayload[] | undefined) {
   return pool.reduce((a, b) => (b.price < a.price ? b : a));
 }
 
-/* Phone-only "live activity" button, bottom-left while the drinks market
-   trades. Starts collapsed as a shimmering round icon; one tap expands it to
+/* Phone-only "live activity" button, bottom-right while the drinks market
+   trades, visible anywhere on the page. Starts collapsed as a shimmering round icon; one tap expands it to
    show the best deal with the price ticking; a tap on the expanded pill goes
    to the market. Tapping elsewhere collapses it again. Hidden on the market
    page itself and from `sm` up (the hero button takes over there). */
@@ -50,13 +51,9 @@ export function MarketPill() {
     ? `Drinks market open: ${deal.name} now ${formatGbp(price)}`
     : "Drinks market open";
 
-  const icon = crash ? (
-    <Zap className="h-5 w-5" aria-hidden="true" />
-  ) : (
-    <TrendingDown className="h-5 w-5" aria-hidden="true" />
-  );
+  const icon = <PintIcon pouring={expanded} className="h-8 w-8" />;
   const iconClass = cn(
-    "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-on-gold",
+    "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-on-gold",
     crash
       ? "bg-linear-to-br from-neon to-[#E6392E] text-ink"
       : "bg-linear-to-br from-gold to-neon",
@@ -77,7 +74,7 @@ export function MarketPill() {
         {sheet}
         <div
           ref={rootRef}
-          className="pointer-events-none fixed right-0 bottom-0 z-40 pr-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:hidden"
+          className="pointer-events-none fixed right-0 bottom-0 z-40 pr-5 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:hidden"
         >
           <button
             type="button"
@@ -86,7 +83,7 @@ export function MarketPill() {
             aria-expanded={false}
             className={cn(
               iconClass,
-              "pointer-events-auto h-14 w-14 shadow-[0_14px_30px_-8px_rgba(255,107,53,0.7)] ring-2 ring-canvas active:scale-95 [&_svg]:h-6 [&_svg]:w-6",
+              "pointer-events-auto h-16 w-16 overflow-hidden shadow-[0_14px_30px_-8px_rgba(255,107,53,0.7)] ring-2 ring-canvas active:scale-95 [&_svg]:h-10 [&_svg]:w-10",
             )}
           >
             <span
@@ -109,7 +106,7 @@ export function MarketPill() {
       {sheet}
       <div
         ref={rootRef}
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-end px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-end px-5 pb-[calc(env(safe-area-inset-bottom)+5rem)] sm:hidden"
       >
         <div
           className={cn(

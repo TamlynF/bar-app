@@ -5,10 +5,12 @@ import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { LiveTicker } from "@/components/marquee-ticker";
-import { NeonSign } from "@/components/neon-sign";
+import { IdentityBlock } from "@/components/identity-block";
 import { MarketPill } from "@/components/market-pill";
+import { MarketSection } from "@/components/market-section";
 import { WeekNights } from "@/components/week-nights";
-import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
+import type { SpecialRow } from "@/components/specials-section";
+import { SpecialsPicks } from "@/components/specials-picks";
 import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import {
@@ -88,16 +90,21 @@ export default async function HomePage() {
   const backdropUrl = HERO_BACKDROP;
 
   const companyInfo = info;
-  const offerWords = (companyInfo?.tagline ?? "")
-    .replace(/\.$/, "")
-    .split(/,|·/)
-    .map((w) => w.trim())
-    .filter(Boolean);
+  const weekday = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][today.getDay()];
+  const doorsRaw = companyInfo?.opening_hours?.[weekday]?.open ?? null;
+  const doorsToday = doorsRaw
+    ? (() => {
+        const [h, m] = doorsRaw.split(":").map(Number);
+        if (!Number.isFinite(h)) return null;
+        const hour = h % 12 === 0 ? 12 : h % 12;
+        return `${hour}${m ? `:${String(m).padStart(2, "0")}` : ""}${h >= 12 ? "pm" : "am"}`;
+      })()
+    : null;
   const tagline = companyInfo?.tagline?.trim() || null;
   const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
 
   return (
-    <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
+    <main className="relative isolate min-h-dvh w-full bg-canvas pb-32 text-ink-2 sm:pb-24 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
       <PublicNav currentPath="/" overlay />
       <MarketPill />
@@ -120,7 +127,11 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 pt-14 sm:pt-16">
+        <div className="relative z-10 pt-14 pb-8 sm:pt-16 sm:pb-10 lg:pt-16 lg:pb-14">
+          <IdentityBlock events={highlightedEvents} todayStr={todayStr} tagline={tagline} />
+        </div>
+
+        <div className="relative z-10">
           {isTonight && <LiveTicker items={liveTickerItems} />}
         </div>
 
@@ -130,23 +141,23 @@ export default async function HomePage() {
             accentWord={taglineAccent}
             tonightEvents={tonightEvents}
             isTonight={isTonight}
+            doors={doorsToday}
           />
         </div>
 
-        <div className="relative z-10 mt-10 sm:mt-14">
-          <NeonSign words={offerWords} />
-        </div>
       </div>
 
-      <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
+      <div className="-mt-4 space-y-12 sm:-mt-6 sm:space-y-24">
+        {specials.length > 0 && <SpecialsPicks specials={specials} today={today} />}
+
         <WeekNights
           events={highlightedEvents}
           today={today}
           openingHours={companyInfo?.opening_hours ?? null}
         />
 
-        <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
-          {specials.length > 0 && <SpecialsSection specials={specials} />}
+        <div className="mx-auto w-full max-w-400 space-y-12 px-4 sm:space-y-24 sm:px-6 lg:px-10">
+          <MarketSection />
 
           {merchandise.length > 0 && (
             <MerchandiseSection merchandise={merchandise} />

@@ -22,7 +22,11 @@ export function TonightDeck({
   isTonight: boolean;
 }) {
   const [rawActive, setActive] = useState(0);
-  const [drag, setDrag] = useState<{ dx: number; live: boolean }>({ dx: 0, live: false });
+  const [drag, setDrag] = useState<{ dx: number; live: boolean }>({
+    dx: 0,
+    live: false,
+  });
+  const [tilt, setTilt] = useState<{ rx: number; ry: number }>({ rx: 0, ry: 0 });
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const moved = useRef(false);
   const count = events.length;
@@ -30,7 +34,7 @@ export function TonightDeck({
 
   const go = useCallback(
     (dir: 1 | -1) => setActive((a) => (a + dir + count) % count),
-    [count]
+    [count],
   );
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -39,6 +43,13 @@ export function TonightDeck({
     moved.current = false;
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && !start.current) {
+      // Hover tilt: a physical flyer following the cursor (max ~5deg)
+      const r = e.currentTarget.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      setTilt({ rx: -py * 8, ry: px * 10 });
+    }
     if (!start.current || start.current.id !== e.pointerId) return;
     const dx = e.clientX - start.current.x;
     const dy = e.clientY - start.current.y;
@@ -71,95 +82,130 @@ export function TonightDeck({
   };
 
   return (
-    <div className="relative mr-auto ml-0 w-[86%] max-w-md md:w-[84%] md:max-w-sm lg:max-w-[22rem] xl:max-w-sm">
-      <div
-        role="region"
-        aria-roledescription="carousel"
+    <>
+      {/* Phones: full-width cards in a native scroll-snap rail, next card peeking 16px */}
+      <ul
         aria-label={`${count} events tonight`}
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowRight") go(1);
-          if (e.key === "ArrowLeft") go(-1);
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onClickCapture={onClickCapture}
-        className="ad-deck relative aspect-4/3 w-full touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-4 focus-visible:ring-offset-canvas sm:aspect-[4/4.4]"
+        className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 md:hidden"
       >
-        {events.map((event, i) => {
-          const pos = (i - active + count) % count; // 0 = front
-          const hidden = pos >= MAX_VISIBLE;
-          const isFront = pos === 0;
-          const dx = isFront && drag.live ? drag.dx : 0;
-          const tilt = isFront ? dx / 24 : pos * 5;
-          const shiftX = isFront ? dx : pos * 14;
-          const shiftY = isFront ? Math.abs(dx) * 0.06 : pos * -4;
-          const scale = isFront ? 1 : 1 - pos * 0.05;
-          return (
-            <div
-              key={event.id}
-              aria-hidden={!isFront}
-              className={cn(
-                "absolute inset-0 origin-bottom will-change-transform",
-                !drag.live && "transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-                hidden && "opacity-0"
-              )}
-              style={{
-                zIndex: count - pos,
-                transform: `translate(${shiftX}${isFront ? "px" : "%"}, ${shiftY}${isFront ? "px" : "%"}) rotate(${tilt}deg) scale(${scale})`,
-                opacity: hidden ? 0 : 1 - pos * 0.08,
-                pointerEvents: isFront ? "auto" : "none",
-              }}
-            >
-              <PosterCard event={event} isTonight={isTonight} priority={pos < 2} className="h-full" />
-            </div>
-          );
-        })}
-      </div>
+        {events.map((event, i) => (
+          <li
+            key={event.id}
+            className="w-[calc(100%-1rem)] shrink-0 snap-start"
+          >
+            <PosterCard
+              event={event}
+              isTonight={isTonight}
+              priority={i === 0}
+            />
+          </li>
+        ))}
+      </ul>
 
-      <div className="mt-4 flex items-center justify-between gap-3 md:absolute md:inset-x-0 md:top-full md:mt-3">
-        <button
-          type="button"
-          onClick={() => go(-1)}
-          aria-label="Previous event"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-ink transition-colors hover:border-gold/60 hover:text-gold"
+      {/* Tablet/desktop: the fanned deck */}
+      <div className="relative mr-auto ml-0 hidden w-[86%] max-w-md md:block md:w-[84%] md:max-w-sm lg:max-w-[22rem] xl:max-w-sm">
+        <div
+          role="region"
+          aria-roledescription="carousel"
+          aria-label={`${count} events tonight`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") go(1);
+            if (e.key === "ArrowLeft") go(-1);
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onPointerLeave={() => setTilt({ rx: 0, ry: 0 })}
+          onClickCapture={onClickCapture}
+          className="ad-deck relative aspect-4/3 w-full touch-pan-y select-none outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-4 focus-visible:ring-offset-canvas sm:aspect-[4/4.4]"
         >
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-
-        <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-          <div className="flex items-center gap-1.5" role="tablist" aria-label="Events tonight">
-            {events.map((event, i) => (
-              <button
+          {events.map((event, i) => {
+            const pos = (i - active + count) % count; // 0 = front
+            const hidden = pos >= MAX_VISIBLE;
+            const isFront = pos === 0;
+            const dx = isFront && drag.live ? drag.dx : 0;
+            const spin = isFront ? dx / 24 : pos * 5;
+            const shiftX = isFront ? dx : pos * 14;
+            const shiftY = isFront ? Math.abs(dx) * 0.06 : pos * -4;
+            const scale = isFront ? 1 : 1 - pos * 0.05;
+            return (
+              <div
                 key={event.id}
-                type="button"
-                role="tab"
-                aria-selected={i === active}
-                aria-label={event.title}
-                onClick={() => setActive(i)}
+                aria-hidden={!isFront}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  i === active ? "w-6 bg-gold" : "w-2 bg-white/25 hover:bg-white/50"
+                  "absolute inset-0 origin-bottom will-change-transform",
+                  !drag.live &&
+                    "transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none",
+                  hidden && "opacity-0",
                 )}
-              />
-            ))}
-          </div>
-          <p className="truncate font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
-            {active + 1} / {count} tonight · swipe
-          </p>
+                style={{
+                  zIndex: count - pos,
+                  transform: `perspective(900px) translate(${shiftX}${isFront ? "px" : "%"}, ${shiftY}${isFront ? "px" : "%"}) rotate(${spin}deg) rotateX(${isFront && !drag.live ? tilt.rx : 0}deg) rotateY(${isFront && !drag.live ? tilt.ry : 0}deg) scale(${scale})`,
+                  opacity: hidden ? 0 : 1 - pos * 0.08,
+                  pointerEvents: isFront ? "auto" : "none",
+                }}
+              >
+                <PosterCard
+                  event={event}
+                  isTonight={isTonight}
+                  priority={pos < 2}
+                  className="h-full"
+                />
+              </div>
+            );
+          })}
         </div>
 
-        <button
-          type="button"
-          onClick={() => go(1)}
-          aria-label="Next event"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-ink transition-colors hover:border-gold/60 hover:text-gold"
-        >
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <div className="mt-4 flex items-center justify-between gap-3 md:absolute md:inset-x-0 md:top-full md:mt-3">
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous event"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-ink transition-colors hover:border-gold/60 hover:text-gold"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+            <div
+              className="flex items-center gap-1.5"
+              role="tablist"
+              aria-label="Events tonight"
+            >
+              {events.map((event, i) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === active}
+                  aria-label={event.title}
+                  onClick={() => setActive(i)}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    i === active
+                      ? "w-6 bg-gold"
+                      : "w-2 bg-white/25 hover:bg-white/50",
+                  )}
+                />
+              ))}
+            </div>
+            <p className="truncate font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
+              {active + 1} / {count} tonight · swipe
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next event"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-ink transition-colors hover:border-gold/60 hover:text-gold"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

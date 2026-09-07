@@ -8,6 +8,7 @@ import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
 import { useMarketLive } from "@/hooks/use-market-live";
+import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 
 export function PublicNavBar({
   currentPath,
@@ -64,8 +65,11 @@ export function PublicNavBar({
               width={869}
               height={176}
               className={cn(
-                "h-10 w-auto object-contain sm:h-12",
-                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]"
+                "h-10 w-auto object-contain transition-[opacity,transform] duration-300 sm:h-12",
+                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]",
+                // Home page: the identity block below already carries the wordmark,
+                // so the nav copy stays hidden until the page is scrolled.
+                currentPath === "/" && !solid && "pointer-events-none -translate-y-1 opacity-0"
               )}
               priority
             />
@@ -107,7 +111,7 @@ export function PublicNavBar({
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
                 className={cn(
-                  "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:h-9 sm:w-9 lg:h-10 lg:w-auto lg:px-4",
+                  "hidden h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:inline-flex sm:h-9 sm:w-9 lg:h-10 lg:w-auto lg:px-4",
                   SOCIAL_BRANDS.instagram.solid
                 )}
               >
@@ -189,6 +193,8 @@ export function PublicNavBar({
       </nav>
 
       {!overlay && <div className="h-14 sm:h-16" aria-hidden="true" />}
+
+      <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} />
     </>
   );
 }

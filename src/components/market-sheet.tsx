@@ -51,7 +51,7 @@ export function MarketSheet({
   const crash = state.crashActive;
 
   return (
-    <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Drinks market">
+    <div className="fixed inset-0 z-[60] sm:hidden" role="dialog" aria-modal="true" aria-label="Drinks market">
       <button
         type="button"
         aria-label="Close"
