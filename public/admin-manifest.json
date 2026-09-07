@@ -1,0 +1,20 @@
+{
+  "name": "Don Fenticas Venue Manager",
+  "short_name": "DF Admin",
+  "description": "Bookings, requests, schedule and quiz for Don Fenticas.",
+  "id": "/dashboard",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F1E8",
+  "theme_color": "#263019",
+  "icons": [
+    { "src": "/df-mark.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Requests", "url": "/requests" },
+    { "name": "Schedule", "url": "/event-setups/events" },
+    { "name": "Quiz", "url": "/event-setups/quiz" }
+  ]
+}

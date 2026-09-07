@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useTransition } from "react"
+import React, { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
@@ -40,6 +40,47 @@ import {
     isSettingsPath,
     isWidePath,
 } from "@/lib/admin-nav"
+
+/* Phone-only: hide the sticky page header while the user scrolls down and
+   bring it back on the first upward scroll (the iOS Safari / Mail pattern).
+   The header is 56px and the fixed bottom nav ~80px; inside a browser tab
+   another ~200px goes to Safari/Chrome chrome, so on a long list the header
+   was costing a third of the remaining reading area for a title the user
+   already knows. Below `sm` the scroll container is the window - the
+   `sm:overflow-y-auto` wrapper only scrolls on desktop, where the header
+   stays put. */
+function useHideHeaderOnScroll(threshold = 8) {
+    const [hidden, setHidden] = useState(false)
+
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        const mq = window.matchMedia("(max-width: 639.98px)")
+        let lastY = window.scrollY
+        let ticking = false
+
+        const onScroll = () => {
+            if (!mq.matches) { setHidden(false); return }
+            if (ticking) return
+            ticking = true
+            requestAnimationFrame(() => {
+                const y = window.scrollY
+                const delta = y - lastY
+                // Always show near the top so the back button is reachable
+                // without a scroll gesture.
+                if (y < 64) setHidden(false)
+                else if (delta > threshold) setHidden(true)
+                else if (delta < -threshold) setHidden(false)
+                lastY = y
+                ticking = false
+            })
+        }
+
+        window.addEventListener("scroll", onScroll, { passive: true })
+        return () => window.removeEventListener("scroll", onScroll)
+    }, [threshold])
+
+    return hidden
+}
 
 type Crumb = { label: string; href?: string | null };
 
@@ -411,6 +452,7 @@ export default function PrivateLayoutClient({
 
     const { title, subtitle, backHref, description = null, trail, mobilePrefix } = getPageInfo() as PageInfo
     const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
+    const headerHidden = useHideHeaderOnScroll()
 
     return (
         <div data-admin-shell className="pt-safe-top flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
@@ -716,7 +758,16 @@ export default function PrivateLayoutClient({
             </aside>
 
             <div data-admin-scroll className="flex min-h-screen min-w-0 flex-1 flex-col bg-admin-bg sm:h-screen sm:overflow-y-auto">
-                <header data-print-hide className="sticky top-0 z-40 w-full border-b border-admin-line bg-admin-card/95 backdrop-blur-sm">
+                <header
+                    data-print-hide
+                    className={cn(
+                        "sticky top-0 z-40 w-full border-b border-admin-line bg-admin-card/95 backdrop-blur-sm",
+                        // Phone only: slide up out of the way on scroll-down. Desktop keeps
+                        // the breadcrumb header pinned (max-sm: keeps the transform off it).
+                        "transition-transform duration-200 ease-out motion-reduce:transition-none",
+                        headerHidden && "max-sm:-translate-y-full"
+                    )}
+                >
                     <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-2 sm:hidden">
                         {backHref ? (
                             <button
@@ -788,7 +839,9 @@ export default function PrivateLayoutClient({
                     clear the fixed nav, and on a long list the last row otherwise
                     sits flush against the viewport edge. */}
                 <main data-admin-main className={cn(
-                    "mx-auto w-full flex-1 p-1 pb-28 sm:min-h-0 sm:py-6 sm:pb-16",
+                    // Phones: 8px side gutter so cards don't kiss the screen edge; pb-28 still
+                    // clears the fixed bottom nav (~80px + safe-area) with breathing room.
+                    "mx-auto w-full flex-1 px-2 pt-2 pb-28 sm:min-h-0 sm:px-0 sm:py-6 sm:pb-16",
                     widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}

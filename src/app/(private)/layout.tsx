@@ -1,4 +1,4 @@
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { buildAdminBookingGroups, partitionBookingGroups, type AdminBookingGroup, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 import { getPendingRequestCounts } from "@/lib/request-counts";
@@ -6,6 +6,20 @@ import PrivateLayoutClient from "./private-layout-client";
 
 export const viewport: Viewport = {
     themeColor: "#F4F1E8",
+};
+
+/* The admin gets its own manifest so it installs as a separate home-screen
+   app ("DF Admin") that opens straight on /dashboard in standalone mode -
+   the public manifest starts on /book. Installed = no Safari/Chrome chrome,
+   which is ~200px of the phone screen back, and it's the only way iOS lets
+   a web app receive push notifications (needed for "new band request" pings). */
+export const metadata: Metadata = {
+    manifest: "/admin-manifest.json",
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: "DF Admin",
+    },
 };
 
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
