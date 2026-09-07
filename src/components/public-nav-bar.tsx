@@ -50,7 +50,7 @@ export function PublicNavBar({
       />
       <nav
         className={cn(
-          "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-350",
+          "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-350 standalone:top-[env(safe-area-inset-top)]",
           solid
             ? "border-[#FDCC4B]/10 bg-canvas/88 backdrop-blur-xl"
             : "border-transparent bg-transparent"

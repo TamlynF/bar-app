@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@custom-variant standalone (@media (display-mode: standalone));
 
 @source "../app/*.{ts,tsx}";
 @source "../app/(public)/**/*.{ts,tsx}";
@@ -196,6 +197,16 @@ body {
 html:has([data-admin-shell]),
 html:has([data-admin-shell]) body {
   background-color: #f4f1e8;
+}
+
+/* Installed public site (translucent status bar): start the document below
+   the clock and battery so the fixed nav and every page's top padding land
+   where they do in a browser tab. Beats the per-page `html, body { padding: 0 }`
+   resets on specificity. The admin uses an opaque status bar, so it is excluded. */
+@media (display-mode: standalone) {
+  body:not(:has([data-admin-shell])) {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
 /* Choreographed hero text reveal (slides up + fades in on load) */
