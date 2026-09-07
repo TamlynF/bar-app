@@ -1,85 +1,111 @@
 import type { Metadata, Viewport } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { buildAdminBookingGroups, partitionBookingGroups, type AdminBookingGroup, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
-import { getPendingRequestCounts } from "@/lib/request-counts";
-import PrivateLayoutClient from "./private-layout-client";
+import { Anton, Archivo, Archivo_Black } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "@/components/ui/sonner";
+import "./globals.css";
+
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+  display: "swap",
+});
+
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-ui",
+  display: "swap",
+});
+
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-black",
+  display: "swap",
+});
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bookingsdonfenticas.co.uk";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Don Fenticas | Bar & Live Music Venue",
+    template: "%s | Don Fenticas",
+  },
+  description:
+    "Don Fenticas, Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
+  icons: {
+    // PNGs generated from the 2000px logo.jpeg - df-mark.jpg was 150px and
+    // went soft when iOS/Android upscaled it for the home screen.
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icon-192.png",
+    apple: "/apple-touch-icon.png", // 180x180 - what iOS actually uses for Add to Home Screen
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Don Fenticas",
+  },
+  openGraph: {
+    title: "Don Fenticas | Bar & Live Music Venue",
+    description:
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
+    siteName: "Don Fenticas",
+    url: siteUrl,
+    locale: "en_GB",
+    type: "website",
+    images: [
+      {
+        url: "/logo.jpeg",
+        width: 1080,
+        height: 1080,
+        alt: "Don Fenticas logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Don Fenticas | Bar & Live Music Venue",
+    description:
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
+    images: ["/logo.jpeg"],
+  },
+};
 
 export const viewport: Viewport = {
-    themeColor: "#F4F1E8",
+  themeColor: "#14180a", // After Dark: deepened from #26300D
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
-/* The admin gets its own manifest so it installs as a separate home-screen
-   app ("DF Admin") that opens straight on /dashboard in standalone mode -
-   the public manifest starts on /book. Installed = no Safari/Chrome chrome,
-   which is ~200px of the phone screen back, and it's the only way iOS lets
-   a web app receive push notifications (needed for "new band request" pings). */
-export const metadata: Metadata = {
-    manifest: "/admin-manifest.json",
-    appleWebApp: {
-        capable: true,
-        statusBarStyle: "default",
-        title: "DF Admin",
-    },
-};
-
-export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
-    const supabase = await createClient();
-    const today = new Date().toISOString().split("T")[0];
-
-    const [
-        { data: { user } },
-        { data: bookableEvents },
-        pendingCounts,
-    ] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase
-            .from("events")
-            .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, title, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, title, color, behavior, booking_card_title, booking_card_icon)")
-            .eq("is_active", true)
-            .eq("is_bookable", true)
-            .gte("date", today)
-            .order("date", { ascending: true })
-            .limit(200),
-        getPendingRequestCounts(supabase),
-    ]);
-
-    let employeeName = "";
-    let employeeRole = "";
-    if (user?.email) {
-        const { data: emp } = await supabase
-            .from("employees")
-            .select("full_name, role")
-            .eq("email", user.email)
-            .maybeSingle();
-        if (emp) {
-            employeeName = emp.full_name;
-            employeeRole = emp.role;
-        }
-    }
-
-    const allGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
-        .sort((a, b) => a.label.localeCompare(b.label));
-    const { guest: guestGroups } = partitionBookingGroups(allGroups);
-
-    const toNav = (g: AdminBookingGroup) => ({
-        label: g.label,
-        href: g.href,
-        icon: g.icon,
-        color: g.badgeColor,
-    });
-    const guestNav = guestGroups.map(toNav);
-
-    return (
-        <PrivateLayoutClient
-            employeeName={employeeName}
-            employeeRole={employeeRole}
-            guestNav={guestNav}
-            pendingRequestsCount={pendingCounts.total}
-            pendingBandCount={pendingCounts.band}
-            pendingHireCount={pendingCounts.privateHire}
-            pendingEnquiriesCount={pendingCounts.enquiries}
-        >
-            {children}
-        </PrivateLayoutClient>
-    );
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      data-surface="dark"
+      className={`${anton.variable} ${archivo.variable} ${archivoBlack.variable}`}
+      suppressHydrationWarning
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-screen font-ui antialiased"
+      >
+        {children}
+        <Toaster />
+        <Analytics />
+      </body>
+    </html>
+  );
 }

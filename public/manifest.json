@@ -1,9 +1,29 @@
 {
-  "name": "Bar App",
-  "short_name": "Bar App",
+  "name": "Don Fenticas",
+  "short_name": "Don Fenticas",
   "description": "Book your quiz night",
   "start_url": "/book",
-  "display": "fullscreen", 
+  "display": "standalone",
   "background_color": "#26300D",
-  "theme_color": "#26300D"
+  "theme_color": "#26300D",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }
