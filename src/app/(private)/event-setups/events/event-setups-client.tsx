@@ -1541,6 +1541,25 @@ export default function EventsClient({
     });
   })();
   const phonePeriodLabel = phoneWeekOnly ? weekLabel : calMonthLabel;
+  /* A sideways swipe on the grid moves a week or a month; anything closer to
+     vertical is left alone so the page still scrolls. */
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const swipeHandlers = {
+    onTouchStart: (event: React.TouchEvent) => {
+      const touch = event.touches[0];
+      swipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+    },
+    onTouchEnd: (event: React.TouchEvent) => {
+      const start = swipeStart.current;
+      const touch = event.changedTouches[0];
+      swipeStart.current = null;
+      if (!start || !touch || !isPhone) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      shiftPhonePeriod(dx < 0 ? 1 : -1);
+    },
+  };
   const eventDotColor = (event: EventRecord) => {
     const sub = subtypeById.get(event.event_subtypes_id);
     const type = typeById.get(event.event_types_id);
@@ -2676,7 +2695,7 @@ export default function EventsClient({
             </button>
           </div>
 
-          <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
+          <div {...swipeHandlers} className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
             <div className="grid shrink-0 grid-cols-7 gap-1">
               {WEEKDAYS.map((w, i) => (
                 <div key={w} className={cn("py-1 text-center font-bold text-[12px] text-[#5E6654] sm:text-[12px]", (i === 0 || i === 6) && "max-sm:text-[#5E6654]/60")}>{w}</div>
@@ -3280,13 +3299,18 @@ export default function EventsClient({
                           {(() => {
                             const used = selected.seating_required ? bk.confirmedCount : bk.confirmedPeople;
                             const total = selected.seating_required ? tableCount : venueCapacity ?? 0;
-                            const unit = selected.seating_required ? "tables" : "people";
                             return (
                               <div className="border-b border-[#D8D5C8] px-4 pt-1 pb-3 sm:hidden">
-                                <p className="text-[13px] font-medium text-admin-muted">
-                                  <span className="text-2xl font-bold text-admin-ink tabular-nums">{used}</span>
-                                  {total > 0 ? ` of ${total} ${unit} booked` : ` ${unit} booked`}
-                                </p>
+                                {selected.seating_required ? (
+                                  <p className="text-[13px] font-medium text-admin-muted">
+                                    <span className="text-2xl font-bold text-admin-ink tabular-nums">{used}</span>
+                                    {total > 0 ? ` of ${total} tables booked` : " tables booked"}
+                                  </p>
+                                ) : (
+                                  <p className="text-[12px] font-medium text-admin-muted">
+                                    {total > 0 ? `Room for ${total} guests` : "Guests"}
+                                  </p>
+                                )}
                                 {total > 0 && (
                                   <div
                                     className="mt-2 h-1.5 overflow-hidden rounded-full bg-admin-surface"
@@ -3299,6 +3323,9 @@ export default function EventsClient({
                               </div>
                             );
                           })()}
+                          {selected.seating_required && (
+                            <p className="px-4 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase sm:hidden">Guests</p>
+                          )}
                           <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
                             <div className="px-2 py-2 text-center sm:px-3">
                               <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
