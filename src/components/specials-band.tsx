@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -28,14 +28,14 @@ function whenLabel(s: SpecialRow, today: Date) {
   if (["5,6", "5,6,7", "6,7"].includes(days.join())) return "Weekend";
   const t = todayDow(today);
   const next = days.find((d) => d > t) ?? days[0];
-  return next === (t % 7) + 1 ? "Tomorrow" : days.map((d) => DAY_SHORT[d]).join(" Â· ");
+  return next === (t % 7) + 1 ? "Tomorrow" : days.map((d) => DAY_SHORT[d]).join(" · ");
 }
 
-/* The burgundy Specials band. Phones: the first special (tonight's, or the
-   next one up) is a full-width photo card and the rest are one-line rows
-   beneath it. From md the title sits left and each special is a
-   photo-and-copy pair beside it, as in the design. Tonight's run first.
-   Tapping opens the special's own popup; nothing leaves the page. */
+/* The burgundy Specials band. Phones: two-up photo cards with the title
+   overlaid, swiping sideways for a third or fourth. From md the title sits
+   left and each special is a photo-and-copy pair beside it, as in the
+   design. Tonight's run first. Tapping opens the special's own popup;
+   nothing leaves the page. */
 export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; today: Date }) {
   const [open, setOpen] = useState<SpecialRow | null>(null);
   if (specials.length === 0) return null;

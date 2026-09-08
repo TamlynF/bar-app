@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Flame, Gauge, Leaf, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import {
@@ -63,6 +63,13 @@ const answerRows = (answer: string) => Math.min(4, Math.max(1, Math.ceil(answer.
 
 const notOwnerMessage = (owner?: string | null) =>
   `That playlist was made on ${owner ?? "another"}${owner ? "'s" : ""} Spotify account, so only they can change it. You can still open and play it.`;
+
+const difficultyIcon = (difficulty: string) => {
+  const value = difficulty.toLowerCase();
+  if (value === "easy") return Leaf;
+  if (value === "hard") return Flame;
+  return Gauge;
+};
 
 const difficultyTone = (difficulty: string) => {
   const value = difficulty.toLowerCase();
@@ -250,6 +257,16 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
      backs out of - falls through to the clipboard. */
   const handleCopyPlaylist = async () => {
     if (!playlistUrl) return;
+
+    const onPhone = window.matchMedia("(max-width: 639px)").matches;
+    if (onPhone) {
+      const ok = await confirm({
+        title: "Copy the playlist link?",
+        description: `This copies the Spotify link for the ${category_name} playlist so you can paste it into a message or open it on another device. Nothing in the round changes.`,
+        confirmLabel: "Copy link",
+      });
+      if (!ok) return;
+    }
 
     const canShare =
       typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
@@ -741,8 +758,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         href={playlistUrl}
         target="_blank"
         rel="noopener noreferrer"
-        style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-        className="flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg bg-(--spotify-bg) text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+        style={{ "--spotify-bg": "#1DB954", "--spotify-ink": "#15803D" } as React.CSSProperties}
+        className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-(--spotify-bg) bg-white text-[13px] font-semibold text-(--spotify-ink) transition-colors hover:bg-admin-surface sm:h-9 sm:rounded-lg sm:border-0 sm:bg-(--spotify-bg) sm:text-white sm:transition-opacity sm:hover:bg-(--spotify-bg) sm:hover:opacity-90"
       >
         <Music className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">Open Spotify Playlist</span>
@@ -754,7 +771,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         onClick={handleCopyPlaylist}
         title="Share or copy playlist link"
         aria-label="Share or copy playlist link"
-        className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white text-admin-primary hover:bg-admin-bg"
+        className="h-11 w-11 shrink-0 rounded-xl border border-admin-line bg-white text-admin-primary hover:bg-admin-bg sm:h-9 sm:w-9 sm:rounded-lg"
       >
         {playlistCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
       </Button>
@@ -766,7 +783,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           disabled={isSyncing}
           title="Sync playlist with saved songs"
           aria-label="Sync playlist with saved songs"
-          className="h-9 w-9 shrink-0 rounded-lg border border-admin-line bg-white text-admin-primary hover:bg-admin-bg"
+          className="h-11 w-11 shrink-0 rounded-xl border border-admin-line bg-white text-admin-primary hover:bg-admin-bg sm:h-9 sm:w-9 sm:rounded-lg"
         >
           {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </Button>
@@ -775,11 +792,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   ) : null;
 
   return (
-    <section ref={sectionRef} data-category-section className="overflow-hidden rounded-2xl border border-admin-line bg-white">
+    <section
+      ref={sectionRef}
+      data-category-section
+      className={cn(
+        "overflow-hidden rounded-2xl border border-admin-muted/40 border-l-4 bg-admin-card",
+        isComplete ? "border-l-admin-success" : hasAny ? "border-l-admin-warning" : "border-l-admin-line"
+      )}
+    >
       {/* Four fixed rails, same order and width on every row: name + status,
           progress chip, action slot, chevron. Complete rounds fill the action
           slot with a tag rather than collapsing it. */}
-      <div className="flex flex-nowrap items-center gap-2 border-b border-admin-line bg-admin-surface px-2 py-2.5 sm:flex-wrap sm:gap-3 sm:px-4">
+      <div className={cn("flex flex-nowrap items-center gap-0 bg-admin-surface px-2 py-2.5 sm:flex-wrap sm:gap-3 sm:px-4", open && "border-b border-admin-muted/40")}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -788,11 +812,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         >
           <RoundIcon className="h-4 w-4 shrink-0 text-admin-muted" />
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-sm font-bold tracking-tight text-admin-primary sm:truncate sm:text-[15px]">
-              {orderNo != null ? `${orderNo}. ` : ''}{category_name}
+            <p className="line-clamp-2 text-[15px] font-bold tracking-tight text-admin-primary sm:truncate sm:text-base">
+              {orderNo != null && <span className="inline-block w-6 shrink-0 tabular-nums">{orderNo}.</span>}
+              {category_name}
             </p>
             <p className={cn(
-              "mt-0.5 text-[12px] font-medium tabular-nums",
+              "mt-0.5 text-[13px] font-bold tabular-nums sm:text-[12px]",
+              orderNo != null && "pl-6",
               isComplete ? "text-admin-success" : hasAny ? "text-admin-warning" : "text-admin-muted"
             )}>
               <span className="sm:hidden">{count} / {question_count}</span>
@@ -816,13 +842,14 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {count} / {question_count}
         </span>
 
-        <div className="flex w-11 flex-none sm:w-auto sm:flex-1 md:w-47.5 md:flex-none">
+        <div className="flex w-11 flex-none items-center justify-center sm:w-auto sm:flex-1 md:w-47.5 md:flex-none">
           {isComplete ? (
             <span
               title="Round complete"
-              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-success/40 text-[13px] font-semibold text-admin-success"
+              aria-label="Round complete"
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-admin-success text-white sm:h-9 sm:w-auto sm:gap-1.5 sm:bg-admin-success-bg sm:px-3 sm:text-[13px] sm:font-semibold sm:text-admin-success"
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-4 w-4" strokeWidth={2.5} />
               <span className="hidden sm:inline">Complete</span>
             </span>
           ) : isPastEvent ? null : configId == null ? (
@@ -830,9 +857,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
               aria-label={hasAny ? `Add ${remaining} more` : "Start round"}
               title={hasAny ? `Add ${remaining} more` : "Start round"}
-              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-3"
+              className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
             >
-              <Plus className="h-4 w-4 shrink-0 sm:hidden" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" /></span>
               <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
               <span className="hidden sm:inline">{hasAny ? `Add ${remaining} more` : "Start round"}</span>
             </Link>
@@ -868,7 +895,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           aria-expanded={open}
           aria-label={open ? "Hide saved questions" : "Show saved questions"}
           title={open ? "Hide saved questions" : "Show saved questions"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-white text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
         >
           <ChevronDown
             className={cn(
@@ -882,7 +909,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       {open && (
         <>
           {includeSpotify && (
-            <div className="space-y-2 px-3 pt-3 pb-3 sm:px-5">
+            <div className="space-y-2 bg-admin-warning-bg px-3 pt-3 pb-3 max-sm:border-b max-sm:border-admin-warning/20 sm:bg-transparent sm:px-5">
               {spotifyConnected ? (
                 <div className="space-y-2 rounded-xl border border-admin-line bg-admin-surface px-2.5 py-2.5 sm:px-3">
                   <div className="flex items-center gap-2">
@@ -933,9 +960,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                   <a
                     href={spotifyLoginHref}
                     style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) text-[13px] font-semibold text-white transition-opacity hover:opacity-90 sm:h-10 sm:text-[12px] sm:tracking-wide"
                   >
-                    <Music className="h-3.5 w-3.5" />
+                    <SiSpotify className="h-4 w-4" />
                     Connect Spotify
                   </a>
                   {playlistLinkRow}
@@ -971,38 +998,38 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
             </div>
           )}
           {isPicture && count > 0 && (
-            <div className="px-5 pt-3">
+            <div className="px-5 pt-3 max-sm:bg-admin-warning-bg max-sm:px-3 max-sm:pb-2.5">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handlePrintPictureSheet}
                 disabled={isBuildingSheet}
-                className="h-10 w-full rounded-xl border-2 border-admin-line bg-slate-100 font-semibold text-[12px] tracking-wide text-admin-primary hover:bg-admin-bg"
+                className="h-11 w-full rounded-xl border border-admin-primary bg-white text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft sm:h-10"
               >
                 {isBuildingSheet ? (
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Printer className="mr-2 h-3.5 w-3.5" />
+                  <Printer className="mr-2 h-4 w-4" />
                 )}
                 {isBuildingSheet
                   ? "Preparing sheet…"
                   : sheetIsReady
-                    ? "Open Picture Sheet"
-                    : "Print Picture Sheet"}
+                    ? "Open picture sheet"
+                    : "Print picture sheet"}
               </Button>
             </div>
           )}
           {isPicture && (() => {
             const firstQ = questions.find((q) => q.question_text);
             return firstQ ? (
-              <div className="border-b border-admin-line bg-admin-primary/5 px-5 py-2.5">
-                <p className="pl-3 font-bold text-sm text-admin-primary">
+              <div className="border-b border-admin-line bg-admin-primary/5 px-5 py-2.5 max-sm:border-admin-warning/20 max-sm:bg-admin-warning-bg max-sm:px-3">
+                <p className="pl-3 font-bold text-sm text-admin-primary max-sm:pl-0">
                   Question: <span className="font-bold text-admin-ink">{firstQ.question_text}</span>
                 </p>
               </div>
             ) : null;
           })()}
-          <div className={cn("space-y-3 bg-admin-bg p-3", draggingId && "select-none")}>
+          <div className={cn("space-y-3 bg-admin-bg/50 p-3", draggingId && "select-none")}>
             {count > 1 && (
               <p className="flex items-center gap-1.5 px-1 text-[13px] text-admin-muted">
                 {isReordering ? (
@@ -1013,7 +1040,8 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 ) : (
                   <>
                     <GripVertical className="h-3.5 w-3.5 shrink-0" />
-                    Drag a question by its handle to reorder the round - the numbers follow.
+                    <span className="sm:hidden">Drag to reorder</span>
+                    <span className="hidden sm:inline">Drag a question by its handle to reorder the round - the numbers follow.</span>
                   </>
                 )}
               </p>
@@ -1041,7 +1069,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       else cardRefs.current.delete(q.id);
                     }}
                     className={cn(
-                      "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
+                      "relative overflow-hidden rounded-xl border bg-admin-card p-4 transition-all",
                       isEditing ? "border-admin-primary ring-4 ring-admin-primary/5" : "border-admin-line",
                       isDragging && "border-admin-primary shadow-lg ring-2 ring-admin-primary/20",
                       draggingId !== null && !isDragging && "opacity-60"
@@ -1050,8 +1078,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                     {isEditing ? (
                       <div className="animate-in space-y-3 duration-200 zoom-in-95 fade-in">
                         <div className="flex items-center gap-2">
-                          <label className="ml-1 text-[13px] font-medium text-admin-muted">Question No.</label>
+                          <label htmlFor={`question-no-${q.id}`} className="ml-1 text-[13px] font-medium text-admin-muted">Question No.</label>
                           <input
+                            id={`question-no-${q.id}`}
                             type="number"
                             inputMode="numeric"
                             title="Question number"
@@ -1062,7 +1091,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               const val = e.target.value.replace(/\D/g, '');
                               setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
-                            className="h-11 w-18 rounded-lg border border-admin-line bg-white px-3 py-2 text-center text-base font-semibold text-admin-primary tabular-nums outline-none focus:border-admin-primary sm:text-sm"
+                            className="h-10 w-14 rounded-xl border-2 border-admin-primary/15 bg-white px-2 text-center text-sm leading-snug font-normal text-admin-primary tabular-nums outline-none focus:border-admin-primary"
                           />
                         </div>
                         {isPicture && (
@@ -1097,7 +1126,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="min-h-30 w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-base leading-relaxed text-admin-ink outline-none focus:border-admin-primary sm:text-sm"
+                              className="min-h-30 w-full resize-none rounded-xl border-2 border-admin-line bg-white p-3 text-sm leading-snug text-admin-ink outline-none focus:border-admin-primary"
                             />
                           </div>
                         )}
@@ -1116,7 +1145,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             onChange={(e) =>
                               setEditForm({ ...editForm, answer: e.target.value.replace(/\n/g, " ") })
                             }
-                            className="min-h-11 w-full resize-none rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 py-2.5 text-sm leading-snug font-semibold text-admin-primary outline-none focus:border-admin-primary"
+                            className="min-h-11 w-full resize-none rounded-xl border-2 border-admin-primary/15 bg-white px-3 py-2.5 text-sm leading-snug font-semibold text-admin-primary outline-none focus:border-admin-primary"
                           />
                         </div>
                         {isPicture && (
@@ -1133,7 +1162,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               placeholder="e.g. The Simpsons' black cat, not the rabbit from The Secret Life of Pets"
                               value={editForm.imageDescription}
                               onChange={(e) => setEditForm({ ...editForm, imageDescription: e.target.value })}
-                              className="w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-sm leading-relaxed text-admin-ink outline-none focus:border-admin-primary"
+                              className="w-full resize-none rounded-xl border-2 border-admin-line bg-white p-3 text-sm leading-relaxed text-admin-ink outline-none focus:border-admin-primary"
                             />
                             <p className="ml-1 text-[12px] leading-snug text-admin-muted">
                               Steers Redraw picture and prints on your answer sheet. Guests never see it.
@@ -1161,7 +1190,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                   setEditForm({ ...editForm, releaseYear: e.target.value.replace(/\D/g, "") })
                                 }
                                 disabled={isPending}
-                                className="h-11 w-28 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base font-semibold text-admin-ink tabular-nums outline-none placeholder:font-normal placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
+                                className="h-10 w-24 rounded-xl border-2 border-admin-line bg-white px-3 text-sm leading-snug text-admin-ink tabular-nums outline-none placeholder:text-admin-muted/50 focus:border-admin-primary"
                               />
                             </div>
                             {isHigherOrLower && (
@@ -1187,7 +1216,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 onChange={(e) => setEditSpotifyUrl(e.target.value)}
                                 placeholder="https://open.spotify.com/track/…"
                                 disabled={isPending || isFindingTrack}
-                                className="h-11 w-full min-w-0 flex-1 rounded-xl border-2 border-admin-line bg-admin-bg/30 px-3 text-base text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary sm:text-sm"
+                                className="h-10 w-full min-w-0 shrink-0 rounded-xl border-2 border-admin-line bg-white px-3 text-sm leading-snug text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary sm:flex-1"
                               />
                               <Button
                                 type="button"
@@ -1266,18 +1295,24 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               </button>
                             )}
                             <span className="shrink-0 font-bold text-sm text-admin-primary">Question {q.question_no ?? idx + 1}:</span>
-                            {q.difficulty && (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold",
-                                  difficultyTone(q.difficulty)
-                                )}
-                              >
-                                <Gauge className="h-3 w-3 shrink-0" />
-                                {q.difficulty}
-                              </span>
-                            )}
                           </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {q.difficulty && (() => {
+                              const DifficultyIcon = difficultyIcon(q.difficulty);
+                              return (
+                                <span
+                                  title={`${q.difficulty} question`}
+                                  aria-label={`${q.difficulty} question`}
+                                  className={cn(
+                                    "inline-flex h-7 items-center gap-1 rounded-lg border px-1.5 text-[11px] font-semibold sm:px-2",
+                                    difficultyTone(q.difficulty)
+                                  )}
+                                >
+                                  <DifficultyIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                  <span className="hidden sm:inline">{q.difficulty}</span>
+                                </span>
+                              );
+                            })()}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1314,6 +1349,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          </div>
                         </div>
                         <div className="space-y-3">
                           {hasChainAnswer ? (
@@ -1331,9 +1367,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 />
                               )}
                               <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
-                                  <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                  <span className="text-center font-bold text-xs tracking-tight">
+                                <div className="flex w-full items-center gap-2 rounded-lg bg-admin-primary-soft px-3 py-2 text-admin-primary sm:w-fit sm:min-w-50">
+                                  <Target className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                  <span className="min-w-0 font-bold text-[13px]">
                                     {stepAnswerText(q.release_year ?? 0, q.hint_year!)}
                                   </span>
                                 </div>
@@ -1382,9 +1418,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 <p className="text-[13px] leading-snug text-admin-muted">{q.image_description}</p>
                               )}
                               <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
-                                  <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                  <span className="text-center font-bold text-xs tracking-tight">{q.answer_text}</span>
+                                <div className="flex w-full items-center gap-2 rounded-lg bg-admin-primary-soft px-3 py-2 text-admin-primary sm:w-fit sm:min-w-50">
+                                  <Target className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                  <span className="min-w-0 font-bold text-[13px]">{q.answer_text}</span>
                                 </div>
                                 {/* On a name-that-tune round the year is not part
                                     of the answer, so it is not on the card. A
@@ -1393,7 +1429,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 {isHigherOrLower && q.release_year != null && (
                                   <span
                                     title="Release year"
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-admin-line bg-white px-3 py-2 font-bold text-xs text-admin-primary tabular-nums"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-admin-line bg-admin-card px-3 py-2 font-bold text-[13px] text-admin-primary tabular-nums"
                                   >
                                     <CalendarDays className="h-3 w-3 shrink-0 text-admin-muted" />
                                     {q.release_year}

@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @custom-variant standalone (@media (display-mode: standalone));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @source "../app/*.{ts,tsx}";
 @source "../app/(public)/**/*.{ts,tsx}";

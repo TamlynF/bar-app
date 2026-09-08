@@ -21,10 +21,14 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     MoreHorizontal,
+    Eye,
+    Printer,
     Users,
-    X
+    X,
+    type LucideIcon
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import InstallPrompt from "@/components/admin/install-prompt"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -96,6 +100,12 @@ type PageInfo = {
     /* The phone header has room for one line, so a page that belongs to a
        specific record names it here rather than losing that in the trail. */
     mobilePrefix?: string;
+    /* One page-level action in the phone header's right slot, opposite the
+       back arrow: a link, a button, or a small menu of links. */
+    mobileAction?:
+        | { href: string; label: string; Icon: LucideIcon }
+        | { onClick: () => void; label: string; Icon: LucideIcon }
+        | { items: { label: string; href: string; Icon: LucideIcon }[]; label: string; Icon: LucideIcon };
 };
 
 function internalHref(value: string | null): string | null {
@@ -290,11 +300,39 @@ export default function PrivateLayoutClient({
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
                     const eventHref = internalHref(searchParams.get("back")) ?? `${SCHEDULE_HREF}?open=${eventId}`
+                    const quizHref = `/event-setups/events/${eventId}`
+                    if (normalizedPath.split("/")[4] === "print") {
+                        return {
+                            title: "Schedule",
+                            subtitle: "Host copy",
+                            backHref: quizHref,
+                            mobilePrefix: `#: ${eventId}`,
+                            mobileAction: {
+                                label: "Print",
+                                Icon: Printer,
+                                onClick: () => requestAnimationFrame(() => setTimeout(() => window.print(), 0)),
+                            },
+                            trail: [
+                                { label: "Schedule", href: SCHEDULE_HREF },
+                                { label: `#${eventId}`, href: eventHref },
+                                { label: "Quiz questions", href: quizHref },
+                                { label: "Host copy" },
+                            ],
+                        }
+                    }
                     return {
                         title: "Schedule",
                         subtitle: "Quiz questions",
                         backHref: eventHref,
                         mobilePrefix: `#: ${eventId}`,
+                        mobileAction: {
+                            label: "Print host copy",
+                            Icon: Printer,
+                            items: [
+                                { label: "Preview, then print", href: `${quizHref}/print`, Icon: Eye },
+                                { label: "Print now", href: `${quizHref}/print?auto=1`, Icon: Printer },
+                            ],
+                        },
                         trail: [
                             { label: "Schedule", href: SCHEDULE_HREF },
                             { label: `#${eventId}`, href: eventHref },
@@ -452,7 +490,7 @@ export default function PrivateLayoutClient({
         return { title: "Venue manager", subtitle: null, backHref: null, description: null }
     }
 
-    const { title, subtitle, backHref, description = null, trail, mobilePrefix } = getPageInfo() as PageInfo
+    const { title, subtitle, backHref, description = null, trail, mobilePrefix, mobileAction } = getPageInfo() as PageInfo
     const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
     const headerHidden = useHideHeaderOnScroll()
 
@@ -790,7 +828,51 @@ export default function PrivateLayoutClient({
                             )}
                             {subtitle ?? title}
                         </h1>
-                        <span className="h-11 w-11 shrink-0" aria-hidden="true" />
+                        {mobileAction && "items" in mobileAction ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        title={mobileAction.label}
+                                        aria-label={mobileAction.label}
+                                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
+                                    >
+                                        <mobileAction.Icon className="h-5 w-5" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                    {mobileAction.items.map((item) => (
+                                        <DropdownMenuItem key={item.href} asChild>
+                                            <Link href={item.href} className="min-h-11">
+                                                <item.Icon className="h-4 w-4" />
+                                                {item.label}
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : mobileAction && "onClick" in mobileAction ? (
+                            <button
+                                type="button"
+                                onClick={mobileAction.onClick}
+                                title={mobileAction.label}
+                                aria-label={mobileAction.label}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
+                            >
+                                <mobileAction.Icon className="h-5 w-5" />
+                            </button>
+                        ) : mobileAction ? (
+                            <Link
+                                href={mobileAction.href}
+                                title={mobileAction.label}
+                                aria-label={mobileAction.label}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
+                            >
+                                <mobileAction.Icon className="h-5 w-5" />
+                            </Link>
+                        ) : (
+                            <span className="h-11 w-11 shrink-0" aria-hidden="true" />
+                        )}
                     </div>
 
                     <div className="mx-auto hidden max-w-7xl flex-col justify-center px-6 py-3 sm:flex sm:min-h-16 md:px-8">

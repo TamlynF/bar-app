@@ -303,6 +303,7 @@ export default function QuizRoundSheet({
   const [retryingIndex, setRetryingIndex] = useState<number | null>(null);
 
   const [setupOpen, setSetupOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [topicMissing, setTopicMissing] = useState(false);
   // The pre-tick is announced once; it stops being news the moment the person
@@ -1045,6 +1046,48 @@ export default function QuizRoundSheet({
         : `We'll create ${batchSize} so you can pick your favourite ${needed} and skip the rest.`
       : `We'll create ${batchSize} spares so you can pick the ones you like.`;
 
+  const savedList = savedQuestions.map((q, i) => (
+    <div
+      key={q.id}
+      className="flex items-center gap-3 border-t border-dashed border-admin-line py-2.5 first:border-t-0 sm:first:border-t"
+    >
+      {kind === "picture" &&
+        (q.image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={q.image_url}
+            alt={q.answer_text}
+            className="h-9 w-9 shrink-0 rounded-lg border border-admin-line object-cover"
+          />
+        ) : (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-admin-line bg-admin-card">
+            <ImageIcon className="h-4 w-4 text-admin-muted/50" />
+          </span>
+        ))}
+      {kind === "song" && (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-admin-line bg-admin-card">
+          <Music className="h-4 w-4 text-admin-muted/50" />
+        </span>
+      )}
+
+      <p className="min-w-0 flex-1 truncate text-[13px] leading-snug text-admin-ink">
+        {q.question_no ?? i + 1}.{" "}
+        {kind === "picture"
+          ? `Picture ${q.question_no ?? i + 1}`
+          : kind === "song"
+            ? (q.answer_text_ext ?? q.answer_text)
+            : q.question_text}
+      </p>
+      <p className="shrink-0 text-[13px] font-semibold text-admin-primary tabular-nums">
+        {kind === "song"
+          ? isHigherOrLower
+            ? q.answer_text
+            : (q.release_year ?? "")
+          : q.answer_text}
+      </p>
+    </div>
+  ));
+
   const spotifyLoginHref = `/api/spotify/login?return=${encodeURIComponent(
     spotifyReturnPath ?? `/event-setups/events/${eventId}?category=${encodeURIComponent(category_name)}`
   )}`;
@@ -1088,9 +1131,9 @@ export default function QuizRoundSheet({
         onClick={() => setOpen(true)}
         aria-label={hasAny ? `Add ${needed} more` : "Start round"}
         title={hasAny ? `Add ${needed} more` : "Start round"}
-        className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-3"
+        className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
       >
-        <Plus className="h-4 w-4 shrink-0 sm:hidden" />
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" /></span>
         <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
         <span className="hidden sm:inline">{hasAny ? `Add ${needed} more` : "Start round"}</span>
       </button>
@@ -1143,10 +1186,29 @@ export default function QuizRoundSheet({
                     />
                   ))}
                 </div>
-                <span className="shrink-0 text-[13px] font-bold text-admin-primary tabular-nums">
+                {savedCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setSavedOpen((o) => !o)}
+                    aria-expanded={savedOpen}
+                    aria-controls={`${savedListId}-phone`}
+                    title={savedOpen ? "Hide saved questions" : "Show saved questions"}
+                    className="-my-2 -mr-2 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-bold text-admin-primary tabular-nums sm:hidden"
+                  >
+                    {savedCount}
+                    {selected.size > 0 ? ` + ${selected.size}` : ""} of {question_count}
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", savedOpen && "rotate-180")} />
+                  </button>
+                ) : null}
+                <span className={cn("shrink-0 text-[13px] font-bold text-admin-primary tabular-nums", savedCount > 0 && "hidden sm:inline")}>
                   {savedCount}
                   {selected.size > 0 ? ` + ${selected.size}` : ""} of {question_count}
                 </span>
+              </div>
+            )}
+            {savedCount > 0 && savedOpen && (
+              <div id={`${savedListId}-phone`} className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-admin-line bg-admin-card px-3 sm:hidden">
+                {savedList}
               </div>
             )}
           </div>
@@ -1272,7 +1334,7 @@ export default function QuizRoundSheet({
           ) : (
             <>
               {/* ---- Scrolling body */}
-              <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-5 sm:px-6">
+              <div className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto px-4 py-5 sm:block sm:px-6">
                 {/* Spotify - picking is never blocked on connecting */}
                 {kind === "song" && (
                   <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-admin-success/25 bg-admin-success-bg px-3 py-2">
@@ -1307,14 +1369,14 @@ export default function QuizRoundSheet({
                 <section className="mb-6">
                   {setupOpen ? (
                     <>
-                      <p className="mb-2.5 flex items-center gap-2 text-[12px] font-bold tracking-wide text-admin-primary uppercase">
+                      <p className="mb-2.5 hidden items-center gap-2 text-[12px] font-bold tracking-wide text-admin-primary uppercase sm:flex">
                         <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-admin-primary text-[11px] font-bold text-white">
                           1
                         </span>
                         Create new {noun}s
                       </p>
 
-                      <div className="space-y-4 rounded-2xl border border-admin-line bg-admin-card p-4">
+                      <div className="space-y-3 sm:space-y-4 sm:rounded-2xl sm:border sm:border-admin-line sm:bg-admin-card sm:p-4">
                         <div>
                           <label
                             htmlFor={topicId}
@@ -1323,11 +1385,13 @@ export default function QuizRoundSheet({
                             Topic{" "}
                             {isPicture ? (
                               <span className="font-semibold text-admin-warning normal-case">
-                                - required for picture rounds
+                                <span className="sm:hidden">- required</span>
+                                <span className="hidden sm:inline">- required for picture rounds</span>
                               </span>
                             ) : (
                               <span className="font-medium normal-case">
-                                - optional, leave blank for a general mix
+                                <span className="sm:hidden">- optional</span>
+                                <span className="hidden sm:inline">- optional, leave blank for a general mix</span>
                               </span>
                             )}
                           </label>
@@ -1357,8 +1421,11 @@ export default function QuizRoundSheet({
                           {topicLocked && (
                             <p className="mt-1.5 flex items-start gap-1.5 text-[13px] font-medium text-admin-muted">
                               <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                              Picture rounds keep one topic - this round is already &ldquo;
-                              {lockedTopic}&rdquo;, so new pictures stay on that topic.
+                              <span className="sm:hidden">Locked - this round keeps one topic.</span>
+                              <span className="hidden sm:inline">
+                                Picture rounds keep one topic - this round is already &ldquo;
+                                {lockedTopic}&rdquo;, so new pictures stay on that topic.
+                              </span>
                             </p>
                           )}
                           {topicUsedBy.length > 0 && (
@@ -1383,15 +1450,26 @@ export default function QuizRoundSheet({
                           )}
                         </div>
 
+                        {isPicture && !notesOpen && !imageNotes && (
+                          <button
+                            type="button"
+                            onClick={() => setNotesOpen(true)}
+                            className="flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-admin-primary sm:hidden"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add picture instructions
+                          </button>
+                        )}
                         {isPicture && (
-                          <div>
+                          <div className={cn(!notesOpen && !imageNotes && "hidden sm:block")}>
                             <div className="mb-1.5 flex items-center justify-between gap-2">
                               <label
                                 htmlFor={imageNotesId}
                                 className="block text-[11px] font-bold tracking-wide text-admin-muted uppercase"
                               >
-                                Extra picture instructions{" "}
-                                <span className="font-medium normal-case">
+                                <span className="sm:hidden">Picture instructions</span>
+                                <span className="hidden sm:inline">Extra picture instructions</span>{" "}
+                                <span className="hidden font-medium normal-case sm:inline">
                                   - optional, never printed or shown to guests
                                 </span>
                               </label>
@@ -1468,7 +1546,7 @@ export default function QuizRoundSheet({
                               disabled={isGenerating}
                               className="w-full resize-none rounded-xl border border-admin-line bg-white px-3.5 py-3 text-sm text-admin-ink outline-none placeholder:text-admin-muted/50 focus:border-admin-primary"
                             />
-                            <p className="mt-1.5 text-[13px] text-admin-muted">
+                            <p className="mt-1.5 hidden text-[13px] text-admin-muted sm:block">
                               Only the topic is printed on the guests&apos; sheet. Anything here
                               just tells the picture generator what you want.
                             </p>
@@ -1613,11 +1691,11 @@ export default function QuizRoundSheet({
                         )}
 
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                          <div className="sm:max-w-95 sm:flex-1">
-                            <span className="mb-1.5 block text-[11px] font-bold tracking-wide text-admin-muted uppercase">
+                          <div className="flex items-center gap-3 sm:block sm:max-w-95 sm:flex-1">
+                            <span className="block shrink-0 text-[11px] font-bold tracking-wide text-admin-muted uppercase sm:mb-1.5">
                               Difficulty
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex flex-1 gap-1.5 sm:gap-2">
                               {DIFFICULTIES.map((d) => (
                                 <button
                                   key={d}
@@ -1625,7 +1703,7 @@ export default function QuizRoundSheet({
                                   onClick={() => setDifficulty(d)}
                                   aria-pressed={difficulty === d}
                                   className={cn(
-                                    "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-xl text-[13px] transition-colors",
+                                    "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13px] transition-colors sm:h-12 sm:rounded-xl",
                                     difficulty === d
                                       ? "border-2 border-admin-primary bg-admin-primary-soft font-bold text-admin-primary"
                                       : "border border-admin-line bg-white font-semibold text-admin-muted hover:bg-admin-surface"
@@ -1642,7 +1720,7 @@ export default function QuizRoundSheet({
                             type="button"
                             onClick={handleGenerate}
                             disabled={isGenerating}
-                            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:pointer-events-none disabled:opacity-40 sm:ml-auto sm:w-auto"
+                            className="hidden h-12 w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:pointer-events-none disabled:opacity-40 sm:ml-auto sm:flex sm:w-auto"
                           >
                             {isGenerating ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -1653,7 +1731,7 @@ export default function QuizRoundSheet({
                           </button>
                         </div>
 
-                        <p className="text-[13px] text-admin-muted">{generateFootnote}</p>
+                        <p className="hidden text-[13px] text-admin-muted sm:block">{generateFootnote}</p>
                       </div>
                     </>
                   ) : (
@@ -1676,7 +1754,7 @@ export default function QuizRoundSheet({
                 </section>
 
                 {/* Straight to the round - no draft to curate, no pick step */}
-                <section className="mb-6">
+                <section className="mb-6 max-sm:order-last max-sm:mt-auto max-sm:mb-0 max-sm:pt-4">
                   <ManualEntry
                     kind={kind}
                     isHigherOrLower={isHigherOrLower}
@@ -1706,8 +1784,26 @@ export default function QuizRoundSheet({
                     </p>
 
                     <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-base font-bold tracking-tight text-admin-ink">
+                      <h3 className="flex items-center gap-1 text-base font-bold tracking-tight text-admin-ink">
                         {isHigherOrLower ? `Higher or lower than ${chainStart}?` : `New ${noun}s`}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="How picking works"
+                              title="How picking works"
+                              className="-my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
+                            >
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-admin-line bg-white p-3.5 text-[13px] font-normal text-admin-muted shadow-lg"
+                          >
+                            {pickHelp}
+                          </PopoverContent>
+                        </Popover>
                       </h3>
                       <span
                         aria-live="polite"
@@ -1722,7 +1818,7 @@ export default function QuizRoundSheet({
                       </span>
                     </div>
 
-                    <p className="mb-3 text-[13px] text-admin-muted">{pickHelp}</p>
+                    <p className="mb-3 hidden text-[13px] text-admin-muted sm:block">{pickHelp}</p>
 
                     {autoPickShown && selected.size > 0 && (
                       <p className="mb-3 rounded-xl border border-admin-primary/20 bg-admin-primary-soft px-4 py-2.5 text-[13px] font-semibold text-admin-primary">
@@ -2036,7 +2132,7 @@ export default function QuizRoundSheet({
 
                 {/* Already saved - on demand only */}
                 {savedCount > 0 && (
-                  <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-surface">
+                  <section className="hidden overflow-hidden rounded-2xl border border-admin-line bg-admin-surface sm:block">
                     <button
                       type="button"
                       onClick={() => setSavedOpen((o) => !o)}
@@ -2064,47 +2160,7 @@ export default function QuizRoundSheet({
 
                     {savedOpen && (
                       <div id={savedListId} className="px-4 pb-2">
-                        {savedQuestions.map((q, i) => (
-                          <div
-                            key={q.id}
-                            className="flex items-center gap-3 border-t border-dashed border-admin-line py-2.5"
-                          >
-                            {kind === "picture" &&
-                              (q.image_url ? (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img
-                                  src={q.image_url}
-                                  alt={q.answer_text}
-                                  className="h-9 w-9 shrink-0 rounded-lg border border-admin-line object-cover"
-                                />
-                              ) : (
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-admin-line bg-admin-card">
-                                  <ImageIcon className="h-4 w-4 text-admin-muted/50" />
-                                </span>
-                              ))}
-                            {kind === "song" && (
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-admin-line bg-admin-card">
-                                <Music className="h-4 w-4 text-admin-muted/50" />
-                              </span>
-                            )}
-
-                            <p className="min-w-0 flex-1 truncate text-[13px] leading-snug text-admin-ink">
-                              {q.question_no ?? i + 1}.{" "}
-                              {kind === "picture"
-                                ? `Picture ${q.question_no ?? i + 1}`
-                                : kind === "song"
-                                  ? (q.answer_text_ext ?? q.answer_text)
-                                  : q.question_text}
-                            </p>
-                            <p className="shrink-0 text-[13px] font-semibold text-admin-primary tabular-nums">
-                              {kind === "song"
-                                ? isHigherOrLower
-                                  ? q.answer_text
-                                  : (q.release_year ?? "")
-                                : q.answer_text}
-                            </p>
-                          </div>
-                        ))}
+                        {savedList}
                       </div>
                     )}
                   </section>
@@ -2117,6 +2173,7 @@ export default function QuizRoundSheet({
                   aria-live="polite"
                   className={cn(
                     "min-w-0 flex-1 text-[13px] font-semibold",
+                    drafts.length === 0 && !topicMissing && !isGenerating && "hidden sm:block",
                     topicMissing
                       ? "text-admin-warning"
                       : footerReady
@@ -2134,16 +2191,36 @@ export default function QuizRoundSheet({
                   <button
                     type="button"
                     onClick={closeSheet}
-                    className="h-12 flex-1 rounded-xl border border-admin-line bg-white px-4 text-sm font-semibold text-admin-muted transition-colors hover:bg-admin-bg sm:flex-none"
+                    className="h-12 flex-none rounded-xl border border-admin-line bg-white px-5 text-sm font-semibold text-admin-muted transition-colors hover:bg-admin-bg"
                   >
                     Close
                   </button>
 
+                  {drafts.length === 0 && setupOpen && (
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary px-5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-admin-primary-hover disabled:pointer-events-none disabled:opacity-40 sm:hidden"
+                    >
+                      {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {isGenerating
+                        ? "Creating…"
+                        : isHigherOrLower
+                          ? `Suggest ${batchSize} songs`
+                          : needed > 0
+                            ? `Create ${batchSize} · keep ${needed}`
+                            : `Create ${batchSize} spares`}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleApprove}
                     disabled={isApproving || selected.size === 0}
-                    className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:pointer-events-none disabled:opacity-40 sm:flex-none"
+                    className={cn(
+                      "flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary px-5 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:pointer-events-none disabled:opacity-40 sm:flex-none",
+                      drafts.length === 0 && setupOpen && "hidden sm:flex"
+                    )}
                   >
                     {isApproving && <Loader2 className="h-4 w-4 animate-spin" />}
                     {selected.size > 0

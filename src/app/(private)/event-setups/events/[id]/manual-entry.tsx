@@ -320,10 +320,11 @@ export default function ManualEntry({
           setOpen(true);
         }}
         disabled={disabled}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-admin-primary bg-white px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40 sm:border sm:border-admin-primary sm:bg-white"
       >
         <Pencil className="h-4 w-4" />
-        Write your own {noun}
+        <span className="sm:hidden">Or write your own {noun}</span>
+        <span className="hidden sm:inline">Write your own {noun}</span>
       </button>
     );
   }

@@ -24,6 +24,16 @@ function formatDate(dateStr: string | null) {
   });
 }
 
+function formatDateShort(dateStr: string | null) {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 type Category = {
   id: number;
   category_name: string;
@@ -157,7 +167,6 @@ export default async function EventQuizQuestionsPage({
     (total, cat) => total + Math.max(cat.question_count - cat.questions.length, 0),
     0
   );
-  const progress = targetQuestions > 0 ? Math.min(100, Math.round((totalQuestions / targetQuestions) * 100)) : 0;
 
   // The next round after each one that still needs questions. Drives the round
   // sheet's footer so approving hands you onward rather than dead-ending.
@@ -198,52 +207,54 @@ export default async function EventQuizQuestionsPage({
         </div>
       )}
 
-      <div className="rounded-2xl border border-admin-line bg-admin-card p-4 shadow-sm sm:p-5">
+      <div className="px-2 pt-1 sm:rounded-2xl sm:border sm:border-admin-line sm:bg-admin-card sm:p-5 sm:shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-admin-primary/20 bg-admin-primary-soft">
+          <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-admin-primary/20 bg-admin-primary-soft sm:flex">
             <Brain className="h-5 w-5 text-admin-primary" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg leading-tight font-bold tracking-tight text-admin-ink sm:text-xl">
-              {event.title ?? "Untitled event"}
-            </h1>
+            <div className="flex items-start justify-between gap-3 sm:block">
+              <h1 className="text-lg leading-tight font-bold tracking-tight text-admin-ink sm:text-xl">
+                {event.title ?? "Untitled event"}
+              </h1>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums sm:hidden ${
+                  quizIsComplete ? "bg-admin-success-bg text-admin-success" : "bg-admin-primary-soft text-admin-primary"
+                }`}
+              >
+                {quizIsComplete && <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                {completedRounds} / {byCategory.length} rounds
+              </span>
+            </div>
             <p className="mt-1 text-[13px] font-medium text-admin-muted">
-              {formatDate(event.date)}
+              <span className="sm:hidden">{formatDateShort(event.date)}</span>
+              <span className="hidden sm:inline">{formatDate(event.date)}</span>
             </p>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="hidden shrink-0 text-right sm:block">
             <p className="text-lg leading-none font-bold text-admin-primary tabular-nums">
-              {totalQuestions}
-              <span className="text-[13px] font-semibold text-admin-muted"> of {targetQuestions}</span>
+              {completedRounds}
+              <span className="text-[13px] font-semibold text-admin-muted"> of {byCategory.length}</span>
             </p>
-            <p className="mt-1 text-[12px] font-semibold text-admin-muted">questions saved</p>
+            <p className="mt-1 text-[12px] font-semibold text-admin-muted">rounds complete</p>
           </div>
         </div>
 
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-admin-surface">
-          <div
-            className="h-full w-(--quiz-progress) rounded-full bg-admin-primary transition-[width] duration-300"
-            style={{ "--quiz-progress": `${progress}%` } as React.CSSProperties}
-          />
-        </div>
-
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 hidden sm:flex sm:items-center sm:justify-between">
           <p className="text-[13px] font-medium text-admin-muted">
             {quizIsComplete
-              ? `${completedRounds} of ${byCategory.length} rounds complete. Your quiz is ready to review.`
-              : `${completedRounds} of ${byCategory.length} rounds complete. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
+              ? `All ${byCategory.length} rounds are full. Your quiz is ready to review.`
+              : `${totalQuestions} of ${targetQuestions} questions saved. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
           </p>
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            {totalQuestions > 0 && (
-              <Link
-                href={`/event-setups/events/${event.id}/print`}
-                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
-              >
-                <Printer className="h-4 w-4" />
-                Print host copy
-              </Link>
-            )}
-          </div>
+          {totalQuestions > 0 && (
+            <Link
+              href={`/event-setups/events/${event.id}/print`}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
+            >
+              <Printer className="h-4 w-4" />
+              Print host copy
+            </Link>
+          )}
         </div>
       </div>
 
