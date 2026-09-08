@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import PrintActions from "./print-actions";
+import QRCode from "qrcode";
+import { QR_OPTIONS } from "@/lib/quiz/playlist-qr";
+import { siteUrl } from "@/lib/site-url";
 import { stepAnswerText } from "@/lib/quiz/higher-lower";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { pickCategoryPlaylist, type CategoryPlaylistRow } from "@/lib/quiz/category-playlist";
@@ -100,28 +102,48 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
     if (picked) playlistByCategory.set(cat.id, picked.row.playlist_url);
   }
 
-  const rounds = cats.map((cat) => ({
-    ...cat,
-    questions: qs.filter((q) => q.quiz_category_configs_id === cat.id),
-    playlistUrl: playlistByCategory.get(cat.id) ?? null,
-  }));
+  const rounds = await Promise.all(
+    cats.map(async (cat) => {
+      const playlistUrl = playlistByCategory.get(cat.id) ?? null;
+      return {
+        ...cat,
+        questions: qs.filter((q) => q.quiz_category_configs_id === cat.id),
+        playlistUrl,
+        playlistQr: playlistUrl ? await QRCode.toDataURL(playlistUrl, QR_OPTIONS) : null,
+      };
+    })
+  );
 
   const totalQuestions = qs.length;
+  const questionsQr = await QRCode.toDataURL(`${siteUrl()}/event-setups/events/${event.id}`, QR_OPTIONS);
 
   return (
     <div data-print-sheet className="mx-auto max-w-4xl bg-white p-4 text-admin-ink sm:p-8">
-      <PrintActions eventId={event.id} />
-
-      <header className="mb-6 border-b-2 border-admin-ink pb-3">
-        <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-          Host copy - questions and answers
-        </p>
-        <h1 className="mt-1 text-xl font-bold tracking-tight">
-          {event.title ?? "Untitled event"}
-        </h1>
-        <p className="mt-1 text-[13px] font-medium text-admin-muted">
-          {formatDate(event.date)} · {totalQuestions} question{totalQuestions === 1 ? "" : "s"} across {rounds.length} round{rounds.length === 1 ? "" : "s"}
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4 border-b-2 border-admin-ink pb-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+            Host copy - questions and answers
+          </p>
+          <h1 className="mt-1 text-xl font-bold tracking-tight">
+            {event.title ?? "Untitled event"}
+          </h1>
+          <p className="mt-1 text-[13px] font-medium text-admin-muted">
+            {formatDate(event.date)} · {totalQuestions} question{totalQuestions === 1 ? "" : "s"} across {rounds.length} round{rounds.length === 1 ? "" : "s"}
+          </p>
+        </div>
+        <figure className="m-0 flex w-24 shrink-0 flex-col items-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={questionsQr}
+            alt="QR code for this quiz's questions page"
+            width={96}
+            height={96}
+            className="h-24 w-24 rounded-md border border-admin-ink/20"
+          />
+          <figcaption className="mt-1 text-center text-[10px] leading-tight text-admin-muted">
+            Scan to open the quiz questions
+          </figcaption>
+        </figure>
       </header>
 
       {rounds.map((round, index) => {
@@ -152,9 +174,26 @@ export default async function PrintQuizPage({ params }: { params: Promise<{ id: 
             </div>
 
             {round.playlistUrl && (
-              <p className="mb-3 break-after-avoid text-[12px] text-admin-muted">
-                Playlist: <span className="font-medium text-admin-ink">{round.playlistUrl}</span>
-              </p>
+              <div className="mb-3 break-after-avoid break-inside-avoid">
+                <p className="text-[12px] text-admin-muted">
+                  Playlist: <span className="font-medium text-admin-ink">{round.playlistUrl}</span>
+                </p>
+                {round.playlistQr && (
+                  <div className="mt-2 flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={round.playlistQr}
+                      alt={`QR code for the ${round.category_name} playlist`}
+                      width={96}
+                      height={96}
+                      className="h-24 w-24 shrink-0 rounded-md border border-admin-ink/20"
+                    />
+                    <p className="max-w-[28ch] text-[12px] leading-snug text-admin-muted">
+                      Scan with a phone camera to open this round&apos;s playlist in Spotify.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
 
             {sharedQuestion && (

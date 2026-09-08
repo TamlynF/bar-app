@@ -9,6 +9,10 @@ import { validateEventForm, findActiveEventClashes, type EventClashCandidate } f
 import { isEventCreationMethod } from "@/lib/event-creation";
 import { resolveEventIsActive } from "@/lib/event-active";
 import { eventHasFinished } from "@/lib/events-finished";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
+import { pickCategoryPlaylist, type CategoryPlaylistRow } from "@/lib/quiz/category-playlist";
+import { buildHostCopy, type HostCopy, type HostCopyCategory, type HostCopyQuestion } from "@/lib/quiz/host-copy";
+import { siteUrl } from "@/lib/site-url";
 
 /* Questions the generator produced but nobody added to a round. Once a quiz
    that has been and gone is switched off they are scrap, and they are heavy -
@@ -291,4 +295,50 @@ export async function deleteEventAction(id: number) {
     console.error("Error deleting event:", error);
     return { error: error instanceof Error ? error.message : "Failed to delete event." };
   }
+}
+/* Everything the printed host copy needs, shaped for the PDF builder. The
+   host copy page does the same reads for its HTML version. */
+export async function getHostCopyAction(eventId: number): Promise<HostCopy> {
+  const supabase = await createClient();
+  const [{ data: event, error }, { data: categories }, { data: questions }, { data: playlists }] =
+    await Promise.all([
+      supabase.from("events").select("id, title, date").eq("id", eventId).single(),
+      supabase
+        .from("quiz_category_configs")
+        .select("id, category_name, question_count, order_no, include_spotify, is_picture, is_higher_lower")
+        .eq("is_active", true)
+        .order("order_no", { ascending: true }),
+      supabase
+        .from("past_quiz_questions")
+        .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_description")
+        .eq("events_id", eventId)
+        .order("question_no", { ascending: true, nullsFirst: false })
+        .order("created_at"),
+      supabase
+        .from("event_category_playlists")
+        .select("quiz_category_configs_id, playlist_url, playlist_id, employee_id")
+        .eq("events_id", eventId),
+    ]);
+  if (error || !event) throw new Error("Event not found");
+
+  const cats = (categories ?? []) as HostCopyCategory[];
+  const myEmployeeId = await getCurrentEmployeeId(supabase);
+  const playlistRows = (playlists ?? []) as (CategoryPlaylistRow & { quiz_category_configs_id: number })[];
+  const playlistByCategory: Record<number, string> = {};
+  for (const cat of cats) {
+    const picked = pickCategoryPlaylist(
+      playlistRows.filter((p) => p.quiz_category_configs_id === cat.id),
+      myEmployeeId
+    );
+    if (picked) playlistByCategory[cat.id] = picked.row.playlist_url;
+  }
+
+  return buildHostCopy({
+    eventTitle: event.title,
+    eventDate: event.date,
+    questionsUrl: `${siteUrl()}/event-setups/events/${event.id}`,
+    categories: cats,
+    questions: (questions ?? []) as HostCopyQuestion[],
+    playlistByCategory,
+  });
 }

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Brain, CheckCircle2, Printer } from "lucide-react";
+import { BookOpen, Brain, CheckCircle2 } from "lucide-react";
 import CategorySection from "./category-section";
 import JumpToTopButton from "@/components/admin/jump-to-top-button";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
@@ -240,22 +240,11 @@ export default async function EventQuizQuestionsPage({
           </div>
         </div>
 
-        <div className="mt-3 hidden sm:flex sm:items-center sm:justify-between">
-          <p className="text-[13px] font-medium text-admin-muted">
-            {quizIsComplete
-              ? `All ${byCategory.length} rounds are full. Your quiz is ready to review.`
-              : `${totalQuestions} of ${targetQuestions} questions saved. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
-          </p>
-          {totalQuestions > 0 && (
-            <Link
-              href={`/event-setups/events/${event.id}/print`}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
-            >
-              <Printer className="h-4 w-4" />
-              Print host copy
-            </Link>
-          )}
-        </div>
+        <p className="mt-3 hidden text-[13px] font-medium text-admin-muted sm:block">
+          {quizIsComplete
+            ? `All ${byCategory.length} rounds are full. Your quiz is ready to review.`
+            : `${totalQuestions} of ${targetQuestions} questions saved. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
+        </p>
       </div>
 
       <div className="space-y-4">

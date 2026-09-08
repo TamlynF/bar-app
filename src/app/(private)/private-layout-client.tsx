@@ -31,7 +31,7 @@ import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import InstallPrompt from "@/components/admin/install-prompt"
 import { cn } from "@/lib/utils"
-import { printUrlInFrame } from "@/lib/print-in-frame"
+import { printHostCopy } from "@/lib/quiz/host-copy-print"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
@@ -98,13 +98,70 @@ type PageInfo = {
     description?: string | null;
     // Set when a page needs more than the default "title > subtitle" pair.
     trail?: Crumb[];
-    /* One page-level action in the phone header's right slot, opposite the
-       back arrow: a link, a button, or a small menu of links. */
-    mobileAction?:
-        | { href: string; label: string; Icon: LucideIcon }
-        | { onClick: () => void; label: string; Icon: LucideIcon }
-        | { items: ({ label: string; Icon: LucideIcon } & ({ href: string } | { onClick: () => void }))[]; label: string; Icon: LucideIcon };
+    /* One page-level action in the header: an icon in the phone header's
+       right slot, a labelled button beside the desktop breadcrumb. A link, a
+       button, or a small menu. */
+    action?: HeaderAction;
 };
+
+type HeaderActionItem = { label: string; Icon: LucideIcon } & ({ href: string } | { onClick: () => void });
+type HeaderAction =
+    | { href: string; label: string; Icon: LucideIcon }
+    | { onClick: () => void; label: string; Icon: LucideIcon }
+    | { items: HeaderActionItem[]; label: string; Icon: LucideIcon };
+
+function HeaderActionControl({ action, compact }: { action: HeaderAction; compact: boolean }) {
+    const className = compact
+        ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
+        : "inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
+    const content = (
+        <>
+            <action.Icon className={compact ? "h-5 w-5" : "h-4 w-4"} />
+            {!compact && action.label}
+            {!compact && "items" in action && <ChevronDown className="h-4 w-4 opacity-70" />}
+        </>
+    )
+    if ("items" in action) {
+        return (
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button type="button" title={action.label} aria-label={compact ? action.label : undefined} className={className}>
+                        {content}
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                    {action.items.map((item) =>
+                        "href" in item ? (
+                            <DropdownMenuItem key={item.label} asChild>
+                                <Link href={item.href} className="min-h-11 sm:min-h-9">
+                                    <item.Icon className="h-4 w-4" />
+                                    {item.label}
+                                </Link>
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem key={item.label} onSelect={item.onClick} className="min-h-11 sm:min-h-9">
+                                <item.Icon className="h-4 w-4" />
+                                {item.label}
+                            </DropdownMenuItem>
+                        )
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        )
+    }
+    if ("onClick" in action) {
+        return (
+            <button type="button" onClick={action.onClick} title={action.label} aria-label={compact ? action.label : undefined} className={className}>
+                {content}
+            </button>
+        )
+    }
+    return (
+        <Link href={action.href} title={action.label} aria-label={compact ? action.label : undefined} className={className}>
+            {content}
+        </Link>
+    )
+}
 
 
 function internalHref(value: string | null): string | null {
@@ -305,11 +362,6 @@ export default function PrivateLayoutClient({
                             title: "Schedule",
                             subtitle: "Host copy",
                             backHref: quizHref,
-                            mobileAction: {
-                                label: "Print",
-                                Icon: Printer,
-                                onClick: () => window.print(),
-                            },
                             trail: [
                                 { label: "Schedule", href: SCHEDULE_HREF },
                                 { label: `#${eventId}`, href: eventHref },
@@ -322,12 +374,12 @@ export default function PrivateLayoutClient({
                         title: "Schedule",
                         subtitle: "Quiz questions",
                         backHref: eventHref,
-                        mobileAction: {
+                        action: {
                             label: "Print host copy",
                             Icon: Printer,
                             items: [
-                                { label: "Preview, then print", href: `${quizHref}/print`, Icon: Eye },
-                                { label: "Print now", onClick: () => printUrlInFrame(`${quizHref}/print`), Icon: Printer },
+                                { label: "Preview", href: `${quizHref}/print`, Icon: Eye },
+                                { label: "Print", onClick: () => { void printHostCopy(Number(eventId)) }, Icon: Printer },
                             ],
                         },
                         trail: [
@@ -487,7 +539,7 @@ export default function PrivateLayoutClient({
         return { title: "Venue manager", subtitle: null, backHref: null, description: null }
     }
 
-    const { title, subtitle, backHref, description = null, trail, mobileAction } = getPageInfo() as PageInfo
+    const { title, subtitle, backHref, description = null, trail, action } = getPageInfo() as PageInfo
     const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
     const headerHidden = useHideHeaderOnScroll()
 
@@ -822,61 +874,15 @@ export default function PrivateLayoutClient({
                         <h1 className="min-w-0 flex-1 truncate text-center text-[17px] leading-tight font-bold tracking-tight text-admin-ink">
                             {subtitle ?? title}
                         </h1>
-                        {mobileAction && "items" in mobileAction ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        type="button"
-                                        title={mobileAction.label}
-                                        aria-label={mobileAction.label}
-                                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
-                                    >
-                                        <mobileAction.Icon className="h-5 w-5" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52">
-                                    {mobileAction.items.map((item) =>
-                                        "href" in item ? (
-                                            <DropdownMenuItem key={item.label} asChild>
-                                                <Link href={item.href} className="min-h-11">
-                                                    <item.Icon className="h-4 w-4" />
-                                                    {item.label}
-                                                </Link>
-                                            </DropdownMenuItem>
-                                        ) : (
-                                            <DropdownMenuItem key={item.label} onSelect={item.onClick} className="min-h-11">
-                                                <item.Icon className="h-4 w-4" />
-                                                {item.label}
-                                            </DropdownMenuItem>
-                                        )
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : mobileAction && "onClick" in mobileAction ? (
-                            <button
-                                type="button"
-                                onClick={mobileAction.onClick}
-                                title={mobileAction.label}
-                                aria-label={mobileAction.label}
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
-                            >
-                                <mobileAction.Icon className="h-5 w-5" />
-                            </button>
-                        ) : mobileAction ? (
-                            <Link
-                                href={mobileAction.href}
-                                title={mobileAction.label}
-                                aria-label={mobileAction.label}
-                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-primary transition-colors hover:bg-admin-surface active:scale-95"
-                            >
-                                <mobileAction.Icon className="h-5 w-5" />
-                            </Link>
+                        {action ? (
+                            <HeaderActionControl action={action} compact />
                         ) : (
                             <span className="h-11 w-11 shrink-0" aria-hidden="true" />
                         )}
                     </div>
 
-                    <div className="mx-auto hidden max-w-7xl flex-col justify-center px-6 py-3 sm:flex sm:min-h-16 md:px-8">
+                    <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-6 py-3 sm:flex sm:min-h-16 md:px-8">
+                    <div className="flex min-w-0 flex-col justify-center">
                         {subtitle && (
                             <nav aria-label="Breadcrumb" className="mb-0.5">
                                 <ol className="flex flex-wrap items-center gap-1 text-[13px] font-medium text-admin-muted">
@@ -917,6 +923,8 @@ export default function PrivateLayoutClient({
                                 {description}
                             </p>
                         )}
+                    </div>
+                    {action && <HeaderActionControl action={action} compact={false} />}
                     </div>
                 </header>
 
