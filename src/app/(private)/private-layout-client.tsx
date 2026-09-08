@@ -33,6 +33,7 @@ import InstallPrompt from "@/components/admin/install-prompt"
 import { cn } from "@/lib/utils"
 import { printHostCopy } from "@/lib/quiz/host-copy-print"
 import { useAdminPageTitle } from "@/lib/admin-page-title"
+import { useAdminPageAction } from "@/lib/admin-page-action"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
@@ -543,7 +544,9 @@ export default function PrivateLayoutClient({
         return { title: "Venue manager", subtitle: null, backHref: null, description: null }
     }
 
-    const { title, subtitle, backHref, description = null, trail, action } = getPageInfo() as PageInfo
+    const { title, subtitle, backHref, description = null, trail, action: routeAction } = getPageInfo() as PageInfo
+    const pageAction = useAdminPageAction()
+    const action = routeAction ?? pageAction
     /* A record page can publish its own name; it replaces the id-based
        subtitle in both headers and as the last breadcrumb. */
     const pageTitle = useAdminPageTitle()

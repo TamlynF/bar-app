@@ -74,15 +74,7 @@ async function fetchPosterFile(url: string, title: string): Promise<File | null>
   }
 }
 
-export function ShareEventButton({
-  event,
-  className,
-  showLabel = true,
-}: {
-  event: ShareEventInput;
-  className?: string;
-  showLabel?: boolean;
-}) {
+export function useShareEvent(event: ShareEventInput) {
   const [busy, setBusy] = useState(false);
 
   const share = async () => {
@@ -127,6 +119,20 @@ export function ShareEventButton({
       setBusy(false);
     }
   };
+
+  return { share, busy };
+}
+
+export function ShareEventButton({
+  event,
+  className,
+  showLabel = true,
+}: {
+  event: ShareEventInput;
+  className?: string;
+  showLabel?: boolean;
+}) {
+  const { share, busy } = useShareEvent(event);
 
   return (
     <button

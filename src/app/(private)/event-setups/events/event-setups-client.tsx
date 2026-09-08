@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useMemo, startTransition as deferRender } from "react";
+import { Fragment, useState, useTransition, useEffect, useRef, useMemo, startTransition as deferRender } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
@@ -47,6 +47,7 @@ import {
   HelpCircle,
   Undo2,
   MoreVertical,
+  Share2,
   Ban,
   Trophy,
   Sparkles,
@@ -70,10 +71,26 @@ import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction, patchEventAction, type EventIssuePatch } from "./actions";
 import { setEventWinner } from "../quiz-leaderboards/actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { setAdminPageAction } from "@/lib/admin-page-action";
+
+const PHONE_QUERY = "(max-width: 639px)";
+
+const QUICK_FILTER_GROUPS: { label: string; keys: string[] }[] = [
+  { label: "Status", keys: ["upcoming", "historic", "active", "inactive"] },
+  { label: "Bookings", keys: ["bookable", "bookings", "fully-booked", "under-10"] },
+  { label: "Needs attention", keys: ["quiz", "needs-winner", "missing-info"] },
+];
+
+const SHEET_SECTION_LABEL = "mb-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase";
+const SHEET_CHECK_ROW =
+  "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-1 text-[13px] font-medium text-admin-ink";
+const SHEET_CHECKBOX = "h-5 w-5 shrink-0 rounded border-admin-line accent-[#34451F]";
 import { cn } from "@/lib/utils";
 import { FormToggle } from "@/components/admin";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
-import { ShareEventButton } from "@/components/admin/share-event-button";
+import { ShareEventButton, useShareEvent } from "@/components/admin/share-event-button";
+import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, badgeSelectedClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { findActiveEventClashes, isOvernightEnd } from "@/lib/event-form-validation";
@@ -209,7 +226,6 @@ const DAY_CHIP_LIMIT = 4;
    button that resolves it can never drift apart. The quiz one carries a count,
    so only its opening words are fixed. */
 const ISSUE_NO_WINNER = "No winning team has been recorded for this quiz.";
-const ISSUE_PAST_BUT_ACTIVE = "This event has already happened but is still marked active.";
 const ISSUE_NO_HOST = "This event type needs a host and none has been chosen.";
 const ISSUE_NO_PAYMENT = "This event type takes payment but no amount has been set.";
 const ISSUE_NO_BOOKING_URL = "Public booking is switched on but there is no booking URL.";
@@ -393,6 +409,7 @@ export default function EventsClient({
   linkedRequestByEvent = {},
   winnerByEvent = {},
   venueCapacity = null,
+  tableCount = 0,
   filter,
   initialFrom,
   initialTo,
@@ -411,6 +428,8 @@ export default function EventsClient({
   winnerByEvent?: Record<number, number>;
   /** Venue-wide seat count from company_information; null when it isn't configured. */
   venueCapacity?: number | null;
+  /** Tables marked available on the floor plan; the denominator for seated events. */
+  tableCount?: number;
   filter?: string;
   initialFrom?: string;
   initialTo?: string;
@@ -433,6 +452,15 @@ export default function EventsClient({
   const [sortSoon, setSortSoon] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [showFilters, setShowFilters] = useState(!!initialQuick);
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
+  const toggleMonth = (key: string) =>
+    setCollapsedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  const isPhone = useMediaQuery(PHONE_QUERY);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -441,6 +469,9 @@ export default function EventsClient({
     format(new Date(), "yyyy-MM-dd")
   );
   const [calendarView, setCalendarView] = useState<"month" | "week">("month");
+  /* Phone only: the month grid is for finding a date, the week strip is for
+     reading it. Tapping a day folds the grid so the day's events fit on screen. */
+  const [phoneWeekOnly, setPhoneWeekOnly] = useState(false);
   const [quickFilters, setQuickFilters] = useState<Set<string>>(
     () => new Set((initialQuick ?? "").split(",").map((s) => s.trim()).filter(Boolean))
   );
@@ -476,6 +507,8 @@ export default function EventsClient({
   const [formExternalLink, setFormExternalLink] = useState<string>("");
   const [copySourceId, setCopySourceId] = useState<number | null>(null);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
+  const [sysInfoSheetOpen, setSysInfoSheetOpen] = useState(false);
+  const [formMoreOpen, setFormMoreOpen] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState<string>("");
   const [imageWarning, setImageWarning] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
@@ -734,6 +767,12 @@ export default function EventsClient({
       setSelected(event);
     });
   };
+
+  const openAddRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    setAdminPageAction({ label: "Add event", Icon: Plus, onClick: () => openAddRef.current() });
+    return () => setAdminPageAction(null);
+  }, []);
 
   const openAdd = (subtypeId?: number, date?: string) => {
     setFormError(null);
@@ -1050,6 +1089,61 @@ export default function EventsClient({
      off the date having passed. */
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const employeeById = new Map(employees.map((e) => [e.id, e.full_name]));
+
+  const shareInput = selected
+    ? {
+        title: selected.title ?? subtypeById.get(selected.event_subtypes_id)?.name ?? "Event",
+        date: selected.date,
+        startTime: selected.start_time,
+        endTime: selected.end_time,
+        price: selected.payment_amount,
+        searchPhrase: subtypeById.get(selected.event_subtypes_id)?.name ?? null,
+        posterUrl: resolveEventImage({
+          eventImageUrl: selected.image_url,
+          actCoverUrl: actCoverByEvent[selected.id],
+          subtypeDefaultUrl: subtypeById.get(selected.event_subtypes_id)?.default_image_url,
+        }).url,
+        publicUrl:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/whats-on/${selected.id}`
+            : `/whats-on/${selected.id}`,
+      }
+    : { title: "Event", date: "", publicUrl: "" };
+  const { share: shareSelected, busy: shareBusy } = useShareEvent(shareInput);
+
+  const renderSystemRows = (row: EventRecord) => (
+    <>
+      <SheetRow label="Event ID" value={<span className="tabular-nums">#{row.id}</span>} />
+      <SheetRow label="Creation Method" value={eventCreationMethodLabel(row.creation_method)} />
+      {row.creation_method && row.creation_method !== "manual" && (
+        <SheetRow
+          label="Creation Source"
+          value={(() => {
+            const href = eventCreationSourceHref(row.creation_method, row.creation_source_id);
+            const label = eventCreationSourceLabel(row.creation_method, row.creation_source_id);
+            if (!href || !label) return null;
+            return (
+              <Link
+                href={href}
+                title={row.creation_source_id ?? undefined}
+                className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] tabular-nums hover:underline"
+              >
+                <Hash className="h-3 w-3 shrink-0" />
+                <span>{label}</span>
+                <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+              </Link>
+            );
+          })()}
+        />
+      )}
+      <SheetRow label="Created" value={formatDateTime(row.created_at)} />
+      <SheetRow label="Created By" value={row.created_by ? (employeeById.get(row.created_by) ?? "-") : "-"} />
+      <SheetRow label="Last Modified" value={formatDateTime(row.updated_at)} />
+      <SheetRow label="Modified By" value={row.updated_by ? (employeeById.get(row.updated_by) ?? "-") : "-"} />
+    </>
+  );
+
+
   const activeEmployees = employees.filter((e) => (e.status ?? "active").toLowerCase() === "active");
 
   const canCopy = (e: EventRecord) => !linkedRequestByEvent[e.id];
@@ -1109,14 +1203,14 @@ export default function EventsClient({
      a quiz that finished at 21:00 reads as history for the rest of the night. */
   const hasEnded = (e: EventRecord) => !!e.date && !endsAfterNow(e);
 
-  /* A quiz whose night is over opens on a phone with its rounds folded away -
-     there is nothing left to write, and the list is long enough to bury the
-     rest of the sheet. A quiz still to come keeps them open. */
+  /* On a phone the rounds list is long enough to bury the rest of the sheet,
+     and the progress bar under the title already says how far along it is,
+     so a quiz opens with its rounds folded away. Desktop keeps them open. */
   useEffect(() => {
     if (!selected) return;
     if (subtypeById.get(selected.event_subtypes_id)?.behavior !== "quiz") return;
     const onPhone = window.matchMedia("(max-width: 639px)").matches;
-    setQuizOpen(!(onPhone && !endsAfterNow(selected)));
+    setQuizOpen(!onPhone);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
@@ -1199,10 +1293,11 @@ export default function EventsClient({
     const inactive = e.is_active === false;
     const issues: string[] = [];
 
-    /* An event that has been switched off is never going to run, so nothing
-       about getting it ready is worth chasing. What a quiz that did run should
-       have recorded still is. */
-    if (!inactive) {
+    /* An event that has been switched off is never going to run, and one
+       that has ended cannot be got ready any more, so nothing about preparing
+       it is worth chasing. What a quiz that did run should have recorded
+       still is. */
+    if (!inactive && !past) {
       if (!e.title?.trim()) issues.push("No title has been set.");
       if (!e.date) issues.push("No date has been set.");
       if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
@@ -1218,7 +1313,7 @@ export default function EventsClient({
       if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) {
         issues.push(ISSUE_NO_KARAOKE_LINK);
       }
-      if (!past && needsQuiz(e)) {
+      if (needsQuiz(e)) {
         const { total, target } = quizStatusFor(e.id);
         issues.push(`${ISSUE_QUIZ_INCOMPLETE} - ${total} of ${target} written.`);
       }
@@ -1226,12 +1321,61 @@ export default function EventsClient({
     if (needsWinner(e)) {
       issues.push(ISSUE_NO_WINNER);
     }
-    if (past && !inactive) {
-      issues.push(ISSUE_PAST_BUT_ACTIVE);
-    }
 
     return issues;
   };
+
+  /* Amber is a nudge (questions started but short, winner not picked);
+     anything that would stop the night running is red. */
+  const issuesAreNudges = (e: EventRecord, issues: string[]) =>
+    issues.length > 0 &&
+    issues.every(
+      (issue) =>
+        issue === ISSUE_NO_WINNER ||
+        (issue.startsWith(ISSUE_QUIZ_INCOMPLETE) && quizStatusFor(e.id).total > 0)
+    );
+
+  const phoneHeaderPills = (() => {
+    if (!selected) return null;
+    const inactive = selected.is_active === false;
+    const full = !inactive && !!selected.is_bookable && !!selected.is_fully_booked;
+    const issues = eventIssues(selected);
+    const nudges = issuesAreNudges(selected, issues);
+    if (!inactive && !full && issues.length === 0) return null;
+    return (
+      <>
+        {(inactive || full) && (
+          <span className={cn(
+            SHEET_PILL,
+            inactive
+              ? "border-admin-line bg-admin-surface text-admin-muted"
+              : "border-admin-error/30 bg-admin-error-bg text-admin-error"
+          )}>
+            {inactive && <Ban className="h-3.5 w-3.5 shrink-0" />}
+            {inactive ? "Removed" : "Sold out"}
+          </span>
+        )}
+        {issues.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIssuesEvent(selected)}
+            aria-label={`View ${issues.length} issue${issues.length === 1 ? "" : "s"} on this event`}
+            className={cn(
+              SHEET_PILL,
+              "transition-colors active:scale-[0.98]",
+              nudges
+                ? "border-admin-warning/30 bg-admin-warning-bg text-admin-warning"
+                : "border-admin-error/30 bg-admin-error-bg text-admin-error"
+            )}
+          >
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <span className="tabular-nums">{issues.length}</span>
+          </button>
+        )}
+      </>
+    );
+  })();
+
 
   const missingInfo = (e: EventRecord) => {
     const sub = subtypeById.get(e.event_subtypes_id);
@@ -1258,6 +1402,23 @@ export default function EventsClient({
     { key: "upcoming", label: "Upcoming", test: (e) => !hasEnded(e) },
     { key: "historic", label: "Historic", test: hasEnded },
   ];
+
+  useEffect(() => {
+    openAddRef.current = () => openAdd();
+  });
+
+  const quickFilterGroups = (() => {
+    const placed = new Set(QUICK_FILTER_GROUPS.flatMap((group) => group.keys));
+    const groups = QUICK_FILTER_GROUPS.map((group) => ({
+      label: group.label,
+      filters: group.keys
+        .map((key) => QUICK_FILTERS.find((q) => q.key === key))
+        .filter((q): q is (typeof QUICK_FILTERS)[number] => q != null),
+    }));
+    const rest = QUICK_FILTERS.filter((q) => !placed.has(q.key));
+    if (rest.length > 0) groups.push({ label: "More", filters: rest });
+    return groups;
+  })();
 
   const passesQuick = (e: EventRecord) =>
     [...quickFilters].every((k) => QUICK_FILTERS.find((q) => q.key === k)!.test(e));
@@ -1368,6 +1529,23 @@ export default function EventsClient({
     setSelectedCalendarDate(format(d, "yyyy-MM-dd"));
   };
   const shiftPeriod = (delta: number) => (isWeekView ? shiftWeek(delta) : shiftMonth(delta));
+  const shiftPhonePeriod = (delta: number) => (phoneWeekOnly ? shiftWeek(delta) : shiftMonth(delta));
+  const phoneCells: string[] = (() => {
+    if (phoneWeekOnly) return weekCells;
+    const start = new Date(calMonthStart);
+    start.setDate(1 - calMonthStart.getDay());
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return format(d, "yyyy-MM-dd");
+    });
+  })();
+  const phonePeriodLabel = phoneWeekOnly ? weekLabel : calMonthLabel;
+  const eventDotColor = (event: EventRecord) => {
+    const sub = subtypeById.get(event.event_subtypes_id);
+    const type = typeById.get(event.event_types_id);
+    return swatchHexFromColor(sub?.color ?? type?.color ?? null) ?? "#34451F";
+  };
   const goToday = () => {
     const n = new Date();
     setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() });
@@ -1444,6 +1622,20 @@ export default function EventsClient({
       ? `${bStats.confirmedPeople} of ${venueCapacity} booked`
       : `${bStats.confirmedPeople} booked`;
     const priceLabel = hasPricing ? `£${event.payment_amount!.toFixed(2)}` : null;
+
+    /* Seated nights count tables (one confirmed booking per table); stand-up
+       nights count people against the venue capacity. */
+    const seated = (event.seating_required ?? sub?.seating_required) === true;
+    const seatsUsed = seated ? bStats.confirmedCount : bStats.confirmedPeople;
+    const seatsTotal = seated ? tableCount : venueCapacity;
+    const seatsUnit = seated ? "tables" : "booked";
+    const seatsNode = showBooked ? (
+      <>
+        <span className="font-semibold text-admin-ink">{seatsUsed}</span>
+        {seatsTotal ? ` of ${seatsTotal} ${seatsUnit}` : ` ${seatsUnit}`}
+      </>
+    ) : null;
+    const seatsAria = seatsTotal ? `${seatsUsed} of ${seatsTotal} ${seatsUnit}` : `${seatsUsed} ${seatsUnit}`;
 
     // An event that has been and gone is a record, not a state to act on, so
     // its whole trailing group reads back in grey.
@@ -1528,33 +1720,51 @@ export default function EventsClient({
     const issues = eventIssues(event);
     const issueLabel = `${issues.length} issue${issues.length === 1 ? "" : "s"}`;
 
-    /* The phone row has no menu of its own, so the count rides at the end of
-       the pills as a chip you can tap. It sits above the row-wide overlay
-       button, which is what makes it open the issues rather than the event. */
-    const issuePill = issues.length > 0 && (
-      <button
-        type="button"
-        onClick={() => setIssuesEvent(event)}
-        title={`${issueLabel} on this event`}
-        aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
-        className={cn(
-          PILL,
-          "pointer-events-auto relative z-2 bg-admin-error-bg text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98]"
+    /* The phone card carries at most one state pill and one warning: hidden
+       is the only state worth naming, past reads from the card itself, and
+       every warning folds into the issue count. */
+    const nudges = issuesAreNudges(event, issues);
+    const phoneFlags = (
+      <span className="ml-auto flex shrink-0 items-center gap-1.5">
+        {canPickWinner && winnerBookingId && (
+          <span
+            title={`Winner: ${teamLabel(winnerBookingId)}`}
+            className="inline-flex max-w-24 shrink-0 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
+          >
+            <Trophy className="h-3 w-3 shrink-0" />
+            <span className="truncate">{teamLabel(winnerBookingId)}</span>
+          </span>
         )}
-      >
-        <AlertTriangle className="h-3 w-3 shrink-0" />
-        <span className="tabular-nums">{issues.length}</span>
-      </button>
-    );
-
-    const statusFlags = (
-      <>
-        {rowFlags}
-        {activePill}
-        {historicPill}
-        {fullPill}
-        {issuePill}
-      </>
+        {inactive && (
+          <span title="Removed from the public site" className={cn(PILL, GREY)}>
+            <Ban className="h-3 w-3" />
+            Removed
+          </span>
+        )}
+        {event.is_fully_booked && !isPast && (
+          <span title="This event is sold out" className={cn(PILL, "bg-admin-error-bg text-admin-error")}>
+            Sold out
+          </span>
+        )}
+        {issues.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIssuesEvent(event)}
+            title={`${issueLabel} on this event`}
+            aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
+            className={cn(
+              PILL,
+              "pointer-events-auto relative z-2 transition-colors active:scale-[0.98]",
+              nudges
+                ? "bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
+                : "bg-admin-error-bg text-admin-error hover:bg-admin-error/15"
+            )}
+          >
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            <span className="tabular-nums">{issues.length}</span>
+          </button>
+        )}
+      </span>
     );
 
     const rowMenu = (
@@ -1655,13 +1865,13 @@ export default function EventsClient({
       <div
         key={event.id}
         data-event-row={event.id}
-        style={{ "--spine": accentHex } as React.CSSProperties}
+        style={{ "--spine": isPast ? "#C9C6B9" : accentHex } as React.CSSProperties}
         className={cn(
-          "group relative w-full rounded-xl border bg-admin-card text-left transition-colors",
+          "group relative w-full rounded-xl border bg-admin-card text-left transition-colors max-sm:rounded-2xl max-sm:shadow-sm has-[>button:active]:bg-admin-surface",
           "pointer-fine:transition-shadow pointer-fine:hover:shadow-md",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-admin-line hover:border-admin-primary/40",
           inactive && "opacity-60",
-          !inactive && isPast && "border-admin-line bg-admin-line",
+          !inactive && isPast && "max-sm:opacity-70 sm:border-admin-line sm:bg-admin-line",
           focusedId === event.id && "border-admin-primary bg-admin-primary-soft/40 ring-2 ring-admin-primary/30"
         )}
       >
@@ -1680,26 +1890,59 @@ export default function EventsClient({
           </span>
         )}
 
-        {/* Mobile: badge + status, title over two lines, then time / bookings / price */}
-        <div className="flex items-start gap-2 py-2.5 pr-2 pl-4 sm:hidden">
-          <div className="pointer-events-none min-w-0 flex-1">
-            <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-              {sub && <span className={cn("rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
-              {statusFlags}
-            </div>
-            <p className={cn("line-clamp-2 text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
-              {event.title || "Untitled Event"}
-            </p>
-            <p className="mt-0.5 text-[12px] font-medium text-admin-muted tabular-nums">{timeLabel}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium text-admin-muted">
-              {showBooked && <span className="tabular-nums" aria-label={bookedAria}>{bookedNode}</span>}
-              {showBooked && priceLabel && <span aria-hidden="true">·</span>}
-              {priceLabel && <span className="tabular-nums">{priceLabel}</span>}
-              {host && (showBooked || priceLabel) && <span aria-hidden="true">·</span>}
-              {host && <span>{shortHost(host.full_name)}</span>}
-            </p>
+        {/* Mobile: time first (the list is ordered by it) with the type as a
+            tinted pill, the title, then bookings on the left and price and host
+            on the right. The whole card opens the event, so there is no chevron. */}
+        <div className="pointer-events-none min-w-0 py-3 pr-3 pl-4 sm:hidden">
+          <div className="flex items-center gap-2">
+            <span className={cn("shrink-0 text-[13px] font-bold tabular-nums", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+              {isPast && event.end_time ? `Ended ${formatTime(event.end_time)}` : formatTime(event.start_time)}
+              {!isPast && event.end_time && (
+                <span className="font-medium text-admin-muted"> to {formatTime(event.end_time)}</span>
+              )}
+            </span>
+            {sub && (
+              <span className={cn("min-w-0 truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase", isPast ? GREY : badgeClass)}>
+                {toTitleCase(sub.name)}
+              </span>
+            )}
+            {phoneFlags}
           </div>
-          <ChevronRight className="pointer-events-none mt-8 h-4 w-4 shrink-0 text-admin-muted" />
+          <p className={cn("mt-1 truncate text-base leading-snug font-bold", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+            {event.title || "Untitled Event"}
+          </p>
+          {(seatsNode || priceLabel || host) && (
+            <div className="mt-1.5 flex items-center gap-2 text-[12px] font-medium text-admin-muted">
+              {seatsNode && (
+                <span className="inline-flex min-w-0 items-center gap-1 tabular-nums" aria-label={seatsAria}>
+                  <Users className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
+                  {seatsNode}
+                </span>
+              )}
+              <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                {host && (
+                  <span className="inline-flex items-center gap-1">
+                    <UserRound className="h-3.5 w-3.5 opacity-70" aria-hidden="true" />
+                    {shortHost(host.full_name)}
+                  </span>
+                )}
+                {priceLabel && (
+                  <span className={cn("rounded-md px-1.5 py-0.5 text-[12px] font-bold tabular-nums", isPast ? GREY : "bg-admin-primary-soft text-admin-primary")}>
+                    {priceLabel}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
+          {seatsTotal != null && seatsTotal > 0 && event.is_bookable && !isPast && (
+            <div
+              className="mt-2 h-1 overflow-hidden rounded-full bg-admin-surface"
+              style={{ "--fill": `${Math.min(100, (seatsUsed / seatsTotal) * 100)}%` } as React.CSSProperties}
+              aria-hidden="true"
+            >
+              <div className={cn("h-full w-(--fill) rounded-full", event.is_fully_booked ? "bg-admin-error" : "bg-admin-primary")} />
+            </div>
+          )}
         </div>
 
         {/* Anything above a phone gets one line: tag, title, status, host, time,
@@ -1898,7 +2141,7 @@ export default function EventsClient({
 
   return (
     <div className={cn(
-      "mx-auto w-full max-w-352 space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
+      "mx-auto w-full max-w-352 space-y-3 bg-[#F4F1E8] px-2 pt-0 pb-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
       viewMode === "calendar" &&
         "sm:flex sm:h-[calc(100dvh-7rem)] sm:flex-col md:h-[calc(100dvh-8.5rem)]"
     )}>
@@ -1916,11 +2159,11 @@ export default function EventsClient({
 
       {/* Pinned, so the search, the date range and the filters stay reachable
           however far down the list you are. */}
-      <div className="sticky top-0 z-30 shrink-0 rounded-2xl border border-[#D8D5C8] bg-admin-card/95 p-1.5 shadow-sm backdrop-blur sm:p-3">
+      <div className="sticky top-0 z-30 shrink-0 rounded-2xl border border-[#D8D5C8] bg-[#EAE7DB]/95 p-1.5 shadow-sm backdrop-blur sm:p-3">
       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {/* Labels step aside on a phone - the toolbar is pinned, so it has to
             cost as little of the screen as it can. */}
-        <div className="inline-flex items-center rounded-xl border border-admin-line bg-admin-surface p-0.5 sm:p-1">
+        <div className="inline-flex items-center rounded-xl border border-admin-line bg-[#DBD8CA] p-0.5 max-sm:order-2 sm:p-1">
           <button
             type="button"
             onClick={() => setViewMode("list")}
@@ -1933,7 +2176,7 @@ export default function EventsClient({
                 : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <List className="h-4 w-4" /> <span className="hidden sm:inline">List</span>
+            <List className="h-4 w-4" /> <span>List</span>
           </button>
           <button
             type="button"
@@ -1947,23 +2190,12 @@ export default function EventsClient({
                 : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <Grid2X2 className="h-4 w-4" /> <span className="hidden sm:inline">Calendar</span>
+            <Grid2X2 className="h-4 w-4" /> <span>Calendar</span>
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => openAdd()}
-          title="Add event"
-          aria-label="Add event"
-          className="order-2 ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-white shadow-sm transition-colors hover:bg-[#283719] sm:h-10 sm:w-auto sm:px-3 lg:order-3 lg:ml-0"
-        >
-          <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden text-[13px] font-semibold sm:inline">Add event</span>
-        </button>
-
-      <div className="order-3 flex w-full items-center gap-1.5 sm:gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
-        <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border border-admin-line bg-admin-card px-2.5 transition-colors focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-gold/30 sm:h-11 sm:px-3">
+      <div className="order-3 flex w-full items-center gap-1.5 max-sm:order-1 sm:gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-admin-line bg-admin-card pl-2.5 pr-1 transition-colors focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-gold/30 sm:px-3">
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
@@ -1973,13 +2205,35 @@ export default function EventsClient({
             className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
           />
           {isSearching && (
-            <button type="button" onClick={() => setSearchQuery("")} className="-mr-1 shrink-0 rounded-md p-1 transition-colors hover:bg-[#D8D5C8]" title="Clear search">
+            <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 rounded-md p-1 transition-colors hover:bg-[#D8D5C8]" title="Clear search">
               <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            aria-expanded={showFilters}
+            aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"}
+            title="Filters"
+            className={cn(
+              "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors sm:hidden",
+              activeFilterCount > 0
+                ? "bg-admin-primary-soft text-admin-primary"
+                : "text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-admin-primary px-1 text-[10px] font-semibold text-white tabular-nums">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
         {viewMode === "list" && (
-          <DatePicker value={dateRange} onChange={setDateRange} appearance="secondary" />
+          <div className="hidden sm:contents">
+            <DatePicker value={dateRange} onChange={setDateRange} appearance="secondary" />
+          </div>
         )}
         <button
           type="button"
@@ -1988,14 +2242,14 @@ export default function EventsClient({
           aria-expanded={showFilters}
           title={showFilters ? "Hide filters" : "Show filters"}
           className={cn(
-            "inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors sm:h-11 sm:w-auto sm:px-4",
+            "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition-colors max-sm:hidden",
             showFilters || activeFilterCount > 0
               ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
               : "border-admin-line bg-admin-card text-admin-muted hover:border-admin-primary/40 hover:bg-admin-surface hover:text-admin-ink"
           )}
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline">Filters</span>
+          <span>Filters</span>
           {activeFilterCount > 0 && (
             <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1.5 text-[11px] font-semibold text-white tabular-nums">
               {activeFilterCount}
@@ -2004,8 +2258,14 @@ export default function EventsClient({
         </button>
       </div>
 
+      {viewMode === "list" && (
+        <div className="order-3 ml-auto sm:hidden">
+          <DatePicker value={dateRange} onChange={setDateRange} appearance="secondary" />
+        </div>
+      )}
+
       {showFilters && (
-      <div className="order-4 w-full space-y-1.5 border-t border-[#D8D5C8] pt-2 pb-0.5 sm:space-y-2 sm:pt-3">
+      <div className="order-4 w-full space-y-1.5 border-t border-[#D8D5C8] pt-2 pb-0.5 max-sm:hidden sm:space-y-2 sm:pt-3">
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -2124,8 +2384,239 @@ export default function EventsClient({
       </div>
       </div>
 
+      <Sheet open={showFilters && isPhone} onOpenChange={(next) => { if (!next) setShowFilters(false); }}>
+        <SheetContent
+          side="bottom"
+          showCloseButton={false}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="flex max-h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line bg-admin-surface p-0 shadow-2xl outline-none"
+        >
+          <SheetDragHandle onClose={() => setShowFilters(false)} className="bg-admin-surface" />
+          <div className="flex items-center justify-between gap-3 px-5 pt-2 pb-2">
+            <div>
+              <SheetTitle className="text-base font-bold text-admin-ink">Filter events</SheetTitle>
+              <SheetDescription className="text-[12px] text-admin-muted">
+                Narrow the schedule by type, status and bookings.
+              </SheetDescription>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters(false)}
+              aria-label="Close filters"
+              className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-card"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-4">
+            <section>
+              <h4 className={SHEET_SECTION_LABEL}>Event type</h4>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCatFilters(new Set())}
+                  aria-pressed={catFilters.size === 0}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors",
+                    catFilters.size === 0
+                      ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                      : "border-admin-line bg-admin-card text-admin-muted"
+                  )}
+                >
+                  {catFilters.size === 0 && <Check className="h-3.5 w-3.5" />}
+                  All <span className="opacity-70">{chipBase.length}</span>
+                </button>
+                {chipTypes.map(({ type, count }) => {
+                  const sel = catFilters.has(type.id);
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      aria-pressed={sel}
+                      onClick={() => toggleCatFilter(type.id)}
+                      className={cn(
+                        "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors",
+                        sel ? badgeSelectedClassFromColor(type.color) : badgeClassFromColor(type.color)
+                      )}
+                    >
+                      {sel && <Check className="h-3.5 w-3.5" />}
+                      {toTitleCase(type.name)} <span className="opacity-70">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {subChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5 border-l-2 border-admin-line pl-3">
+                  <button
+                    type="button"
+                    onClick={() => setSubFilters(new Set())}
+                    aria-pressed={subFilters.size === 0}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors",
+                      subFilters.size === 0
+                        ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                        : "border-admin-line bg-admin-card text-admin-muted"
+                    )}
+                  >
+                    {subFilters.size === 0 && <Check className="h-3.5 w-3.5" />}
+                    All subtypes <span className="opacity-70">{subChipTotal}</span>
+                  </button>
+                  {subChips.map((subtype) => {
+                    const sel = subFilters.has(subtype.id);
+                    return (
+                      <button
+                        key={subtype.id}
+                        type="button"
+                        aria-pressed={sel}
+                        onClick={() => toggleSubFilter(subtype.id)}
+                        className={cn(
+                          "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors",
+                          sel ? badgeSelectedClassFromColor(subtype.color) : badgeClassFromColor(subtype.color)
+                        )}
+                      >
+                        {sel && <Check className="h-3.5 w-3.5" />}
+                        {toTitleCase(subtype.name)}{" "}
+                        <span className="opacity-70">{subCounts.get(subtype.id) ?? 0}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {viewMode === "list" && (
+              <section>
+                <h4 className={SHEET_SECTION_LABEL}>Sort</h4>
+                <div className="inline-flex items-center rounded-xl border border-admin-line bg-admin-card p-0.5">
+                  {[
+                    { soon: true, label: "Soonest first" },
+                    { soon: false, label: "Latest first" },
+                  ].map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      aria-pressed={sortSoon === option.soon}
+                      onClick={() => setSortSoon(option.soon)}
+                      className={cn(
+                        "inline-flex h-9 items-center rounded-lg px-3 text-[13px] font-semibold transition-colors",
+                        sortSoon === option.soon
+                          ? "bg-admin-primary-soft text-admin-primary"
+                          : "text-admin-muted"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section>
+              <h4 className={SHEET_SECTION_LABEL}>Show only</h4>
+              <div className="space-y-3">
+                {quickFilterGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-0.5 text-[12px] font-semibold text-admin-muted">{group.label}</p>
+                    {group.filters.map((q) => {
+                      const id = `quick-filter-${q.key}`;
+                      return (
+                        <label key={q.key} htmlFor={id} className={SHEET_CHECK_ROW}>
+                          <input
+                            id={id}
+                            type="checkbox"
+                            checked={quickFilters.has(q.key)}
+                            onChange={() => toggleQuickFilter(q.key)}
+                            className={SHEET_CHECKBOX}
+                          />
+                          {q.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+          <div className="flex gap-2 border-t border-admin-line bg-admin-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              disabled={!anyFilterActive}
+              className="flex h-11 items-center justify-center rounded-lg border border-[#D8D5C8] px-4 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] disabled:opacity-50"
+            >
+              Clear all
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFilters(false)}
+              className="flex h-11 flex-1 items-center justify-center rounded-lg bg-[#34451F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719]"
+            >
+              Show {filterSummaryCount} event{filterSummaryCount === 1 ? "" : "s"}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {anyFilterActive && (
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs font-semibold text-[#5E6654]">
+        <div className="flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden">
+          {chipTypes
+            .filter(({ type }) => catFilters.has(type.id))
+            .map(({ type }) => (
+              <button
+                key={`cat-${type.id}`}
+                type="button"
+                onClick={() => toggleCatFilter(type.id)}
+                aria-label={`Remove ${toTitleCase(type.name)} filter`}
+                className={cn("inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold", badgeSelectedClassFromColor(type.color))}
+              >
+                {toTitleCase(type.name)} <X className="h-3 w-3" />
+              </button>
+            ))}
+          {subChips
+            .filter((subtype) => subFilters.has(subtype.id))
+            .map((subtype) => (
+              <button
+                key={`sub-${subtype.id}`}
+                type="button"
+                onClick={() => toggleSubFilter(subtype.id)}
+                aria-label={`Remove ${toTitleCase(subtype.name)} filter`}
+                className={cn("inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[12px] font-semibold", badgeSelectedClassFromColor(subtype.color))}
+              >
+                {toTitleCase(subtype.name)} <X className="h-3 w-3" />
+              </button>
+            ))}
+          {QUICK_FILTERS.filter((q) => quickFilters.has(q.key)).map((q) => (
+            <button
+              key={`quick-${q.key}`}
+              type="button"
+              onClick={() => toggleQuickFilter(q.key)}
+              aria-label={`Remove ${q.label} filter`}
+              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full border border-admin-primary/30 bg-admin-primary-soft px-2.5 text-[12px] font-semibold text-admin-primary"
+            >
+              {q.label} <X className="h-3 w-3" />
+            </button>
+          ))}
+          {isSearching && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="Clear search"
+              className="inline-flex h-8 max-w-40 shrink-0 items-center gap-1 rounded-full border border-admin-line bg-admin-card px-2.5 text-[12px] font-semibold text-admin-ink"
+            >
+              <span className="truncate">&ldquo;{searchQuery.trim()}&rdquo;</span> <X className="h-3 w-3 shrink-0" />
+            </button>
+          )}
+          <span className="ml-auto inline-flex h-8 shrink-0 items-center pl-1 text-[12px] font-semibold text-admin-muted tabular-nums">
+            {filterSummaryCount} event{filterSummaryCount === 1 ? "" : "s"}
+          </span>
+          <button type="button" onClick={clearAllFilters} className="inline-flex h-8 shrink-0 items-center text-[12px] font-bold text-[#34451F] underline">
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {anyFilterActive && (
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs font-semibold text-[#5E6654] max-sm:hidden">
           <b className="font-bold text-[13px] text-[#20231A]">{filterSummaryCount}</b>
           event{filterSummaryCount === 1 ? "" : "s"}
           {filterSummaryParts.map((part) => (
@@ -2144,14 +2635,26 @@ export default function EventsClient({
       {viewMode === "calendar" ? (
         <div className="space-y-3 sm:flex sm:min-h-0 sm:flex-1 sm:flex-col sm:space-y-2">
           <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white px-3 py-2.5 shadow-sm">
-            <button type="button" onClick={() => shiftPeriod(-1)} title={isWeekView ? "Previous week" : "Previous month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+            <button type="button" onClick={() => (isPhone ? shiftPhonePeriod(-1) : shiftPeriod(-1))} aria-label={isWeekView || (isPhone && phoneWeekOnly) ? "Previous week" : "Previous month"} title={isWeekView ? "Previous week" : "Previous month"} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4] active:bg-[#EFE8D4] sm:h-9 sm:w-9">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <h3 className="min-w-0 flex-1 text-center font-bold text-sm tracking-tight text-[#20231A] sm:text-base">{periodLabel}</h3>
-            <button type="button" onClick={() => shiftPeriod(1)} title={isWeekView ? "Next week" : "Next month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+            <h3 className="min-w-0 flex-1 text-center font-bold text-sm tracking-tight text-[#20231A] sm:text-base">
+              <span className="sm:hidden">{phonePeriodLabel}</span>
+              <span className="max-sm:hidden">{periodLabel}</span>
+            </h3>
+            <button type="button" onClick={() => (isPhone ? shiftPhonePeriod(1) : shiftPeriod(1))} aria-label={isWeekView || (isPhone && phoneWeekOnly) ? "Next week" : "Next month"} title={isWeekView ? "Next week" : "Next month"} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4] active:bg-[#EFE8D4] sm:h-9 sm:w-9">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <div className="inline-flex shrink-0 items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
+            {selectedCalendarDate !== todayStr && (
+              <button
+                type="button"
+                onClick={goToday}
+                className="inline-flex h-11 shrink-0 items-center rounded-xl px-2 text-[13px] font-semibold text-[#34451F] transition-colors active:bg-[#EFE8D4] sm:hidden"
+              >
+                Today
+              </button>
+            )}
+            <div className="inline-flex shrink-0 items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5 max-sm:hidden">
               {(["month", "week"] as const).map((v) => (
                 <button
                   key={v}
@@ -2168,48 +2671,77 @@ export default function EventsClient({
                 </button>
               ))}
             </div>
-            <button type="button" onClick={goToday} className="h-9 shrink-0 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-bold text-[12px] text-[#34451F] transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[12px]">
+            <button type="button" onClick={goToday} className="h-9 shrink-0 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-bold text-[12px] text-[#34451F] transition-colors hover:bg-[#D8D5C8] max-sm:hidden sm:px-3 sm:text-[12px]">
               Today
             </button>
           </div>
 
           <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
             <div className="grid shrink-0 grid-cols-7 gap-1">
-              {WEEKDAYS.map((w) => (
-                <div key={w} className="py-1 text-center font-bold text-[12px] text-[#5E6654] sm:text-[12px]">{w}</div>
+              {WEEKDAYS.map((w, i) => (
+                <div key={w} className={cn("py-1 text-center font-bold text-[12px] text-[#5E6654] sm:text-[12px]", (i === 0 || i === 6) && "max-sm:text-[#5E6654]/60")}>{w}</div>
               ))}
             </div>
 
             <div className="grid grid-cols-7 gap-1 sm:hidden">
-              {gridCells.map((dateStr, i) => {
-                if (!dateStr) return <div key={`mobile-blank-${i}`} className="aspect-square" />;
+              {phoneCells.map((dateStr) => {
                 const dayEvents = eventsByDate.get(dateStr) ?? [];
                 const isToday = dateStr === todayStr;
                 const isSelected = dateStr === selectedCalendarDate;
+                const isPastDay = dateStr < todayStr;
+                const outsideMonth = !phoneWeekOnly && dateStr.slice(0, 7) !== format(calMonthStart, "yyyy-MM");
+                const dots = dayEvents.slice(0, 3);
                 return (
                   <button
                     key={dateStr}
                     type="button"
-                    onClick={() => setSelectedCalendarDate(dateStr)}
+                    onClick={() => {
+                      setSelectedCalendarDate(dateStr);
+                      if (outsideMonth) {
+                        const d = parseDate(dateStr);
+                        setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
+                      }
+                      setPhoneWeekOnly(true);
+                    }}
                     aria-label={`${formatDate(dateStr)}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`}
                     aria-pressed={isSelected}
                     className={cn(
-                      "relative flex aspect-square min-h-10 flex-col items-center justify-center rounded-xl border text-xs font-bold tabular-nums transition-colors",
+                      "relative flex h-11 flex-col items-center justify-center rounded-xl border text-[13px] font-bold tabular-nums transition-colors active:bg-[#F4F1E8]",
                       isSelected
                         ? "border-[#34451F] bg-[#34451F] text-white"
                         : isToday
-                          ? "border-[#FF6B35] bg-[#FFF4EF] text-[#FF6B35]"
-                          : "border-transparent text-[#20231A] hover:bg-[#F4F1E8]"
+                          ? "border-[#FF6B35] text-[#FF6B35]"
+                          : "border-transparent text-[#20231A]",
+                      !isSelected && !isToday && isPastDay && "text-[#5E6654]",
+                      !isSelected && outsideMonth && "opacity-35"
                     )}
                   >
-                    {Number(dateStr.slice(-2))}
-                    {dayEvents.length > 0 && (
-                      <span className={cn("absolute bottom-1.5 h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-[#34451F]")} />
-                    )}
+                    <span className="leading-none">{Number(dateStr.slice(-2))}</span>
+                    <span className="mt-1 flex h-1.5 items-center gap-0.5" aria-hidden="true">
+                      {dots.map((event) => (
+                        <span
+                          key={event.id}
+                          style={{ "--dot": eventDotColor(event) } as React.CSSProperties}
+                          className={cn("h-1.5 w-1.5 rounded-full", isSelected ? "bg-white" : "bg-(--dot)")}
+                        />
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <span className={cn("text-[9px] leading-none font-bold", isSelected ? "text-white" : "text-[#5E6654]")}>+</span>
+                      )}
+                    </span>
                   </button>
                 );
               })}
             </div>
+            <button
+              type="button"
+              onClick={() => setPhoneWeekOnly((w) => !w)}
+              aria-expanded={!phoneWeekOnly}
+              className="mt-1 flex h-9 w-full items-center justify-center gap-1 rounded-lg text-[12px] font-semibold text-[#5E6654] transition-colors active:bg-[#F4F1E8] sm:hidden"
+            >
+              <ChevronDown className={cn("h-4 w-4 transition-transform", !phoneWeekOnly && "rotate-180")} aria-hidden="true" />
+              {phoneWeekOnly ? "Show month" : "Show week"}
+            </button>
 
             <div
               style={{ "--cal-rows": gridRowCount, "--cal-row-min": isWeekView ? "0px" : "5rem" } as React.CSSProperties}
@@ -2262,8 +2794,8 @@ export default function EventsClient({
                 <p className="font-bold text-sm text-[#20231A]">{selectedCalendarLabel}</p>
                 <p className="text-[13px] font-semibold text-[#5E6654]">{selectedCalendarEvents.length} event{selectedCalendarEvents.length === 1 ? "" : "s"}</p>
               </div>
-              <button type="button" onClick={() => openAdd(undefined, selectedCalendarDate)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 font-bold text-[12px] text-[#34451F]">
-                <Plus className="h-3.5 w-3.5" /> Add
+              <button type="button" onClick={() => openAdd(undefined, selectedCalendarDate)} className="inline-flex h-11 items-center gap-1 rounded-xl px-2 text-[13px] font-semibold text-[#34451F] transition-colors active:bg-[#EFE8D4]">
+                <Plus className="h-4 w-4" /> Add event
               </button>
             </div>
             {selectedCalendarEvents.length > 0 ? (
@@ -2295,33 +2827,101 @@ export default function EventsClient({
         </div>
       ) : (
         <div className="space-y-1 sm:space-y-1.5">
-          {dayGroups.map((group) => (
-            <section key={group.date} className="space-y-1">
-              {/* The date rides in a chip rather than a banded header, so a day
-                  costs one line; today's chip picks up the Tonight colour so
-                  the eye lands on it. */}
-              <div className="flex items-center gap-2 pt-2 pb-0.5">
+          {dayGroups.map((group, index) => {
+            const isPastDay = group.date < todayStr;
+            const isToday = group.date === todayStr;
+            const day = parseDate(group.date);
+            const previous = index > 0 ? parseDate(dayGroups[index - 1].date) : null;
+            const newMonth = !previous || previous.getMonth() !== day.getMonth() || previous.getFullYear() !== day.getFullYear();
+            const lastDay = index === dayGroups.length - 1;
+            const monthKey = group.date.slice(0, 7);
+            const monthCollapsed = collapsedMonths.has(monthKey);
+            const monthEvents = dayGroups
+              .filter((g) => g.date.startsWith(monthKey))
+              .reduce((sum, g) => sum + g.events.length, 0);
+            return (
+            <Fragment key={group.date}>
+            {/* Phone: a month header whenever the month changes; tapping it
+                folds that month away so a long range stays short. */}
+            {newMonth && (
+              <button
+                type="button"
+                onClick={() => toggleMonth(monthKey)}
+                aria-expanded={!monthCollapsed}
+                className={cn("flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-left transition-colors active:bg-admin-surface sm:hidden", index > 0 && "mt-2")}
+              >
+                <span className="text-[13px] font-bold text-admin-ink">
+                  {day.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                </span>
+                <span className="text-[12px] font-medium text-admin-muted tabular-nums">
+                  {monthEvents} event{monthEvents === 1 ? "" : "s"}
+                </span>
+                <ChevronDown
+                  className={cn("ml-auto h-4 w-4 text-admin-muted transition-transform", monthCollapsed && "-rotate-90")}
+                  aria-hidden="true"
+                />
+              </button>
+            )}
+            <section className={cn("space-y-1 max-sm:flex max-sm:gap-2.5 max-sm:space-y-0", monthCollapsed && "max-sm:hidden")}>
+              {/* Phone: the date is a tile on a rail down the left, so every
+                  card beside it is on that day and nothing else needs saying. */}
+              <div className="flex w-11 shrink-0 flex-col items-center sm:hidden" aria-hidden="true">
+                <span
+                  className={cn(
+                    "flex h-12 w-11 flex-col items-center justify-center rounded-xl border leading-none",
+                    isToday
+                      ? "border-[#FF6B35] bg-[#FF6B35] text-white"
+                      : isPastDay
+                        ? "border-admin-line bg-admin-surface text-admin-muted"
+                        : "border-admin-line bg-admin-card text-admin-ink"
+                  )}
+                >
+                  <span className={cn("text-[10px] font-semibold tracking-wide uppercase", !isToday && "text-admin-muted")}>
+                    {day.toLocaleDateString("en-GB", { weekday: "short" })}
+                  </span>
+                  <span className="mt-0.5 text-lg font-bold tabular-nums">{day.getDate()}</span>
+                </span>
+                {!lastDay && <span className="mt-1 w-px flex-1 bg-admin-line" />}
+              </div>
+              <div className="min-w-0 space-y-1 max-sm:flex-1 max-sm:space-y-1.5 max-sm:pb-2">
+              <div className="flex items-center gap-2 pt-2 pb-0.5 max-sm:hidden">
                 <h2
                   className={cn(
                     "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase",
                     group.date === todayStr
-                      ? "border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35]"
-                      : "border-admin-line bg-admin-card text-admin-primary"
+                      ? "border-[#FF6B35] bg-[#FF6B35] text-white"
+                      : isPastDay
+                        ? "border-admin-line bg-admin-surface text-admin-muted"
+                        : "border-admin-line bg-admin-card text-admin-primary"
                   )}
                 >
                   <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
                   {fullDayLabel(group.date, todayStr)}
+                  <span className="opacity-70 tabular-nums sm:hidden">· {group.events.length}</span>
                 </h2>
                 <span className="h-px flex-1 bg-admin-line" aria-hidden="true" />
-                <span className="shrink-0 rounded-full bg-admin-surface px-2 py-0.5 text-[11px] font-medium text-admin-muted tabular-nums">
+                <span className="shrink-0 rounded-full bg-admin-surface px-2 py-0.5 text-[11px] font-medium text-admin-muted tabular-nums max-sm:hidden">
                   {group.events.length} event{group.events.length === 1 ? "" : "s"}
                 </span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
+              </div>
             </section>
-          ))}
+            </Fragment>
+            );
+          })}
         </div>
       )}
+
+      <Dialog open={sysInfoSheetOpen && !!selected} onOpenChange={setSysInfoSheetOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+          <DialogTitle className="border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 text-[12px] font-bold text-[#34451F]">
+            Event details
+          </DialogTitle>
+          <DialogDescription className="sr-only">When and how this event was created and last changed.</DialogDescription>
+          {selected && renderSystemRows(selected)}
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
@@ -2333,37 +2933,64 @@ export default function EventsClient({
             showForm && "lg:w-7xl xl:w-352"
           )}
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <SheetDragHandle onClose={closeSheet} className="bg-white/80 backdrop-blur-md" />
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl max-sm:pt-1">
             {/* A phone parks the actions in the header's bottom-right corner -
                 level with the pills, growing up into the date line rather than
                 adding a row of their own. */}
             <div className="flex items-start justify-between gap-1.5 sm:gap-3">
-              <div className="min-w-0">
+              <button
+                type="button"
+                onClick={closeSheet}
+                aria-label="Close"
+                title="Close"
+                className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
+              >
+                <X className="h-5 w-5 shrink-0" />
+              </button>
+              <div className="min-w-0 flex-1">
                 {!showForm && selected ? (
                   <>
-                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase max-sm:hidden">
                       {sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "Event"}
                       <span className="normal-case tabular-nums"> · #{selected.id}</span>
                     </p>
-                    <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
+                    <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink max-sm:mt-2 max-sm:text-lg">
                       {selected.title || "Untitled Event"}
                     </SheetTitle>
-                    <p className="mt-1 pr-22 text-[13px] leading-relaxed font-medium text-admin-muted sm:truncate sm:pr-0">
-                      {formatDate(selected.date)}
-                      {(selected.start_time || selected.end_time) && (
-                        <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
+                    <p className="mt-1 flex items-center gap-2 text-[13px] leading-relaxed font-medium text-admin-muted sm:block sm:truncate sm:pr-0">
+                      <span className="min-w-0 truncate">
+                        {formatDate(selected.date)}
+                        {(selected.start_time || selected.end_time) && (
+                          <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
+                        )}
+                      </span>
+                      {!showForm && phoneHeaderPills && (
+                        <span className="ml-auto flex shrink-0 items-center gap-1.5 sm:hidden">{phoneHeaderPills}</span>
                       )}
                     </p>
                   </>
                 ) : (
-                  <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
-                    {sheetTitle}
-                    {selected && (
-                      <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
-                        (#ID : {selected.id})
+                  <>
+                    {/* A phone keeps the same shape as view mode: what you are
+                        doing as the eyebrow, the event as the title. */}
+                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase sm:hidden">
+                      {isAdding ? (copySourceId ? `Copying #${copySourceId}` : "Creating") : "Editing"}
+                    </p>
+                    <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A] max-sm:mt-1 max-sm:tracking-tight">
+                      <span className="sm:hidden">
+                        {isAdding ? (sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "New event") : selected?.title || "Untitled Event"}
                       </span>
-                    )}
-                  </SheetTitle>
+                      <span className="max-sm:hidden">
+                        {sheetTitle}
+                        {selected && (
+                          <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
+                            (#ID : {selected.id})
+                          </span>
+                        )}
+                      </span>
+                    </SheetTitle>
+                  </>
                 )}
                 <SheetDescription className="sr-only">
                   {isAdding
@@ -2377,8 +3004,47 @@ export default function EventsClient({
                   </div>
                 )}
               </div>
+              {selected && !isAdding && !showForm && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="More actions"
+                      title="More actions"
+                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface sm:hidden"
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem disabled={shareBusy} onClick={() => void shareSelected()}>
+                      <Share2 className="h-4 w-4" />
+                      Share event
+                    </DropdownMenuItem>
+                    {canCopy(selected) && (
+                      <DropdownMenuItem onClick={() => openCopy(selected)}>
+                        <CopyPlus className="h-4 w-4" />
+                        Copy event
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setSysInfoSheetOpen(true)}>
+                      <Info className="h-4 w-4" />
+                      Details
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled={isPending} onClick={() => toggleEventActive(selected)}>
+                      {selected.is_active === false ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                      {selected.is_active === false ? "Put back on the site" : "Remove from the site"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" disabled={isPending} onClick={() => void handleDelete()}>
+                      <Trash2 className="h-4 w-4" />
+                      Delete event
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {selected && !isAdding && (
-                <div className="absolute right-4 bottom-3 z-10 flex shrink-0 items-center gap-2 sm:static sm:right-auto sm:bottom-auto">
+                <div className="absolute right-4 bottom-3 z-10 flex shrink-0 items-center gap-2 max-sm:hidden sm:static sm:right-auto sm:bottom-auto">
                   <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                     <PopoverTrigger asChild>
                       <button
@@ -2395,33 +3061,7 @@ export default function EventsClient({
                       <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] text-[#34451F]">
                         System Information
                       </span>
-                      <SheetRow label="Event ID" value={<span className="tabular-nums">#{selected.id}</span>} />
-                      <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
-                      {selected.creation_method && selected.creation_method !== "manual" && (
-                        <SheetRow
-                          label="Creation Source"
-                          value={(() => {
-                            const href = eventCreationSourceHref(selected.creation_method, selected.creation_source_id);
-                            const label = eventCreationSourceLabel(selected.creation_method, selected.creation_source_id);
-                            if (!href || !label) return null;
-                            return (
-                              <Link
-                                href={href}
-                                title={selected.creation_source_id ?? undefined}
-                                className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] tabular-nums hover:underline"
-                              >
-                                <Hash className="h-3 w-3 shrink-0" />
-                                <span>{label}</span>
-                                <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-                              </Link>
-                            );
-                          })()}
-                        />
-                      )}
-                      <SheetRow label="Created" value={formatDateTime(selected.created_at)} />
-                      <SheetRow label="Created By" value={selected.created_by ? (employeeById.get(selected.created_by) ?? "-") : "-"} />
-                      <SheetRow label="Last Modified" value={formatDateTime(selected.updated_at)} />
-                      <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "-") : "-"} />
+                      {renderSystemRows(selected)}
                     </PopoverContent>
                   </Popover>
 
@@ -2461,38 +3101,26 @@ export default function EventsClient({
                   )}
                 </div>
               )}
-              <button
-                type="button"
-                onClick={closeSheet}
-                aria-label="Close"
-                title="Close"
-                className="-mt-1 -mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
-              >
-                <X className="h-4 w-4 shrink-0" />
-              </button>
             </div>
 
             {selected && !isAdding && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 pr-22 sm:pr-0">
-                {/* A phone gets one pill for the whole state: live or not, and
-                    once it sells tickets, whether there are any left. */}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 max-sm:hidden sm:pr-0">
+                {/* A phone names only the exceptions: removed from the site,
+                    or sold out. Live and open is the normal state. */}
                 {(() => {
                   const inactive = selected.is_active === false;
                   const full = !inactive && !!selected.is_bookable && !!selected.is_fully_booked;
+                  if (!inactive && !full) return null;
                   return (
                     <span className={cn(
                       SHEET_PILL,
                       "sm:hidden",
                       inactive
-                        ? "border-admin-error/30 bg-admin-error-bg text-admin-error"
-                        : full
-                          ? "border-admin-success bg-admin-success text-white"
-                          : "border-admin-success/30 bg-admin-success-bg text-admin-success"
+                        ? "border-admin-line bg-admin-surface text-admin-muted"
+                        : "border-admin-error/30 bg-admin-error-bg text-admin-error"
                     )}>
-                      {inactive
-                        ? <X className="h-3.5 w-3.5 shrink-0" />
-                        : <Check className="h-3.5 w-3.5 shrink-0" />}
-                      {inactive ? "Inactive" : full ? "Full" : selected.is_bookable ? "Open" : "Active"}
+                      {inactive ? <Ban className="h-3.5 w-3.5 shrink-0" /> : null}
+                      {inactive ? "Removed" : "Sold out"}
                     </span>
                   );
                 })()}
@@ -2525,6 +3153,7 @@ export default function EventsClient({
                 {!showForm && (() => {
                   const issues = eventIssues(selected);
                   if (issues.length === 0) return null;
+                  const nudges = issuesAreNudges(selected, issues);
                   return (
                     <button
                       type="button"
@@ -2532,7 +3161,10 @@ export default function EventsClient({
                       title={`View ${issues.length} issue${issues.length === 1 ? "" : "s"} on this event`}
                       className={cn(
                         SHEET_PILL,
-                        "border-admin-error/30 bg-admin-error-bg text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98] sm:ml-auto sm:pr-1.5"
+                        "transition-colors active:scale-[0.98] sm:ml-auto sm:pr-1.5",
+                        nudges
+                          ? "border-admin-warning/30 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
+                          : "border-admin-error/30 bg-admin-error-bg text-admin-error hover:bg-admin-error/15"
                       )}
                     >
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
@@ -2608,8 +3240,29 @@ export default function EventsClient({
               const winningTeamId = winnerByEvent[selected.id] ?? null;
               const showWinningTeam = type?.name === "games" && (winningTeamId != null || eventHasPassed);
               const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
+              const quizSummary = isQuiz ? quizStatusFor(selected.id) : null;
+              const quizRemaining = quizSummary ? quizSummary.target - quizSummary.total : 0;
+              const phonePrimary = isQuiz && quizSummary && quizSummary.target > 0 ? (
+                quizSummary.allComplete ? (
+                  <Link href={quizHrefFor(selected, "sheet")} className={cn(SHEET_PRIMARY_LINK, "border border-admin-primary bg-admin-card text-admin-primary hover:bg-admin-primary-soft")}>
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    Review quiz
+                  </Link>
+                ) : (
+                  <Link href={quizHrefFor(selected, "sheet")} className={cn(SHEET_PRIMARY_LINK, "bg-[#34451F] text-white shadow-sm hover:bg-[#283719]")}>
+                    <Brain className="h-4 w-4 shrink-0" />
+                    {quizSummary.total === 0 ? "Start writing the quiz" : `Continue quiz, ${quizRemaining} to go`}
+                  </Link>
+                )
+              ) : selected.is_bookable ? (
+                <Link href={viewAllHref} className={cn(SHEET_PRIMARY_LINK, "bg-[#34451F] text-white shadow-sm hover:bg-[#283719]")}>
+                  <Users className="h-4 w-4 shrink-0" />
+                  View bookings
+                </Link>
+              ) : null;
               return (
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+                  {phonePrimary && <div className="sm:hidden">{phonePrimary}</div>}
                   <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-start">
                     <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-5 md:order-2">
                       {selected.is_bookable && (
@@ -2619,11 +3272,33 @@ export default function EventsClient({
                           open={bookingsOpen}
                           onToggle={() => setBookingsOpen(o => !o)}
                           headerRight={
-                            <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums">
+                            <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums max-sm:hidden">
                               {bk.confirmedCount} {bk.confirmedCount === 1 ? "group" : "groups"}
                             </span>
                           }
                         >
+                          {(() => {
+                            const used = selected.seating_required ? bk.confirmedCount : bk.confirmedPeople;
+                            const total = selected.seating_required ? tableCount : venueCapacity ?? 0;
+                            const unit = selected.seating_required ? "tables" : "people";
+                            return (
+                              <div className="border-b border-[#D8D5C8] px-4 pt-1 pb-3 sm:hidden">
+                                <p className="text-[13px] font-medium text-admin-muted">
+                                  <span className="text-2xl font-bold text-admin-ink tabular-nums">{used}</span>
+                                  {total > 0 ? ` of ${total} ${unit} booked` : ` ${unit} booked`}
+                                </p>
+                                {total > 0 && (
+                                  <div
+                                    className="mt-2 h-1.5 overflow-hidden rounded-full bg-admin-surface"
+                                    style={{ "--fill": `${Math.min(100, (used / total) * 100)}%` } as React.CSSProperties}
+                                    aria-hidden="true"
+                                  >
+                                    <div className={cn("h-full w-(--fill) rounded-full", selected.is_fully_booked ? "bg-admin-error" : "bg-admin-primary")} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
                             <div className="px-2 py-2 text-center sm:px-3">
                               <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
@@ -2641,10 +3316,19 @@ export default function EventsClient({
                           {showWinningTeam && (
                             <DetailCell label="Winning Team" value={winningTeamId ? `#${winningTeamId}: ${bookings.find((b) => b.id === winningTeamId)?.group_name?.trim() || "Unnamed"}` : "-"} />
                           )}
-                          <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
+                          <div className={cn(
+                            "grid gap-2.5 p-3 sm:p-4",
+                            selected.seating_required ? "grid-cols-2" : "grid-cols-1",
+                            !isQuiz && !selected.seating_required && "max-sm:hidden",
+                            !isQuiz && selected.seating_required && "max-sm:grid-cols-1"
+                          )}>
                             <Link
                               href={viewAllHref}
-                              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]"
+                              className={cn(
+                                "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]",
+                                "max-sm:border-admin-primary/40 max-sm:bg-admin-primary-soft",
+                                !isQuiz && "max-sm:hidden"
+                              )}
                             >
                               <Users className="h-4 w-4 shrink-0" />
                               View bookings
@@ -2652,7 +3336,7 @@ export default function EventsClient({
                             {selected.seating_required && (
                               <Link
                                 href={`/settings/floor-plan/${selected.id}`}
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98] active:bg-admin-surface"
                               >
                                 <Grid2X2 className="h-4 w-4 shrink-0" />
                                 Floor plan
@@ -2688,24 +3372,24 @@ export default function EventsClient({
                         );
                         return (
                           <ViewSection
-                            title="Quiz Rounds"
+                            title="Quiz rounds"
                             className="order-1 sm:order-none"
                             open={quizOpen}
                             onToggle={() => setQuizOpen(o => !o)}
+                            phoneProgress={{
+                              pct: targetQuestionCount > 0 ? (savedQuestionCount / targetQuestionCount) * 100 : 0,
+                              label: `${readyRoundCount} of ${categoryCounts.length} rounds ready`,
+                              complete: quizIsComplete,
+                            }}
                             headerRight={
                               <span className={cn(
-                                "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums",
+                                "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums max-sm:hidden",
                                 quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
                               )}>
-                                <span className="sm:hidden">{readyRoundCount} / {categoryCounts.length} rounds</span>
-                                <span className="hidden sm:inline">{savedQuestionCount} / {targetQuestionCount}</span>
+                                {savedQuestionCount} / {targetQuestionCount}
                               </span>
                             }
                           >
-                            {/* On a phone the rounds list is long enough to push
-                                the action off screen, so the button leads the
-                                section instead of closing it. */}
-                            <div className="border-b border-[#D8D5C8] p-3 sm:hidden">{quizAction}</div>
                             {categoryCounts.map(cat => {
                               const remaining = cat.question_count - cat.count;
                               const done = cat.count >= cat.question_count;
@@ -2741,7 +3425,7 @@ export default function EventsClient({
                     </div>
 
                     <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-5 md:order-1">
-                      <ViewSection title="Event Details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
+                      <ViewSection title="Event details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)} phoneStatic>
                         {poster.url && (
                           <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                             <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
@@ -2751,19 +3435,10 @@ export default function EventsClient({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title="Open the full-size poster"
-                                className="hidden shrink-0 overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] transition-colors hover:border-[#34451F] sm:block"
+                                className="block shrink-0 overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] transition-colors hover:border-[#34451F]"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
-                              </a>
-                              <a
-                                href={poster.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-[#34451F] underline underline-offset-2 sm:hidden"
-                              >
-                                View poster
-                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-12 w-20 object-cover sm:h-16 sm:w-28 sm:object-contain" />
                               </a>
                               {posterNote && (
                                 <span className="text-right text-[12px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
@@ -2815,7 +3490,7 @@ export default function EventsClient({
                         {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
                       </ViewSection>
 
-                      <ViewSection title="Public Booking Settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
+                      <ViewSection title="Public booking settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
                         <DetailCell
                           label="Public Booking"
                           value={selected.is_bookable
@@ -2891,7 +3566,7 @@ export default function EventsClient({
 
                   {formError && <ErrorBox message={formError} />}
 
-                  <div className="pt-1 text-center">
+                  <div className="pt-1 text-center max-sm:hidden">
                     <button
                       type="button"
                       onClick={handleDelete}
@@ -2917,7 +3592,7 @@ export default function EventsClient({
                 <input type="hidden" name="is_fully_booked" value={formFullyBooked ? "on" : ""} />
                 <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
 
-                <FormSection title="Event Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
+                <FormSection title="Event details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
                   <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="mb-2 block font-bold text-[12px] text-[#5E6654]">Poster Image</span>
                     <input type="hidden" name="image_url" value={formImageUrl} />
@@ -3079,6 +3754,19 @@ export default function EventsClient({
 
                 </FormSection>
 
+                <button
+                  type="button"
+                  onClick={() => setFormMoreOpen((o) => !o)}
+                  aria-expanded={formMoreOpen}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-admin-line bg-admin-card px-4 text-left shadow-sm transition-colors active:bg-admin-surface sm:hidden"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14px] font-bold text-admin-ink">More settings</span>
+                    <span className="block truncate text-[12px] text-admin-muted">Seating, active, public booking and the booking card</span>
+                  </span>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-admin-muted transition-transform", formMoreOpen && "rotate-180")} aria-hidden="true" />
+                </button>
+                <div className={cn("contents", !formMoreOpen && "max-sm:hidden")}>
                 <div className="space-y-4 sm:space-y-5">
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
                   {/* Seating comes from the sub-type, and an event with a
@@ -3107,7 +3795,7 @@ export default function EventsClient({
                   </FormRow>
                 </FormSection>
 
-                <FormSection title="Public Booking Settings" open={formBookingSettingsOpen} onToggle={() => setFormBookingSettingsOpen((o) => !o)}>
+                <FormSection title="Public booking settings" open={formBookingSettingsOpen} onToggle={() => setFormBookingSettingsOpen((o) => !o)}>
                   <FormRow label="Public Booking">
                     <FormToggle label="Public booking" on={formIsBookable} onToggle={toggleBookable} />
                   </FormRow>
@@ -3160,6 +3848,8 @@ export default function EventsClient({
                   </div>
                 )}
 
+                </div>
+
                 {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
               </form>
             )}
@@ -3169,7 +3859,7 @@ export default function EventsClient({
 
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             {!showForm && selected && (
-              <Button variant="ghost" onClick={openEdit} className="h-12 w-full rounded-xl border border-[#34451F] bg-white px-4 text-[13px] font-semibold tracking-wide text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95">
+              <Button variant="ghost" onClick={openEdit} className="h-12 w-full rounded-xl border border-[#34451F] bg-white px-4 text-[13px] font-semibold tracking-wide text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-[0.98] active:bg-[#E5EBD8]">
                 <Pencil className="mr-2 h-4 w-4" />Edit event
               </Button>
             )}
@@ -3180,7 +3870,7 @@ export default function EventsClient({
                   <Undo2 className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#34451F] font-semibold text-[12px] tracking-wide text-white shadow-lg hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50">
+                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#34451F] font-semibold text-[12px] tracking-wide text-white shadow-sm hover:bg-[#283719] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>
@@ -3383,17 +4073,6 @@ export default function EventsClient({
                             Set booking link
                           </button>
                         )}
-                        {issue === ISSUE_PAST_BUT_ACTIVE && (
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            onClick={() => toggleEventActive(issuesEvent)}
-                            className={ISSUE_ACTION_BUTTON}
-                          >
-                            <Ban className="h-4 w-4 shrink-0" />
-                            Deactivate event
-                          </button>
-                        )}
                       </li>
                     ))
                   )}
@@ -3448,28 +4127,49 @@ function FormRow({ label, required, error, warning, children }: { label: string;
   );
 }
 
-function ViewSection({ title, open, onToggle, headerRight, className, children }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode }) {
+const SHEET_PRIMARY_LINK =
+  "flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition-colors";
+
+type PhoneProgress = { pct: number; label: string; complete: boolean };
+
+/* Desktop keeps the banded, collapsible card. A phone gets a flat white card
+   with a plain bold title; phoneStatic drops the fold for short sections and
+   phoneProgress swaps a count pill for a bar under the title. */
+function ViewSection({ title, open, onToggle, headerRight, className, children, phoneStatic, phoneProgress }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode; phoneStatic?: boolean; phoneProgress?: PhoneProgress }) {
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
-      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 sm:px-5", open && "border-b border-[#D8D5C8]")}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white max-sm:rounded-2xl max-sm:border max-sm:border-admin-line max-sm:shadow-sm", className)}>
+      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 transition-colors max-sm:min-h-12 max-sm:bg-white has-[button:active]:max-sm:bg-admin-surface sm:px-5", open && "border-b border-[#D8D5C8]", phoneStatic && "max-sm:border-b")}>
         <button
           type="button"
           onClick={onToggle}
-          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
+          disabled={phoneStatic}
+          className={cn("flex flex-1 items-center text-left transition-all hover:brightness-95", phoneStatic && "max-sm:pointer-events-none")}
         >
-          <span className="font-bold text-[12px] text-[#34451F]">{title}</span>
+          <span className="font-bold text-[12px] text-[#34451F] max-sm:text-[14px] max-sm:text-admin-ink">{title}</span>
         </button>
         {headerRight}
         <button
           type="button"
           onClick={onToggle}
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-          className="shrink-0 transition-all hover:brightness-95"
+          className={cn("shrink-0 transition-all hover:brightness-95 max-sm:flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center", phoneStatic && "max-sm:hidden")}
         >
           <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
-      <div className={cn(!open && "hidden")}>{children}</div>
+      {phoneProgress && (
+        <div className="px-4 pb-2.5 sm:hidden">
+          <div
+            className="h-1.5 overflow-hidden rounded-full bg-admin-surface"
+            style={{ "--fill": `${Math.min(100, Math.max(0, phoneProgress.pct))}%` } as React.CSSProperties}
+            aria-hidden="true"
+          >
+            <div className={cn("h-full w-(--fill) rounded-full", phoneProgress.complete ? "bg-admin-success" : "bg-admin-warning")} />
+          </div>
+          <p className="mt-1 text-[12px] font-medium text-admin-muted">{phoneProgress.label}</p>
+        </div>
+      )}
+      <div className={cn(!open && "hidden", !open && phoneStatic && "max-sm:block")}>{children}</div>
     </div>
   );
 }
@@ -3550,14 +4250,14 @@ function ErrorBox({ message }: { message: string }) {
 
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
-      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 sm:px-5", open && "border-b border-[#D8D5C8]")}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white max-sm:rounded-2xl max-sm:border max-sm:border-admin-line max-sm:shadow-sm", className)}>
+      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 transition-colors max-sm:min-h-12 max-sm:bg-white has-[button:active]:max-sm:bg-admin-surface sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-bold text-[12px] text-[#34451F]">{title}</span>
+          <span className="font-bold text-[12px] text-[#34451F] max-sm:text-[14px] max-sm:text-admin-ink">{title}</span>
         </button>
         <button
           type="button"

@@ -29,7 +29,10 @@ export default async function EventsPage({
     supabase.from("booking_scores").select("booking_id, event_id").eq("is_winner", true),
   ]);
 
-  const venueCapacity = await getVenueMaxCapacity(supabase);
+  const [venueCapacity, { count: tableCount }] = await Promise.all([
+    getVenueMaxCapacity(supabase),
+    supabase.from("tables").select("id", { count: "exact", head: true }).eq("available", true),
+  ]);
 
   const actCoverByEvent: Record<number, string> = {};
   for (const row of actCovers ?? []) {
@@ -52,5 +55,5 @@ export default async function EventsPage({
     if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "private", id: row.id };
   }
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} winnerByEvent={winnerByEvent} venueCapacity={venueCapacity} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} winnerByEvent={winnerByEvent} venueCapacity={venueCapacity} tableCount={tableCount ?? 0} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
 }

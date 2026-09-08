@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import {
   DropdownMenu,
@@ -374,6 +375,7 @@ export function RecordSheet({
 
   const panel = (
     <>
+      <SheetDragHandle onClose={() => void dismiss()} className="bg-admin-card/80 backdrop-blur-md" />
       <div className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1 border-b border-admin-line bg-admin-card/80 px-2 backdrop-blur-md sm:rounded-t-4xl">
         <button
           type="button"

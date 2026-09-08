@@ -180,7 +180,6 @@ export default async function DashboardPage() {
     { count: pendingEnquiries },
     { data: unpaidBookingsData },
     { data: upcomingQuizData },
-    { count: finishedActive },
     { data: finishedQuizData },
     { data: winnerRows },
   ] = await Promise.all([
@@ -208,11 +207,6 @@ export default async function DashboardPage() {
       .gte("date", todayStr)
       .eq("is_active", true)
       .eq("event_subtypes.behavior", "quiz"),
-    supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .eq("is_active", true)
-      .or(finishedFilter),
     supabase
       .from("events")
       .select("id, bookings!bookings_event_id_fkey(id, status), event_subtypes!inner(behavior)")
@@ -326,7 +320,6 @@ export default async function DashboardPage() {
   });
 
   const totalActions =
-    (finishedActive ?? 0) +
     quizzesMissingWinner +
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
@@ -490,7 +483,6 @@ export default async function DashboardPage() {
     .filter((b) => !!b.createdAt);
 
   const actionItems: ActionItem[] = [
-    { key: "finished-active", label: "Past events still active", count: finishedActive ?? 0, href: `/event-setups/events?quick=historic,active&to=${todayStr}`, color: "bg-slate-600" },
     { key: "quiz-winner", label: "Past events missing quiz winner", count: quizzesMissingWinner, href: `/event-setups/events?quick=historic,needs-winner&to=${todayStr}`, color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Band requests pending", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=new,reviewing", color: "bg-purple-700" },

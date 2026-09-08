@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { BellRing, CheckCircle2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
+
+const PHONE_QUERY = "(max-width: 639px)";
 
 export interface ActionItem {
   key: string;
@@ -14,7 +17,9 @@ export interface ActionItem {
 }
 
 export default function NeedsActionHero({ items, total }: { items: ActionItem[]; total: number }) {
-  const [open, setOpen] = useState(true);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  const open = toggled ?? !isPhone;
 
   if (total === 0) {
     return (
@@ -38,7 +43,7 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
     <div className="rounded-2xl border border-[#e9c9c0] bg-linear-to-b from-[#fff8f3] to-[#FFFEFA] p-4 shadow-sm">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setToggled(!open)}
         aria-expanded={open}
         aria-controls="needs-action-items"
         title={open ? "Hide items" : "Show items"}
@@ -75,7 +80,7 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         id="needs-action-items"
         className={cn(
           "mt-3 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4",
-          open ? "grid" : "hidden"
+          toggled == null ? "hidden sm:grid" : toggled ? "grid" : "hidden"
         )}
       >
         {active.map((i) => (
