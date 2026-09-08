@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { Check, ChevronDown, Clock } from "lucide-react";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { EventActions } from "@/components/event-actions";
 import { MarketHeroCard } from "@/components/market-hero-card";
@@ -27,6 +27,7 @@ export function PosterHero({
   openTonight: string | null;
 }) {
   const [active, setActive] = useState(0);
+  const [billOpen, setBillOpen] = useState(false);
   const event = nightEvents[Math.min(active, nightEvents.length - 1)];
   const light = useLightBackdrop(event?.imageUrl ?? null);
   if (!event) return null;
@@ -81,7 +82,18 @@ export function PosterHero({
       <div className="absolute inset-0 mx-auto w-full max-w-400">
       {/* Live / next-up pill */}
       <div className="absolute top-19 left-4 flex flex-col items-start gap-2.5 sm:top-22 sm:left-6 lg:left-10">
-        <p className="inline-flex items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3">
+        {/* With several acts the pill opens the bill for the night on a
+            phone; desktop has the bill card instead, so the pill stays inert. */}
+        <button
+          type="button"
+          onClick={() => acts > 1 && setBillOpen((o) => !o)}
+          aria-expanded={acts > 1 ? billOpen : undefined}
+          aria-label={acts > 1 ? `${isTonight ? "Live tonight" : "Next up"}: ${whenTail}. Show all ${acts} on this night` : undefined}
+          className={cn(
+            "inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 text-left backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3",
+            acts > 1 ? "md:pointer-events-none" : "pointer-events-none"
+          )}
+        >
           {isTonight && <span className="ad-live-dot h-2 w-2 rounded-full bg-neon sm:h-2.5 sm:w-2.5" aria-hidden="true" />}
           <span className={cn("font-black text-[10px] tracking-[0.22em] uppercase sm:text-xs", isTonight ? "text-ink" : "text-gold")}>
             {isTonight ? "Live tonight" : "Next up"}
@@ -92,7 +104,37 @@ export function PosterHero({
               <span className={cn("text-[11px] font-bold tabular-nums sm:text-[13px]", isTonight ? "text-ink-2" : "text-ink")}>{whenTail}</span>
             </>
           )}
-        </p>
+          {acts > 1 && (
+            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gold transition-transform md:hidden", billOpen && "rotate-180")} aria-hidden="true" />
+          )}
+        </button>
+        {acts > 1 && billOpen && (
+          <ul className="m-0 w-[calc(100vw-2rem)] max-w-xs list-none overflow-hidden rounded-2xl border border-gold/35 bg-canvas/90 p-1 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.9)] backdrop-blur-xl md:hidden">
+            {nightEvents.map((e, i) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActive(i);
+                    setBillOpen(false);
+                  }}
+                  aria-pressed={i === active}
+                  className={cn(
+                    "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left",
+                    i === active ? "bg-gold/15" : "active:bg-ink/8"
+                  )}
+                >
+                  <span className="w-14 shrink-0 font-black text-[11px] text-gold tabular-nums">{e.startTimeLabel ?? "Late"}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-black text-[13px] leading-tight tracking-tight text-ink uppercase">{e.title}</span>
+                    <span className="block truncate text-[11px] text-ink-2">{[i === 0 ? "Headline" : "Support", e.subType].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  {i === active && <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {!isTonight && openTonight && (
           <p className="inline-flex items-center gap-2 text-[11px] font-bold text-ink-2 drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)] sm:text-[13px]">
             <Clock className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />

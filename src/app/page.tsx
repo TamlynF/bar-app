@@ -5,6 +5,7 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
 import { NextUpList } from "@/components/next-up-list";
+import { LaterTonightStrip } from "@/components/later-tonight-strip";
 import { TicketStrip } from "@/components/ticket-strip";
 import { SpecialsBand } from "@/components/specials-band";
 import { FloorStrip } from "@/components/floor-strip";
@@ -113,6 +114,11 @@ export default async function HomePage() {
             doors={doors}
             openTonight={openTonight}
           />
+          <LaterTonightStrip
+            events={nightEvents.slice(1)}
+            isTonight={isTonight}
+            dayName={format(parseDate(featuredDate as string), "EEEE")}
+          />
         </>
       ) : (
         <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
@@ -124,7 +130,7 @@ export default async function HomePage() {
       )}
 
       <div className="mx-auto w-full max-w-400">
-        <NextUpList events={nextUp} alsoOn={nightEvents.slice(1)} alsoOnIsTonight={isTonight} />
+        <NextUpList events={nextUp} />
         <TicketStrip events={nextUp} rangeLabel={rangeLabel} doorsFor={doorsFor} />
         <div className="mt-14 hidden px-6 sm:block lg:px-10">
           <MarketSection />
