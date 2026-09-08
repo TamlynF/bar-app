@@ -22,6 +22,7 @@ export type MarketSessionRow = {
   orders_watermark: string | null;
   crash_until_tick: number | null;
   started_at: string;
+  stock_market_event_id?: number | null;
 };
 
 export type MarketInstrumentRow = {
@@ -96,6 +97,7 @@ export type MarketStatePayload = {
   nextTickInSec?: number;
   crashActive?: boolean;
   crashRemainingSec?: number;
+  pushAlertsEnabled?: boolean;
   instruments?: MarketInstrumentPayload[];
   events?: MarketEventPayload[];
 };
@@ -348,10 +350,12 @@ export async function maybeRunMarketTick(
     if (events.length > 0) {
       const { error: eventError } = await supabase.from("market_events").insert(events);
       if (eventError) throw eventError;
-      try {
-        await sendMarketPushAlerts(supabase, events);
-      } catch (err) {
-        console.error("[market] push alerts failed:", err);
+      if (config.pushAlertsEnabled) {
+        try {
+          await sendMarketPushAlerts(supabase, events);
+        } catch (err) {
+          console.error("[market] push alerts failed:", err);
+        }
       }
     }
 
@@ -395,17 +399,33 @@ export async function readMarketState(
   let session = sessionRow as MarketSessionRow;
   await maybeRunMarketTick(supabase, session, now);
 
-  const [{ data: refreshed }, { data: instrumentRows }] = await Promise.all([
+  const [{ data: refreshed }, { data: instrumentRows }, { data: eventItemRows }] = await Promise.all([
     supabase.from("market_sessions").select("*").eq("id", session.id).maybeSingle(),
     supabase
       .from("market_instruments")
       .select("*, menu_items(menu_categories(name, display_order))")
       .eq("session_id", session.id)
       .order("display_name", { ascending: true }),
+    session.stock_market_event_id != null
+      ? supabase
+          .from("stock_market_event_items")
+          .select("menu_item_id")
+          .eq("event_id", session.stock_market_event_id)
+      : Promise.resolve({ data: null }),
   ]);
   if (refreshed) session = refreshed as MarketSessionRow;
 
-  const instruments = (instrumentRows ?? []) as MarketInstrumentWithCategoryRow[];
+  /* The board only lists drinks still on the event: a drink staff remove
+     from the event mid-session keeps its instrument row (so its history and
+     till price survive) but drops off the phone page and the big screen. */
+  const onEvent =
+    eventItemRows == null
+      ? null
+      : new Set((eventItemRows as { menu_item_id: number }[]).map((row) => row.menu_item_id));
+  const instruments = ((instrumentRows ?? []) as MarketInstrumentWithCategoryRow[]).filter(
+    (row) => onEvent == null || onEvent.has(row.menu_item_id)
+  );
+  const shownInstrumentIds = new Set(instruments.map((row) => row.id));
   const config = resolveMarketConfig(session.config);
   const crashActive =
     session.crash_until_tick != null && session.tick_no <= session.crash_until_tick;
@@ -441,6 +461,7 @@ export async function readMarketState(
     nextTickInSec: secondsUntilNextTick(session, config, now),
     crashActive,
     ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
+    pushAlertsEnabled: config.pushAlertsEnabled,
     instruments: instruments.map((row) => {
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
@@ -470,6 +491,7 @@ export async function readMarketState(
       };
     }),
     events: (eventRows ?? [])
+      .filter((row) => row.instrument_id == null || shownInstrumentIds.has(row.instrument_id as number))
       .map((row) => {
         const payload = (row.payload ?? {}) as {
           name?: string;

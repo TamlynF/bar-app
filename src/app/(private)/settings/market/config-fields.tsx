@@ -2,10 +2,10 @@
 
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { MarketConfig } from "@/lib/market/types";
+import type { MarketConfig, MarketConfigNumberKey } from "@/lib/market/types";
 
 export type ConfigField = {
-  key: keyof MarketConfig;
+  key: MarketConfigNumberKey;
   label: string;
   step: string;
   hint: string;
@@ -57,6 +57,12 @@ export const CONFIG_FIELDS: ConfigField[] = [
   },
 ];
 
+export const PUSH_ALERTS_FIELD = {
+  label: "Phone alerts",
+  hint: "Notify me button on the public page",
+  help: "When on, the public Market Night page offers a Notify me button and subscribed phones are buzzed on price drops, crashes and stock changes. Turn off to hide the button and stop sending alerts for this event; phones that already subscribed are kept for the next night.",
+};
+
 export function configSummary(config: MarketConfig): string {
   return [
     `${config.tickIntervalSec}s ticks`,
@@ -64,10 +70,11 @@ export function configSummary(config: MarketConfig): string {
     `${config.floorPct}x to ${config.ceilPct}x base`,
     `alert at ${Math.round(config.moveNotifyPct * 100)}%`,
     `low stock at ${config.lowStockThreshold}`,
+    config.pushAlertsEnabled ? "phone alerts on" : "phone alerts off",
   ].join(" · ");
 }
 
-export function ConfigHelp({ field }: { field: ConfigField }) {
+export function ConfigHelp({ field }: { field: Pick<ConfigField, "label" | "hint" | "help"> }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

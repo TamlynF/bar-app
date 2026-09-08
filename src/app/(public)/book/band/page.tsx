@@ -7,7 +7,7 @@ import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
 
 export const metadata = {
-  title: "Book the Stage | Don Fenticas",
+  title: "Book the Stage",
   description: "Apply to perform live at Don Fenticas.",
 };
 

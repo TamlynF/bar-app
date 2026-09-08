@@ -1,0 +1,30 @@
+{
+  "name": "Market Night",
+  "short_name": "Market Night",
+  "description": "Live drink prices at Don Fenticas - get alerts when they drop",
+  "start_url": "/market",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a2008",
+  "theme_color": "#1a2008",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

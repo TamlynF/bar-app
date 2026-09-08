@@ -11,7 +11,7 @@ import LoginForm from "./_components/login-form";
    install time, so this page has to advertise the admin app, not the public
    site, or the installed admin inherits the public dark translucent bar. */
 export const metadata: Metadata = {
-  title: "Staff Login | Don Fenticas",
+  title: "Staff Login",
   manifest: "/admin-manifest.json",
   appleWebApp: {
     capable: true,

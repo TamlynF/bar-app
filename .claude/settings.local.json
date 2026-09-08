@@ -86,7 +86,11 @@
       "mcp__supabase__execute_sql",
       "Bash(cd \"/c/Users/TAMLYN~1/AppData/Local/Temp/claude/C--DFRepo-bar-app/c2b7ea72-e624-4d67-8d25-3484352e9743/scratchpad\" && node -e ' *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST \"https://vhbbbxljtemawsimqhfw.supabase.co/auth/v1/token?grant_type=password\" -H \"apikey: sb_publishable_BLHPE-eksoI-6-YFoRNMdQ_eCV_IbdW\" -H \"Content-Type: application/json\" -d '{\"email\":\"probe@example.invalid\",\"password\":\"x\"}')",
-      "Bash(curl -s -X POST \"https://vhbbbxljtemawsimqhfw.supabase.co/auth/v1/token?grant_type=password\" -H \"apikey: sb_publishable_BLHPE-eksoI-6-YFoRNMdQ_eCV_IbdW\" -H \"Content-Type: application/json\" -d '{\"email\":\"probe@example.invalid\",\"password\":\"x\"}')"
+      "Bash(curl -s -X POST \"https://vhbbbxljtemawsimqhfw.supabase.co/auth/v1/token?grant_type=password\" -H \"apikey: sb_publishable_BLHPE-eksoI-6-YFoRNMdQ_eCV_IbdW\" -H \"Content-Type: application/json\" -d '{\"email\":\"probe@example.invalid\",\"password\":\"x\"}')",
+      "Bash(npm run *)",
+      "Bash(python -)",
+      "mcp__supabase__apply_migration",
+      "Bash(echo \"--- css out top-\\\\\\\\[env ---\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",

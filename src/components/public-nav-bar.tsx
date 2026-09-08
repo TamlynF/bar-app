@@ -7,8 +7,9 @@ import { Menu as MenuIcon, X } from "lucide-react";
 import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
-import { useMarketLive } from "@/hooks/use-market-live";
+import { useMarketState } from "@/hooks/use-market-live";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
+import { MarketTicker } from "@/components/market-ticker";
 
 export function PublicNavBar({
   currentPath,
@@ -21,7 +22,9 @@ export function PublicNavBar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const marketLive = useMarketLive();
+  const marketState = useMarketState();
+  const marketLive = marketState.status === "live";
+  const onMarketPage = currentPath?.startsWith("/market") ?? false;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -121,7 +124,8 @@ export function PublicNavBar({
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
                 className={cn(
-                  "hidden h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:inline-flex sm:h-9 sm:w-9 lg:h-10 lg:w-auto lg:px-4",
+                  "ad-installed-hidden inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:h-9 sm:w-9 lg:h-10 lg:w-auto lg:px-4",
+                  !solid && "ring-2 ring-canvas/60 shadow-lg shadow-black/40",
                   SOCIAL_BRANDS.instagram.solid
                 )}
               >
@@ -204,7 +208,11 @@ export function PublicNavBar({
 
       {!overlay && <div className="h-14 sm:h-16" aria-hidden="true" />}
 
-      <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} />
+      {/* Overlay pages run their hero under the nav; pull the hero back up by
+          the nav height so the strip only costs its own 44px. */}
+      {!onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-14 -mb-14" : undefined} />}
+
+      <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} marketLive={marketLive} />
     </>
   );
 }

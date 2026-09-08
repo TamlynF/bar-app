@@ -3,6 +3,9 @@
 import { useState, useTransition, useEffect, useRef, useMemo, startTransition as deferRender } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
+import { readImageFileDimensions } from "@/lib/image-file-dimensions";
+import { posterSizeWarning } from "@/lib/poster-image-quality";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -474,6 +477,7 @@ export default function EventsClient({
   const [copySourceId, setCopySourceId] = useState<number | null>(null);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState<string>("");
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const [formPayment, setFormPayment] = useState<string>("");
   const [formBookingPageUrl, setFormBookingPageUrl] = useState<string>("");
@@ -698,6 +702,7 @@ export default function EventsClient({
     if (!file) return;
     setImageUploading(true);
     setFormError(null);
+    setImageWarning(posterSizeWarning(await readImageFileDimensions(file)));
     const ext = file.name.split(".").pop();
     const path = `events/${crypto.randomUUID()}.${ext}`;
     const { data, error } = await storageClient.storage
@@ -754,6 +759,7 @@ export default function EventsClient({
     setFormCardIcon(null);
     setFormCardBadge("");
     setFormImageUrl("");
+    setImageWarning(null);
     setFormExternalLink("");
     setFormActive(false);
     activeTouchedRef.current = false;
@@ -779,6 +785,7 @@ export default function EventsClient({
     setFormHostId(source.host_employee_id ? String(source.host_employee_id) : "");
     setFormExternalLink(source.external_link ?? "");
     setFormImageUrl(source.image_url ?? "");
+    setImageWarning(null);
     setFormIsBookable(!!source.is_bookable);
     setFormBookingConfig(source.booking_config ?? {});
     setFormCardTitle(source.booking_card_title ?? "");
@@ -835,6 +842,7 @@ export default function EventsClient({
     setFormTagline(selected.tagline ?? "");
     setFormExternalLink(selected.external_link ?? "");
     setFormImageUrl(selected.image_url ?? "");
+    setImageWarning(null);
     setFormPayment(selected.payment_amount != null ? String(selected.payment_amount) : "");
     setFormSeating(selected.seating_required ?? true);
     setFormActive(selected.is_active ?? true);
@@ -2904,13 +2912,17 @@ export default function EventsClient({
                         <img src={formImageUrl} alt="Event poster" className="max-h-32 w-full bg-[#F4F1E8] object-contain" />
                         <button
                           type="button"
-                          onClick={() => setFormImageUrl("")}
+                          onClick={() => {
+                            setFormImageUrl("");
+                            setImageWarning(null);
+                          }}
                           title={inheritedForForm.url ? "Clear and use the default image" : "Clear poster image"}
                           aria-label={inheritedForForm.url ? "Clear and use the default image" : "Clear poster image"}
                           className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                        <PosterSizeWarning message={imageWarning} />
                       </div>
                     ) : inheritedForForm.url ? (
                       <div className="space-y-2">

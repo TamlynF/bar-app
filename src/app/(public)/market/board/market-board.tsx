@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { useMarketState } from "../use-market-state";
-import { eventCopy, formatChangePct } from "../market-ui";
+import { FlipPrice, eventCopy, formatChangePct } from "../market-ui";
 
 export type BoardView = "categories" | "table" | "movers";
 
@@ -23,7 +23,6 @@ const VIEW_TOGGLE_LABEL: Record<BoardView, string> = {
   movers: "Category view",
 };
 
-const FLIP_STEP_MS = 70;
 const UNCATEGORISED = "The Bar";
 
 function trendOf(changePct: number): Trend {
@@ -53,113 +52,6 @@ function byCategoryThenName(a: MarketInstrumentPayload, b: MarketInstrumentPaylo
 function byChangeDesc(a: MarketInstrumentPayload, b: MarketInstrumentPayload): number {
   if (a.changePct !== b.changePct) return b.changePct - a.changePct;
   return a.name.localeCompare(b.name);
-}
-
-function isDigit(glyph: string): boolean {
-  return glyph >= "0" && glyph <= "9";
-}
-
-function glyphSequence(from: string, to: string): string[] {
-  if (from === to) return [];
-  if (!isDigit(from) || !isDigit(to)) return [to];
-  const sequence: string[] = [];
-  let current = Number(from);
-  const target = Number(to);
-  while (current !== target) {
-    current = (current + 1) % 10;
-    sequence.push(String(current));
-  }
-  return sequence;
-}
-
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-function subscribeReducedMotion(onChange: () => void): () => void {
-  const media = window.matchMedia(REDUCED_MOTION_QUERY);
-  media.addEventListener("change", onChange);
-  return () => media.removeEventListener("change", onChange);
-}
-
-function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false
-  );
-}
-
-function FlipPrice({ value, className }: { value: string; className?: string }) {
-  const reducedMotion = useReducedMotion();
-  const [displayed, setDisplayed] = useState(value);
-  const [target, setTarget] = useState(value);
-  const displayedRef = useRef(value);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  if (value !== target) {
-    setTarget(value);
-    if (reducedMotion) setDisplayed(value);
-  }
-
-  useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    if (reducedMotion) {
-      displayedRef.current = value;
-      return;
-    }
-
-    const start = displayedRef.current;
-    if (start === value) return;
-    const startGlyphs = Array.from({ length: value.length }, (_, index) => start[index] ?? "0");
-    const sequences = startGlyphs.map((glyph, index) => glyphSequence(glyph, value[index]));
-    const totalSteps = Math.max(
-      0,
-      ...sequences.map((sequence, index) => (sequence.length === 0 ? 0 : sequence.length + index))
-    );
-    if (totalSteps === 0) return;
-
-    let step = 0;
-    timerRef.current = setInterval(() => {
-      step += 1;
-      if (step >= totalSteps) {
-        if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = null;
-        displayedRef.current = value;
-        setDisplayed(value);
-        return;
-      }
-      const frame = sequences
-        .map((sequence, index) => {
-          const progress = step - index;
-          if (progress <= 0 || sequence.length === 0) return startGlyphs[index];
-          return sequence[Math.min(progress, sequence.length) - 1];
-        })
-        .join("");
-      displayedRef.current = frame;
-      setDisplayed(frame);
-    }, FLIP_STEP_MS);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [value, reducedMotion]);
-
-  return (
-    <span className={className} aria-label={value}>
-      {Array.from(displayed).map((glyph, index) => (
-        <span
-          key={`${index}-${glyph}`}
-          aria-hidden="true"
-          className={isDigit(glyph) ? "ad-flap inline-block w-[1ch] text-center" : "ad-flap"}
-        >
-          {glyph}
-        </span>
-      ))}
-    </span>
-  );
 }
 
 function OpenCell({ instrument }: { instrument: MarketInstrumentPayload }) {

@@ -3,7 +3,7 @@ import type { EmailTemplateRow } from "@/lib/email/merge";
 import EmailTemplatesClient from "./email-templates-client";
 
 export const metadata = {
-  title: "Email templates | Don Fenticas",
+  title: "Email templates",
 };
 
 export default async function EmailTemplatesPage() {

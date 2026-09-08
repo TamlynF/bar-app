@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export const metadata = {
-  title: "Music Bingo | Don Fenticas",
+  title: "Music Bingo",
   description: "Book your spot for Music Bingo night at Don Fenticas.",
 };
 

@@ -38,6 +38,11 @@ describe("eventConfig", () => {
     expect(config.crashFactor).toBe(DEFAULT_MARKET_CONFIG.crashFactor);
     expect(config.decayK).toBe(DEFAULT_MARKET_CONFIG.decayK);
   });
+
+  it("defaults phone alerts on for rows written before the column existed", () => {
+    expect(eventConfig(row).pushAlertsEnabled).toBe(true);
+    expect(eventConfig({ ...row, push_alerts_enabled: false }).pushAlertsEnabled).toBe(false);
+  });
 });
 
 describe("normaliseClock", () => {

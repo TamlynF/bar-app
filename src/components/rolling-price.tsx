@@ -35,7 +35,7 @@ export function RollingPrice({
   return (
     <span
       className={cn(
-        "ad-rolling inline-flex items-baseline tabular-nums transition-colors duration-300",
+        "ad-rolling inline-flex items-center leading-none tabular-nums transition-colors duration-300",
         flashOnChange && dir === "down" && "ad-flash-down",
         flashOnChange && dir === "up" && "ad-flash-up",
         className
@@ -57,7 +57,7 @@ export function RollingPrice({
             </span>
           </span>
         ) : (
-          <span key={i} aria-hidden="true" className="leading-none">
+          <span key={i} aria-hidden="true" className="flex h-[1em] items-center leading-none">
             {ch}
           </span>
         )

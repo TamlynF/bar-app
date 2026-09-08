@@ -3,7 +3,7 @@ import { PublicNav } from "@/components/public-nav";
 import { Wine } from "lucide-react";
 
 export const metadata = {
-  title: "Menu | Don Fenticas",
+  title: "Menu",
   description:
     "Explore the Don Fenticas menu - draught, cocktails, spirits, wine, and snacks.",
 };

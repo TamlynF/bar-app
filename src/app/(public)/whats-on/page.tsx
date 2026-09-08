@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { format, endOfMonth, addMonths } from "date-fns";
 import { Calendar } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
-import { SectionHeading } from "@/components/editorial/section-heading";
+import { PageHeader } from "@/components/editorial/page-header";
 import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
 import {
@@ -104,7 +104,7 @@ export default async function WhatsOnPage() {
       <PublicNav currentPath="/whats-on" />
 
       <div className="relative z-10 mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
-        <SectionHeading eyebrow="The schedule" title="What's On" />
+        <PageHeader eyebrow="The schedule" title="What's On" />
 
         {upcoming.length > 0 && <WhatsOnGrid upcoming={upcoming} tabs={tabs} />}
 

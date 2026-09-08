@@ -47,6 +47,10 @@ const configSchema = z.object({
   lowStockThreshold: z.coerce.number().min(1).max(100),
 });
 
+function readPushAlertsEnabled(formData: FormData): boolean {
+  return formData.get("pushAlertsEnabled") === "on";
+}
+
 function readConfig(formData: FormData) {
   const parsed = configSchema.safeParse({
     tickIntervalSec: formData.get("tickIntervalSec"),
@@ -57,7 +61,7 @@ function readConfig(formData: FormData) {
     lowStockThreshold: formData.get("lowStockThreshold"),
   });
   if (!parsed.success) return null;
-  return { ...DEFAULT_MARKET_CONFIG, ...parsed.data };
+  return { ...DEFAULT_MARKET_CONFIG, ...parsed.data, pushAlertsEnabled: readPushAlertsEnabled(formData) };
 }
 
 type PriceRow = {
@@ -246,6 +250,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     ceil_pct: values.ceilPct,
     move_notify_pct: values.moveNotifyPct,
     low_stock_threshold: values.lowStockThreshold,
+    push_alerts_enabled: readPushAlertsEnabled(formData),
   };
 
   let eventId: number;

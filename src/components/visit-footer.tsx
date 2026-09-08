@@ -14,7 +14,7 @@ type Cell = {
 };
 
 /* Three-cell visit block (find us / opening hours / directions) followed
-   by socials, the legal line and staff login. Replaces the old footer. */
+   by socials and the legal line. Replaces the old footer. */
 export function VisitFooter({ info }: { info: CompanyInfo }) {
   const mapsHref = info?.address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(info.address)}`
@@ -111,14 +111,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
           )}
         </div>
         <p className="m-0 text-center text-[9px] tracking-widest text-stone-600 uppercase">
-          &copy; {new Date().getFullYear()} Don Fenticas &middot; Licensed venue &middot; Drink responsibly
+          &copy; {new Date().getFullYear()}{" "}Don Fenticas &middot; Licensed venue &middot; Drink responsibly
         </p>
-        <Link
-          href="/login"
-          className="inline-flex min-h-11 items-center text-[9px] font-bold tracking-widest text-stone-600 uppercase transition-colors hover:text-stone-400 sm:min-h-0"
-        >
-          Staff Login
-        </Link>
       </div>
     </footer>
   );

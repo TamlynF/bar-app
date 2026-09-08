@@ -62,8 +62,9 @@ The nav spans the **full screen width** at every breakpoint - no `max-w-*` conta
 - No hamburger
 
 **Required composition - mobile (below `sm:`):**
-- Logo on the left, hamburger on the right - **nothing else in the bar**
+- Logo on the left; on the right the round Instagram icon then the hamburger - **nothing else in the bar**. The icon is the bar's own Follow action: it lives in brand chrome, never on the event poster (a Follow inside the hero reads as following the act). It hides on the installed app below `sm` (`.ad-installed-hidden`), where the bottom bar carries Follow.
 - The drawer opens with the gold `Book` CTA as a full-width pill at the top, then `Home`, the primary destinations, and `Staff Login` last
+- The second Follow is the gradient pill on the home page's "From the floor" section, where the Instagram photos earn it. Don't add a third.
 
 Mobile deliberately trades the always-visible Book pill for a clean two-element bar (the Bongo's Bingo pattern). Book stays the first and most prominent thing in the drawer, so it is never more than two taps away, and the home hero carries its own Book CTA above the fold.
 
@@ -71,7 +72,16 @@ Mobile deliberately trades the always-visible Book pill for a clean two-element 
 
 **Nav link type sizing:** `text-xs` (12px) `font-bold uppercase tracking-wide` from `sm:`, stepping to `text-sm` (14px) at `lg:` where the full-width bar has room. Drawer links are `text-sm`. Don't go below `text-xs` in the bar or below `10px` anywhere.
 
-**When NOT to use a bottom nav on public pages:** never (unless the product becomes a full PWA with persistent in-app sections, which it currently isn't). A bottom nav competes with the Book CTA.
+**Bottom bar on public pages: installed app only.** Browser visitors never get one - it competes with the Book CTA and eats the bottom of a 375px screen. When the site is running from the Home Screen (`display-mode: standalone` - the `.ad-installed-only` utility, since Tailwind won't stack the `standalone:` variant with `max-sm:`) there is no browser chrome and people flip between sections all evening, so `MobileBottomBar` shows below `sm` with exactly four slots:
+
+1. `Tonight` - jumps to the home hero (the most common question)
+2. `Book` - the primary CTA
+3. `Menu` - **replaced by `Market` with the live dot while a drinks market trades**
+4. `Follow` - Instagram (the bar's channel)
+
+It slides away on scroll-down and returns on scroll-up. Don't add a fifth slot (labels would drop under 10px) and don't swap `Follow` or `Tonight` for the market - `Menu` is the slot that gives way, because the market page carries the prices people would have gone to the menu for. 
+
+**Live market signal on phones in the browser: the ticker strip.** While a market trades, `MarketTicker` renders a full-width strip directly under the top bar on every public page except the market pages - live dot, "Market open", the best deal with its price rolling, and a chevron; a tap opens the market-at-a-glance sheet. It is the phone echo of the big-screen ticker and sits in nav chrome so it reads as the bar's status, never the act's. Hidden from `sm` up (the nav's Market pill takes over) and on the installed app (the bottom bar's Market slot takes over). There is no floating market button any more - don't bring one back.
 
 ### Admin portal → sidebar + mobile bottom nav
 

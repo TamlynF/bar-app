@@ -5,7 +5,7 @@ import { PublicNav } from "@/components/public-nav";
 import { getCompanyInfo } from "@/lib/company-info";
 
 export const metadata = {
-  title: "Private Hire | Don Fenticas",
+  title: "Private Hire",
   description: "Book Don Fenticas for your private event.",
 };
 

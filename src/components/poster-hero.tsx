@@ -44,13 +44,17 @@ export function PosterHero({
     ? [acts > 1 ? `${acts} acts` : null, doors ? `doors ${doors}` : null].filter(Boolean).join(" · ")
     : `${format(dateObj, "EEE d MMM")}${acts > 1 ? ` · ${acts} events` : daysAway === 1 ? " · tomorrow" : daysAway > 1 ? ` · in ${daysAway} days` : ""}`;
   const paid = event.price != null && event.price > 0;
+  const longestWord = Math.max(...event.title.split(/\s+/).map((word) => word.length), 1);
+  const titleChars = Math.max(event.title.replace(/\s+/g, "").length, 1);
 
   return (
     <section
       id="tonight"
       aria-label={isTonight ? "Tonight" : "Next up"}
       className="relative h-160 overflow-hidden md:h-205"
-      style={{ "--ev-c": event.color } as React.CSSProperties}
+      style={
+        { "--ev-c": event.color, "--title-chars": longestWord, "--title-total": titleChars } as React.CSSProperties
+      }
     >
       {event.imageUrl ? (
         <Image
@@ -117,17 +121,14 @@ export function PosterHero({
             {event.isFullyBooked ? "Sold out" : paid ? formatGBP(event.price ?? 0) : "Free entry"}
           </span>
         </div>
+        {/* Sized from the text itself so nothing is ever cut off: the column
+            width divided by (characters × ~0.72em, the average Archivo Black
+            cap width at tracking-tighter). The longest word must fit one line;
+            the whole title must fit in about two and a half lines. Words wrap
+            one per line rather than truncating. */}
         <h1
           key={event.id}
-          className={cn(
-            "animate-reveal ad-extrude m-0 font-black tracking-tighter text-balance text-ink uppercase",
-            event.title.length <= 12
-              ? "text-[clamp(3.5rem,19vw,4.75rem)] md:text-[clamp(4.5rem,10vw,9.25rem)] md:whitespace-nowrap"
-              : event.title.length <= 20
-                ? "text-[clamp(2.75rem,14vw,3.5rem)] md:text-[clamp(3.5rem,7vw,6.5rem)]"
-                : "text-[clamp(2.25rem,11vw,2.75rem)] md:text-[clamp(3rem,5.2vw,5rem)]",
-            "leading-[0.85]"
-          )}
+          className="animate-reveal ad-extrude m-0 font-black leading-[0.85] tracking-tighter text-balance text-ink uppercase text-[clamp(1.5rem,min(calc((100vw-2rem)/(var(--title-chars)*0.72)),calc((100vw-2rem)*2.5/(var(--title-total)*0.72))),4.75rem)] md:text-[clamp(2.5rem,min(calc(min(50vw,44rem)/(var(--title-chars)*0.72)),calc(min(50vw,44rem)*2.5/(var(--title-total)*0.72))),6rem)]"
         >
           {event.title}
         </h1>

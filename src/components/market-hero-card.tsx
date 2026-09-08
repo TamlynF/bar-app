@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 /* Desktop-only card in the top-right of the poster hero while the drinks
    market trades: the best deal, its session line and the way in. Renders
-   nothing when the market is closed (phones get MarketPill instead). */
+   nothing when the market is closed (phones get MarketTicker instead). */
 export function MarketHeroCard({ className }: { className?: string }) {
   const state = useMarketState();
   if (state.status !== "live") return null;

@@ -21,7 +21,12 @@ export type MarketConfig = {
   lowStockThreshold: number;
   crashFactor: number;
   crashDurationTicks: number;
+  pushAlertsEnabled: boolean;
 };
+
+export type MarketConfigNumberKey = {
+  [K in keyof MarketConfig]: MarketConfig[K] extends number ? K : never;
+}[keyof MarketConfig];
 
 /* roundStep keeps every quote chargeable at the till; moveNotifyPct is the
    cumulative move (vs the last alerted price) that wakes phones up. */
@@ -38,12 +43,17 @@ export const DEFAULT_MARKET_CONFIG: MarketConfig = {
   lowStockThreshold: 5,
   crashFactor: 0.75,
   crashDurationTicks: 5,
+  pushAlertsEnabled: true,
 };
 
 export function resolveMarketConfig(raw: unknown): MarketConfig {
   const source = (raw ?? {}) as Partial<Record<keyof MarketConfig, unknown>>;
   const config = { ...DEFAULT_MARKET_CONFIG };
   for (const key of Object.keys(config) as (keyof MarketConfig)[]) {
+    if (key === "pushAlertsEnabled") {
+      if (typeof source[key] === "boolean") config[key] = source[key];
+      continue;
+    }
     const value = Number(source[key]);
     if (Number.isFinite(value) && value > 0) config[key] = value;
   }

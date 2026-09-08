@@ -127,7 +127,7 @@ export async function generateMetadata ({
   params: Promise<{ scope: string; id: string }>
 }) {
   const { scope, id } = await params
-  if (!isScope(scope)) return { title: 'Book | Don Fenticas' }
+  if (!isScope(scope)) return { title: 'Book' }
   const header = await loadHeader(scope, id)
   return {
     title: `${header.title} | Don Fenticas`,

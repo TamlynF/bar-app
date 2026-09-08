@@ -8,13 +8,13 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
-import { SectionHeading } from "@/components/editorial/section-heading";
+import { PageHeader } from "@/components/editorial/page-header";
 import { toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import EnquiryForm from "./_components/enquiry-form";
 import CopyAddressButton from "./_components/copy-address-button";
 
 export const metadata = {
-  title: "Contact Us | Don Fenticas",
+  title: "Contact Us",
   description: "Find us, get in touch, or follow us on social media.",
 };
 
@@ -54,12 +54,11 @@ export default async function ContactPage() {
       <div className="mx-auto flex w-full max-w-400 flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-10 xl:gap-x-24">
           <div className="order-1 min-w-0 lg:order-0 lg:col-span-2 lg:col-start-1 lg:row-start-1">
-            <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
-            {info?.description && (
-              <p className="-mt-2 text-sm leading-relaxed font-medium text-stone-400">
-                {info.description}
-              </p>
-            )}
+            <PageHeader
+              eyebrow="Find us · get in touch"
+              title="About Us"
+              subtitle={info?.description ?? undefined}
+            />
           </div>
 
           <div className="order-3 min-w-0 space-y-8 lg:order-0 lg:col-span-2 lg:col-start-1 lg:row-start-2">

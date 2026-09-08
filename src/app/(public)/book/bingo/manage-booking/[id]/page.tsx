@@ -5,7 +5,7 @@ import ManageBingoBooking from "./_components/manage-bingo-booking";
 import type { BingoManageBooking } from "./_components/manage-bingo-booking";
 
 export const metadata = {
-  title: "Manage Booking | Don Fenticas",
+  title: "Manage Booking",
 };
 
 export const viewport: Viewport = {

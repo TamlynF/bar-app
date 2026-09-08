@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { Camera } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
-import { SectionHeading } from "@/components/editorial/section-heading";
+import { PageHeader } from "@/components/editorial/page-header";
 import GalleryGrid, { type GalleryItem } from "./gallery-grid";
 import { format } from "date-fns";
 
 export const metadata = {
-  title: "Gallery | Don Fenticas",
+  title: "Gallery",
   description: "Photos and videos from Don Fenticas.",
 };
 
@@ -51,7 +51,7 @@ export default async function GalleryPage() {
       <PublicNav currentPath="/gallery" />
 
       <div className="mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
-        <SectionHeading eyebrow="Photos & videos" title="Gallery" />
+        <PageHeader eyebrow="Photos & videos" title="Gallery" />
 
         {galleryItems.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-white/3 py-20 text-center">

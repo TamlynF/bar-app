@@ -5,16 +5,11 @@ import { Bell, BellOff, BellRing, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
+import { detectInstallPlatform } from "@/lib/pwa-install";
 import { useMarketState } from "./use-market-state";
 import { removeMarketPushSubscription, saveMarketPushSubscription } from "./actions";
-import {
-  DirectionArrow,
-  Sparkline,
-  StockBadge,
-  directionClass,
-  eventCopy,
-  formatChangePct,
-} from "./market-ui";
+import InstallCard from "./install-card";
+import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
 
 /* iOS (and some Android browsers) refuse `new Notification()` from page
    script and only show notifications raised through the service worker, so
@@ -54,6 +49,61 @@ async function systemNotify(events: MarketEventPayload[]) {
   }
 }
 
+function ChangePill({
+  direction,
+  changePct,
+}: {
+  direction: "up" | "down" | "flat";
+  changePct: number;
+}) {
+  const base =
+    "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-ui text-[11px] font-semibold tabular-nums";
+  if (direction === "up") {
+    return (
+      <span className={`${base} bg-[#8CFF6A]/10 text-[#8CFF6A]`}>
+        <span aria-label="Rising">▲</span> {formatChangePct(changePct)}
+      </span>
+    );
+  }
+  if (direction === "down") {
+    return (
+      <span className={`${base} bg-[#FF4D6D]/[.12] text-[#FF4D6D]`}>
+        <span aria-label="Falling">▼</span> {formatChangePct(changePct)}
+      </span>
+    );
+  }
+  return (
+    <span className={`${base} bg-white/5 text-stone-400`}>
+      <span aria-label="Unchanged">–</span> {formatChangePct(changePct)}
+    </span>
+  );
+}
+
+function formatCountdown(seconds: number): string {
+  const clamped = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(clamped / 60);
+  const rest = clamped % 60;
+  return `${minutes}:${rest.toString().padStart(2, "0")}`;
+}
+
+/* Remounted by the parent (key = tick number) so the clock restarts from the
+   server's figure on every tick instead of drifting on the poll interval. */
+function NextTickCountdown({ seconds }: { seconds: number }) {
+  const [remaining, setRemaining] = useState(seconds);
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      setRemaining(seconds - (Date.now() - startedAt) / 1000);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [seconds]);
+  return (
+    <span className="tabular-nums" aria-live="off">
+      {remaining <= 0 ? "Updating…" : `Next update ${formatCountdown(remaining)}`}
+    </span>
+  );
+}
+
 const subscribeNever = () => () => {};
 const readNotifyGranted = () =>
   typeof Notification !== "undefined" && Notification.permission === "granted";
@@ -85,14 +135,13 @@ function pushSupported(): boolean {
 }
 
 function isIosBrowserTab(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1);
-  const standalone =
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return ios && !standalone;
+  const platform = detectInstallPlatform();
+  return platform === "ios-safari" || platform === "ios-other";
 }
+
+const readInstalled = () => detectInstallPlatform() === "installed";
+const readNotifyUndecided = () =>
+  typeof Notification !== "undefined" && Notification.permission === "default";
 
 async function currentPushSubscription(): Promise<PushSubscription | null> {
   const registration = await navigator.serviceWorker.ready;
@@ -204,7 +253,7 @@ function useWatchedDrinks(): [number[], (id: number) => void] {
 }
 
 export default function MarketFeed() {
-  const { state, feed, fresh } = useMarketState();
+  const { state, fresh } = useMarketState();
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
   const [muted, setMuted] = useAlertsMuted();
@@ -212,6 +261,9 @@ export default function MarketFeed() {
   const announcedRef = useRef(0);
   const [watched, toggleWatched] = useWatchedDrinks();
   const [pushState, setPushState] = useState<PushState>("unknown");
+  const installed = useSyncExternalStore(subscribeNever, readInstalled, () => false);
+  const notifyUndecided = useSyncExternalStore(subscribeNever, readNotifyUndecided, () => false);
+  const freshInstall = installed && notifyUndecided && !justGranted;
   const instruments = state?.instruments ?? [];
 
   useEffect(() => {
@@ -222,6 +274,11 @@ export default function MarketFeed() {
         return;
       }
       try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (!registration) {
+          if (!cancelled) setPushState(isIosBrowserTab() ? "needs-install" : "page-only");
+          return;
+        }
         const subscription = await currentPushSubscription();
         if (!cancelled) setPushState(subscription ? "on" : "page-only");
       } catch {
@@ -237,6 +294,10 @@ export default function MarketFeed() {
   const onToggleWatch = (id: number) => {
     const next = watched.includes(id) ? watched.filter((w) => w !== id) : [...watched, id];
     toggleWatched(id);
+    const name = instruments.find((instrument) => instrument.id === id)?.name;
+    if (name && next.includes(id)) {
+      toast(`Watching ${name} - you'll only hear about the drinks you're watching, plus a crash.`);
+    }
     if (pushState === "on") {
       registerPush(next).catch(() => {
         toast.error("Couldn't update your alerts - check your connection.");
@@ -248,12 +309,14 @@ export default function MarketFeed() {
     .map((instrument) => instrument.name)
     .join("\u0000");
 
+  const alertsAllowed = state?.pushAlertsEnabled !== false;
+
   useEffect(() => {
     if (fresh.length === 0) return;
     const newest = fresh[fresh.length - 1];
     if (newest.id <= announcedRef.current) return;
     announcedRef.current = newest.id;
-    if (muted) return;
+    if (!notifyEnabled || !alertsAllowed) return;
 
     const watchedNames = new Set(watchedNamesKey ? watchedNamesKey.split("\u0000") : []);
     const relevant =
@@ -275,7 +338,7 @@ export default function MarketFeed() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(150);
     }
-  }, [fresh, watchedNamesKey, muted]);
+  }, [fresh, watchedNamesKey, notifyEnabled, alertsAllowed]);
 
   async function enableNotifications() {
     if (typeof Notification === "undefined") {
@@ -345,15 +408,31 @@ export default function MarketFeed() {
 
   const watchedCount = instruments.filter((instrument) => watched.includes(instrument.id)).length;
 
+  const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
+  const alertsOff = !alertsAllowed;
+
   return (
     <div className="space-y-8">
+      <div className="-mt-2 flex items-center justify-between gap-3 font-black text-[10px] tracking-wider text-stone-500 uppercase">
+        <span className="min-w-0 truncate">
+          <span className="text-[#FDCC4B]">Market open</span>
+          {" · "}
+          {tradingCount} {tradingCount === 1 ? "drink" : "drinks"}
+        </span>
+        {state.nextTickInSec != null && (
+          <span className="shrink-0 whitespace-nowrap">
+            <NextTickCountdown key={state.tickNo ?? 0} seconds={state.nextTickInSec} />
+          </span>
+        )}
+      </div>
+
       {state.crashActive && (
         <div className="ad-blink rounded-2xl border border-[#FF6B35]/40 bg-[#FF6B35]/10 px-4 py-3 text-center font-black text-sm tracking-widest text-[#FF6B35] uppercase">
           Market crash - buy the dip
         </div>
       )}
 
-      {notifyEnabled ? (
+      {alertsOff ? null : notifyEnabled ? (
         <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
           <p className="text-[12px] leading-relaxed text-stone-400">
@@ -379,20 +458,19 @@ export default function MarketFeed() {
             onClick={enableNotifications}
             className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 px-4 py-3 font-black text-xs tracking-widest text-[#FDCC4B] uppercase transition-colors hover:bg-[#FDCC4B]/20"
           >
-            <BellOff className="h-4 w-4" aria-hidden="true" /> Notify me on price drops
+            <BellOff className="h-4 w-4" aria-hidden="true" />{" "}
+            {freshInstall ? "Turn on lock-screen alerts" : "Notify me on price drops"}
           </button>
-          <p className="-mt-5 text-center text-[11px] leading-relaxed text-stone-500">
-            {watchedCount > 0
-              ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"} - turn alerts on to hear about them.`
-              : "Tap the bell on a drink to only get alerts for that one."}
-          </p>
+          {(freshInstall || watchedCount > 0) && (
+            <p className="-mt-5 text-center text-[11px] leading-relaxed text-stone-500">
+              {freshInstall
+                ? "You're on the Home Screen - one tap and you're set."
+                : `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"} - turn alerts on to hear about them.`}
+            </p>
+          )}
         </>
       )}
-      {pushState === "needs-install" && (
-        <p className="-mt-4 rounded-xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/5 px-3 py-2 text-center text-[11px] leading-relaxed text-stone-400">
-          On iPhone, alerts with the phone locked need this page on your Home Screen: tap Share, then Add to Home Screen, then open it from there.
-        </p>
-      )}
+      {!alertsOff && (pushState === "needs-install" || pushState === "page-only") && <InstallCard />}
 
       <ul className="space-y-3">
         {instruments.map((instrument) => {
@@ -400,48 +478,43 @@ export default function MarketFeed() {
           return (
           <li
             key={instrument.id}
-            className={`flex items-center gap-3 rounded-2xl border px-3 py-3 ${
-              isWatched ? "border-[#FDCC4B]/40 bg-[#FDCC4B]/5" : "border-white/10 bg-white/5"
+            className={`flex items-center gap-3 rounded-2xl border py-3 ${alertsOff ? "px-4" : "px-3"} ${
+              isWatched && !alertsOff ? "border-[#FDCC4B]/40 bg-[#FDCC4B]/5" : "border-white/10 bg-white/5"
             }`}
           >
-            <button
-              type="button"
-              onClick={() => onToggleWatch(instrument.id)}
-              aria-pressed={isWatched}
-              aria-label={isWatched ? `Stop watching ${instrument.name}` : `Watch ${instrument.name} for price alerts`}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                isWatched ? "text-[#FDCC4B]" : "text-stone-500 hover:text-white"
-              }`}
-            >
-              {isWatched ? (
-                <BellRing className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              )}
-            </button>
+            {!alertsOff && (
+              <button
+                type="button"
+                onClick={() => onToggleWatch(instrument.id)}
+                aria-pressed={isWatched}
+                aria-label={isWatched ? `Stop watching ${instrument.name}` : `Watch ${instrument.name} for price alerts`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  isWatched ? "text-[#FDCC4B]" : "text-stone-500 hover:text-white"
+                }`}
+              >
+                {isWatched ? (
+                  <BellRing className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Bell className="h-5 w-5" aria-hidden="true" />
+                )}
+              </button>
+            )}
             <div className="min-w-0 flex-1">
-              <p className="truncate font-black text-sm tracking-tight text-ink uppercase">
+              <p className="font-ui text-[15px] leading-tight font-bold tracking-wide text-ink uppercase">
                 {instrument.name}
               </p>
-              <p className="flex items-center gap-2 text-xs text-stone-400">
-                {instrument.serve !== "each" && <span>{instrument.serve}</span>}
-                <StockBadge stock={instrument.stock} />
-              </p>
+              {instrument.stock !== "ok" && (
+                <p className="mt-1.5 flex items-center">
+                  <StockBadge stock={instrument.stock} />
+                </p>
+              )}
             </div>
-            <Sparkline
-              values={instrument.spark}
-              className={`h-8 w-20 shrink-0 ${directionClass(instrument.direction)}`}
-            />
-            <div className="w-24 shrink-0 text-right">
-              <p className="font-black text-lg tracking-tight text-ink tabular-nums">
-                {formatGbp(instrument.price)}
-              </p>
-              <p
-                className={`flex items-center justify-end gap-0.5 text-xs font-bold tabular-nums ${directionClass(instrument.direction)}`}
-              >
-                <DirectionArrow direction={instrument.direction} className="h-3.5 w-3.5" />
-                {formatChangePct(instrument.changePct)}
-              </p>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <FlipPrice
+                value={formatGbp(instrument.price)}
+                className="block font-display text-2xl leading-none tracking-wide text-ink"
+              />
+              <ChangePill direction={instrument.direction} changePct={instrument.changePct} />
             </div>
           </li>
           );
@@ -452,30 +525,6 @@ export default function MarketFeed() {
           </li>
         )}
       </ul>
-
-      {feed.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase">
-            Trading floor alerts
-          </h2>
-          <ul className="space-y-2">
-            {[...feed].reverse().map((event) => (
-              <li
-                key={event.id}
-                className="flex items-baseline justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm"
-              >
-                <span className="min-w-0 flex-1 truncate text-ink">{eventCopy(event)}</span>
-                <span className="shrink-0 text-[10px] text-stone-500 tabular-nums">
-                  {new Date(event.at).toLocaleTimeString("en-GB", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       <p className="text-center text-[10px] text-stone-500">
         Prices move all night. What the board says is what the bar charges.

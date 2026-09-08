@@ -12,7 +12,7 @@ import Image from 'next/image';
 import { cn } from "@/lib/utils";
 
 export const metadata = {
-  title: 'Book a Quiz | Don Fenticas',
+  title: 'Book a Quiz',
   description: 'Secure your spot for our next quiz night.',
 };
 

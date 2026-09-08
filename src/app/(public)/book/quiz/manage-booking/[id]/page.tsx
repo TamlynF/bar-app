@@ -6,7 +6,7 @@ import CancelButton from "./_components/cancel-button";
 import type { ManageBooking } from "./_components/cancel-button";
 
 export const metadata = {
-  title: "Manage Booking | Don Fenticas",
+  title: "Manage Booking",
 };
 
 export const viewport: Viewport = {

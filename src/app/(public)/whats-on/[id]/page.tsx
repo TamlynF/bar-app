@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .eq("id", id)
     .maybeSingle();
 
-  if (!event) return { title: "Event | Don Fenticas" };
+  if (!event) return { title: "Event" };
 
   const dateLabel = format(parseDate(event.date as string), "d MMMM yyyy");
   return {

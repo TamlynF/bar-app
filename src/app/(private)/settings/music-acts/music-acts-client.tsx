@@ -25,6 +25,9 @@ import type { IconType } from "react-icons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
+import { readImageFileDimensions } from "@/lib/image-file-dimensions";
+import { posterSizeWarning } from "@/lib/poster-image-quality";
 import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import type { MusicActRow, SocialLinks } from "@/lib/music-acts";
@@ -184,6 +187,7 @@ export default function MusicActsClient({
   const [form, setForm] = useState<FormState>(blankForm());
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverWarning, setCoverWarning] = useState<string | null>(null);
   const [uploadingImages, setUploadingImages] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const videoHandles = useRef<Record<string, ResumableHandle>>({});
@@ -335,6 +339,7 @@ export default function MusicActsClient({
     setUploadingCover(true);
     sheet.setFormError(null);
     try {
+      setCoverWarning(posterSizeWarning(await readImageFileDimensions(file)));
       set("cover_image_url", await uploadToGallery(file));
     } catch (err) {
       sheet.setFormError(`Cover upload failed: ${err instanceof Error ? err.message : "unknown error"}`);
@@ -845,12 +850,16 @@ export default function MusicActsClient({
                   />
                   <button
                     type="button"
-                    onClick={() => set("cover_image_url", "")}
+                    onClick={() => {
+                      set("cover_image_url", "");
+                      setCoverWarning(null);
+                    }}
                     aria-label="Remove cover"
                     className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
+                  <PosterSizeWarning message={coverWarning} />
                 </div>
               ) : (
                 <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-admin-line py-8 transition-colors hover:border-admin-primary hover:bg-admin-surface">

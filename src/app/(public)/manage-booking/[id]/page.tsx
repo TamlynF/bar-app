@@ -6,7 +6,7 @@ import { isBookingGrouping } from "@/lib/booking-grouping";
 import ManageBookingView, { type ManageEventBooking } from "./_components/manage-booking-view";
 
 export const metadata = {
-  title: "Manage Booking | Don Fenticas",
+  title: "Manage Booking",
 };
 
 export default async function ManageBookingPage({

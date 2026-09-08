@@ -2,6 +2,12 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react"
 import { Share, SquarePlus, X, Download, Compass } from "lucide-react"
+import {
+    type BeforeInstallPromptEvent,
+    detectInstallPlatform,
+    isIpad,
+    isStandalone,
+} from "@/lib/pwa-install"
 
 /* Install-to-home-screen nudge for the admin.
    - Hidden entirely once the app is running standalone (already installed).
@@ -26,44 +32,16 @@ const DISMISS_DAYS = 14
 
 type Platform = "ssr" | "installed" | "dismissed" | "ios-safari" | "ios-other" | "other"
 
-type BeforeInstallPromptEvent = Event & {
-    prompt: () => Promise<void>
-    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
-}
-
-const IOS_IN_APP_BROWSER = /Instagram|FBAN|FBAV|FB_IAB|GSA\/|Gmail|Twitter|LinkedInApp|Line\/|MicroMessenger|Snapchat|TikTok|musical_ly/i
-const IOS_THIRD_PARTY_BROWSER = /CriOS|FxiOS|EdgiOS|OPT\/|DuckDuckGo|Brave/
-
 function detectPlatform(): Platform {
     if (typeof window === "undefined") return "ssr"
-
-    const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        // Older iOS exposes this non-standard flag instead.
-        (navigator as Navigator & { standalone?: boolean }).standalone === true
-    if (standalone) return "installed"
+    if (isStandalone()) return "installed"
 
     if (localStorage.getItem(NEVER_KEY) === "1") return "dismissed"
 
     const until = Number(localStorage.getItem(DISMISS_KEY) ?? 0)
     if (until > Date.now()) return "dismissed"
 
-    const ua = navigator.userAgent
-    // iPadOS reports as Mac; the touch-points check catches it.
-    const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1)
-    if (!ios) return "other"
-
-    // Real Safari carries "Safari" but none of the other browsers' markers.
-    // In-app webviews usually drop the "Safari" token altogether.
-    const inAppWebview = IOS_IN_APP_BROWSER.test(ua) || !/Safari/.test(ua)
-    const thirdPartyBrowser = IOS_THIRD_PARTY_BROWSER.test(ua)
-    return inAppWebview || thirdPartyBrowser ? "ios-other" : "ios-safari"
-}
-
-function isIpad(): boolean {
-    if (typeof navigator === "undefined") return false
-    const ua = navigator.userAgent
-    return /iPad/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1)
+    return detectInstallPlatform()
 }
 
 // Nothing to subscribe to - the snapshot only changes on reload.

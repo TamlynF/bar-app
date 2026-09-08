@@ -1,5 +1,7 @@
 import Image from "next/image";
 import { ArrowRight, ShoppingBag } from "lucide-react";
+import { SiInstagram } from "react-icons/si";
+import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import type { PromoRow } from "@/components/instagram-strip";
 import type { MerchandiseRow } from "@/components/merchandise-section";
 import { instagramUrl } from "@/lib/company-info";
@@ -38,15 +40,26 @@ export function FloorStrip({
                 Real nights.<span className="hidden md:inline"><br /></span> Real people.
               </p>
             </div>
-            <a
-              href={igHref}
-              target={igHref.startsWith("http") ? "_blank" : undefined}
-              rel={igHref.startsWith("http") ? "noopener noreferrer" : undefined}
-              className="group inline-flex min-h-11 items-center gap-1.5 font-black text-[9px] tracking-[0.16em] text-gold uppercase md:mt-3 md:min-h-0 md:text-[10px] md:text-ink"
-            >
-              View Instagram
-              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-            </a>
+            {igHref.startsWith("http") ? (
+              <a
+                href={igHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Don Fenticas on Instagram"
+                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full pr-4 pl-3 font-black text-[10px] tracking-[0.18em] uppercase shadow-lg shadow-black/40 transition-transform hover:scale-105 active:scale-95 md:mt-3 md:self-start ${SOCIAL_BRANDS.instagram.solid}`}
+              >
+                <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Follow
+              </a>
+            ) : (
+              <a
+                href={igHref}
+                className="group inline-flex min-h-11 items-center gap-1.5 font-black text-[9px] tracking-[0.16em] text-gold uppercase md:mt-3 md:min-h-0 md:text-[10px] md:text-ink"
+              >
+                View gallery
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </a>
+            )}
           </div>
           <ul className="m-0 mt-3 grid list-none grid-cols-4 gap-1.5 p-0 md:mt-0 md:flex-1 md:gap-2.5">
             {tiles.map((post) => {

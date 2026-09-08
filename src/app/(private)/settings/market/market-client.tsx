@@ -54,7 +54,7 @@ import {
   saveStockMarketEventAction,
   setStockOverrideAction,
 } from "./actions";
-import { CONFIG_FIELDS, ConfigHelp } from "./config-fields";
+import { CONFIG_FIELDS, ConfigHelp, PUSH_ALERTS_FIELD } from "./config-fields";
 
 export type SessionSummary = {
   id: number;
@@ -144,6 +144,18 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
           />
         </FormRow>
       ))}
+      <FormRow label={PUSH_ALERTS_FIELD.label} dense>
+        <ConfigHelp field={PUSH_ALERTS_FIELD} />
+        <span className="flex flex-1 justify-end">
+          <input
+            type="checkbox"
+            name="pushAlertsEnabled"
+            aria-label={PUSH_ALERTS_FIELD.label}
+            defaultChecked={config.pushAlertsEnabled}
+            className="h-4 w-4 cursor-pointer accent-admin-primary"
+          />
+        </span>
+      </FormRow>
     </TooltipProvider>
   );
 }
@@ -772,6 +784,11 @@ export default function MarketClient({
                   value={String(selected.config[field.key])}
                 />
               ))}
+              <DetailCell
+                dense
+                label={PUSH_ALERTS_FIELD.label}
+                value={selected.config.pushAlertsEnabled ? "On" : "Off"}
+              />
             </DetailCard>
             <DetailCard>
               <DetailCell

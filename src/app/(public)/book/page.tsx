@@ -10,7 +10,7 @@ import { cardIcon } from "@/lib/booking-card-icons";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 
 export const metadata = {
-  title: "Book | Don Fenticas",
+  title: "Book",
   description: "Book a table, a band slot, or a private event at Don Fenticas.",
 };
 

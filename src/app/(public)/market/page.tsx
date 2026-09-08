@@ -1,13 +1,23 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { MonitorPlay } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
-import { SectionHeading } from "@/components/editorial/section-heading";
+import { PageHeader } from "@/components/editorial/page-header";
 import MarketFeed from "./market-feed";
 
-export const metadata = {
-  title: "Market Night | Don Fenticas",
+/* iOS bakes the manifest and app title into the home-screen icon at install
+   time, so this page advertises its own manifest: the icon a guest adds from
+   here is called "Market Night" and opens /market, not the site home page. */
+export const metadata: Metadata = {
+  title: "Market Night",
   description:
     "The drinks menu turns into a live stock market - prices rise and fall all night with what people are drinking.",
+  manifest: "/market-manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Market Night",
+  },
 };
 
 export default function MarketPage() {
@@ -22,11 +32,19 @@ export default function MarketPage() {
       <PublicNav currentPath="/market" />
 
       <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        <SectionHeading eyebrow="Live from the bar" title="Market Night" />
-        <p className="-mt-2 mb-8 text-sm leading-relaxed font-medium text-stone-400">
-          Every drink trades like a stock. Buy pressure sends it up, quiet spells drag it
-          down - the price on the board is the price at the bar.
-        </p>
+        <PageHeader
+          eyebrow="Live from the bar"
+          title="Market Night"
+          tone="live"
+          subtitle={
+            <>
+              <span className="sm:hidden">The board price is the bar price.</span>
+              <span className="hidden sm:inline">
+                Prices move with what people are drinking. The board price is the bar price.
+              </span>
+            </>
+          }
+        />
         <MarketFeed />
         <div className="mt-10 flex justify-center">
           <Link

@@ -12,6 +12,9 @@ import { createBrowserClient } from "@supabase/ssr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
+import { readImageFileDimensions } from "@/lib/image-file-dimensions";
+import { posterSizeWarning } from "@/lib/poster-image-quality";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EVENT_TYPE_COLORS, colorHexFromKey } from "@/lib/event-type-colors";
@@ -873,6 +876,7 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
                     subline="Used when an event has no picture of its own"
                     ariaLabel="Upload poster picture"
                     pathPrefix="event-subtypes/"
+                    poster
                     onUpload={(u) => set({ default_image_url: u })}
                     onClear={() => set({ default_image_url: "" })}
                   />
@@ -1386,17 +1390,21 @@ function CardIconGrid({ value, onChange }: { value: string | null; onChange: (na
   );
 }
 
-function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
+function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear, poster = false }: {
   url: string; subline: string; ariaLabel: string; pathPrefix: string; onUpload: (u: string) => void; onClear: () => void;
+  /* Posters fill the home page hero, so warn when the file is too small for that. */
+  poster?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [sizeWarning, setSizeWarning] = useState<string | null>(null);
 
   const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     setUploadError(null);
+    setSizeWarning(poster ? posterSizeWarning(await readImageFileDimensions(file)) : null);
     try {
       const ext = file.name.split(".").pop();
       const path = `${pathPrefix}${crypto.randomUUID()}.${ext}`;
@@ -1413,18 +1421,24 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
 
   if (url) {
     return (
-      <div className="relative overflow-hidden rounded-xl border border-[#D8D5C8]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" className="max-h-50 w-full bg-[#F4F1E8] object-cover" />
-        <button
-          type="button"
-          onClick={onClear}
-          aria-label="Remove image"
-          title="Remove image"
-          className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+      <div className="flex flex-col gap-1.5">
+        <div className="relative overflow-hidden rounded-xl border border-[#D8D5C8]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="" className="max-h-50 w-full bg-[#F4F1E8] object-cover" />
+          <button
+            type="button"
+            onClick={() => {
+              setSizeWarning(null);
+              onClear();
+            }}
+            aria-label="Remove image"
+            title="Remove image"
+            className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <PosterSizeWarning message={sizeWarning} />
       </div>
     );
   }

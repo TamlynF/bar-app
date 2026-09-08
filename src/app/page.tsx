@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
 import { SmoothScroll } from "@/components/smooth-scroll";
-import { MarketPill } from "@/components/market-pill";
 import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
 import { AlsoOnList } from "@/components/also-on-list";
@@ -107,7 +106,6 @@ export default async function HomePage() {
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
       <SmoothScroll />
       <PublicNav currentPath="/" overlay />
-      <MarketPill />
 
       {nightEvents.length > 0 ? (
         <>

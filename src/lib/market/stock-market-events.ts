@@ -11,6 +11,7 @@ export type StockMarketEventRow = {
   ceil_pct: number | string;
   move_notify_pct: number | string;
   low_stock_threshold: number | string;
+  push_alerts_enabled?: boolean | null;
   is_active: boolean;
   created_at: string;
   created_by: number | null;
@@ -42,6 +43,7 @@ export function eventConfig(row: StockMarketEventRow): MarketConfig {
     ceilPct: Number(row.ceil_pct),
     moveNotifyPct: Number(row.move_notify_pct),
     lowStockThreshold: Number(row.low_stock_threshold),
+    pushAlertsEnabled: row.push_alerts_enabled ?? true,
   };
 }
 

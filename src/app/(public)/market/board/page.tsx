@@ -16,7 +16,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata = {
-  title: "Drinks Exchange | Don Fenticas",
+  title: "Drinks Exchange",
   description: "Live drinks market board - prices rise and fall all night.",
   robots: { index: false },
 };
