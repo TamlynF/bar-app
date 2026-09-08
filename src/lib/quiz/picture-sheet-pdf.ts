@@ -60,9 +60,9 @@ export function pictureSheetFileName(title: string): string {
   return `${title.replace(/[\\/:*?"<>|]+/g, "-").trim()}.pdf`;
 }
 
-type LoadedImage = { data: string; width: number; height: number };
+export type LoadedImage = { data: string; width: number; height: number };
 
-async function loadImage(url: string): Promise<LoadedImage | null> {
+export async function loadImage(url: string): Promise<LoadedImage | null> {
   try {
     const response = await fetch(url, { mode: "cors" });
     if (!response.ok) return null;

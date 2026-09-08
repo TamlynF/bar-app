@@ -1,7 +1,12 @@
 import type { HostCopy } from "./host-copy";
 import { QR_OPTIONS } from "./playlist-qr";
+import { fitContain, loadImage } from "./picture-sheet-pdf";
 
 const QR_SIZE = 28;
+const PICTURE_COLS = 3;
+const PICTURE_GAP = 4;
+const PICTURE_HEIGHT = 42;
+const PICTURE_LINE = 4;
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
 const MARGIN = 14;
@@ -22,6 +27,8 @@ export async function buildHostCopyPdf(copy: HostCopy): Promise<Blob> {
     )
   );
   const questionsQr = qrByUrl.get(copy.questionsUrl);
+  const imageUrls = [...new Set(copy.rounds.flatMap((round) => round.lines.flatMap((line) => (line.imageUrl ? [line.imageUrl] : []))))];
+  const imageByUrl = new Map(await Promise.all(imageUrls.map(async (url) => [url, await loadImage(url)] as const)));
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   doc.setProperties({ title: `${copy.title} - host copy` });
   doc.setTextColor(0);
@@ -111,6 +118,60 @@ export async function buildHostCopyPdf(copy: HostCopy): Promise<Blob> {
       doc.setFontSize(10);
       doc.text("No questions saved for this round.", MARGIN, y);
       y += LINE;
+      return;
+    }
+
+    if (round.isPicture) {
+      const cellWidth = CONTENT_WIDTH / PICTURE_COLS;
+      const cellInner = cellWidth - PICTURE_GAP;
+      for (let start = 0; start < round.lines.length; start += PICTURE_COLS) {
+        const row = round.lines.slice(start, start + PICTURE_COLS);
+        doc.setFontSize(9);
+        const captions = row.map((line) => ({
+          answer: doc.splitTextToSize(`${line.number}. ${line.answer}`, cellInner) as string[],
+          note: line.note ? (doc.splitTextToSize(line.note, cellInner) as string[]) : [],
+        }));
+        const captionLines = Math.max(...captions.map((c) => c.answer.length + c.note.length));
+        const rowHeight = PICTURE_HEIGHT + 2 + captionLines * PICTURE_LINE + 4;
+        ensure(rowHeight);
+        row.forEach((line, col) => {
+          const x = MARGIN + col * cellWidth;
+          const box = { x, y, width: cellInner, height: PICTURE_HEIGHT };
+          const image = line.imageUrl ? imageByUrl.get(line.imageUrl) : null;
+          doc.setDrawColor(200);
+          doc.setLineWidth(0.2);
+          doc.roundedRect(box.x, box.y, box.width, box.height, 1.5, 1.5);
+          if (image) {
+            const placed = fitContain(image.width, image.height, {
+              x: box.x + 1.5,
+              y: box.y + 1.5,
+              width: box.width - 3,
+              height: box.height - 3,
+            });
+            doc.addImage(image.data, "JPEG", placed.x, placed.y, placed.width, placed.height, undefined, "FAST");
+          } else {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(...MUTED);
+            doc.text(line.imageUrl ? "Image unavailable" : "No image", x + cellInner / 2, y + PICTURE_HEIGHT / 2, { align: "center" });
+            doc.setTextColor(0);
+          }
+          let cy = y + PICTURE_HEIGHT + 2 + PICTURE_LINE;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          doc.text(captions[col].answer, x, cy);
+          cy += captions[col].answer.length * PICTURE_LINE;
+          if (captions[col].note.length) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(8);
+            doc.setTextColor(...MUTED);
+            doc.text(captions[col].note, x, cy);
+            doc.setTextColor(0);
+          }
+        });
+        doc.setDrawColor(0);
+        y += rowHeight;
+      }
       return;
     }
 

@@ -21,6 +21,7 @@ const q = (over: Partial<HostCopyQuestion>): HostCopyQuestion => ({
   spotify_track_id: null,
   hint_year: null,
   release_year: null,
+  image_url: null,
   image_description: null,
   ...over,
 });
@@ -64,7 +65,7 @@ describe("buildHostCopy", () => {
           hint_year: 1990,
           answer_text_ext: "Oasis - Wonderwall",
         }),
-        q({ id: "p", quiz_category_configs_id: 3, question_text: "Name the band", answer_text: "The Clash", image_description: "Anagram" }),
+        q({ id: "p", quiz_category_configs_id: 3, question_text: "Name the band", answer_text: "The Clash", image_description: "Anagram", image_url: "https://example.test/clash.jpg" }),
       ],
       playlistByCategory: {},
     });
@@ -76,7 +77,13 @@ describe("buildHostCopy", () => {
     });
     expect(copy.rounds[1].lines[0].question).toBe("Higher or lower than 1990? (Oasis - Wonderwall)");
     expect(copy.rounds[1].lines[0].answer).toBe("Higher - released 1995");
+    expect(copy.rounds[2].isPicture).toBe(true);
     expect(copy.rounds[2].sharedQuestion).toBe("Name the band");
-    expect(copy.rounds[2].lines[0]).toMatchObject({ question: "Picture 1", answer: "The Clash", note: "Anagram" });
+    expect(copy.rounds[2].lines[0]).toMatchObject({
+      question: "Picture 1",
+      answer: "The Clash",
+      note: "Anagram",
+      imageUrl: "https://example.test/clash.jpg",
+    });
   });
 });

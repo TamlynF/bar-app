@@ -20,14 +20,22 @@ export type HostCopyQuestion = {
   spotify_track_id: string | null;
   hint_year: number | null;
   release_year: number | null;
+  image_url: string | null;
   image_description: string | null;
 };
 
-export type HostCopyLine = { number: number; question: string; answer: string; note: string | null };
+export type HostCopyLine = {
+  number: number;
+  question: string;
+  answer: string;
+  note: string | null;
+  imageUrl: string | null;
+};
 
 export type HostCopyRound = {
   title: string;
   progress: string;
+  isPicture: boolean;
   playlistUrl: string | null;
   sharedQuestion: string | null;
   lines: HostCopyLine[];
@@ -73,7 +81,7 @@ export function buildHostCopy(input: HostCopyInput): HostCopy {
     const lines = questions.map((q, idx) => {
       const number = q.question_no ?? idx + 1;
       if (cat.is_picture) {
-        return { number, question: `Picture ${number}`, answer: q.answer_text, note: q.image_description };
+        return { number, question: `Picture ${number}`, answer: q.answer_text, note: q.image_description, imageUrl: q.image_url };
       }
       if (isNameThatTune) {
         const question = `Name the artist and song${q.release_year ? ` - released ${q.release_year}` : ""}`;
@@ -82,6 +90,7 @@ export function buildHostCopy(input: HostCopyInput): HostCopy {
           question,
           answer: q.answer_text_ext ?? q.answer_text,
           note: q.spotify_track_id ? null : "No Spotify track - play manually",
+          imageUrl: null,
         };
       }
       if (isHigherOrLower) {
@@ -90,14 +99,16 @@ export function buildHostCopy(input: HostCopyInput): HostCopy {
           question: `${q.question_text}${q.answer_text_ext ? ` (${q.answer_text_ext})` : ""}`,
           answer: q.hint_year && q.release_year ? stepAnswerText(q.release_year, q.hint_year) : q.answer_text,
           note: null,
+          imageUrl: null,
         };
       }
-      return { number, question: q.question_text, answer: q.answer_text, note: null };
+      return { number, question: q.question_text, answer: q.answer_text, note: null, imageUrl: null };
     });
 
     return {
       title: `${cat.order_no != null ? `${cat.order_no}. ` : ""}${cat.category_name}`,
       progress: `${questions.length} of ${cat.question_count}`,
+      isPicture: cat.is_picture,
       playlistUrl: input.playlistByCategory[cat.id] ?? null,
       sharedQuestion,
       lines,

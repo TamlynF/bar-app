@@ -310,7 +310,7 @@ export async function getHostCopyAction(eventId: number): Promise<HostCopy> {
         .order("order_no", { ascending: true }),
       supabase
         .from("past_quiz_questions")
-        .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_description")
+        .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url, image_description")
         .eq("events_id", eventId)
         .order("question_no", { ascending: true, nullsFirst: false })
         .order("created_at"),
