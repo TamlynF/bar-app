@@ -937,8 +937,8 @@ export default function PrivateLayoutClient({
                     "mx-auto w-full flex-1 px-2 pt-2 pb-28 sm:min-h-0 sm:px-0 sm:py-6 sm:pb-16",
                     widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
-                    {/* Home-screen install nudge - renders nothing once installed. */}
-                    <InstallPrompt />
+                    {/* Home-screen install nudge - dashboard only, and nothing once installed. */}
+                    {pathname === "/dashboard" && <InstallPrompt />}
                     {children}
                 </main>
 

@@ -34,7 +34,13 @@ type Platform = "ssr" | "installed" | "dismissed" | "ios-safari" | "ios-other" |
 
 function detectPlatform(): Platform {
     if (typeof window === "undefined") return "ssr"
-    if (isStandalone()) return "installed"
+    if (isStandalone()) {
+        /* Running from the home screen proves it is installed, so remember
+           that for the browser tab too (on Android the two share storage;
+           iOS keeps them apart, which is what "Already added it" is for). */
+        localStorage.setItem(NEVER_KEY, "1")
+        return "installed"
+    }
 
     if (localStorage.getItem(NEVER_KEY) === "1") return "dismissed"
 
@@ -205,7 +211,7 @@ export default function InstallPrompt() {
                             onClick={dismissForever}
                             className="rounded-xl px-3 py-2 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] hover:text-admin-ink"
                         >
-                            Don&apos;t show again
+                            {ios ? "Already added it" : "Don't show again"}
                         </button>
                     </div>
                 </div>
