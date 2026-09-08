@@ -5,6 +5,9 @@
    for a minute so a slow print dialog is never cut off. */
 
 const FRAME_LIFETIME_MS = 60_000;
+/* A tap only authorises a print for a few seconds, so images get this long to
+   decode before the dialog opens regardless. */
+const IMAGE_WAIT_MS = 1_500;
 
 function mountFrame(setSource: (frame: HTMLIFrameElement) => void) {
   const frame = document.createElement("iframe");
@@ -15,7 +18,10 @@ function mountFrame(setSource: (frame: HTMLIFrameElement) => void) {
     const win = frame.contentWindow;
     if (!win) return;
     const images = Array.from(win.document.images);
-    await Promise.allSettled(images.map((img) => img.decode()));
+    await Promise.race([
+      Promise.allSettled(images.map((img) => img.decode())),
+      new Promise((resolve) => setTimeout(resolve, IMAGE_WAIT_MS)),
+    ]);
     win.focus();
     win.print();
     setTimeout(() => frame.remove(), FRAME_LIFETIME_MS);

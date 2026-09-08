@@ -308,7 +308,7 @@ export default function PrivateLayoutClient({
                             mobileAction: {
                                 label: "Print",
                                 Icon: Printer,
-                                onClick: () => requestAnimationFrame(() => setTimeout(() => window.print(), 0)),
+                                onClick: () => window.print(),
                             },
                             trail: [
                                 { label: "Schedule", href: SCHEDULE_HREF },
