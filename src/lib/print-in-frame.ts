@@ -35,9 +35,3 @@ export function printUrlInFrame(url: string) {
     frame.src = url;
   });
 }
-
-export function printHtmlInFrame(html: string) {
-  mountFrame((frame) => {
-    frame.srcdoc = html;
-  });
-}

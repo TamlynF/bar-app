@@ -12,8 +12,6 @@ import {
   pictureSheetUsesShareSheet,
   sharePictureSheet,
 } from "@/lib/quiz/picture-sheet-pdf";
-import { buildPictureSheetHtml } from "@/lib/quiz/picture-sheet-html";
-import { printHtmlInFrame } from "@/lib/print-in-frame";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -698,14 +696,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     });
     const title = `${category_name} - Picture sheet`;
     const buildSheet = () => buildPictureSheetPdf({ title, question: firstQ, cells });
-
-    if (window.matchMedia("(max-width: 639px)").matches) {
-      if (sorted.length > total) {
-        toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
-      }
-      printHtmlInFrame(buildPictureSheetHtml({ title, question: firstQ, cells }));
-      return;
-    }
 
     if (!pictureSheetUsesShareSheet()) {
       const win = window.open("", "_blank");

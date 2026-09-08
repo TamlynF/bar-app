@@ -2668,6 +2668,7 @@ export default function EventsClient({
                         const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                         const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
                         const quizHref = quizHrefFor(selected, "sheet");
+                        const readyRoundCount = categoryCounts.filter(cat => cat.count >= cat.question_count).length;
                         const quizAction = quizIsComplete ? (
                           <Link
                             href={quizHref}
@@ -2696,7 +2697,8 @@ export default function EventsClient({
                                 "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums",
                                 quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
                               )}>
-                                {savedQuestionCount} / {targetQuestionCount}
+                                <span className="sm:hidden">{readyRoundCount} / {categoryCounts.length} rounds</span>
+                                <span className="hidden sm:inline">{savedQuestionCount} / {targetQuestionCount}</span>
                               </span>
                             }
                           >
@@ -2709,9 +2711,22 @@ export default function EventsClient({
                               const done = cat.count >= cat.question_count;
                               return (
                                 <div key={cat.id} className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
-                                  <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
+                                  <span className="flex min-w-0 items-center gap-2.5">
+                                    <span
+                                      aria-hidden="true"
+                                      className={cn(
+                                        "h-2 w-2 shrink-0 rounded-full sm:hidden",
+                                        done ? "bg-admin-success" : cat.count > 0 ? "bg-admin-warning" : "bg-admin-line"
+                                      )}
+                                    />
+                                    <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
+                                  </span>
+                                  <span className="shrink-0 text-[13px] font-semibold text-admin-muted tabular-nums sm:hidden">
+                                    <span className="sr-only">{done ? "Ready, " : cat.count > 0 ? `${remaining} more needed, ` : "Not started, "}</span>
+                                    {cat.count} / {cat.question_count}
+                                  </span>
                                   <span className={cn(
-                                    "inline-flex min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums",
+                                    "hidden min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums sm:inline-flex",
                                     done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
                                   )}>
                                     {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
