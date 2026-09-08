@@ -32,6 +32,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import InstallPrompt from "@/components/admin/install-prompt"
 import { cn } from "@/lib/utils"
 import { printHostCopy } from "@/lib/quiz/host-copy-print"
+import { useAdminPageTitle } from "@/lib/admin-page-title"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
@@ -509,13 +510,16 @@ export default function PrivateLayoutClient({
                     }
                 }
                 if (leaf) {
+                    /* Back lands on the list with this event's sheet open,
+                       which is where the visitor came from. */
+                    const sheetHref = `${marketHref}?open=${leaf}`
                     return {
                         title: "Market",
                         subtitle: `#${leaf}`,
-                        backHref: marketHref,
+                        backHref: sheetHref,
                         trail: [
                             { label: "Settings", href: "/settings" },
-                            { label: "Market", href: marketHref },
+                            { label: "Market", href: sheetHref },
                             { label: `#${leaf}` },
                         ],
                     }
@@ -540,7 +544,14 @@ export default function PrivateLayoutClient({
     }
 
     const { title, subtitle, backHref, description = null, trail, action } = getPageInfo() as PageInfo
-    const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
+    /* A record page can publish its own name; it replaces the id-based
+       subtitle in both headers and as the last breadcrumb. */
+    const pageTitle = useAdminPageTitle()
+    const shownSubtitle = pageTitle ?? subtitle
+    const baseCrumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
+    const crumbs: Crumb[] = pageTitle
+        ? baseCrumbs.map((crumb, index) => (index === baseCrumbs.length - 1 ? { ...crumb, label: pageTitle } : crumb))
+        : baseCrumbs
     const headerHidden = useHideHeaderOnScroll()
 
     return (
@@ -872,7 +883,7 @@ export default function PrivateLayoutClient({
                             <span className="h-11 w-11 shrink-0" aria-hidden="true" />
                         )}
                         <h1 className="min-w-0 flex-1 truncate text-center text-[17px] leading-tight font-bold tracking-tight text-admin-ink">
-                            {subtitle ?? title}
+                            {shownSubtitle ?? title}
                         </h1>
                         {action ? (
                             <HeaderActionControl action={action} compact />
@@ -916,7 +927,7 @@ export default function PrivateLayoutClient({
                             </nav>
                         )}
                         <h1 className="truncate text-xl leading-tight font-bold tracking-tight text-admin-ink lg:text-2xl">
-                            {subtitle ?? title}
+                            {shownSubtitle ?? title}
                         </h1>
                         {description && (
                             <p className="mt-1 max-w-[70ch] truncate text-sm leading-normal font-normal text-admin-muted">

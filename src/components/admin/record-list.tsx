@@ -152,7 +152,10 @@ export function RecordList({
           onClick={() => collapsible && setCollapsed((c) => !c)}
           className={cn(
             "order-1 min-w-0 text-left",
-            toolbar ? "flex-1 sm:flex-none" : "flex-1",
+            /* A zero flex basis would let the search box share the title's
+               line and squash the title to nothing; claiming half the line
+               forces the search onto its own row on phones. */
+            toolbar ? "flex-1 max-sm:min-w-[50%] sm:flex-none" : "flex-1",
           )}
         >
           <span className="block truncate text-[11px] font-semibold tracking-wide text-admin-primary">
@@ -165,8 +168,18 @@ export function RecordList({
             </span>
           )}
         </button>
+        {/* On a phone the search box takes its own line and the Filters
+            toggle sits at the right end of that line, beside the thing it
+            filters, rather than up with the add button. */}
         {toolbar && (
-          <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1">{toolbar}</div>
+          <div
+            className={cn(
+              "order-3 min-w-0 sm:order-2 sm:w-auto sm:flex-1",
+              filters ? "max-sm:grow max-sm:basis-[calc(100%-3.25rem)]" : "w-full",
+            )}
+          >
+            {toolbar}
+          </div>
         )}
         {filters && (
           <button
@@ -177,6 +190,7 @@ export function RecordList({
             title={showFilters ? "Hide filters" : "Show filters"}
             className={cn(
               "order-2 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold transition-colors sm:order-3 sm:h-8",
+              toolbar && "max-sm:order-3 max-sm:h-11 max-sm:w-11 max-sm:justify-center max-sm:rounded-xl max-sm:px-0",
               showFilters || activeFilterCount > 0
                 ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
                 : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink",

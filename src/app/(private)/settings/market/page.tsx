@@ -42,10 +42,10 @@ type EventRow = StockMarketEventRow & {
 export default async function MarketSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ edit?: string; open?: string }>;
 }) {
   const supabase = await createClient();
-  const { edit } = await searchParams;
+  const { edit, open } = await searchParams;
 
   const [
     { data: sessionRow },
@@ -86,12 +86,28 @@ export default async function MarketSettingsPage({
       config: resolveMarketConfig(sessionRow.config),
       stockMarketEventId: sessionRow.stock_market_event_id ?? null,
     };
-    const { data: instrumentRows } = await supabase
-      .from("market_instruments")
-      .select("*")
-      .eq("session_id", sessionRow.id)
-      .order("display_name", { ascending: true });
-    instruments = (instrumentRows ?? []).map((row) => ({
+    const [{ data: instrumentRows }, { data: eventItemRows }] = await Promise.all([
+      supabase
+        .from("market_instruments")
+        .select("*")
+        .eq("session_id", sessionRow.id)
+        .order("display_name", { ascending: true }),
+      sessionRow.stock_market_event_id != null
+        ? supabase
+            .from("stock_market_event_items")
+            .select("menu_item_id")
+            .eq("event_id", sessionRow.stock_market_event_id)
+        : Promise.resolve({ data: null }),
+    ]);
+    /* Same rule as the public board: only drinks still on the open event are
+       listed, so the trading floor matches what guests can see. */
+    const onEvent =
+      eventItemRows == null
+        ? null
+        : new Set((eventItemRows as { menu_item_id: number }[]).map((row) => row.menu_item_id));
+    instruments = (instrumentRows ?? [])
+      .filter((row) => onEvent == null || onEvent.has(row.menu_item_id))
+      .map((row) => ({
       id: row.id,
       name: row.display_name,
       serve: row.serve,
@@ -179,6 +195,7 @@ export default async function MarketSettingsPage({
   );
 
   const editId = edit && /^\d+$/.test(edit) ? Number(edit) : null;
+  const openId = open && /^\d+$/.test(open) ? Number(open) : null;
 
   return (
     <MarketClient
@@ -191,6 +208,7 @@ export default async function MarketSettingsPage({
       mappingRows={mappingRows}
       tillRestore={tillRestore}
       initialEditId={editId}
+      initialOpenId={openId}
     />
   );
 }

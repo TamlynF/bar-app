@@ -4,28 +4,35 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRight,
   CandlestickChart,
   Check,
+  ChevronDown,
+  ChevronRight,
   Link2,
   Loader2,
   MonitorPlay,
+  MoreHorizontal,
   Play,
   PowerOff,
   RotateCcw,
   SearchX,
+  Square,
   TrendingDown,
   Upload,
   Wand2,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   DetailCard,
-  DetailCell,
   EmptyState,
   ErrorBox,
   FilterChip,
@@ -54,7 +61,7 @@ import {
   saveStockMarketEventAction,
   setStockOverrideAction,
 } from "./actions";
-import { CONFIG_FIELDS, ConfigHelp, PUSH_ALERTS_FIELD } from "./config-fields";
+import { CONFIG_FIELDS, ConfigHelp, PUSH_ALERTS_FIELD, configSummary } from "./config-fields";
 
 export type SessionSummary = {
   id: number;
@@ -123,8 +130,15 @@ const OUTLINE_BUTTON =
   "flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:opacity-50 sm:h-9";
 const NEUTRAL_BUTTON =
   "flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-line px-4 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface disabled:opacity-50 sm:h-9";
+/* Row actions are icon-only on phones, so they sit as round 44px targets
+   rather than wide pills with their label hidden. */
+const ROW_ICON_BUTTON = "max-sm:w-11 max-sm:rounded-full max-sm:px-0";
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+/* Every settings value sits in the same fixed column, with the browser's
+   number spinners hidden so the digits line up down the card. */
+const CONFIG_VALUE =
+  "w-20 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 function ConfigFormRows({ config }: { config: MarketConfig }) {
   return (
@@ -132,28 +146,32 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
       {CONFIG_FIELDS.map((field) => (
         <FormRow key={field.key} label={field.label} dense>
           <ConfigHelp field={field} />
-          <input
-            type="number"
-            name={field.key}
-            aria-label={field.label}
-            defaultValue={config[field.key]}
-            step={field.step}
-            min="0"
-            required
-            className={FIELD_INPUT}
-          />
+          <span className="flex flex-1 justify-end">
+            <input
+              type="number"
+              name={field.key}
+              aria-label={field.label}
+              defaultValue={config[field.key]}
+              step={field.step}
+              min="0"
+              required
+              className={cn(FIELD_INPUT, CONFIG_VALUE)}
+            />
+          </span>
         </FormRow>
       ))}
       <FormRow label={PUSH_ALERTS_FIELD.label} dense>
         <ConfigHelp field={PUSH_ALERTS_FIELD} />
         <span className="flex flex-1 justify-end">
-          <input
-            type="checkbox"
-            name="pushAlertsEnabled"
-            aria-label={PUSH_ALERTS_FIELD.label}
-            defaultChecked={config.pushAlertsEnabled}
-            className="h-4 w-4 cursor-pointer accent-admin-primary"
-          />
+          <span className={cn(CONFIG_VALUE, "flex justify-end")}>
+            <input
+              type="checkbox"
+              name="pushAlertsEnabled"
+              aria-label={PUSH_ALERTS_FIELD.label}
+              defaultChecked={config.pushAlertsEnabled}
+              className="h-4 w-4 cursor-pointer accent-admin-primary"
+            />
+          </span>
         </span>
       </FormRow>
     </TooltipProvider>
@@ -205,9 +223,14 @@ function DrinkPicker({
         const onCount = ids.filter((id) => selectedSet.has(id)).length;
         const allOn = onCount === ids.length;
         return (
-          <div key={group.id} className="px-4 py-2 sm:px-5">
-            <label className="flex min-h-9 cursor-pointer items-center justify-between gap-3">
-              <span className="flex items-center gap-2">
+          <details key={group.id} className="group/cat">
+            {/* The group checkbox lives in the summary but must not toggle it:
+                its clicks stop before they reach the summary. */}
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-admin-bg px-4 py-1 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+              <label
+                className="flex min-h-9 cursor-pointer items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <input
                   type="checkbox"
                   checked={allOn}
@@ -215,13 +238,19 @@ function DrinkPicker({
                   aria-label={`Select all ${group.name}`}
                   className="h-4 w-4 cursor-pointer accent-admin-primary"
                 />
-                <span className="text-[13px] font-bold text-admin-ink">{group.name}</span>
+                <span className="text-[13px] font-bold text-admin-ink sm:text-sm">{group.name}</span>
+              </label>
+              <span className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-admin-muted tabular-nums">
+                  {onCount}/{ids.length}
+                </span>
+                <ChevronDown
+                  className="h-4 w-4 text-admin-muted transition-transform duration-200 group-open/cat:rotate-180"
+                  aria-hidden="true"
+                />
               </span>
-              <span className="text-[11px] font-semibold text-admin-muted tabular-nums">
-                {onCount}/{ids.length}
-              </span>
-            </label>
-            <div className="mt-1 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            </summary>
+            <div className="grid grid-cols-1 gap-x-4 bg-admin-card px-4 py-2 sm:grid-cols-2 sm:px-5">
               {group.drinks.map((drink) => (
                 <label
                   key={drink.id}
@@ -238,7 +267,7 @@ function DrinkPicker({
                 </label>
               ))}
             </div>
-          </div>
+          </details>
         );
       })}
     </div>
@@ -282,52 +311,77 @@ function EventForm({
             className={FIELD_INPUT}
           />
         </FormRow>
-        <FormRow label="Opens at" required dense>
-          <input
-            type="time"
-            name="open_time"
-            required
-            aria-label="Opening time"
-            defaultValue={event?.openTime || "19:00"}
-            className={FIELD_INPUT}
-          />
-        </FormRow>
-        <FormRow label="Closes at" required dense>
-          <input
-            type="time"
-            name="close_time"
-            required
-            aria-label="Closing time"
-            defaultValue={event?.closeTime || "23:30"}
-            className={FIELD_INPUT}
-          />
+        <FormRow label="Hours" required dense>
+          <span className="flex flex-1 items-center justify-end gap-2">
+            <input
+              type="time"
+              name="open_time"
+              required
+              aria-label="Opening time"
+              defaultValue={event?.openTime || "19:00"}
+              className={cn(FIELD_INPUT, "w-24 flex-none")}
+            />
+            <span className="text-[11px] font-semibold text-admin-muted">to</span>
+            <input
+              type="time"
+              name="close_time"
+              required
+              aria-label="Closing time"
+              defaultValue={event?.closeTime || "23:30"}
+              className={cn(FIELD_INPUT, "w-24 flex-none")}
+            />
+          </span>
         </FormRow>
       </DetailCard>
 
-      <div>
-        <p className="mb-2 px-1 text-[11px] font-semibold text-admin-muted">Market settings</p>
-        <DetailCard className="divide-y divide-admin-line/50">
-          <ConfigFormRows config={config} />
-        </DetailCard>
-        {live && (
-          <p className="mt-2 px-1 text-[11px] text-admin-muted">
-            This event&apos;s market is live. Changes here apply the next time it is opened; use
-            the live settings above to change the running market.
-          </p>
-        )}
-      </div>
+      {/* The seven tuning numbers are rarely touched, so they start folded
+          behind a one-line summary of what they currently say. */}
+      <DetailCard>
+        <details className="group">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-semibold tracking-wide text-admin-muted">
+                Market settings
+              </span>
+              <span className="mt-0.5 block truncate text-[12px] text-admin-ink group-open:hidden">
+                {configSummary(config)}
+              </span>
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200 group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="divide-y divide-admin-line/50 border-t border-admin-line">
+            <ConfigFormRows config={config} />
+          </div>
+          {live && (
+            <p className="border-t border-admin-line px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+              The market is live now. These changes apply the next time it opens.
+            </p>
+          )}
+        </details>
+      </DetailCard>
 
-      <div>
-        <div className="mb-2 flex items-center justify-between px-1">
-          <p className="text-[11px] font-semibold text-admin-muted">Drinks on the board</p>
-          <p className="text-[11px] font-semibold text-admin-muted tabular-nums">
-            {selectedDrinks.length} selected
-          </p>
-        </div>
-        <DetailCard>
-          <DrinkPicker drinks={drinks} selected={selectedDrinks} onChange={setSelectedDrinks} />
-        </DetailCard>
-      </div>
+      <DetailCard>
+        <details open className="group/drinks">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-admin-surface px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="text-[11px] font-semibold tracking-wide text-admin-muted sm:text-xs">Drinks on the board</span>
+            <span className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-admin-muted tabular-nums">
+                {selectedDrinks.length} selected
+              </span>
+              <ChevronDown
+                className="h-4 w-4 text-admin-muted transition-transform duration-200 group-open/drinks:rotate-180"
+                aria-hidden="true"
+              />
+            </span>
+          </summary>
+          <div className="border-t border-admin-line">
+            <DrinkPicker drinks={drinks} selected={selectedDrinks} onChange={setSelectedDrinks} />
+          </div>
+        </details>
+      </DetailCard>
 
       {formError && <ErrorBox message={formError} />}
     </form>
@@ -365,6 +419,18 @@ function stockLabel(state: StockState): { label: string; className: string } {
   return { label: "In stock", className: "bg-admin-success-bg text-admin-success" };
 }
 
+/* The seven raw config numbers, read as a person would say them. */
+function settingTiles(config: MarketConfig): { label: string; value: string }[] {
+  return [
+    { label: "Prices move", value: `every ${config.tickIntervalSec}s` },
+    { label: "Volatility", value: String(config.noiseSigma) },
+    { label: "Price range", value: `${config.floorPct}× to ${config.ceilPct}× base` },
+    { label: "Alert on a move of", value: `${Math.round(config.moveNotifyPct * 100)}%` },
+    { label: "Low stock at", value: `${config.lowStockThreshold} left` },
+    { label: "Phone alerts", value: config.pushAlertsEnabled ? "On" : "Off" },
+  ];
+}
+
 function formatRunDate(iso: string | null): string {
   if (!iso) return "Never run";
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -380,6 +446,7 @@ export default function MarketClient({
   mappingRows,
   tillRestore,
   initialEditId,
+  initialOpenId,
 }: {
   session: SessionSummary | null;
   instruments: InstrumentSummary[];
@@ -390,6 +457,7 @@ export default function MarketClient({
   mappingRows: MappingRow[];
   tillRestore: TillRestoreSummary | null;
   initialEditId: number | null;
+  initialOpenId: number | null;
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
@@ -419,8 +487,29 @@ export default function MarketClient({
     router.replace("/settings/market");
   }, [initialEditId, events, openView, startEdit, router]);
 
+  /* The open sheet is mirrored into the URL (?open=id) so the event's own
+     page can send the back button, and the browser's back, straight into it. */
+  useEffect(() => {
+    if (openedFromUrl.current || initialOpenId == null) return;
+    const target = events.find((event) => event.id === initialOpenId);
+    if (!target) return;
+    openedFromUrl.current = true;
+    openView(target);
+  }, [initialOpenId, events, openView]);
+
+  function openEventSheet(event: StockMarketEventSummary) {
+    sheet.openView(event);
+    router.replace(`/settings/market?open=${event.id}`, { scroll: false });
+  }
+
+  function closeEventSheet() {
+    sheet.close();
+    router.replace("/settings/market", { scroll: false });
+  }
+
   const live = session !== null;
   const liveEventId = session?.stockMarketEventId ?? null;
+  const liveEventName = events.find((event) => event.id === liveEventId)?.name ?? null;
   const tradeableCount = categories.reduce((sum, cat) => sum + cat.tradeableCount, 0);
 
   const mappedCount = useMemo(
@@ -593,7 +682,7 @@ export default function MarketClient({
   }, [selected, drinkNames]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full max-w-4xl space-y-4 py-3 sm:px-4 sm:py-0 md:px-6">
       {ConfirmDialogUI}
 
 
@@ -601,6 +690,7 @@ export default function MarketClient({
         variant="panel"
         title="Stock market events"
         count={shownEvents.length}
+        collapsible={false}
         onAdd={sheet.openAdd}
         addLabel="New event"
         activeFilterCount={filter === "all" ? 0 : 1}
@@ -651,13 +741,13 @@ export default function MarketClient({
             return (
               <ListRow
                 key={event.id}
-                onClick={() => sheet.openView(event)}
+                onClick={() => openEventSheet(event)}
                 selected={selected?.id === event.id}
                 status={
                   <StatusPill
                     tone={isLive ? "success" : "neutral"}
                     icon={isLive ? <Check className="h-3 w-3" /> : undefined}
-                    className="sm:w-20 sm:justify-center"
+                    className="max-sm:hidden sm:w-20 sm:justify-center"
                   >
                     {isLive ? "Live" : "Ready"}
                   </StatusPill>
@@ -668,44 +758,35 @@ export default function MarketClient({
                     onClick={(e) => e.stopPropagation()}
                   >
                     {isLive ? (
-                      <>
-                        <a
-                          href="/market/board"
-                          target="_blank"
-                          rel="noreferrer"
-                          className={NEUTRAL_BUTTON}
-                        >
-                          <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-                          <span className="hidden sm:inline">Open big screen</span>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={handleEnd}
-                          disabled={isPending}
-                          className={NEUTRAL_BUTTON}
-                        >
-                          <X className="h-4 w-4" aria-hidden="true" />
-                          <span className="hidden sm:inline">Close market</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCrash}
-                          disabled={isPending}
-                          className={OUTLINE_BUTTON}
-                        >
-                          <TrendingDown className="h-4 w-4" aria-hidden="true" />
-                          <span className="hidden sm:inline">Crash market</span>
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={handleEnd}
+                        disabled={isPending}
+                        aria-label="Close market"
+                        title="Close market"
+                        className={cn(
+                          PRIMARY_BUTTON,
+                          ROW_ICON_BUTTON,
+                          "bg-admin-error hover:bg-admin-error/90"
+                        )}
+                      >
+                        <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                        <span className="hidden sm:inline">Close market</span>
+                      </button>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleOpen(event)}
                         disabled={isPending || live}
-                        title={live ? "Close the live market first" : undefined}
-                        className={PRIMARY_BUTTON}
+                        aria-label="Open market"
+                        title={live ? "Close the live market first" : "Open market"}
+                        className={cn(
+                          PRIMARY_BUTTON,
+                          ROW_ICON_BUTTON,
+                          "bg-admin-success hover:bg-admin-success/90"
+                        )}
                       >
-                        <Play className="h-4 w-4" aria-hidden="true" />
+                        <Play className="h-4 w-4 fill-current max-sm:ml-0.5" aria-hidden="true" />
                         <span className="hidden sm:inline">Open market</span>
                       </button>
                     )}
@@ -716,8 +797,11 @@ export default function MarketClient({
                   <p className="truncate text-[13px] font-semibold text-admin-ink">{event.name}</p>
                   <p className="text-[11px] text-admin-muted">
                     {formatTimeWindow(event.openTime, event.closeTime)} · {event.menuItemIds.length}{" "}
-                    {event.menuItemIds.length === 1 ? "drink" : "drinks"} ·{" "}
-                    {event.lastRunAt ? `Last run ${formatRunDate(event.lastRunAt)}` : "Never run"}
+                    {event.menuItemIds.length === 1 ? "drink" : "drinks"}
+                    <span className="hidden sm:inline"> · </span>
+                    <span className="block sm:inline">
+                      {event.lastRunAt ? `Last run ${formatRunDate(event.lastRunAt)}` : "Never run"}
+                    </span>
                   </p>
                 </div>
               </ListRow>
@@ -728,15 +812,16 @@ export default function MarketClient({
 
       <RecordSheet
         open={sheet.open}
-        onClose={sheet.close}
+        onClose={closeEventSheet}
         mode={mode}
         title={sheetTitle}
         recordId={selected?.id}
         formId="stock-market-event-form"
         isPending={sheet.isPending}
         onEdit={sheet.startEdit}
-        onCancel={mode === "add" || !selected ? sheet.close : () => sheet.openView(selected)}
+        onCancel={mode === "add" || !selected ? closeEventSheet : () => sheet.openView(selected)}
         confirmUI={sheet.ConfirmDialogUI}
+        openHref={selected ? { href: `/settings/market/${selected.id}`, label: "Drinks, prices and history" } : undefined}
         status={
           selected && (
             <StatusPill tone={selectedIsLive ? "success" : "neutral"} showLabelOnMobile>
@@ -770,60 +855,77 @@ export default function MarketClient({
       >
         {!showForm && selected && (
           <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-            <DetailCard>
-              <DetailCell dense label="Name" value={selected.name} />
-              <DetailCell dense label="Opens at" value={selected.openTime} />
-              <DetailCell dense label="Closes at" value={selected.closeTime} />
+            <DetailCard className="p-4 sm:p-5">
+              <p className="text-lg leading-tight font-bold text-admin-ink sm:text-xl">{selected.name}</p>
+              <p className="mt-1.5 text-[13px] text-admin-muted sm:text-sm">
+                {formatTimeWindow(selected.openTime, selected.closeTime)} · {selected.menuItemIds.length}{" "}
+                {selected.menuItemIds.length === 1 ? "drink" : "drinks"}
+              </p>
+              <p className="mt-0.5 text-[13px] text-admin-muted sm:text-sm">
+                {selected.lastRunAt ? `Last run ${formatRunDate(selected.lastRunAt)}` : "Never run"}
+              </p>
             </DetailCard>
-            <DetailCard>
-              {CONFIG_FIELDS.map((field) => (
-                <DetailCell
-                  key={field.key}
-                  dense
-                  label={field.label}
-                  value={String(selected.config[field.key])}
-                />
-              ))}
-              <DetailCell
-                dense
-                label={PUSH_ALERTS_FIELD.label}
-                value={selected.config.pushAlertsEnabled ? "On" : "Off"}
-              />
+
+            <DetailCard className="p-4 sm:p-5">
+              <p className="mb-3 text-[11px] font-semibold tracking-wide text-admin-muted sm:text-xs">Settings</p>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 sm:gap-y-4">
+                {settingTiles(selected.config).map((tile) => (
+                  <div key={tile.label} className="min-w-0">
+                    <dt className="text-[11px] text-admin-muted sm:text-xs">{tile.label}</dt>
+                    <dd className="mt-0.5 text-sm font-semibold text-admin-ink tabular-nums sm:text-base">{tile.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </DetailCard>
+
             <DetailCard>
-              <DetailCell
-                dense
-                label="Last run"
-                value={selected.lastRunAt ? formatRunDate(selected.lastRunAt) : "Never"}
-              />
-              <DetailCell
-                multiline
-                label="Drinks"
-                value={
-                  selectedDrinksByCategory.length === 0 ? (
-                    "None selected"
-                  ) : (
-                    <span className="block space-y-1 text-left">
-                      {selectedDrinksByCategory.map(([category, names]) => (
-                        <span key={category} className="block">
-                          <span className="text-[11px] font-semibold text-admin-muted">
-                            {category}:{" "}
-                          </span>
-                          {names.join(", ")}
-                        </span>
-                      ))}
+              <details open className="group/drinks">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-admin-surface px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+                  <span className="text-[11px] font-semibold tracking-wide text-admin-muted sm:text-xs">Drinks on the board</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-admin-muted tabular-nums sm:text-xs">
+                      {selected.menuItemIds.length}
                     </span>
-                  )
-                }
-              />
+                    <ChevronDown
+                      className="h-4 w-4 text-admin-muted transition-transform duration-200 group-open/drinks:rotate-180"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </summary>
+                <div className="border-t border-admin-line">
+                  {selectedDrinksByCategory.length === 0 ? (
+                    <p className="px-4 py-3 text-[13px] text-admin-muted sm:px-5">None selected</p>
+                  ) : (
+                    <div className="divide-y divide-admin-line/50">
+                      {selectedDrinksByCategory.map(([category, names]) => (
+                        <details key={category} className="group/cat">
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 bg-admin-bg px-4 py-2 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+                            <span className="text-[13px] font-bold text-admin-ink sm:text-sm">{category}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="text-[11px] font-semibold text-admin-muted tabular-nums sm:text-xs">{names.length}</span>
+                              <ChevronDown
+                                className="h-4 w-4 text-admin-muted transition-transform duration-200 group-open/cat:rotate-180"
+                                aria-hidden="true"
+                              />
+                            </span>
+                          </summary>
+                          <ul className="m-0 flex list-none flex-wrap gap-1.5 bg-admin-card px-4 py-3 sm:px-5">
+                            {names.map((name) => (
+                              <li
+                                key={name}
+                                className="rounded-lg border border-admin-line bg-admin-card px-2 py-1 text-[12px] font-medium text-admin-ink sm:text-[13px]"
+                              >
+                                {name}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
             </DetailCard>
-            <Link
-              href={`/settings/market/${selected.id}`}
-              className="flex h-11 items-center justify-center gap-1.5 rounded-lg border border-admin-primary text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
-            >
-              Full details and past nights
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
             {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>
         )}
@@ -842,7 +944,53 @@ export default function MarketClient({
 
       {live && (
         <section className={CARD}>
-          <h3 className="mb-3 text-sm font-bold text-admin-ink">Trading floor</h3>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-bold text-admin-ink">Trading floor</h3>
+            {liveEventName && liveEventId != null && (
+              <Link
+                href={`/settings/market/${liveEventId}`}
+                title="Open this market night"
+                className="flex min-h-11 min-w-0 items-center rounded-full transition-opacity hover:opacity-80"
+              >
+                <StatusPill tone="success" showLabelOnMobile className="min-w-0">
+                  <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-success opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-admin-success" />
+                  </span>
+                  <span className="truncate">Live · {liveEventName}</span>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                </StatusPill>
+              </Link>
+            )}
+          </div>
+          {/* The event row only carries Stop; the live market's other two
+              actions live here, beside the prices they affect. */}
+          <div className="mb-4 flex items-center gap-2 sm:max-w-md">
+            <a
+              href="/market/board"
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                NEUTRAL_BUTTON,
+                "flex-1 border-admin-info/40 bg-admin-info-bg whitespace-nowrap text-admin-info hover:bg-admin-info/15"
+              )}
+            >
+              <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+              Big screen
+            </a>
+            <button
+              type="button"
+              onClick={handleCrash}
+              disabled={isPending}
+              className={cn(
+                NEUTRAL_BUTTON,
+                "flex-1 border-admin-warning/40 bg-admin-warning-bg whitespace-nowrap text-admin-warning hover:bg-admin-warning/15"
+              )}
+            >
+              <TrendingDown className="h-4 w-4" aria-hidden="true" />
+              Crash market
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-125 text-left">
               <thead>
@@ -911,19 +1059,29 @@ export default function MarketClient({
         </section>
       )}
 
-      <section className={CARD}>
+      <section className={cn(CARD, mappingOpen ? "max-sm:bg-admin-line/60" : "max-sm:bg-admin-surface")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Link2 className="h-5 w-5 text-admin-primary" aria-hidden="true" />
-            <div>
-              <h3 className="text-sm font-bold text-admin-ink">Square links</h3>
-              <p className="text-[11px] text-admin-muted">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Link2 className="h-5 w-5 shrink-0 text-admin-primary" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-admin-ink">Square links</h3>
+                <StatusPill
+                  tone={primaryCount > 0 && mappedCount >= primaryCount ? "success" : "warning"}
+                  icon={primaryCount > 0 && mappedCount >= primaryCount ? <Check className="h-3 w-3" /> : undefined}
+                  showLabelOnMobile
+                  className="sm:hidden"
+                >
+                  {mappedCount}/{primaryCount} linked
+                </StatusPill>
+              </div>
+              <p className="hidden text-[11px] text-admin-muted sm:block">
                 Till sales drive demand for linked serves; inventory drives sold-out alerts ·{" "}
                 {mappedCount}/{primaryCount} lead serves linked
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden flex-wrap items-center gap-2 sm:flex">
             <button
               type="button"
               onClick={handlePushToSquare}
@@ -953,6 +1111,38 @@ export default function MarketClient({
             <button type="button" onClick={openMappings} className={NEUTRAL_BUTTON}>
               {mappingOpen ? "Hide serves" : "Edit links"}
             </button>
+          </div>
+          <div className="flex w-full items-center gap-2 sm:hidden">
+            <button type="button" onClick={openMappings} className={cn(NEUTRAL_BUTTON, "flex-1 bg-admin-card")}>
+              <Link2 className="h-4 w-4" aria-hidden="true" />
+              {mappingOpen ? "Hide serves" : "Edit links"}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="More Square actions"
+                  title="More Square actions"
+                  className={cn(NEUTRAL_BUTTON, "w-11 shrink-0 bg-admin-card px-0")}
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem disabled={isPending} onSelect={handlePushToSquare} className="min-h-11">
+                  <Upload className="h-4 w-4" />
+                  Send menu to Square
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={isPending} onSelect={handleAutoMatch} className="min-h-11">
+                  <Wand2 className="h-4 w-4" />
+                  Auto-match serves
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -988,7 +1178,7 @@ export default function MarketClient({
         )}
 
         {mappingOpen && (
-          <div className="mt-4">
+          <div className="mt-4 max-sm:-mx-4 max-sm:-mb-4 max-sm:rounded-b-2xl max-sm:border-t max-sm:border-admin-line max-sm:bg-admin-card max-sm:px-4 max-sm:pt-1 max-sm:pb-3">
             {loadingVariations && (
               <p className="flex items-center gap-2 py-4 text-[13px] text-admin-muted">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

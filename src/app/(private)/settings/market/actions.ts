@@ -11,6 +11,7 @@ import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig } from "@
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import {
   EMPTY_OVERRIDES,
+  optionalNumber,
   overridesFromRow,
   overridesToRow,
   type DrinkOverrideRow,
@@ -1035,4 +1036,70 @@ export async function pushMenuToSquareAction() {
     console.error("[market] push to Square failed:", err);
     return { error: "Sending the menu to Square failed. Check the Square configuration." };
   }
+}
+
+export type DrinkPriceDraft = {
+  menuItemId: number;
+  overrides: Record<keyof DrinkOverrides, string | number | null>;
+};
+
+export async function saveEventDrinkPricesAction(eventId: number, rows: DrinkPriceDraft[]) {
+  const supabase = await createClient();
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  if (rows.length === 0) return { error: "Nothing to save." };
+  if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
+
+  const payload: (DrinkOverrideRow & { event_id: number; menu_item_id: number })[] = [];
+  for (const row of rows) {
+    if (!Number.isInteger(row.menuItemId) || row.menuItemId <= 0) return { error: "Missing drink." };
+    const parsed = drinkOverridesSchema.safeParse(row.overrides);
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Check the prices." };
+    }
+    payload.push({ event_id: eventId, menu_item_id: row.menuItemId, ...overridesToRow(parsed.data) });
+  }
+
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .upsert(payload, { onConflict: "event_id,menu_item_id" });
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true, count: payload.length };
+}
+
+export async function setInstrumentPriceAction(instrumentId: number, price: number) {
+  const supabase = await createClient();
+  if (!Number.isFinite(price) || price <= 0) return { error: "Enter a price above zero." };
+
+  const { data: session } = await supabase
+    .from("market_sessions")
+    .select("id, config")
+    .eq("status", "live")
+    .maybeSingle();
+  if (!session) return { error: "No live market." };
+
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("id, base_price, min_price, max_price")
+    .eq("id", instrumentId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not trading on the live market." };
+
+  const config = resolveMarketConfig(session.config);
+  const basePrice = Number(instrument.base_price);
+  const floor = optionalNumber(instrument.min_price) ?? basePrice * config.floorPct;
+  const ceil = optionalNumber(instrument.max_price) ?? basePrice * config.ceilPct;
+  const clamped = Math.min(Math.max(price, floor), ceil);
+  const rounded = Math.round(clamped / config.roundStep) * config.roundStep;
+  const currentPrice = Number(rounded.toFixed(2));
+
+  const { error } = await supabase
+    .from("market_instruments")
+    .update({ current_price: currentPrice, updated_at: new Date().toISOString() })
+    .eq("id", instrument.id);
+  if (error) return { error: error.message };
+
+  revalidateMarket();
+  return { success: true, price: currentPrice };
 }

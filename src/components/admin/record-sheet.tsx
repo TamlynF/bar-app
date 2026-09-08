@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
@@ -14,7 +14,9 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import {
+  ArrowRight,
   Loader2,
   Save,
   Pencil,
@@ -26,6 +28,14 @@ import {
 } from "lucide-react";
 
 export type SheetMode = "closed" | "add" | "view" | "edit";
+
+function serializeForm(form: HTMLFormElement): string {
+  const parts: string[] = [];
+  for (const [key, value] of new FormData(form)) {
+    parts.push(`${key}=${value instanceof File ? `${value.name}:${value.size}` : value}`);
+  }
+  return parts.sort().join("\n");
+}
 
 type ActionResult = { error?: string } | void | null | undefined;
 
@@ -242,6 +252,7 @@ export function RecordSheet({
   systemInfo,
   status,
   actions,
+  openHref,
   layout = "sheet",
   emptyState,
   children,
@@ -260,6 +271,9 @@ export function RecordSheet({
   // Lands in the header menu, not the footer, so the footer stays one button.
   onDelete?: () => void;
   onCancel?: () => void;
+  /* A record with a page of its own: the view footer leads with a link to it
+     and Edit becomes the secondary button. */
+  openHref?: { href: string; label: string };
   confirmUI?: React.ReactNode;
   // Audit trail behind "System info" in the header menu. Hidden while adding,
   // since a record that does not exist yet has nothing to report.
@@ -286,9 +300,44 @@ export function RecordSheet({
   // would read as a click outside itself and shut straight away.
   const panelPending = useRef(false);
 
+  /* Closing a form only asks about discarding when something has actually
+     changed: a user edit fires input/change on the form, and as a backstop
+     the form's values are compared with a snapshot taken when it mounted
+     (controls that set values without events still get caught). */
+  const dirtyRef = useRef(false);
+  const snapshotRef = useRef<string | null>(null);
+  useEffect(() => {
+    dirtyRef.current = false;
+    snapshotRef.current = null;
+    if (!open || mode === "view" || mode === "closed") return;
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement)) return;
+    snapshotRef.current = serializeForm(form);
+    const mark = () => {
+      dirtyRef.current = true;
+    };
+    form.addEventListener("input", mark);
+    form.addEventListener("change", mark);
+    return () => {
+      form.removeEventListener("input", mark);
+      form.removeEventListener("change", mark);
+    };
+  }, [open, mode, formId]);
+
+  const hasChanges = () => {
+    if (dirtyRef.current) return true;
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement) || snapshotRef.current == null) return false;
+    return serializeForm(form) !== snapshotRef.current;
+  };
+
   const dismiss = async () => {
     if (mode === "view") {
       onClose();
+      return;
+    }
+    if (!hasChanges()) {
+      (onCancel ?? onClose)();
       return;
     }
     const ok = await confirm({
@@ -338,6 +387,11 @@ export function RecordSheet({
         <TitleTag className="min-w-0 flex-1 truncate px-1 text-base leading-tight font-bold tracking-tight text-admin-ink">
           {title}
         </TitleTag>
+        {/* The record's state sits in the header beside its title, so it is
+            read before the record and stays put while the body scrolls. */}
+        {status && mode !== "add" && (
+          <div className="flex shrink-0 items-center gap-1.5 pr-1">{status}</div>
+        )}
         {hasMenu ? (
           <Popover open={openPanel !== null} onOpenChange={(next) => { if (!next) closePanel(); }}>
             <PopoverAnchor asChild>
@@ -418,9 +472,6 @@ export function RecordSheet({
       </div>
 
       <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-        {status && mode !== "add" && (
-          <div className="flex flex-wrap items-center gap-1.5">{status}</div>
-        )}
         {children}
         <div className="h-4" />
       </div>
@@ -432,16 +483,31 @@ export function RecordSheet({
               into Save mid-click and the browser would submit the form it now
               points at. */}
           {mode === "view" ? (
-            <Button
-              key="view-actions"
-              type="button"
-              variant="ghost"
-              onClick={onEdit}
-              className="h-12 w-full rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            <div key="view-actions" className="flex items-center gap-2">
+              {/* A record with its own page gets that as the footer's main
+                  action; Edit steps aside to a narrower outline button. */}
+              {openHref && (
+                <Link
+                  href={openHref.href}
+                  className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-admin-primary px-4 text-[13px] font-semibold tracking-wide text-white shadow-lg transition-colors hover:bg-admin-primary-hover active:scale-95"
+                >
+                  {openHref.label}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onEdit}
+                className={cn(
+                  "h-12 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95",
+                  openHref ? "shrink-0" : "w-full",
+                )}
+              >
+                <Pencil className={cn("h-4 w-4", !openHref && "mr-2")} />
+                {openHref ? <span className="sr-only sm:not-sr-only sm:ml-2">Edit</span> : "Edit"}
+              </Button>
+            </div>
           ) : (
             <Button
               key="form-actions"
@@ -489,7 +555,7 @@ export function RecordSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+    <Sheet open={open} onOpenChange={(next) => { if (!next) void dismiss(); }}>
       <SheetContent
         side="bottom"
         showCloseButton={false}

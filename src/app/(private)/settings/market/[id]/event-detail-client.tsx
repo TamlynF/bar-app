@@ -1,18 +1,22 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
+  Check,
+  ChevronRight,
   History,
   Loader2,
   MonitorPlay,
-  Pencil,
   Play,
   Plus,
+  PoundSterling,
+  RotateCcw,
+  Save,
   SearchX,
   Sparkles,
+  Square,
   TrendingDown,
   X,
 } from "lucide-react";
@@ -48,11 +52,12 @@ import {
   endMarketAction,
   openStockMarketEventAction,
   removeEventDrinkAction,
+  saveEventDrinkPricesAction,
   saveEventDrinkPricingAction,
   saveNightOnlyDrinkAction,
+  setInstrumentPriceAction,
   setStockOverrideAction,
 } from "../actions";
-import { configSummary } from "../config-fields";
 
 export type LiveInstrument = {
   id: number;
@@ -95,6 +100,102 @@ export type EventSession = {
 };
 
 type AddPicker = { kind: "add" };
+
+const PRICE_KEYS = ["openingPrice", "minPrice", "maxPrice", "crashPrice"] as const;
+type PriceKey = (typeof PRICE_KEYS)[number];
+type PriceDraft = Record<PriceKey, string>;
+
+const PRICE_LABELS: Record<PriceKey, string> = {
+  openingPrice: "Opening",
+  minPrice: "Min",
+  maxPrice: "Max",
+  crashPrice: "Crash",
+};
+
+const EMPTY_DRAFT: PriceDraft = { openingPrice: "", minPrice: "", maxPrice: "", crashPrice: "" };
+
+function draftFromOverrides(overrides: DrinkOverrides): PriceDraft {
+  return {
+    openingPrice: overrides.openingPrice?.toString() ?? "",
+    minPrice: overrides.minPrice?.toString() ?? "",
+    maxPrice: overrides.maxPrice?.toString() ?? "",
+    crashPrice: overrides.crashPrice?.toString() ?? "",
+  };
+}
+
+function normalisePrice(value: string): string {
+  return value.trim() === "" ? "" : String(Number(value));
+}
+
+function sameDraft(a: PriceDraft, b: PriceDraft): boolean {
+  return PRICE_KEYS.every((key) => normalisePrice(a[key]) === normalisePrice(b[key]));
+}
+
+function hasDraftValue(draft: PriceDraft): boolean {
+  return PRICE_KEYS.some((key) => draft[key].trim() !== "");
+}
+
+type DrinkGroup = { name: string; drinks: EventDrink[] };
+
+function groupByCategory(drinks: EventDrink[]): DrinkGroup[] {
+  const groups: DrinkGroup[] = [];
+  for (const drink of drinks) {
+    const name = drink.nightOnly ? "Tonight only" : drink.categoryName;
+    const last = groups[groups.length - 1];
+    if (last && last.name === name) last.drinks.push(drink);
+    else groups.push({ name, drinks: [drink] });
+  }
+  return groups;
+}
+
+function PriceInput({
+  label,
+  value,
+  placeholder,
+  disabled,
+  autoFocus,
+  onChange,
+  onSubmit,
+  className,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  onChange: (value: string) => void;
+  onSubmit?: () => void;
+  className?: string;
+}) {
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      step="0.05"
+      min="0"
+      aria-label={label}
+      placeholder={placeholder}
+      value={value}
+      disabled={disabled}
+      autoFocus={autoFocus}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && onSubmit) {
+          event.preventDefault();
+          onSubmit();
+        }
+      }}
+      onChange={(event) => onChange(event.target.value)}
+      className={cn(
+        "h-10 w-full rounded-lg border border-admin-line bg-admin-card px-2 text-right text-sm font-semibold text-admin-ink tabular-nums outline-none placeholder:font-normal placeholder:text-admin-muted/50 focus:border-admin-primary disabled:opacity-50 [appearance:textfield] sm:h-9 sm:text-[13px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        className
+      )}
+    />
+  );
+}
+
+const ROW_ICON_BUTTON =
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:w-9";
 
 function stockLabel(state: StockState): { label: string; className: string } {
   if (state === "out")
@@ -158,6 +259,7 @@ function formatStamp(iso: string | null): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 }
 
@@ -242,31 +344,6 @@ function drinkSettings(
     effective: effectiveDrinkSettings(drink.basePrice, config, drink.overrides),
     defaults: defaultDrinkSettings(drink.basePrice, config),
   };
-}
-
-function OverrideCell({
-  drink,
-  config,
-  field,
-}: {
-  drink: EventDrink;
-  config: MarketConfig;
-  field: OverrideField;
-}) {
-  const settings = drinkSettings(drink, config);
-  if (!settings) return <>-</>;
-  const overridden = drink.overrides[field.key] != null;
-  return (
-    <span
-      className={cn(
-        "tabular-nums",
-        overridden ? "font-semibold text-admin-ink" : "text-admin-muted",
-      )}
-      title={overridden ? "Set on this drink" : "Event setting"}
-    >
-      {field.format(settings.effective[field.key])}
-    </span>
-  );
 }
 
 function OverrideFields({
@@ -495,6 +572,8 @@ export default function EventDetailClient({
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
+  const [priceDrafts, setPriceDrafts] = useState<Record<number, PriceDraft>>({});
+  const [priceEdit, setPriceEdit] = useState<{ instrumentId: number; value: string } | null>(null);
 
   const drinkSheet = useRecordSheet<EventDrink>({
     records: drinks,
@@ -510,6 +589,67 @@ export default function EventDetailClient({
       ),
     [drinks, needle],
   );
+  const groups = useMemo(() => groupByCategory(shownDrinks), [shownDrinks]);
+
+  const dirtyDrinks = drinks.filter((drink) => {
+    const draft = priceDrafts[drink.id];
+    return draft != null && !sameDraft(draft, draftFromOverrides(drink.overrides));
+  });
+
+  function draftFor(drink: EventDrink): PriceDraft {
+    return priceDrafts[drink.id] ?? draftFromOverrides(drink.overrides);
+  }
+
+  function setDraft(drink: EventDrink, key: PriceKey, value: string) {
+    setPriceDrafts((prev) => ({
+      ...prev,
+      [drink.id]: { ...(prev[drink.id] ?? draftFromOverrides(drink.overrides)), [key]: value },
+    }));
+  }
+
+  function resetDraft(drink: EventDrink) {
+    setPriceDrafts((prev) => ({ ...prev, [drink.id]: EMPTY_DRAFT }));
+  }
+
+  function handleSavePrices() {
+    if (dirtyDrinks.length === 0) return;
+    const rows = dirtyDrinks.map((drink) => ({
+      menuItemId: drink.id,
+      overrides: {
+        ...draftFor(drink),
+        lowStockAt: drink.overrides.lowStockAt,
+        alertThreshold: drink.overrides.alertThreshold,
+      },
+    }));
+    startTransition(async () => {
+      const result = await saveEventDrinkPricesAction(event.id, rows);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`Prices saved for ${rows.length} ${rows.length === 1 ? "drink" : "drinks"}.`);
+      router.refresh();
+    });
+  }
+
+  function startPriceEdit(instrument: LiveInstrument) {
+    setPriceEdit({ instrumentId: instrument.id, value: instrument.currentPrice.toFixed(2) });
+  }
+
+  function handleSetPrice() {
+    if (!priceEdit) return;
+    const price = Number(priceEdit.value);
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error("Enter a price above zero.");
+      return;
+    }
+    const { instrumentId } = priceEdit;
+    setPriceEdit(null);
+    run(
+      () => setInstrumentPriceAction(instrumentId, price),
+      "Price set - it shows on the board from the next tick."
+    );
+  }
 
   function run(
     action: () => Promise<{ error?: string } | void>,
@@ -598,6 +738,14 @@ export default function EventDetailClient({
       ? await saveEventDrinkPricingAction(formData)
       : await saveNightOnlyDrinkAction(formData);
     if ("error" in result && result.error) return { error: result.error };
+    const savedId = drinkSheet.selected?.id;
+    if (savedId != null) {
+      setPriceDrafts((prev) => {
+        const next = { ...prev };
+        delete next[savedId];
+        return next;
+      });
+    }
     router.refresh();
   });
 
@@ -634,90 +782,98 @@ export default function EventDetailClient({
     <div className="w-full space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
       {ConfirmDialogUI}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/settings/market"
-            aria-label="Back to stock market events"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-admin-card text-admin-primary hover:bg-admin-surface sm:h-9 sm:w-9"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold leading-tight text-admin-ink">
-                {event.name}
-              </h2>
-              <StatusPill tone={isLive ? "success" : "neutral"}>
-                {isLive ? "Live now" : "Ready"}
-              </StatusPill>
-            </div>
-            <p className="text-[11px] text-admin-muted">
-              {formatTimeWindow(event.openTime, event.closeTime)} ·{" "}
-              {drinks.length} {drinks.length === 1 ? "drink" : "drinks"} · Last
-              run: {event.lastRunAt ? formatStamp(event.lastRunAt) : "never"}
-            </p>
-            <p className="text-[11px] text-admin-muted">
-              {configSummary(event.config)}
-            </p>
+      <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="hidden text-base leading-tight font-bold text-admin-ink sm:block">
+              {event.name}
+            </h2>
+            <StatusPill tone={isLive ? "success" : "neutral"} showLabelOnMobile>
+              {isLive ? "Live now" : "Ready to open"}
+            </StatusPill>
           </div>
+          <p className="mt-1.5 text-[13px] text-admin-muted">
+            {formatTimeWindow(event.openTime, event.closeTime)} · {drinks.length}{" "}
+            {drinks.length === 1 ? "drink" : "drinks"}
+            {isLive ? " trading" : ""}
+          </p>
+          <p className="mt-0.5 text-[13px] text-admin-muted">
+            {isLive
+              ? `Opened ${formatStamp(sessions.find((session) => session.status === "live")?.startedAt ?? null)}`
+              : event.lastRunAt
+                ? `Last run ${formatStamp(event.lastRunAt)}`
+                : "Never run"}
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={`/settings/market?edit=${event.id}`}
-            className={OUTLINE_BUTTON}
-          >
-            <Pencil className="h-4 w-4" aria-hidden="true" />
-            Edit
-          </Link>
+
+        {/* One primary action for the market's state; everything else is
+            secondary - labelled on desktop, behind a menu on phones. */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap">
           {isLive ? (
-            <>
-              <a
-                href="/market/board"
-                target="_blank"
-                rel="noreferrer"
-                className={NEUTRAL_BUTTON}
-              >
-                <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-                Open big screen
-              </a>
-              <button
-                type="button"
-                onClick={handleEnd}
-                disabled={isPending}
-                className={NEUTRAL_BUTTON}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-                Close market
-              </button>
-              <button
-                type="button"
-                onClick={handleCrash}
-                disabled={isPending}
-                className={OUTLINE_BUTTON}
-              >
-                <TrendingDown className="h-4 w-4" aria-hidden="true" />
-                Crash market
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleEnd}
+              disabled={isPending}
+              aria-label="Close market"
+              title="Close market"
+              className={cn(PRIMARY_BUTTON, "flex-1 bg-admin-error hover:bg-admin-error/90 max-sm:px-0 sm:flex-none")}
+            >
+              <Square className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+              <span className="hidden sm:inline">Close market</span>
+            </button>
           ) : (
             <button
               type="button"
               onClick={handleOpen}
               disabled={isPending || anyLive}
               title={anyLive ? "Close the live market first" : undefined}
-              className={PRIMARY_BUTTON}
+              className={cn(PRIMARY_BUTTON, "flex-1 bg-admin-success hover:bg-admin-success/90 sm:flex-none")}
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Play className="h-4 w-4" aria-hidden="true" />
+                <Play className="h-4 w-4 fill-current" aria-hidden="true" />
               )}
               Open market
             </button>
           )}
+          {/* On a phone all three share one row as equal icon buttons, big
+              screen then crash then close; from tablet up the pair is
+              labelled and sits after the primary. */}
+          {isLive && (
+            <div className="flex items-center gap-2 max-sm:order-first max-sm:flex-[2] sm:w-auto">
+              <a
+                href="/market/board"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open big screen"
+                title="Open big screen"
+                className={cn(
+                  NEUTRAL_BUTTON,
+                  "flex-1 border-admin-info/40 bg-admin-info-bg text-admin-info hover:bg-admin-info/15 max-sm:px-0 sm:flex-none"
+                )}
+              >
+                <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Big screen</span>
+              </a>
+              <button
+                type="button"
+                onClick={handleCrash}
+                disabled={isPending}
+                aria-label="Crash market"
+                title="Crash market"
+                className={cn(
+                  NEUTRAL_BUTTON,
+                  "flex-1 border-admin-warning/40 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15 max-sm:px-0 sm:flex-none"
+                )}
+              >
+                <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Crash market</span>
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
       <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -727,23 +883,39 @@ export default function EventDetailClient({
               ({shownDrinks.length})
             </span>
           </h3>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
             <button
               type="button"
               onClick={drinkSheet.openAdd}
-              className={OUTLINE_BUTTON}
+              className={cn(OUTLINE_BUTTON, "whitespace-nowrap max-sm:flex-1 max-sm:px-2")}
             >
               <Sparkles className="h-4 w-4" aria-hidden="true" />
-              Tonight-only drink
+              Tonight-only
             </button>
             <button
               type="button"
               onClick={addSheet.openAdd}
-              className={PRIMARY_BUTTON}
+              className={cn(OUTLINE_BUTTON, "whitespace-nowrap max-sm:flex-1 max-sm:px-2")}
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Add from menu
             </button>
+            {!isLive && drinks.length > 0 && (
+              <button
+                type="button"
+                onClick={handleSavePrices}
+                disabled={isPending || dirtyDrinks.length === 0}
+                className={cn(PRIMARY_BUTTON, "whitespace-nowrap max-sm:w-full")}
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                Save prices
+                {dirtyDrinks.length > 0 && ` (${dirtyDrinks.length})`}
+              </button>
+            )}
           </div>
         </div>
         <div className="mb-3">
@@ -754,11 +926,19 @@ export default function EventDetailClient({
             placeholder="Search by drink, category or serve"
           />
         </div>
-        {isLive && (
+        {isLive ? (
           <p className="mb-3 text-[11px] text-admin-muted">
-            The market is live. Drinks added or removed now trade from the next
-            time this event is opened.
+            The market is live. Prices are locked to what was set at opening;
+            use Set price or Crash on a drink to step in. Drinks added or
+            removed now trade from the next time this event is opened.
           </p>
+        ) : (
+          drinks.length > 0 && (
+            <p className="mb-3 text-[11px] text-admin-muted">
+              Set tonight&apos;s opening, min, max and crash prices per drink, then
+              Save prices. An empty box uses the event default shown in grey.
+            </p>
+          )
         )}
         {drinks.length === 0 ? (
           <p className="text-[13px] text-admin-muted">
@@ -773,187 +953,434 @@ export default function EventDetailClient({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-300 text-left">
-              <thead>
-                <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-                  <th className="py-2 pr-3">Drink</th>
-                  <th className="py-2 pr-3">Category</th>
-                  <th className="py-2 pr-3">Serve</th>
-                  <th className="py-2 pr-3 text-right">Base</th>
-                  <th className="py-2 pr-3 text-right">Opening</th>
-                  <th className="py-2 pr-3 text-right">Now</th>
-                  <th className="py-2 pr-3 text-right">Demand</th>
-                  <th className="py-2 pr-3">Stock</th>
-                  <th className="py-2 pr-3">Override</th>
-                  <th className="py-2 pr-3 text-right">Min</th>
-                  <th className="py-2 pr-3 text-right">Max</th>
-                  <th className="py-2 pr-3 text-right">Crash</th>
-                  <th className="py-2 pr-3 text-right">Low stock at</th>
-                  <th className="py-2 pr-3 text-right">Alert</th>
-                  <th className="py-2 pr-3">Square</th>
-                  <th className="py-2 text-right">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {shownDrinks.map((drink) => {
-                  const instrument = drink.instrument;
-                  const stock = instrument
-                    ? stockLabel(instrument.stockState)
-                    : null;
-                  const up = instrument
-                    ? instrument.currentPrice > instrument.openingPrice
-                    : false;
-                  const down = instrument
-                    ? instrument.currentPrice < instrument.openingPrice
-                    : false;
-                  return (
-                    <tr
-                      key={drink.id}
-                      onClick={() => drinkSheet.openView(drink)}
-                      className="cursor-pointer border-b border-admin-line/60 hover:bg-admin-surface/60"
-                    >
-                      <td className="py-2 pr-3 text-[13px] font-semibold text-admin-ink">
-                        {drink.name}
-                        {!drink.isActive && (
-                          <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
-                            (inactive)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-[13px] text-admin-muted">
-                        {drink.nightOnly ? (
-                          <span className="rounded-full bg-admin-primary-soft px-2 py-0.5 text-[11px] font-semibold text-admin-primary">
-                            Tonight only
-                          </span>
-                        ) : (
-                          drink.categoryName
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-[13px] text-admin-muted">
-                        {drink.serve ?? "-"}
-                      </td>
-                      <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
-                        {drink.basePrice != null
-                          ? formatGbp(drink.basePrice)
-                          : "-"}
-                      </td>
-                      <td className="py-2 pr-3 text-right text-[13px] tabular-nums">
-                        {instrument ? (
-                          <span className="text-admin-muted">
-                            {formatGbp(instrument.openingPrice)}
-                          </span>
-                        ) : (
-                          <OverrideCell
-                            drink={drink}
-                            config={event.config}
-                            field={OVERRIDE_FIELDS[0]}
-                          />
-                        )}
-                      </td>
-                      <td
-                        className={cn(
-                          "py-2 pr-3 text-right text-[13px] tabular-nums",
-                          !instrument && "text-admin-muted",
-                          instrument && "font-semibold",
-                          up
-                            ? "text-admin-success"
-                            : down
-                              ? "text-admin-error"
-                              : instrument && "text-admin-ink",
-                        )}
-                      >
-                        {instrument ? formatGbp(instrument.currentPrice) : "-"}
-                      </td>
-                      <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
-                        {instrument ? instrument.demandUnits.toFixed(1) : "-"}
-                      </td>
-                      <td className="py-2 pr-3 text-[13px] text-admin-muted">
-                        {stock ? (
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                              stock.className,
-                            )}
+          <>
+            <p className="mb-2 text-[11px] text-admin-muted sm:hidden">
+              Tap a drink for stock alerts and its Square link.
+            </p>
+            <ul className="m-0 list-none p-0 sm:hidden">
+              {groups.map((group) => (
+                <li key={group.name} className="mt-3 first:mt-0">
+                  <p className="mb-1 rounded-lg bg-admin-surface px-2.5 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                    {group.name}
+                  </p>
+                  <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
+                    {group.drinks.map((drink) => {
+                      const instrument = drink.instrument;
+                      const settings = drinkSettings(drink, event.config);
+                      const draft = draftFor(drink);
+                      const stock = instrument && instrument.stockState !== "ok" ? stockLabel(instrument.stockState) : null;
+                      const up = instrument ? instrument.currentPrice > instrument.openingPrice : false;
+                      const down = instrument ? instrument.currentPrice < instrument.openingPrice : false;
+                      const editing = instrument != null && priceEdit?.instrumentId === instrument.id;
+                      return (
+                        <li key={drink.id} className="py-2.5">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => drinkSheet.openView(drink)}
+                            onKeyDown={(e) => {
+                              if (e.target !== e.currentTarget) return;
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                drinkSheet.openView(drink);
+                              }
+                            }}
+                            className="flex min-h-11 w-full cursor-pointer items-center gap-3 text-left"
                           >
-                            {stock.label}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 text-[13px] text-admin-muted">
-                        {instrument ? (
-                          <StockSelect
-                            drinkName={drink.name}
-                            instrument={instrument}
-                            disabled={isPending}
-                            onChange={(value) =>
-                              run(
-                                () =>
-                                  setStockOverrideAction(instrument.id, value),
-                                "Stock override updated.",
-                              )
-                            }
-                          />
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      {OVERRIDE_FIELDS.slice(1).map((field) => (
-                        <td
-                          key={field.key}
-                          className="py-2 pr-3 text-right text-[13px]"
-                        >
-                          <OverrideCell
-                            drink={drink}
-                            config={event.config}
-                            field={field}
-                          />
-                        </td>
-                      ))}
-                      <td className="py-2 pr-3 text-[11px] font-semibold">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5",
-                            drink.linked
-                              ? "bg-admin-success-bg text-admin-success"
-                              : "bg-admin-surface text-admin-muted",
-                          )}
-                        >
-                          {drink.linked ? "Linked" : "Not linked"}
-                        </span>
-                      </td>
-                      <td className="py-2 text-right">
-                        {instrument &&
-                          (instrument.crashing ? (
-                            <span className="rounded-full bg-admin-error-bg px-2 py-0.5 text-[11px] font-semibold text-admin-error">
-                              Crashing
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13px] font-semibold text-admin-ink">
+                                {drink.name}
+                                {!drink.isActive && (
+                                  <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(inactive)</span>
+                                )}
+                              </span>
+                              <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-admin-muted">
+                                {drink.serve && <span>{drink.serve}</span>}
+                                {drink.linked ? (
+                                  <span className="rounded-full bg-admin-success-bg px-1.5 py-0.5 font-semibold text-admin-success">
+                                    Square linked
+                                  </span>
+                                ) : (
+                                  <span className="rounded-full bg-admin-surface px-1.5 py-0.5 font-semibold">
+                                    Not linked
+                                  </span>
+                                )}
+                                {stock && (
+                                  <span className={cn("rounded-full px-1.5 py-0.5 font-semibold", stock.className)}>
+                                    {stock.label}
+                                  </span>
+                                )}
+                                {instrument?.crashing && (
+                                  <span className="rounded-full bg-admin-error-bg px-1.5 py-0.5 font-semibold text-admin-error">
+                                    Crashing
+                                  </span>
+                                )}
+                              </span>
                             </span>
-                          ) : (
-                            <button
-                              type="button"
-                              aria-label={`Crash ${drink.name}`}
-                              title="Crash this drink"
-                              disabled={isPending || instrument.stockState === "out"}
-                              onClick={(clickEvent) => {
-                                clickEvent.stopPropagation();
-                                handleCrashDrink(drink, instrument);
-                              }}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-admin-line text-admin-primary transition-colors hover:bg-admin-primary-soft disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <TrendingDown className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                          ))}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <span className="shrink-0 text-right tabular-nums">
+                              {instrument ? (
+                                <>
+                                  <span
+                                    className={cn(
+                                      "block text-sm font-semibold",
+                                      up ? "text-admin-success" : down ? "text-admin-error" : "text-admin-ink"
+                                    )}
+                                  >
+                                    {formatGbp(instrument.currentPrice)}
+                                  </span>
+                                  <span className="block text-[11px] text-admin-muted">
+                                    opened {formatGbp(instrument.openingPrice)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="block text-sm font-semibold text-admin-ink">
+                                    {drink.basePrice != null ? formatGbp(drink.basePrice) : "-"}
+                                  </span>
+                                  <span className="block text-[11px] text-admin-muted">base</span>
+                                </>
+                              )}
+                            </span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted opacity-40" aria-hidden="true" />
+                          </div>
+                          {!isLive && settings && (
+                            <div className="mt-2">
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {PRICE_KEYS.map((key) => (
+                                  <label key={key} className="block">
+                                    <span className="mb-0.5 block text-[10px] font-semibold text-admin-muted">
+                                      {PRICE_LABELS[key]}
+                                    </span>
+                                    <PriceInput
+                                      label={`${PRICE_LABELS[key]} price for ${drink.name}`}
+                                      value={draft[key]}
+                                      placeholder={settings.defaults[key].toFixed(2)}
+                                      disabled={isPending}
+                                      onChange={(value) => setDraft(drink, key, value)}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
+                              {hasDraftValue(draft) && (
+                                <button
+                                  type="button"
+                                  onClick={() => resetDraft(drink)}
+                                  className="mt-1.5 inline-flex min-h-8 items-center gap-1 text-[11px] font-semibold text-admin-primary"
+                                >
+                                  <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                                  Reset to base
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {instrument && settings && (
+                            <div className="mt-2">
+                              <p className="text-[11px] text-admin-muted tabular-nums">
+                                Demand {instrument.demandUnits.toFixed(1)} · Range{" "}
+                                {formatGbp(settings.effective.minPrice)} to {formatGbp(settings.effective.maxPrice)}
+                              </p>
+                              <div className="mt-1.5 flex items-center gap-2">
+                                {editing ? (
+                                  <>
+                                    <PriceInput
+                                      label={`New price for ${drink.name}`}
+                                      value={priceEdit.value}
+                                      autoFocus
+                                      disabled={isPending}
+                                      onChange={(value) => setPriceEdit({ instrumentId: instrument.id, value })}
+                                      onSubmit={handleSetPrice}
+                                      className="w-24 flex-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      aria-label={`Save price for ${drink.name}`}
+                                      title="Save price"
+                                      disabled={isPending}
+                                      onClick={handleSetPrice}
+                                      className={cn(ROW_ICON_BUTTON, "border-admin-primary bg-admin-primary text-white hover:bg-admin-primary-hover")}
+                                    >
+                                      <Check className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label="Cancel price change"
+                                      title="Cancel"
+                                      onClick={() => setPriceEdit(null)}
+                                      className={cn(ROW_ICON_BUTTON, "border-admin-line text-admin-muted hover:bg-admin-surface")}
+                                    >
+                                      <X className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="min-w-0 flex-1">
+                                      <StockSelect
+                                        drinkName={drink.name}
+                                        instrument={instrument}
+                                        disabled={isPending}
+                                        onChange={(value) =>
+                                          run(() => setStockOverrideAction(instrument.id, value), "Stock override updated.")
+                                        }
+                                      />
+                                    </span>
+                                    <button
+                                      type="button"
+                                      aria-label={`Set price for ${drink.name}`}
+                                      title="Set price now"
+                                      disabled={isPending || instrument.stockState === "out"}
+                                      onClick={() => startPriceEdit(instrument)}
+                                      className={cn(ROW_ICON_BUTTON, "border-admin-line text-admin-primary hover:bg-admin-primary-soft")}
+                                    >
+                                      <PoundSterling className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Crash ${drink.name}`}
+                                      title="Crash this drink"
+                                      disabled={isPending || instrument.crashing || instrument.stockState === "out"}
+                                      onClick={() => handleCrashDrink(drink, instrument)}
+                                      className={cn(ROW_ICON_BUTTON, "border-admin-warning/40 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15")}
+                                    >
+                                      <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-160 text-left">
+                <thead>
+                  <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                    <th className="py-2 pr-3">Drink</th>
+                    <th className="py-2 pr-3">Serve</th>
+                    <th className="py-2 pr-3 text-right">Base</th>
+                    <th className="py-2 pr-3 text-right">Opening</th>
+                    {isLive ? (
+                      <>
+                        <th className="py-2 pr-3 text-right">Now</th>
+                        <th className="py-2 pr-3 text-right">Range</th>
+                        <th className="py-2 pr-3 text-right">Demand</th>
+                        <th className="py-2 pr-3">Stock</th>
+                        <th className="py-2 pr-3">Override</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-2 pr-3 text-right">Min</th>
+                        <th className="py-2 pr-3 text-right">Max</th>
+                        <th className="py-2 pr-3 text-right">Crash</th>
+                      </>
+                    )}
+                    <th className="py-2 pr-3">Square</th>
+                    <th className="py-2 text-right">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((group) => (
+                    <Fragment key={group.name}>
+                      <tr>
+                        <td
+                          colSpan={isLive ? 11 : 9}
+                          className="bg-admin-surface px-2 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"
+                        >
+                          {group.name}
+                        </td>
+                      </tr>
+                      {group.drinks.map((drink) => {
+                        const instrument = drink.instrument;
+                        const settings = drinkSettings(drink, event.config);
+                        const draft = draftFor(drink);
+                        const stock = instrument ? stockLabel(instrument.stockState) : null;
+                        const up = instrument ? instrument.currentPrice > instrument.openingPrice : false;
+                        const down = instrument ? instrument.currentPrice < instrument.openingPrice : false;
+                        const editing = instrument != null && priceEdit?.instrumentId === instrument.id;
+                        return (
+                          <tr
+                            key={drink.id}
+                            onClick={() => drinkSheet.openView(drink)}
+                            className="cursor-pointer border-b border-admin-line/60 hover:bg-admin-surface/60"
+                          >
+                            <td className="py-1.5 pr-3 text-[13px] font-semibold text-admin-ink">
+                              {drink.name}
+                              {!drink.isActive && (
+                                <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(inactive)</span>
+                              )}
+                              {instrument?.crashing && (
+                                <span className="ml-1.5 rounded-full bg-admin-error-bg px-2 py-0.5 text-[11px] font-semibold text-admin-error">
+                                  Crashing
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{drink.serve ?? "-"}</td>
+                            <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+                              {drink.basePrice != null ? formatGbp(drink.basePrice) : "-"}
+                            </td>
+                            {isLive ? (
+                              <>
+                                <td className="py-1.5 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
+                                  {instrument ? formatGbp(instrument.openingPrice) : "-"}
+                                </td>
+                                <td
+                                  className={cn(
+                                    "py-1.5 pr-3 text-right text-[13px] tabular-nums",
+                                    !instrument && "text-admin-muted",
+                                    instrument && "font-semibold",
+                                    up ? "text-admin-success" : down ? "text-admin-error" : instrument && "text-admin-ink"
+                                  )}
+                                >
+                                  {instrument ? formatGbp(instrument.currentPrice) : "-"}
+                                </td>
+                                <td className="py-1.5 pr-3 text-right text-[12px] whitespace-nowrap text-admin-muted tabular-nums">
+                                  {settings
+                                    ? `${formatGbp(settings.effective.minPrice)} to ${formatGbp(settings.effective.maxPrice)}`
+                                    : "-"}
+                                </td>
+                                <td className="py-1.5 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
+                                  {instrument ? instrument.demandUnits.toFixed(1) : "-"}
+                                </td>
+                                <td className="py-1.5 pr-3 text-[13px] text-admin-muted">
+                                  {stock ? (
+                                    <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap", stock.className)}>
+                                      {stock.label}
+                                    </span>
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
+                                <td className="py-1.5 pr-3 text-[13px] text-admin-muted" onClick={(e) => e.stopPropagation()}>
+                                  {instrument ? (
+                                    <StockSelect
+                                      drinkName={drink.name}
+                                      instrument={instrument}
+                                      disabled={isPending}
+                                      onChange={(value) =>
+                                        run(() => setStockOverrideAction(instrument.id, value), "Stock override updated.")
+                                      }
+                                    />
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
+                              </>
+                            ) : settings ? (
+                              PRICE_KEYS.map((key) => (
+                                <td key={key} className="py-1.5 pr-2" onClick={(e) => e.stopPropagation()}>
+                                  <PriceInput
+                                    label={`${PRICE_LABELS[key]} price for ${drink.name}`}
+                                    value={draft[key]}
+                                    placeholder={settings.defaults[key].toFixed(2)}
+                                    disabled={isPending}
+                                    onChange={(value) => setDraft(drink, key, value)}
+                                    className="w-20"
+                                  />
+                                </td>
+                              ))
+                            ) : (
+                              <td colSpan={4} className="py-1.5 pr-3 text-[13px] text-admin-muted">
+                                No price yet
+                              </td>
+                            )}
+                            <td className="py-1.5 pr-3 text-[11px] font-semibold">
+                              <span
+                                className={cn(
+                                  "rounded-full px-2 py-0.5 whitespace-nowrap",
+                                  drink.linked ? "bg-admin-success-bg text-admin-success" : "bg-admin-surface text-admin-muted"
+                                )}
+                              >
+                                {drink.linked ? "Linked" : "Not linked"}
+                              </span>
+                            </td>
+                            <td className="py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
+                              {!isLive && hasDraftValue(draft) && (
+                                <button
+                                  type="button"
+                                  aria-label={`Reset ${drink.name} to base pricing`}
+                                  title="Reset to base"
+                                  onClick={() => resetDraft(drink)}
+                                  className={cn(ROW_ICON_BUTTON, "border-admin-line text-admin-muted hover:bg-admin-surface")}
+                                >
+                                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                                </button>
+                              )}
+                              {instrument && (
+                                <span className="inline-flex items-center justify-end gap-1.5">
+                                  {editing ? (
+                                    <>
+                                      <PriceInput
+                                        label={`New price for ${drink.name}`}
+                                        value={priceEdit.value}
+                                        autoFocus
+                                        disabled={isPending}
+                                        onChange={(value) => setPriceEdit({ instrumentId: instrument.id, value })}
+                                        onSubmit={handleSetPrice}
+                                        className="w-20"
+                                      />
+                                      <button
+                                        type="button"
+                                        aria-label={`Save price for ${drink.name}`}
+                                        title="Save price"
+                                        disabled={isPending}
+                                        onClick={handleSetPrice}
+                                        className={cn(ROW_ICON_BUTTON, "border-admin-primary bg-admin-primary text-white hover:bg-admin-primary-hover")}
+                                      >
+                                        <Check className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        aria-label="Cancel price change"
+                                        title="Cancel"
+                                        onClick={() => setPriceEdit(null)}
+                                        className={cn(ROW_ICON_BUTTON, "border-admin-line text-admin-muted hover:bg-admin-surface")}
+                                      >
+                                        <X className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        aria-label={`Set price for ${drink.name}`}
+                                        title="Set price now"
+                                        disabled={isPending || instrument.stockState === "out"}
+                                        onClick={() => startPriceEdit(instrument)}
+                                        className={cn(ROW_ICON_BUTTON, "border-admin-line text-admin-primary hover:bg-admin-primary-soft")}
+                                      >
+                                        <PoundSterling className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        aria-label={`Crash ${drink.name}`}
+                                        title="Crash this drink"
+                                        disabled={isPending || instrument.crashing || instrument.stockState === "out"}
+                                        onClick={() => handleCrashDrink(drink, instrument)}
+                                        className={cn(ROW_ICON_BUTTON, "border-admin-warning/40 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15")}
+                                      >
+                                        <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                                      </button>
+                                    </>
+                                  )}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </section>
 
@@ -1125,7 +1552,7 @@ export default function EventDetailClient({
                         : ""}
                     </p>
                     <p className="text-[11px] text-admin-muted">
-                      Session #{session.id} · {session.tickNo} ticks
+                      {session.tickNo} price {session.tickNo === 1 ? "update" : "updates"}
                     </p>
                   </div>
                   <span

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AdminPageTitle from "@/components/admin/page-title";
 import {
   summariseEvent,
   type StockMarketEventRow,
@@ -225,13 +226,16 @@ export default async function StockMarketEventPage({
   const event = summariseEvent(row, menuItemIds, lastRunAt);
 
   return (
-    <EventDetailClient
-      event={event}
-      drinks={drinks}
-      available={available}
-      sessions={sessions}
-      isLive={isLive}
-      anyLive={Boolean(liveRow)}
-    />
+    <>
+      <AdminPageTitle title={event.name} />
+      <EventDetailClient
+        event={event}
+        drinks={drinks}
+        available={available}
+        sessions={sessions}
+        isLive={isLive}
+        anyLive={Boolean(liveRow)}
+      />
+    </>
   );
 }
