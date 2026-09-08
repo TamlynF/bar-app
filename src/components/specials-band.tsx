@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -28,19 +28,22 @@ function whenLabel(s: SpecialRow, today: Date) {
   if (["5,6", "5,6,7", "6,7"].includes(days.join())) return "Weekend";
   const t = todayDow(today);
   const next = days.find((d) => d > t) ?? days[0];
-  return next === (t % 7) + 1 ? "Tomorrow" : days.map((d) => DAY_SHORT[d]).join(" · ");
+  return next === (t % 7) + 1 ? "Tomorrow" : days.map((d) => DAY_SHORT[d]).join(" Â· ");
 }
 
-/* The burgundy Specials band: every active special as its own panel -
-   compact tappable rows on phones; from md the title sits left and each
-   special is a photo-and-copy pair beside it, as in the design. Tonight's
-   run first. Tapping opens the special's own popup; nothing leaves the page. */
+/* The burgundy Specials band. Phones: the first special (tonight's, or the
+   next one up) is a full-width photo card and the rest are one-line rows
+   beneath it. From md the title sits left and each special is a
+   photo-and-copy pair beside it, as in the design. Tonight's run first.
+   Tapping opens the special's own popup; nothing leaves the page. */
 export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; today: Date }) {
   const [open, setOpen] = useState<SpecialRow | null>(null);
   if (specials.length === 0) return null;
 
   const ordered = [...specials].sort((a, b) => Number(runsToday(b, today)) - Number(runsToday(a, today))).slice(0, MAX_SPECIALS);
   const cols = ordered.length >= 3 ? "md:grid-cols-2 xl:grid-cols-3" : ordered.length === 2 ? "md:grid-cols-2" : "md:grid-cols-1";
+  const tonightCount = ordered.filter((s) => runsToday(s, today)).length;
+  const countLabel = tonightCount > 1 ? `${tonightCount} on tonight` : `${ordered.length} on this week`;
 
   return (
     <section
@@ -56,18 +59,55 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
             <h2 id="specials-heading" className="m-0 font-black text-[22px] leading-none tracking-tighter text-ink uppercase md:text-[40px]">
               Specials
             </h2>
-            <p className="mt-1 mb-0 text-[11px] font-semibold text-ink/75 md:mt-2 md:text-[13px] md:leading-snug md:text-gold">
-              Good drinks.<span className="hidden md:inline"><br /></span> Better company.
+            <p className="mt-2 mb-0 hidden text-[13px] leading-snug font-semibold text-gold md:block">
+              Good drinks.<br />Better company.
             </p>
           </div>
           {ordered.length > 1 && (
-            <span className="shrink-0 pb-0.5 font-black text-[9px] tracking-[0.16em] text-ink/70 uppercase md:mt-2 md:text-[10px]">
-              {ordered.length} on this week
+            <span className="shrink-0 pb-0.5 font-black text-[11px] tracking-[0.14em] text-ink/70 uppercase md:mt-2 md:text-[10px] md:tracking-[0.16em]">
+              {countLabel}
             </span>
           )}
         </div>
 
-        <ul className={cn("relative m-0 mt-3 flex list-none flex-col gap-2 p-0 md:mt-0 md:grid md:min-w-0 md:flex-1 md:gap-5", cols)}>
+        <ul className="no-scrollbar relative -mx-4 mt-3 flex snap-x snap-mandatory list-none gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 md:hidden">
+          {ordered.map((s) => {
+            const tonight = runsToday(s, today);
+            return (
+              <li key={s.id} className={cn("shrink-0 snap-start", ordered.length === 1 ? "w-full" : "w-[calc(50%-0.375rem)]")}>
+                <button
+                  type="button"
+                  onClick={() => setOpen(s)}
+                  aria-label={`${s.title} - details`}
+                  className={cn(
+                    "relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left transition-transform active:scale-[0.97]",
+                    tonight ? "ring-2 ring-gold ring-offset-2 ring-offset-[#7a1f1f]" : "border border-ink/15"
+                  )}
+                >
+                  {s.image_url ? (
+                    <Image src={s.image_url} alt="" fill sizes="(max-width: 768px) 50vw, 168px" className="object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center text-gold" aria-hidden="true">
+                      <Martini className="h-8 w-8" strokeWidth={1.6} />
+                    </span>
+                  )}
+                  <span
+                    className={cn(
+                      "absolute top-2 left-2 rounded-full px-2 py-0.5 font-black text-[10px] tracking-[0.14em] uppercase",
+                      tonight ? "bg-gold text-on-gold" : "bg-black/70 text-ink"
+                    )}
+                  >
+                    {whenLabel(s, today)}
+                  </span>
+                  <span className="absolute inset-x-0 bottom-0 block rounded-b-xl bg-black/85 px-2.5 py-2">
+                    <span className="line-clamp-3 font-black text-[13px] leading-tight tracking-tight text-gold uppercase">{s.title}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <ul className={cn("relative m-0 mt-3 hidden list-none flex-col gap-2 p-0 md:mt-0 md:grid md:min-w-0 md:flex-1 md:gap-5", cols)}>
           {ordered.map((s) => {
             const tonight = runsToday(s, today);
             const badge = s.badges?.[0] ?? null;
