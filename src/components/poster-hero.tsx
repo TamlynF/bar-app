@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { ArrowDown, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { EventActions } from "@/components/event-actions";
 import { MarketHeroCard } from "@/components/market-hero-card";
@@ -21,13 +20,11 @@ export function PosterHero({
   isTonight,
   doors,
   openTonight,
-  moreNights,
 }: {
   nightEvents: SerializedEvent[];
   isTonight: boolean;
   doors: string | null;
   openTonight: string | null;
-  moreNights: number;
 }) {
   const [active, setActive] = useState(0);
   const event = nightEvents[Math.min(active, nightEvents.length - 1)];
@@ -51,7 +48,7 @@ export function PosterHero({
     <section
       id="tonight"
       aria-label={isTonight ? "Tonight" : "Next up"}
-      className="relative h-160 overflow-hidden md:h-205"
+      className="relative h-150 overflow-hidden md:h-205"
       style={
         { "--ev-c": event.color, "--title-chars": longestWord, "--title-total": titleChars } as React.CSSProperties
       }
@@ -105,7 +102,7 @@ export function PosterHero({
       </div>
 
       {/* Poster copy */}
-      <div className="absolute right-4 bottom-14.5 left-4 flex flex-col gap-3 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
+      <div className="absolute right-4 bottom-6 left-4 flex flex-col gap-3 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
         <div className="flex items-center gap-2 sm:gap-2.5">
           {event.subType && (
             <span className="rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
@@ -196,20 +193,6 @@ export function PosterHero({
         </div>
       )}
 
-      {/* Phone scroll cue */}
-      {moreNights > 0 && (
-        <Link
-          href="#coming-up"
-          className="absolute right-4 bottom-3.5 left-4 flex items-center justify-center gap-2 md:hidden"
-        >
-          <span className="h-px flex-1 bg-linear-to-r from-transparent to-ink/25" aria-hidden="true" />
-          <span className="inline-flex items-center gap-2 font-black text-[9px] tracking-[0.2em] text-gold uppercase">
-            {moreNights === 1 ? "1 more night this week" : `${moreNights} more nights this week`}
-            <ArrowDown className="ad-nudge h-3 w-3" aria-hidden="true" />
-          </span>
-          <span className="h-px flex-1 bg-linear-to-l from-transparent to-ink/25" aria-hidden="true" />
-        </Link>
-      )}
       </div>
     </section>
   );

@@ -4,7 +4,6 @@ import { PublicNav } from "@/components/public-nav";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
-import { AlsoOnList } from "@/components/also-on-list";
 import { NextUpList } from "@/components/next-up-list";
 import { TicketStrip } from "@/components/ticket-strip";
 import { SpecialsBand } from "@/components/specials-band";
@@ -80,7 +79,6 @@ export default async function HomePage() {
   const later = featuredDate ? events.filter((e) => e.date > featuredDate) : events;
   const nextDates = Array.from(new Set(later.map((e) => e.date))).slice(0, NEXT_NIGHTS);
   const nextUp = later.filter((e) => nextDates.includes(e.date));
-  const moreNights = new Set(later.map((e) => e.date)).size;
   const rangeLabel =
     nextUp.length > 1
       ? `${format(parseDate(nextUp[0].date), "d MMM")} – ${format(parseDate(nextUp[nextUp.length - 1].date), "d MMM")}`
@@ -114,14 +112,7 @@ export default async function HomePage() {
             isTonight={isTonight}
             doors={doors}
             openTonight={openTonight}
-            moreNights={moreNights}
           />
-          <div className="md:hidden">
-            <AlsoOnList
-              events={nightEvents.slice(1)}
-              when={isTonight ? "tonight" : format(parseDate(featuredDate as string), "EEEE")}
-            />
-          </div>
         </>
       ) : (
         <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
@@ -133,7 +124,7 @@ export default async function HomePage() {
       )}
 
       <div className="mx-auto w-full max-w-400">
-        <NextUpList events={nextUp} />
+        <NextUpList events={nextUp} alsoOn={nightEvents.slice(1)} alsoOnIsTonight={isTonight} />
         <TicketStrip events={nextUp} rangeLabel={rangeLabel} doorsFor={doorsFor} />
         <div className="mt-14 hidden px-6 sm:block lg:px-10">
           <MarketSection />

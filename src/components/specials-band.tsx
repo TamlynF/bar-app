@@ -49,7 +49,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
     <section
       id="specials"
       aria-labelledby="specials-heading"
-      className="relative mx-4 mt-6 overflow-hidden rounded-2xl border border-ink/15 bg-[#7a1f1f] p-4 sm:mx-6 sm:mt-8 sm:p-5 md:rounded-[20px] md:p-6 lg:mx-10"
+      className="relative mx-4 mt-8 overflow-hidden rounded-2xl border border-ink/15 bg-[#7a1f1f] p-4 sm:mx-6 sm:mt-8 sm:p-5 md:rounded-[20px] md:p-6 lg:mx-10"
     >
       <div className="pointer-events-none absolute -top-30 right-50 h-90 w-90 rounded-full bg-gold/12 blur-[70px] max-md:-top-17.5 max-md:-right-12.5 max-md:h-55 max-md:w-55 max-md:blur-[50px]" aria-hidden="true" />
 
