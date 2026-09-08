@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata, Viewport } from "next";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signIn } from "./actions";
@@ -39,9 +40,14 @@ export default async function LoginPage() {
 
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDCC4B] shadow-lg">
-            <span className="font-black text-xl text-[#26300D]">DF</span>
-          </div>
+          <Image
+            src="/df-mark.jpg"
+            alt=""
+            width={56}
+            height={56}
+            priority
+            className="mb-4 inline-block h-14 w-14 rounded-2xl shadow-lg"
+          />
           <h1 className="font-black text-2xl tracking-widest text-white uppercase">Don Fenticas</h1>
           <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Staff Portal</p>
         </div>

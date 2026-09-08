@@ -94,7 +94,8 @@
       "PowerShell(npx eslint src/components/specials-band.tsx)",
       "PowerShell($p='src/components/specials-band.tsx'; \\(Get-Content $p -Raw\\) -replace 'className=\"w-18 shrink-0\"','className=\"w-22 shrink-0\"' -replace '\"relative block h-18 w-18 overflow-hidden rounded-\\\\[14px\\\\]','\"relative block h-20 w-20 overflow-hidden rounded-[14px]' -replace 'sizes=\"72px\"','sizes=\"80px\"' -replace 'mt-2 line-clamp-2 font-black text-\\\\[11px\\\\]','mt-2 line-clamp-3 font-black text-[11px]' | Set-Content $p -Encoding utf8 -NoNewline; npx eslint $p)",
       "PowerShell(npx eslint src/components/specials-band.tsx; Write-Output \"lint-exit:$LASTEXITCODE\")",
-      "PowerShell(npx eslint src/components/specials-band.tsx; Write-Output \"lint-exit:$LASTEXITCODE\"; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)"
+      "PowerShell(npx eslint src/components/specials-band.tsx; Write-Output \"lint-exit:$LASTEXITCODE\"; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)",
+      "PowerShell(npx eslint src/app/login; Write-Output \"lint-exit:$LASTEXITCODE\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",
