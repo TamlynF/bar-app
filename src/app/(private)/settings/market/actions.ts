@@ -29,6 +29,23 @@ import {
 } from "@/lib/market/square-push";
 import { normaliseName } from "@/lib/menu-import";
 import { randomUUID } from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { maybeRunMarketTick, type MarketSessionRow } from "@/lib/market/tick";
+import {
+  isValidSaleUnits,
+  planBusyRound,
+  SIM_MAX_ROUND_SALES,
+  SIM_MAX_UNITS_PER_SALE,
+  SIM_MAX_SQUARE_ROUND_SALES,
+} from "@/lib/market/simulate";
+import {
+  addInventory,
+  assertSandbox,
+  ringSaleThroughSquare,
+  seedSandboxCatalog,
+  squareSimEnvironment,
+  type RungSale,
+} from "@/lib/market/square-sandbox";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -73,27 +90,61 @@ type PriceRow = {
   square_variation_id: string | null;
 };
 
-type ItemRow = {
+type ServeItemJoin = { id: number; name: string; is_active: boolean } | null;
+
+type ServeRow = {
   id: number;
-  name: string;
-  is_active: boolean;
-  category_id: number;
-  menu_item_prices: PriceRow[];
+  menu_item_id: number;
+  serve: string;
+  amount: number | string;
+  square_variation_id: string | null;
+  menu_items: ServeItemJoin | ServeItemJoin[];
 };
 
-function primaryPrice(item: ItemRow): PriceRow | null {
-  const priced = item.menu_item_prices
-    .filter((price) => Number(price.amount) > 0)
-    .sort((a, b) => a.display_order - b.display_order || a.id - b.id);
-  return priced[0] ?? null;
+export type TradeableServe = {
+  id: number;
+  menuItemId: number;
+  name: string;
+  serve: string;
+  amount: number;
+  squareVariationId: string | null;
+};
+
+/* The serves (menu_item_prices rows) staff can put on a market: priced and
+   belonging to an active menu item. Everything that links an event to a
+   drink goes through here so each link carries both the serve and its item. */
+async function tradeableServes(
+  supabase: ServerClient,
+  menuItemPriceIds: number[]
+): Promise<TradeableServe[] | { error: string }> {
+  if (menuItemPriceIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("menu_item_prices")
+    .select("id, menu_item_id, serve, amount, square_variation_id, menu_items(id, name, is_active)")
+    .in("id", menuItemPriceIds);
+  if (error) return { error: error.message };
+  return ((data ?? []) as ServeRow[]).flatMap((row) => {
+    const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+    if (!item || !item.is_active || !(Number(row.amount) > 0)) return [];
+    return [
+      {
+        id: row.id,
+        menuItemId: row.menu_item_id,
+        name: item.name,
+        serve: row.serve,
+        amount: Number(row.amount),
+        squareVariationId: row.square_variation_id,
+      },
+    ];
+  });
 }
 
 async function openSession(
   supabase: ServerClient,
   options: {
     config: MarketConfig;
-    menuItemIds: number[];
-    overridesByItem: Map<number, DrinkOverrides>;
+    menuItemPriceIds: number[];
+    overridesByPrice: Map<number, DrinkOverrides>;
     stockMarketEventId: number;
   }
 ) {
@@ -104,20 +155,10 @@ async function openSession(
     .maybeSingle();
   if (existing) return { error: "A market is already live - close it before opening another." };
 
-  const { data: items, error: itemsError } = await supabase
-    .from("menu_items")
-    .select(
-      "id, name, is_active, category_id, menu_item_prices(id, serve, amount, display_order, square_variation_id)"
-    )
-    .eq("is_active", true)
-    .in("id", options.menuItemIds);
-  if (itemsError) return { error: itemsError.message };
-
-  const instruments = ((items ?? []) as ItemRow[])
-    .map((item) => ({ item, price: primaryPrice(item) }))
-    .filter((entry): entry is { item: ItemRow; price: PriceRow } => entry.price !== null);
-  if (instruments.length === 0) {
-    return { error: "None of the drinks on this event have a numeric price to trade." };
+  const serves = await tradeableServes(supabase, options.menuItemPriceIds);
+  if ("error" in serves) return { error: serves.error };
+  if (serves.length === 0) {
+    return { error: "None of the serves on this event has a price to trade." };
   }
 
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
@@ -139,20 +180,20 @@ async function openSession(
     return { error: sessionError?.message ?? "Could not open the market." };
   }
 
-  const instrumentRows = instruments.map(({ item, price }) => {
-    const overrides = options.overridesByItem.get(item.id) ?? EMPTY_OVERRIDES;
-    const opening = overrides.openingPrice ?? Number(price.amount);
+  const instrumentRows = serves.map((serve) => {
+    const overrides = options.overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES;
+    const opening = overrides.openingPrice ?? serve.amount;
     return {
       session_id: session.id,
-      menu_item_price_id: price.id,
-      menu_item_id: item.id,
-      display_name: item.name,
-      serve: price.serve,
-      base_price: Number(price.amount),
+      menu_item_price_id: serve.id,
+      menu_item_id: serve.menuItemId,
+      display_name: serve.name,
+      serve: serve.serve,
+      base_price: serve.amount,
       opening_price: opening,
       current_price: opening,
       last_notified_price: opening,
-      square_variation_id: price.square_variation_id,
+      square_variation_id: serve.squareVariationId,
       min_price: overrides.minPrice,
       max_price: overrides.maxPrice,
       crash_price: overrides.crashPrice,
@@ -200,9 +241,9 @@ const eventSchema = configSchema.extend({
   close_time: z.string().regex(CLOCK, "Closing time is required."),
 });
 
-function readMenuItemIds(formData: FormData): number[] {
+function readMenuItemPriceIds(formData: FormData): number[] {
   try {
-    const raw = JSON.parse(formData.get("menu_item_ids")?.toString() || "[]");
+    const raw = JSON.parse(formData.get("menu_item_price_ids")?.toString() || "[]");
     return Array.isArray(raw)
       ? [...new Set(raw.map(Number).filter((id) => Number.isInteger(id) && id > 0))]
       : [];
@@ -234,8 +275,8 @@ export async function saveStockMarketEventAction(formData: FormData) {
     return { error: message };
   }
 
-  const menuItemIds = readMenuItemIds(formData);
-  if (menuItemIds.length === 0) return { error: "Pick at least one drink for this event." };
+  const menuItemPriceIds = readMenuItemPriceIds(formData);
+  if (menuItemPriceIds.length === 0) return { error: "Pick at least one drink for this event." };
 
   const idRaw = formData.get("id")?.toString();
   const id = idRaw ? Number(idRaw) : null;
@@ -276,35 +317,42 @@ export async function saveStockMarketEventAction(formData: FormData) {
     eventId = data.id;
   }
 
-  const nightOnlyIds = await nightOnlyItemIds(supabase, eventId);
-  const keep = [...new Set([...menuItemIds, ...nightOnlyIds])];
+  const nightOnlyIds = await nightOnlyPriceIds(supabase, eventId);
+  const serves = await tradeableServes(supabase, [...new Set([...menuItemPriceIds, ...nightOnlyIds])]);
+  if ("error" in serves) return { error: serves.error };
+  if (serves.length === 0) return { error: "Pick at least one drink for this event." };
+
   const { data: existingItems, error: existingError } = await supabase
     .from("stock_market_event_items")
-    .select("menu_item_id")
+    .select("menu_item_price_id")
     .eq("event_id", eventId);
   if (existingError) return { error: existingError.message };
-  const keepSet = new Set(keep);
+  const keepSet = new Set(serves.map((serve) => serve.id));
   const dropped = (existingItems ?? [])
-    .map((item) => item.menu_item_id as number)
-    .filter((menuItemId) => !keepSet.has(menuItemId));
+    .map((item) => item.menu_item_price_id as number)
+    .filter((priceId) => !keepSet.has(priceId));
   if (dropped.length > 0) {
     const { error: clearError } = await supabase
       .from("stock_market_event_items")
       .delete()
       .eq("event_id", eventId)
-      .in("menu_item_id", dropped);
+      .in("menu_item_price_id", dropped);
     if (clearError) return { error: clearError.message };
   }
   const { error: itemsError } = await supabase
     .from("stock_market_event_items")
-    .upsert(
-      keep.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })),
-      { onConflict: "event_id,menu_item_id", ignoreDuplicates: true }
-    );
+    .upsert(serves.map((serve) => eventItemLink(eventId, serve)), {
+      onConflict: "event_id,menu_item_price_id",
+      ignoreDuplicates: true,
+    });
   if (itemsError) return { error: itemsError.message };
 
   revalidateMarket();
   return { success: true, id: eventId };
+}
+
+function eventItemLink(eventId: number, serve: { id: number; menuItemId: number }) {
+  return { event_id: eventId, menu_item_id: serve.menuItemId, menu_item_price_id: serve.id };
 }
 
 export async function deactivateStockMarketEventAction(id: number) {
@@ -336,7 +384,7 @@ export async function openStockMarketEventAction(id: number) {
   const { data: event, error } = await supabase
     .from("stock_market_events")
     .select(
-      "*, stock_market_event_items(menu_item_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)"
+      "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)"
     )
     .eq("id", id)
     .eq("is_active", true)
@@ -345,16 +393,16 @@ export async function openStockMarketEventAction(id: number) {
   if (!event) return { error: "That event is no longer available." };
 
   const row = event as StockMarketEventRow & {
-    stock_market_event_items: ({ menu_item_id: number } & DrinkOverrideRow)[] | null;
+    stock_market_event_items: ({ menu_item_price_id: number } & DrinkOverrideRow)[] | null;
   };
   const items = row.stock_market_event_items ?? [];
-  const menuItemIds = items.map((item) => item.menu_item_id);
-  if (menuItemIds.length === 0) return { error: "This event has no drinks - edit it and pick some." };
+  const menuItemPriceIds = items.map((item) => item.menu_item_price_id);
+  if (menuItemPriceIds.length === 0) return { error: "This event has no drinks - edit it and pick some." };
 
   const result = await openSession(supabase, {
     config: eventConfig(row),
-    menuItemIds,
-    overridesByItem: new Map(items.map((item) => [item.menu_item_id, overridesFromRow(item)])),
+    menuItemPriceIds,
+    overridesByPrice: new Map(items.map((item) => [item.menu_item_price_id, overridesFromRow(item)])),
     stockMarketEventId: row.id,
   });
   if ("error" in result) return result;
@@ -363,7 +411,7 @@ export async function openStockMarketEventAction(id: number) {
 }
 
 type EventItemJoin = {
-  menu_item_id: number;
+  menu_item_price_id: number;
   menu_items:
     | { menu_categories: { market_only: boolean } | { market_only: boolean }[] | null }
     | { menu_categories: { market_only: boolean } | { market_only: boolean }[] | null }[]
@@ -377,14 +425,14 @@ function isMarketOnlyJoin(row: EventItemJoin): boolean {
   return Boolean(category?.market_only);
 }
 
-async function nightOnlyItemIds(supabase: ServerClient, eventId: number): Promise<number[]> {
+async function nightOnlyPriceIds(supabase: ServerClient, eventId: number): Promise<number[]> {
   const { data } = await supabase
     .from("stock_market_event_items")
-    .select("menu_item_id, menu_items(menu_categories(market_only))")
+    .select("menu_item_price_id, menu_items(menu_categories(market_only))")
     .eq("event_id", eventId);
   return ((data ?? []) as EventItemJoin[])
     .filter(isMarketOnlyJoin)
-    .map((row) => row.menu_item_id);
+    .map((row) => row.menu_item_price_id);
 }
 
 async function ensureMarketOnlyCategory(supabase: ServerClient): Promise<number | { error: string }> {
@@ -420,30 +468,43 @@ async function eventExists(supabase: ServerClient, eventId: number): Promise<boo
   return Boolean(data);
 }
 
-export async function addEventDrinksAction(eventId: number, menuItemIds: number[]) {
+export async function addEventDrinksAction(eventId: number, menuItemPriceIds: number[]) {
   const supabase = await createClient();
-  const ids = [...new Set(menuItemIds.filter((id) => Number.isInteger(id) && id > 0))];
+  const ids = [...new Set(menuItemPriceIds.filter((id) => Number.isInteger(id) && id > 0))];
   if (ids.length === 0) return { error: "Pick at least one drink to add." };
   if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
 
+  const serves = await tradeableServes(supabase, ids);
+  if ("error" in serves) return { error: serves.error };
+  if (serves.length === 0) return { error: "None of those serves has a price to trade." };
+
   const { error } = await supabase
     .from("stock_market_event_items")
-    .upsert(
-      ids.map((menuItemId) => ({ event_id: eventId, menu_item_id: menuItemId })),
-      { onConflict: "event_id,menu_item_id", ignoreDuplicates: true }
-    );
+    .upsert(serves.map((serve) => eventItemLink(eventId, serve)), {
+      onConflict: "event_id,menu_item_price_id",
+      ignoreDuplicates: true,
+    });
   if (error) return { error: error.message };
   revalidateMarket();
-  return { success: true, count: ids.length };
+  return { success: true, count: serves.length };
 }
 
-export async function removeEventDrinkAction(eventId: number, menuItemId: number) {
+export async function removeEventDrinkAction(eventId: number, menuItemPriceId: number) {
   const supabase = await createClient();
+  const { data: link } = await supabase
+    .from("stock_market_event_items")
+    .select("menu_item_id")
+    .eq("event_id", eventId)
+    .eq("menu_item_price_id", menuItemPriceId)
+    .maybeSingle();
+  if (!link) return { error: "That serve is not on this event." };
+  const menuItemId = link.menu_item_id as number;
+
   const { error } = await supabase
     .from("stock_market_event_items")
     .delete()
     .eq("event_id", eventId)
-    .eq("menu_item_id", menuItemId);
+    .eq("menu_item_price_id", menuItemPriceId);
   if (error) return { error: error.message };
 
   const { data: item } = await supabase
@@ -521,17 +582,29 @@ function readDrinkOverrides(formData: FormData): DrinkOverrides | { error: strin
   return parsed.data;
 }
 
+async function serveOwner(
+  supabase: ServerClient,
+  menuItemPriceId: number
+): Promise<{ id: number; menuItemId: number } | null> {
+  const { data } = await supabase
+    .from("menu_item_prices")
+    .select("id, menu_item_id")
+    .eq("id", menuItemPriceId)
+    .maybeSingle();
+  return data ? { id: data.id as number, menuItemId: data.menu_item_id as number } : null;
+}
+
 async function writeDrinkOverrides(
   supabase: ServerClient,
   eventId: number,
-  menuItemId: number,
+  serve: { id: number; menuItemId: number },
   overrides: DrinkOverrides
 ): Promise<{ error: string } | null> {
   const { error } = await supabase
     .from("stock_market_event_items")
     .upsert(
-      { event_id: eventId, menu_item_id: menuItemId, ...overridesToRow(overrides) },
-      { onConflict: "event_id,menu_item_id" }
+      { ...eventItemLink(eventId, serve), ...overridesToRow(overrides) },
+      { onConflict: "event_id,menu_item_price_id" }
     );
   return error ? { error: error.message } : null;
 }
@@ -539,18 +612,21 @@ async function writeDrinkOverrides(
 export async function saveEventDrinkPricingAction(formData: FormData) {
   const supabase = await createClient();
   const eventId = Number(formData.get("event_id"));
-  const menuItemId = Number(formData.get("id"));
+  const menuItemPriceId = Number(formData.get("menu_item_price_id"));
   if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
-  if (!Number.isInteger(menuItemId) || menuItemId <= 0) return { error: "Missing drink." };
+  if (!Number.isInteger(menuItemPriceId) || menuItemPriceId <= 0) return { error: "Missing drink." };
   if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
 
   const overrides = readDrinkOverrides(formData);
   if ("error" in overrides) return overrides;
 
-  const writeError = await writeDrinkOverrides(supabase, eventId, menuItemId, overrides);
+  const serve = await serveOwner(supabase, menuItemPriceId);
+  if (!serve) return { error: "That serve is no longer on the menu." };
+
+  const writeError = await writeDrinkOverrides(supabase, eventId, serve, overrides);
   if (writeError) return writeError;
   revalidateMarket();
-  return { success: true, id: menuItemId };
+  return { success: true, id: menuItemPriceId };
 }
 
 export async function saveNightOnlyDrinkAction(formData: FormData) {
@@ -609,22 +685,33 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
           .from("menu_item_prices")
           .update({ serve, amount, updated_at: now, updated_by: currentEmployeeId })
           .eq("id", price.id)
-      : supabase.from("menu_item_prices").insert({
-          menu_item_id: id,
-          serve,
-          amount,
-          display_order: 0,
-          created_by: currentEmployeeId,
-          updated_by: currentEmployeeId,
-        });
-    const { error: priceError } = await priceWrite;
-    if (priceError) return { error: priceError.message };
+          .select("id")
+          .single()
+      : supabase
+          .from("menu_item_prices")
+          .insert({
+            menu_item_id: id,
+            serve,
+            amount,
+            display_order: 0,
+            created_by: currentEmployeeId,
+            updated_by: currentEmployeeId,
+          })
+          .select("id")
+          .single();
+    const { data: savedPrice, error: priceError } = await priceWrite;
+    if (priceError || !savedPrice) return { error: priceError?.message ?? "Could not save the price." };
 
-    const overrideError = await writeDrinkOverrides(supabase, eventId, id, overrides);
+    const overrideError = await writeDrinkOverrides(
+      supabase,
+      eventId,
+      { id: savedPrice.id as number, menuItemId: id },
+      overrides
+    );
     if (overrideError) return overrideError;
 
     revalidateMarket();
-    return { success: true, id };
+    return { success: true, id: savedPrice.id as number };
   }
 
   const categoryId = await ensureMarketOnlyCategory(supabase);
@@ -647,26 +734,31 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
     .single();
   if (error || !inserted) return { error: error?.message ?? "Could not create the drink." };
 
-  const { error: priceError } = await supabase.from("menu_item_prices").insert({
-    menu_item_id: inserted.id,
-    serve,
-    amount,
-    display_order: 0,
-    created_by: currentEmployeeId,
-    updated_by: currentEmployeeId,
-  });
-  if (priceError) {
+  const { data: insertedPrice, error: priceError } = await supabase
+    .from("menu_item_prices")
+    .insert({
+      menu_item_id: inserted.id,
+      serve,
+      amount,
+      display_order: 0,
+      created_by: currentEmployeeId,
+      updated_by: currentEmployeeId,
+    })
+    .select("id")
+    .single();
+  if (priceError || !insertedPrice) {
     await supabase.from("menu_items").delete().eq("id", inserted.id);
-    return { error: priceError.message };
+    return { error: priceError?.message ?? "Could not save the price." };
   }
 
-  const { error: linkError } = await supabase
-    .from("stock_market_event_items")
-    .insert({ event_id: eventId, menu_item_id: inserted.id, ...overridesToRow(overrides) });
+  const { error: linkError } = await supabase.from("stock_market_event_items").insert({
+    ...eventItemLink(eventId, { id: insertedPrice.id as number, menuItemId: inserted.id }),
+    ...overridesToRow(overrides),
+  });
   if (linkError) return { error: linkError.message };
 
   revalidateMarket();
-  return { success: true, id: inserted.id };
+  return { success: true, id: insertedPrice.id as number };
 }
 
 export async function updateConfigAction(formData: FormData) {
@@ -1039,7 +1131,7 @@ export async function pushMenuToSquareAction() {
 }
 
 export type DrinkPriceDraft = {
-  menuItemId: number;
+  menuItemPriceId: number;
   overrides: Record<keyof DrinkOverrides, string | number | null>;
 };
 
@@ -1049,19 +1141,39 @@ export async function saveEventDrinkPricesAction(eventId: number, rows: DrinkPri
   if (rows.length === 0) return { error: "Nothing to save." };
   if (!(await eventExists(supabase, eventId))) return { error: "That event is no longer available." };
 
-  const payload: (DrinkOverrideRow & { event_id: number; menu_item_id: number })[] = [];
+  const { data: serveRows, error: serveError } = await supabase
+    .from("menu_item_prices")
+    .select("id, menu_item_id")
+    .in(
+      "id",
+      rows.map((row) => row.menuItemPriceId)
+    );
+  if (serveError) return { error: serveError.message };
+  const menuItemByPrice = new Map(
+    (serveRows ?? []).map((row) => [row.id as number, row.menu_item_id as number])
+  );
+
+  const payload: (DrinkOverrideRow & {
+    event_id: number;
+    menu_item_id: number;
+    menu_item_price_id: number;
+  })[] = [];
   for (const row of rows) {
-    if (!Number.isInteger(row.menuItemId) || row.menuItemId <= 0) return { error: "Missing drink." };
+    const menuItemId = menuItemByPrice.get(row.menuItemPriceId);
+    if (menuItemId == null) return { error: "One of those serves is no longer on the menu." };
     const parsed = drinkOverridesSchema.safeParse(row.overrides);
     if (!parsed.success) {
       return { error: parsed.error.issues[0]?.message ?? "Check the prices." };
     }
-    payload.push({ event_id: eventId, menu_item_id: row.menuItemId, ...overridesToRow(parsed.data) });
+    payload.push({
+      ...eventItemLink(eventId, { id: row.menuItemPriceId, menuItemId }),
+      ...overridesToRow(parsed.data),
+    });
   }
 
   const { error } = await supabase
     .from("stock_market_event_items")
-    .upsert(payload, { onConflict: "event_id,menu_item_id" });
+    .upsert(payload, { onConflict: "event_id,menu_item_price_id" });
   if (error) return { error: error.message };
   revalidateMarket();
   return { success: true, count: payload.length };
@@ -1102,4 +1214,344 @@ export async function setInstrumentPriceAction(instrumentId: number, price: numb
 
   revalidateMarket();
   return { success: true, price: currentPrice };
+}
+
+/* ─── Simulated sales ────────────────────────────────────────────────────────
+   The engine only learns about demand once per tick, from Square's completed
+   orders. These actions queue fake "units sold" rows that the next tick adds
+   on top of the till figures (see market_sim_sales in tick.ts), so a market
+   can be exercised on a quiet afternoon - or before the Square links are
+   done - without a sandbox catalog or a real customer. Prices, alerts and the
+   Square price sync all behave exactly as they would for a real sale. */
+
+type SimSession = { id: number; tick_no: number; config: unknown; sandbox_seeded_at: string | null };
+
+async function liveSimSession(supabase: ServerClient): Promise<SimSession | { error: string }> {
+  const { data: session, error } = await supabase
+    .from("market_sessions")
+    .select("id, tick_no, config, sandbox_seeded_at")
+    .eq("status", "live")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!session) return { error: "No live market - open one before simulating sales." };
+  return session as SimSession;
+}
+
+export type SimMode = "queue" | "square";
+
+type SimInstrumentRow = {
+  id: number;
+  display_name: string;
+  stock_state: string;
+  stock_override: string | null;
+  square_variation_id: string | null;
+};
+
+async function liveSimInstruments(
+  supabase: ServerClient,
+  sessionId: number
+): Promise<SimInstrumentRow[] | { error: string }> {
+  const { data, error } = await supabase
+    .from("market_instruments")
+    .select("id, display_name, stock_state, stock_override, square_variation_id")
+    .eq("session_id", sessionId);
+  if (error) return { error: error.message };
+  return (data ?? []) as SimInstrumentRow[];
+}
+
+/* Sandbox sales are recorded already-consumed: the units reach the engine
+   through Square's orders.search on the next tick, not through this table. */
+async function recordSquareSales(
+  supabase: ServerClient,
+  session: SimSession,
+  sales: { instrumentId: number; units: number; rung: RungSale }[],
+  createdBy: number | null
+) {
+  if (sales.length === 0) return null;
+  const { error } = await supabase.from("market_sim_sales").insert(
+    sales.map((sale) => ({
+      session_id: session.id,
+      instrument_id: sale.instrumentId,
+      units: sale.units,
+      source: "square_sandbox",
+      created_by: createdBy,
+      consumed_tick_no: session.tick_no,
+      square_order_id: sale.rung.orderId,
+      square_payment_id: sale.rung.paymentId,
+      amount: sale.rung.amount,
+      tender: sale.rung.tender,
+    }))
+  );
+  return error ? { error: error.message } : null;
+}
+
+const NOT_SEEDED = "Seed the sandbox catalog first so this market's drinks exist in Square sandbox.";
+
+function pickTender(): "card" | "cash" {
+  return Math.random() < 0.3 ? "cash" : "card";
+}
+
+export async function simulateSaleAction(
+  instrumentId: number,
+  units: number,
+  mode: SimMode = "queue"
+) {
+  const supabase = await createClient();
+  if (!isValidSaleUnits(units)) {
+    return { error: `Sell between 1 and ${SIM_MAX_UNITS_PER_SALE} at a time.` };
+  }
+  const session = await liveSimSession(supabase);
+  if ("error" in session) return session;
+
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("id, display_name, square_variation_id")
+    .eq("id", instrumentId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not trading on the live market." };
+
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+
+  if (mode === "square") {
+    const guard = assertSandbox();
+    if ("error" in guard) return guard;
+    if (!session.sandbox_seeded_at) return { error: NOT_SEEDED };
+    if (!instrument.square_variation_id) {
+      return { error: `${instrument.display_name} is not in the sandbox catalog - seed it first.` };
+    }
+    let rung: RungSale;
+    try {
+      rung = await ringSaleThroughSquare(
+        guard.locationId,
+        [{ variationId: instrument.square_variation_id, quantity: units }],
+        pickTender()
+      );
+    } catch (err) {
+      console.error("[market] sandbox sale failed:", err);
+      return { error: err instanceof Error ? err.message : "Square sandbox rejected the sale." };
+    }
+    const recordError = await recordSquareSales(
+      supabase,
+      session,
+      [{ instrumentId: instrument.id, units, rung }],
+      currentEmployeeId
+    );
+    if (recordError) return recordError;
+    revalidateMarket();
+    return { success: true, name: instrument.display_name as string, units, amount: rung.amount, orderId: rung.orderId };
+  }
+
+  const { error } = await supabase.from("market_sim_sales").insert({
+    session_id: session.id,
+    instrument_id: instrument.id,
+    units,
+    source: "manual",
+    created_by: currentEmployeeId,
+  });
+  if (error) return { error: error.message };
+
+  revalidateMarket();
+  return { success: true, name: instrument.display_name as string, units };
+}
+
+export async function simulateBusyRoundAction(
+  sales: number,
+  favouriteId?: number | null,
+  mode: SimMode = "queue"
+) {
+  const supabase = await createClient();
+  if (!Number.isFinite(sales) || sales < 1) return { error: "Pick how many sales to ring up." };
+  const session = await liveSimSession(supabase);
+  if ("error" in session) return session;
+
+  const rows = await liveSimInstruments(supabase, session.id);
+  if ("error" in rows) return rows;
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+
+  if (mode === "square") {
+    const guard = assertSandbox();
+    if ("error" in guard) return guard;
+    if (!session.sandbox_seeded_at) return { error: NOT_SEEDED };
+    const linked = rows.filter((row) => row.square_variation_id);
+    if (linked.length === 0) return { error: "No drinks are in the sandbox catalog yet - seed it first." };
+
+    const plan = planBusyRound(
+      linked.map((row) => ({
+        id: row.id,
+        soldOut: row.stock_override === "out" || row.stock_state === "out",
+      })),
+      { sales: Math.min(sales, SIM_MAX_SQUARE_ROUND_SALES), favouriteId: favouriteId ?? null }
+    );
+    if (plan.length === 0) return { error: "Every drink on the board is sold out - nothing to sell." };
+
+    const variationById = new Map(linked.map((row) => [row.id, row.square_variation_id as string]));
+    const rung: { instrumentId: number; units: number; rung: RungSale }[] = [];
+    let failure: string | null = null;
+    for (const sale of plan) {
+      try {
+        const result = await ringSaleThroughSquare(
+          guard.locationId,
+          [{ variationId: variationById.get(sale.instrumentId) as string, quantity: sale.units }],
+          pickTender()
+        );
+        rung.push({ instrumentId: sale.instrumentId, units: sale.units, rung: result });
+      } catch (err) {
+        console.error("[market] sandbox busy round stopped:", err);
+        failure = err instanceof Error ? err.message : "Square sandbox rejected a sale.";
+        break;
+      }
+    }
+    const recordError = await recordSquareSales(supabase, session, rung, currentEmployeeId);
+    if (recordError) return recordError;
+    revalidateMarket();
+    if (rung.length === 0) return { error: failure ?? "Square sandbox rejected the round." };
+    const units = rung.reduce((sum, sale) => sum + sale.units, 0);
+    const takings = rung.reduce((sum, sale) => sum + sale.rung.amount, 0);
+    return { success: true, sales: rung.length, units, takings, partialError: failure };
+  }
+
+  const plan = planBusyRound(
+    rows.map((row) => ({
+      id: row.id,
+      soldOut: row.stock_override === "out" || row.stock_state === "out",
+    })),
+    { sales: Math.min(sales, SIM_MAX_ROUND_SALES), favouriteId: favouriteId ?? null }
+  );
+  if (plan.length === 0) return { error: "Every drink on the board is sold out - nothing to sell." };
+
+  const { error } = await supabase.from("market_sim_sales").insert(
+    plan.map((sale) => ({
+      session_id: session.id,
+      instrument_id: sale.instrumentId,
+      units: sale.units,
+      source: "busy_round",
+      created_by: currentEmployeeId,
+    }))
+  );
+  if (error) return { error: error.message };
+
+  revalidateMarket();
+  const units = plan.reduce((sum, sale) => sum + sale.units, 0);
+  return { success: true, sales: plan.length, units };
+}
+
+export async function seedSandboxCatalogAction(stockQty: number) {
+  const supabase = await createClient();
+  const session = await liveSimSession(supabase);
+  if ("error" in session) return session;
+  const qty = Number.isFinite(stockQty) ? Math.max(0, Math.min(999, Math.floor(stockQty))) : 40;
+
+  try {
+    const result = await seedSandboxCatalog(supabase, session.id, qty);
+    if ("error" in result) return result;
+    revalidateMarket();
+    return { success: true, ...result, stockQty: qty };
+  } catch (err) {
+    console.error("[market] sandbox seed failed:", err);
+    return { error: err instanceof Error ? err.message : "Could not write to the Square sandbox catalog." };
+  }
+}
+
+/* Drops sales the tick has not picked up yet; consumed rows stay as history. */
+export async function clearSimulatedSalesAction() {
+  const supabase = await createClient();
+  const session = await liveSimSession(supabase);
+  if ("error" in session) return session;
+
+  const { error, count } = await supabase
+    .from("market_sim_sales")
+    .delete({ count: "exact" })
+    .eq("session_id", session.id)
+    .is("consumed_tick_no", null);
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true, cleared: count ?? 0 };
+}
+
+/* Runs the engine now instead of waiting out tickIntervalSec, so a simulated
+   sale shows on the board straight away. Uses the admin client like the cron
+   route does; the compare-and-swap in maybeRunMarketTick still protects
+   against a cron tick landing at the same moment. */
+async function forceTickNow(liveId: number): Promise<{ tickNo: number | null } | { error: string }> {
+  const admin = createAdminClient();
+  const { error: resetError } = await admin
+    .from("market_sessions")
+    .update({ last_tick_at: null })
+    .eq("id", liveId)
+    .eq("status", "live");
+  if (resetError) return { error: resetError.message };
+
+  const { data: session, error } = await admin
+    .from("market_sessions")
+    .select("*")
+    .eq("id", liveId)
+    .eq("status", "live")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!session) return { error: "The market closed before the tick could run." };
+
+  await maybeRunMarketTick(admin, session as MarketSessionRow);
+
+  const { data: after } = await admin
+    .from("market_sessions")
+    .select("tick_no")
+    .eq("id", liveId)
+    .maybeSingle();
+  return { tickNo: (after?.tick_no as number | undefined) ?? null };
+}
+
+export async function runTickNowAction() {
+  const supabase = await createClient();
+  const live = await liveSimSession(supabase);
+  if ("error" in live) return live;
+
+  const ticked = await forceTickNow(live.id);
+  if ("error" in ticked) return ticked;
+
+  revalidateMarket();
+  return { success: true, tickNo: ticked.tickNo ?? live.tick_no + 1 };
+}
+
+const STOCK_ADD_MAX = 500;
+
+/* A real Square inventory adjustment for one linked serve, then a tick so
+   the board's stock state and count catch up at once (and the engine's
+   restock alert fires if the drink was sold out). */
+export async function addStockAction(instrumentId: number, quantity: number) {
+  const supabase = await createClient();
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > STOCK_ADD_MAX) {
+    return { error: `Add between 1 and ${STOCK_ADD_MAX} at a time.` };
+  }
+  const session = await liveSimSession(supabase);
+  if ("error" in session) return session;
+
+  const env = squareSimEnvironment();
+  if (!process.env.SQUARE_ACCESS_TOKEN) return { error: "SQUARE_ACCESS_TOKEN is not set." };
+  if (!env.locationId) return { error: "SQUARE_LOCATION_ID is not set." };
+  if (env.isSandbox && !session.sandbox_seeded_at) return { error: NOT_SEEDED };
+
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("id, display_name, square_variation_id")
+    .eq("id", instrumentId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not trading on the live market." };
+  if (!instrument.square_variation_id) {
+    return { error: `${instrument.display_name} is not linked to Square, so it has no stock to add to.` };
+  }
+
+  try {
+    await addInventory(env.locationId, instrument.square_variation_id, quantity);
+  } catch (err) {
+    console.error("[market] add stock failed:", err);
+    return { error: err instanceof Error ? err.message : "Square rejected the stock change." };
+  }
+
+  const ticked = await forceTickNow(session.id);
+  if ("error" in ticked) return ticked;
+
+  revalidateMarket();
+  return { success: true, name: instrument.display_name as string, quantity };
 }

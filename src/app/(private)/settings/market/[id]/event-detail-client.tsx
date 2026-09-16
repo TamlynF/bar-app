@@ -69,14 +69,18 @@ export type LiveInstrument = {
   crashing: boolean;
 };
 
+/* One serve on the event: `id` is the menu_item_prices row, which is what
+   the event link, the overrides and the live instrument are keyed on. */
 export type EventDrink = {
   id: number;
+  menuItemId: number;
   name: string;
   isActive: boolean;
   categoryName: string;
   categoryOrder: number;
   nightOnly: boolean;
-  serve: string | null;
+  serve: string;
+  serveOrder: number;
   basePrice: number | null;
   linked: boolean;
   overrides: DrinkOverrides;
@@ -89,6 +93,7 @@ export type AvailableDrink = {
   categoryName: string;
   serve: string;
   basePrice: number;
+  linked: boolean;
 };
 
 export type EventSession = {
@@ -409,7 +414,8 @@ function DrinkForm({
       className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
     >
       <input type="hidden" name="event_id" value={eventId} />
-      {drink && <input type="hidden" name="id" value={drink.id} />}
+      {drink && <input type="hidden" name="id" value={drink.menuItemId} />}
+      {drink && <input type="hidden" name="menu_item_price_id" value={drink.id} />}
       {nightOnly && (
         <>
           <DetailCard className="divide-y divide-admin-line/50">
@@ -498,7 +504,7 @@ function AddDrinksForm({
     >
       <input
         type="hidden"
-        name="menu_item_ids"
+        name="menu_item_price_ids"
         value={JSON.stringify(selected)}
       />
       <ListSearchInput
@@ -508,14 +514,14 @@ function AddDrinksForm({
         placeholder="Search by drink or category"
       />
       <div className="flex items-center justify-between px-1 text-[11px] font-semibold text-admin-muted">
-        <span>{available.length} drinks not yet on this event</span>
+        <span>{available.length} serves not yet on this event</span>
         <span className="tabular-nums">{selected.length} selected</span>
       </div>
       <DetailCard>
         {shown.length === 0 ? (
           <p className="px-4 py-3 text-[13px] text-admin-muted sm:px-5">
             {available.length === 0
-              ? "Every priced menu drink is already on this event."
+              ? "Every priced serve on the menu is already on this event."
               : "No drinks match."}
           </p>
         ) : (
@@ -529,15 +535,17 @@ function AddDrinksForm({
                   type="checkbox"
                   checked={selectedSet.has(drink.id)}
                   onChange={() => toggle(drink.id)}
-                  aria-label={`Add ${drink.name}`}
+                  aria-label={`Add ${drink.name} (${drink.serve})`}
                   className="h-4 w-4 cursor-pointer accent-admin-primary"
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-semibold text-admin-ink">
                     {drink.name}
+                    <span className="font-medium text-admin-muted"> · {drink.serve}</span>
                   </span>
                   <span className="block text-[11px] text-admin-muted">
-                    {drink.categoryName} · {drink.serve}
+                    {drink.categoryName}
+                    {!drink.linked && " · not linked to Square"}
                   </span>
                 </span>
                 <span className="text-[13px] text-admin-muted tabular-nums">
@@ -614,7 +622,7 @@ export default function EventDetailClient({
   function handleSavePrices() {
     if (dirtyDrinks.length === 0) return;
     const rows = dirtyDrinks.map((drink) => ({
-      menuItemId: drink.id,
+      menuItemPriceId: drink.id,
       overrides: {
         ...draftFor(drink),
         lowStockAt: drink.overrides.lowStockAt,
@@ -721,7 +729,7 @@ export default function EventDetailClient({
       title: "Remove drink from event",
       description: drink.nightOnly
         ? `"${drink.name}" is a tonight-only drink and will be deleted.`
-        : `"${drink.name}" comes off this event. It stays on the menu.`,
+        : `"${drink.name} · ${drink.serve}" comes off this event. It stays on the menu.`,
       confirmLabel: "Remove",
       action: async () => {
         const result = await removeEventDrinkAction(event.id, drink.id);
@@ -752,7 +760,7 @@ export default function EventDetailClient({
   const submitAddDrinks = addSheet.submit(async (formData) => {
     let ids: number[] = [];
     try {
-      ids = JSON.parse(formData.get("menu_item_ids")?.toString() || "[]");
+      ids = JSON.parse(formData.get("menu_item_price_ids")?.toString() || "[]");
     } catch {
       ids = [];
     }
@@ -995,7 +1003,7 @@ export default function EventDetailClient({
                                 )}
                               </span>
                               <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-admin-muted">
-                                {drink.serve && <span>{drink.serve}</span>}
+                                <span>{drink.serve}</span>
                                 {drink.linked ? (
                                   <span className="rounded-full bg-admin-success-bg px-1.5 py-0.5 font-semibold text-admin-success">
                                     Square linked
@@ -1221,7 +1229,7 @@ export default function EventDetailClient({
                                 </span>
                               )}
                             </td>
-                            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{drink.serve ?? "-"}</td>
+                            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{drink.serve}</td>
                             <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
                               {drink.basePrice != null ? formatGbp(drink.basePrice) : "-"}
                             </td>
@@ -1425,7 +1433,7 @@ export default function EventDetailClient({
               <DetailCell
                 dense
                 label="Serve"
-                value={selectedDrink.serve ?? "-"}
+                value={selectedDrink.serve}
               />
               <DetailCell
                 dense

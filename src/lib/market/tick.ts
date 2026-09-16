@@ -12,6 +12,7 @@ import {
   type StockState,
 } from "./types";
 import { sendMarketPushAlerts } from "./push-alerts";
+import { mergeUnits, sumPendingUnits, type SimSaleRow } from "./simulate";
 
 export type MarketSessionRow = {
   id: number;
@@ -39,6 +40,7 @@ export type MarketInstrumentRow = {
   demand_units: number | string;
   stock_state: StockState;
   stock_override: StockState | null;
+  stock_qty: number | string | null;
   square_variation_id: string | null;
   min_price: number | string | null;
   max_price: number | string | null;
@@ -224,6 +226,22 @@ async function fetchStockByVariation(
   return stock;
 }
 
+/* The serves (menu_item_price ids) on the session's event, or null when the
+   session predates events and every instrument counts. */
+async function eventServeIds(
+  supabase: SupabaseClient,
+  session: MarketSessionRow
+): Promise<Set<number> | null> {
+  if (session.stock_market_event_id == null) return null;
+  const { data } = await supabase
+    .from("stock_market_event_items")
+    .select("menu_item_price_id")
+    .eq("event_id", session.stock_market_event_id);
+  return new Set(
+    ((data ?? []) as { menu_item_price_id: number }[]).map((row) => row.menu_item_price_id)
+  );
+}
+
 /* The winner of the compare-and-swap on last_tick_at runs one engine tick;
    everyone else reads the state as-is. Square being down degrades to a pure
    random-walk tick rather than freezing the board. */
@@ -254,12 +272,16 @@ export async function maybeRunMarketTick(
   const tickNo = won[0].tick_no as number;
 
   try {
-    const { data: instrumentRows, error } = await supabase
-      .from("market_instruments")
-      .select("*")
-      .eq("session_id", session.id);
+    const [{ data: instrumentRows, error }, onEvent] = await Promise.all([
+      supabase.from("market_instruments").select("*").eq("session_id", session.id),
+      eventServeIds(supabase, session),
+    ]);
     if (error) throw error;
-    const instruments = (instrumentRows ?? []) as MarketInstrumentRow[];
+    /* Only serves still on the event move. A serve staff removed mid-session
+       keeps its row (history, till restore at close) but stops trading. */
+    const instruments = ((instrumentRows ?? []) as MarketInstrumentRow[]).filter(
+      (row) => onEvent == null || onEvent.has(row.menu_item_price_id)
+    );
     if (instruments.length === 0) return;
 
     const locationId = process.env.SQUARE_LOCATION_ID;
@@ -283,11 +305,26 @@ export async function maybeRunMarketTick(
       stockQtyByVariation = await fetchStockByVariation(locationId, mappedVariationIds);
     }
 
-    const newUnitsByInstrument = new Map<number, number>();
+    let newUnitsByInstrument = new Map<number, number>();
     for (const instrument of instruments) {
       if (!instrument.square_variation_id) continue;
       const units = unitsByVariation.get(instrument.square_variation_id);
       if (units) newUnitsByInstrument.set(instrument.id, units);
+    }
+
+    /* Simulated sales (admin "Simulate sales" panel) are a second demand
+       feed on top of the till. Rows are claimed by id so a sale rung up
+       between this read and the update below is simply picked up next tick
+       rather than lost or double-counted. */
+    const { data: simRows, error: simError } = await supabase
+      .from("market_sim_sales")
+      .select("id, instrument_id, units")
+      .eq("session_id", session.id)
+      .is("consumed_tick_no", null);
+    if (simError) console.error("[market] simulated sales read failed:", simError);
+    const pendingSim = (simRows ?? []) as (SimSaleRow & { id: number })[];
+    if (pendingSim.length > 0) {
+      newUnitsByInstrument = mergeUnits(newUnitsByInstrument, sumPendingUnits(pendingSim));
     }
 
     const crashActive =
@@ -307,6 +344,8 @@ export async function maybeRunMarketTick(
 
     const byId = new Map(instruments.map((i) => [i.id, i] as const));
     for (const result of results) {
+      const variationId = byId.get(result.id)?.square_variation_id;
+      const stockQty = variationId ? stockQtyByVariation.get(variationId) : undefined;
       const { error: updateError } = await supabase
         .from("market_instruments")
         .update({
@@ -315,6 +354,7 @@ export async function maybeRunMarketTick(
           stock_state: result.stockState,
           last_notified_price: result.lastNotifiedPrice,
           updated_at: now.toISOString(),
+          ...(stockQty === undefined ? {} : { stock_qty: stockQty }),
         })
         .eq("id", result.id);
       if (updateError) throw updateError;
@@ -366,6 +406,17 @@ export async function maybeRunMarketTick(
         .eq("id", session.id);
     }
 
+    if (pendingSim.length > 0) {
+      const { error: consumeError } = await supabase
+        .from("market_sim_sales")
+        .update({ consumed_tick_no: tickNo })
+        .in(
+          "id",
+          pendingSim.map((row) => row.id)
+        );
+      if (consumeError) console.error("[market] could not mark simulated sales consumed:", consumeError);
+    }
+
     /* Write leg: push every price that moved this tick into Square in one
        batched catalog write. Runs last so the board state above is already
        committed, and is try/caught on its own so a Square outage can never
@@ -399,31 +450,22 @@ export async function readMarketState(
   let session = sessionRow as MarketSessionRow;
   await maybeRunMarketTick(supabase, session, now);
 
-  const [{ data: refreshed }, { data: instrumentRows }, { data: eventItemRows }] = await Promise.all([
+  const [{ data: refreshed }, { data: instrumentRows }, onEvent] = await Promise.all([
     supabase.from("market_sessions").select("*").eq("id", session.id).maybeSingle(),
     supabase
       .from("market_instruments")
       .select("*, menu_items(menu_categories(name, display_order))")
       .eq("session_id", session.id)
       .order("display_name", { ascending: true }),
-    session.stock_market_event_id != null
-      ? supabase
-          .from("stock_market_event_items")
-          .select("menu_item_id")
-          .eq("event_id", session.stock_market_event_id)
-      : Promise.resolve({ data: null }),
+    eventServeIds(supabase, session),
   ]);
   if (refreshed) session = refreshed as MarketSessionRow;
 
-  /* The board only lists drinks still on the event: a drink staff remove
+  /* The board only lists serves still on the event: a serve staff remove
      from the event mid-session keeps its instrument row (so its history and
      till price survive) but drops off the phone page and the big screen. */
-  const onEvent =
-    eventItemRows == null
-      ? null
-      : new Set((eventItemRows as { menu_item_id: number }[]).map((row) => row.menu_item_id));
   const instruments = ((instrumentRows ?? []) as MarketInstrumentWithCategoryRow[]).filter(
-    (row) => onEvent == null || onEvent.has(row.menu_item_id)
+    (row) => onEvent == null || onEvent.has(row.menu_item_price_id)
   );
   const shownInstrumentIds = new Set(instruments.map((row) => row.id));
   const config = resolveMarketConfig(session.config);

@@ -4,22 +4,29 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Beaker,
   CandlestickChart,
   Check,
   ChevronDown,
   ChevronRight,
+  Eraser,
+  ExternalLink,
+  FastForward,
   Link2,
   Loader2,
   MonitorPlay,
   MoreHorizontal,
+  PackagePlus,
   Play,
   PowerOff,
+  Receipt,
   RotateCcw,
   SearchX,
   Square,
   TrendingDown,
   Upload,
   Wand2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -48,8 +55,11 @@ import { formatGbp } from "@/lib/price";
 import { DEFAULT_MARKET_CONFIG, type MarketConfig, type StockState } from "@/lib/market/types";
 import type { CatalogVariation } from "@/lib/market/mapping";
 import { formatTimeWindow, type StockMarketEventSummary } from "@/lib/market/stock-market-events";
+import { groupServesForPicker, serveLabel, type ServeOption } from "@/lib/market/event-serves";
 import {
+  addStockAction,
   autoMatchMappingsAction,
+  clearSimulatedSalesAction,
   crashMarketAction,
   deactivateStockMarketEventAction,
   endMarketAction,
@@ -57,10 +67,17 @@ import {
   openStockMarketEventAction,
   pushMenuToSquareAction,
   restoreTillPricesAction,
+  runTickNowAction,
   saveMappingAction,
   saveStockMarketEventAction,
+  seedSandboxCatalogAction,
+  setSquareSyncEnabledAction,
   setStockOverrideAction,
+  simulateBusyRoundAction,
+  simulateSaleAction,
+  type SimMode,
 } from "./actions";
+import { squareSandboxDashboardUrl } from "@/lib/market/simulate";
 import { CONFIG_FIELDS, ConfigHelp, PUSH_ALERTS_FIELD, configSummary } from "./config-fields";
 
 export type SessionSummary = {
@@ -70,6 +87,7 @@ export type SessionSummary = {
   crashUntilTick: number | null;
   config: MarketConfig;
   stockMarketEventId: number | null;
+  squareSyncEnabled: boolean;
 };
 
 /* A session (live or ended) whose linked drinks still carry market prices
@@ -91,19 +109,34 @@ export type InstrumentSummary = {
   stockState: StockState;
   stockOverride: StockState | null;
   mapped: boolean;
+  /* Square's IN_STOCK count at the last tick; null when unlinked or unknown. */
+  stockQty: number | null;
+  /* Simulated units queued for the next tick (0 when nothing is waiting). */
+  simPending: number;
+};
+
+export type SquareSimOrder = {
+  id: number;
+  name: string;
+  serve: string;
+  units: number;
+  amount: number | null;
+  tender: "card" | "cash" | null;
+  orderId: string | null;
+  at: string;
+};
+
+export type SquareSimSummary = {
+  environment: "sandbox" | "production";
+  locationId: string | null;
+  sandboxSeededAt: string | null;
+  recentOrders: SquareSimOrder[];
 };
 
 export type CategoryOption = {
   id: number;
   name: string;
   tradeableCount: number;
-};
-
-export type DrinkOption = {
-  id: number;
-  name: string;
-  categoryId: number;
-  categoryName: string;
 };
 
 export type EmployeeOption = {
@@ -117,7 +150,7 @@ export type MappingRow = {
   categoryName: string;
   serve: string;
   amount: number;
-  isPrimary: boolean;
+  onEvent: boolean;
   squareVariationId: string | null;
 };
 
@@ -178,28 +211,22 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
   );
 }
 
+/* Each serve is its own checkbox: "Guinness · pint" and "Guinness · half"
+   are different instruments with different Square links. */
 function DrinkPicker({
   drinks,
   selected,
   onChange,
 }: {
-  drinks: DrinkOption[];
+  drinks: ServeOption[];
   selected: number[];
   onChange: (ids: number[]) => void;
 }) {
-  const groups = useMemo(() => {
-    const byCategory = new Map<number, { name: string; drinks: DrinkOption[] }>();
-    for (const drink of drinks) {
-      const group = byCategory.get(drink.categoryId) ?? { name: drink.categoryName, drinks: [] };
-      group.drinks.push(drink);
-      byCategory.set(drink.categoryId, group);
-    }
-    return [...byCategory.entries()].map(([id, group]) => ({ id, ...group }));
-  }, [drinks]);
+  const groups = useMemo(() => groupServesForPicker(drinks), [drinks]);
 
   const selectedSet = new Set(selected);
 
-  function toggleDrink(id: number) {
+  function toggleServe(id: number) {
     onChange(selectedSet.has(id) ? selected.filter((d) => d !== id) : [...selected, id]);
   }
 
@@ -219,7 +246,7 @@ function DrinkPicker({
   return (
     <div className="divide-y divide-admin-line/50">
       {groups.map((group) => {
-        const ids = group.drinks.map((drink) => drink.id);
+        const ids = group.items.flatMap((item) => item.serves.map((serve) => serve.id));
         const onCount = ids.filter((id) => selectedSet.has(id)).length;
         const allOn = onCount === ids.length;
         return (
@@ -251,21 +278,32 @@ function DrinkPicker({
               </span>
             </summary>
             <div className="grid grid-cols-1 gap-x-4 bg-admin-card px-4 py-2 sm:grid-cols-2 sm:px-5">
-              {group.drinks.map((drink) => (
-                <label
-                  key={drink.id}
-                  className="flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-admin-ink"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedSet.has(drink.id)}
-                    onChange={() => toggleDrink(drink.id)}
-                    aria-label={`Trade ${drink.name}`}
-                    className="h-4 w-4 cursor-pointer accent-admin-primary"
-                  />
-                  <span className="truncate">{drink.name}</span>
-                </label>
-              ))}
+              {group.items.flatMap((item) =>
+                item.serves.map((serve) => (
+                  <label
+                    key={serve.id}
+                    className="flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-admin-ink"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSet.has(serve.id)}
+                      onChange={() => toggleServe(serve.id)}
+                      aria-label={`Trade ${serveLabel(serve.name, serve.serve)}`}
+                      className="h-4 w-4 cursor-pointer accent-admin-primary"
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {item.name}
+                      {item.serves.length > 1 || serve.serve.toLowerCase() !== "each" ? (
+                        <span className="text-admin-muted"> · {serve.serve}</span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-admin-muted tabular-nums">
+                      {formatGbp(serve.amount)}
+                      {!serve.linked && " · not linked"}
+                    </span>
+                  </label>
+                ))
+              )}
             </div>
           </details>
         );
@@ -282,12 +320,12 @@ function EventForm({
   onSubmit,
 }: {
   event: StockMarketEventSummary | null;
-  drinks: DrinkOption[];
+  drinks: ServeOption[];
   live: boolean;
   formError: string | null;
   onSubmit: (formData: FormData) => void;
 }) {
-  const [selectedDrinks, setSelectedDrinks] = useState<number[]>(event?.menuItemIds ?? []);
+  const [selectedDrinks, setSelectedDrinks] = useState<number[]>(event?.menuItemPriceIds ?? []);
   const config = event?.config ?? DEFAULT_MARKET_CONFIG;
 
   return (
@@ -297,7 +335,7 @@ function EventForm({
       className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
     >
       {event && <input type="hidden" name="id" value={event.id} />}
-      <input type="hidden" name="menu_item_ids" value={JSON.stringify(selectedDrinks)} />
+      <input type="hidden" name="menu_item_price_ids" value={JSON.stringify(selectedDrinks)} />
 
       <DetailCard className="divide-y divide-admin-line/50">
         <FormRow label="Name" required dense>
@@ -413,10 +451,11 @@ function StockSelect({
   );
 }
 
-function stockLabel(state: StockState): { label: string; className: string } {
-  if (state === "out") return { label: "Sold out", className: "bg-admin-error-bg text-admin-error" };
-  if (state === "low") return { label: "Running low", className: "bg-admin-warning-bg text-admin-warning" };
-  return { label: "In stock", className: "bg-admin-success-bg text-admin-success" };
+function stockLabel(state: StockState, qty: number | null): { label: string; className: string } {
+  const count = qty == null ? "" : ` · ${Math.max(0, Math.round(qty))} left`;
+  if (state === "out") return { label: `Sold out${count}`, className: "bg-admin-error-bg text-admin-error" };
+  if (state === "low") return { label: `Running low${count}`, className: "bg-admin-warning-bg text-admin-warning" };
+  return { label: `In stock${count}`, className: "bg-admin-success-bg text-admin-success" };
 }
 
 /* The seven raw config numbers, read as a person would say them. */
@@ -445,17 +484,19 @@ export default function MarketClient({
   employees,
   mappingRows,
   tillRestore,
+  squareSim,
   initialEditId,
   initialOpenId,
 }: {
   session: SessionSummary | null;
   instruments: InstrumentSummary[];
   categories: CategoryOption[];
-  drinks: DrinkOption[];
+  drinks: ServeOption[];
   events: StockMarketEventSummary[];
   employees: EmployeeOption[];
   mappingRows: MappingRow[];
   tillRestore: TillRestoreSummary | null;
+  squareSim: SquareSimSummary;
   initialEditId: number | null;
   initialOpenId: number | null;
 }) {
@@ -467,6 +508,12 @@ export default function MarketClient({
   const [loadingVariations, setLoadingVariations] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<EventFilter>("all");
+  const [simOpen, setSimOpen] = useState(false);
+  const [roundSize, setRoundSize] = useState(10);
+  const [favouriteId, setFavouriteId] = useState<number | null>(null);
+  const [simMode, setSimMode] = useState<SimMode>("queue");
+  const [seedStock, setSeedStock] = useState(40);
+  const [stockToAdd, setStockToAdd] = useState(12);
 
   const sheet = useRecordSheet<StockMarketEventSummary>({
     records: events,
@@ -513,11 +560,11 @@ export default function MarketClient({
   const tradeableCount = categories.reduce((sum, cat) => sum + cat.tradeableCount, 0);
 
   const mappedCount = useMemo(
-    () => mappingRows.filter((row) => row.isPrimary && row.squareVariationId).length,
+    () => mappingRows.filter((row) => row.onEvent && row.squareVariationId).length,
     [mappingRows]
   );
   const primaryCount = useMemo(
-    () => mappingRows.filter((row) => row.isPrimary).length,
+    () => mappingRows.filter((row) => row.onEvent).length,
     [mappingRows]
   );
 
@@ -594,6 +641,148 @@ export default function MarketClient({
       confirmLabel: "Crash it",
     });
     if (confirmed) run(crashMarketAction, "Crash triggered - watch the board.");
+  }
+
+  /* ── Simulated sales ─────────────────────────────────────────────────────
+     Queued units land on the next tick; "Tick now" runs the engine at once so
+     the effect is visible without waiting out the interval. */
+  const simPendingTotal = instruments.reduce((sum, instrument) => sum + instrument.simPending, 0);
+
+  const sandboxAvailable = squareSim.environment === "sandbox";
+  const sandboxSeeded = squareSim.sandboxSeededAt !== null;
+  const viaSquare = simMode === "square" && sandboxAvailable;
+  const tillSyncOn = session?.squareSyncEnabled ?? false;
+  /* Queue-only sales still move prices, and with sync on those prices land on
+     the real till when Square is production. Offer to pause sync first. */
+  const queueTouchesRealTill = !viaSquare && !sandboxAvailable && tillSyncOn;
+
+  async function confirmQueueSale(): Promise<boolean> {
+    if (!queueTouchesRealTill) return true;
+    const confirmed = await confirm({
+      title: "Square is set to production",
+      description:
+        "Simulated sales move prices on the board, and till sync is on, so the real Square till would change price too. Pause till sync for this market before selling?",
+      confirmLabel: "Pause till sync and sell",
+    });
+    if (!confirmed) return false;
+    const result = await setSquareSyncEnabledAction(false);
+    if (result?.error) {
+      toast.error(result.error);
+      return false;
+    }
+    return true;
+  }
+
+  /* Confirm dialogs run before the transition starts: a state update raised
+     inside startTransition waits for the transition itself to finish, so a
+     dialog opened in there never appears. */
+  async function handleSimSale(instrument: InstrumentSummary, units: number) {
+    if (!(await confirmQueueSale())) return;
+    startTransition(async () => {
+      const result = await simulateSaleAction(instrument.id, units, viaSquare ? "square" : "queue");
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      if ("amount" in result && typeof result.amount === "number") {
+        toast.success(
+          `${units} × ${instrument.name} rung through Square sandbox - ${formatGbp(result.amount)} paid. The next tick picks it up.`
+        );
+      } else {
+        toast.success(`${units} × ${instrument.name} queued for the next tick.`);
+      }
+      router.refresh();
+    });
+  }
+
+  async function handleAddStock(instrument: InstrumentSummary) {
+    const quantity = Math.floor(stockToAdd);
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      toast.error("Enter how much stock to add.");
+      return;
+    }
+    if (!sandboxAvailable) {
+      const confirmed = await confirm({
+        title: `Add ${quantity} to Square inventory for ${instrument.name}?`,
+        description: "This is a real stock change on the production Square account.",
+        confirmLabel: "Add stock",
+      });
+      if (!confirmed) return;
+    }
+    startTransition(async () => {
+      const result = await addStockAction(instrument.id, quantity);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`${quantity} added to ${instrument.name} in Square.`);
+      router.refresh();
+    });
+  }
+
+  async function handleBusyRound() {
+    if (!(await confirmQueueSale())) return;
+    startTransition(async () => {
+      const result = await simulateBusyRoundAction(roundSize, favouriteId, viaSquare ? "square" : "queue");
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      const sales = "sales" in result ? result.sales : 0;
+      const units = "units" in result ? result.units : 0;
+      if ("takings" in result && typeof result.takings === "number") {
+        toast.success(`${sales} sandbox orders paid - ${units} drinks, ${formatGbp(result.takings)} in the Square sandbox.`);
+        if ("partialError" in result && result.partialError) toast.error(`Round stopped early: ${result.partialError}`);
+      } else {
+        toast.success(`Busy round rung up - ${sales} sales, ${units} drinks queued.`);
+      }
+      router.refresh();
+    });
+  }
+
+  async function handleSeedSandbox() {
+    const confirmed = await confirm({
+      title: "Seed the Square sandbox catalog?",
+      description: `Creates one sandbox item per drink on the live market, priced at the menu price with ${seedStock} in stock, and points this market's drinks at those sandbox items. Your real menu links are untouched.`,
+      confirmLabel: "Seed sandbox",
+    });
+    if (!confirmed) return;
+    startTransition(async () => {
+      const result = await seedSandboxCatalogAction(seedStock);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      const seeded = "seeded" in result ? result.seeded : 0;
+      toast.success(`${seeded} drinks now live in the Square sandbox catalog.`);
+      setSimMode("square");
+      router.refresh();
+    });
+  }
+
+  function handleTickNow() {
+    startTransition(async () => {
+      const result = await runTickNowAction();
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      const tickNo = "tickNo" in result ? result.tickNo : null;
+      toast.success(tickNo != null ? `Tick ${tickNo} run - board updated.` : "Tick run - board updated.");
+      router.refresh();
+    });
+  }
+
+  function handleClearSim() {
+    startTransition(async () => {
+      const result = await clearSimulatedSalesAction();
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Queued simulated sales cleared.");
+      router.refresh();
+    });
   }
 
   function handleDeactivate() {
@@ -673,10 +862,13 @@ export default function MarketClient({
   const selectedDrinksByCategory = useMemo(() => {
     if (!selected) return [];
     const groups = new Map<string, string[]>();
-    for (const id of selected.menuItemIds) {
+    for (const id of selected.menuItemPriceIds) {
       const drink = drinkNames.get(id);
       if (!drink) continue;
-      groups.set(drink.categoryName, [...(groups.get(drink.categoryName) ?? []), drink.name]);
+      groups.set(drink.categoryName, [
+        ...(groups.get(drink.categoryName) ?? []),
+        serveLabel(drink.name, drink.serve),
+      ]);
     }
     return [...groups.entries()];
   }, [selected, drinkNames]);
@@ -796,8 +988,8 @@ export default function MarketClient({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-admin-ink">{event.name}</p>
                   <p className="text-[11px] text-admin-muted">
-                    {formatTimeWindow(event.openTime, event.closeTime)} · {event.menuItemIds.length}{" "}
-                    {event.menuItemIds.length === 1 ? "drink" : "drinks"}
+                    {formatTimeWindow(event.openTime, event.closeTime)} · {event.menuItemPriceIds.length}{" "}
+                    {event.menuItemPriceIds.length === 1 ? "serve" : "serves"}
                     <span className="hidden sm:inline"> · </span>
                     <span className="block sm:inline">
                       {event.lastRunAt ? `Last run ${formatRunDate(event.lastRunAt)}` : "Never run"}
@@ -858,8 +1050,8 @@ export default function MarketClient({
             <DetailCard className="p-4 sm:p-5">
               <p className="text-lg leading-tight font-bold text-admin-ink sm:text-xl">{selected.name}</p>
               <p className="mt-1.5 text-[13px] text-admin-muted sm:text-sm">
-                {formatTimeWindow(selected.openTime, selected.closeTime)} · {selected.menuItemIds.length}{" "}
-                {selected.menuItemIds.length === 1 ? "drink" : "drinks"}
+                {formatTimeWindow(selected.openTime, selected.closeTime)} · {selected.menuItemPriceIds.length}{" "}
+                {selected.menuItemPriceIds.length === 1 ? "serve" : "serves"}
               </p>
               <p className="mt-0.5 text-[13px] text-admin-muted sm:text-sm">
                 {selected.lastRunAt ? `Last run ${formatRunDate(selected.lastRunAt)}` : "Never run"}
@@ -884,7 +1076,7 @@ export default function MarketClient({
                   <span className="text-[11px] font-semibold tracking-wide text-admin-muted sm:text-xs">Drinks on the board</span>
                   <span className="flex items-center gap-2">
                     <span className="text-[11px] font-semibold text-admin-muted tabular-nums sm:text-xs">
-                      {selected.menuItemIds.length}
+                      {selected.menuItemPriceIds.length}
                     </span>
                     <ChevronDown
                       className="h-4 w-4 text-admin-muted transition-transform duration-200 group-open/drinks:rotate-180"
@@ -991,6 +1183,271 @@ export default function MarketClient({
               Crash market
             </button>
           </div>
+
+          {/* Test tool: fakes till sales so the market can be exercised
+              without customers. Collapsed by default so a busy Saturday's
+              control panel is not cluttered with +1 buttons. */}
+          <div className="mb-4 rounded-xl border border-dashed border-admin-line bg-admin-surface">
+            <button
+              type="button"
+              onClick={() => setSimOpen((open) => !open)}
+              aria-expanded={simOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left sm:px-4"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <Beaker className="h-4 w-4 shrink-0 text-admin-muted" aria-hidden="true" />
+                <span className="text-[13px] font-semibold text-admin-ink">Simulate sales</span>
+                <span className="hidden text-[11px] text-admin-muted sm:inline">
+                  · fake till sales feed the next tick like real ones
+                </span>
+              </span>
+              <span className="flex items-center gap-2">
+                {simPendingTotal > 0 && (
+                  <StatusPill tone="warning" showLabelOnMobile>
+                    {simPendingTotal} queued
+                  </StatusPill>
+                )}
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-admin-muted transition-transform duration-200",
+                    simOpen && "rotate-180"
+                  )}
+                  aria-hidden="true"
+                />
+              </span>
+            </button>
+            {simOpen && (
+              <div className="space-y-3 border-t border-admin-line px-3 py-3 sm:px-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    role="radiogroup"
+                    aria-label="How simulated sales are recorded"
+                    className="flex rounded-lg border border-admin-line bg-admin-card p-0.5"
+                  >
+                    {(
+                      [
+                        { value: "queue", label: "Queue only" },
+                        { value: "square", label: "Ring through Square" },
+                      ] as { value: SimMode; label: string }[]
+                    ).map((option) => {
+                      const disabled = option.value === "square" && !sandboxAvailable;
+                      const active = simMode === option.value && !disabled;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          disabled={disabled}
+                          onClick={() => setSimMode(option.value)}
+                          className={cn(
+                            "flex h-9 items-center rounded-md px-3 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                            active ? "bg-admin-primary text-white" : "text-admin-muted hover:bg-admin-surface"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <StatusPill tone={sandboxAvailable ? "info" : "warning"} showLabelOnMobile>
+                    Square: {squareSim.environment}
+                    {squareSim.locationId ? ` · ${squareSim.locationId}` : ""}
+                  </StatusPill>
+                </div>
+
+                {viaSquare ? (
+                  <p className="text-[12px] text-admin-muted">
+                    Every sale becomes a real order and payment in the Square{" "}
+                    <span className="font-semibold text-admin-ink">sandbox</span>. The market finds it the same
+                    way it finds a till sale, moves the price, and writes the new price back into the sandbox
+                    catalog - open the sandbox dashboard alongside the board to show the loop end to end.
+                    Square takes stock off as sales ring through; Add stock puts it back so you can show the
+                    restock alert.
+                  </p>
+                ) : (
+                  <p className="text-[12px] text-admin-muted">
+                    Sales go straight into the tick queue without touching Square. Use{" "}
+                    <span className="font-semibold text-admin-ink">Ring through Square</span> when the app is
+                    pointed at the sandbox to show the real integration.
+                    {!sandboxAvailable && " Square is set to production here, so sandbox sales are locked."}
+                  </p>
+                )}
+
+                {viaSquare && (
+                  <div className="rounded-lg border border-admin-info/40 bg-admin-info-bg px-3 py-2.5">
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold text-admin-ink">
+                          {sandboxSeeded ? "Sandbox catalog seeded" : "Seed the sandbox catalog first"}
+                        </p>
+                        <p className="text-[11px] text-admin-muted">
+                          {sandboxSeeded
+                            ? "This market's drinks exist as sandbox items. Re-seed to reset prices and stock."
+                            : "The sandbox has its own catalog, so each drink on this market needs a sandbox item to sell."}
+                        </p>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                          Stock each
+                          <input
+                            type="number"
+                            min={0}
+                            max={999}
+                            value={seedStock}
+                            onChange={(event) => setSeedStock(Number(event.target.value))}
+                            className="h-11 w-20 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleSeedSandbox}
+                          disabled={isPending}
+                          className={cn(sandboxSeeded ? NEUTRAL_BUTTON : PRIMARY_BUTTON, "whitespace-nowrap")}
+                        >
+                          <Upload className="h-4 w-4" aria-hidden="true" />
+                          {sandboxSeeded ? "Re-seed" : "Seed sandbox"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                      {(
+                        [
+                          { key: "orders", label: "Sandbox orders" },
+                          { key: "items", label: "Sandbox items & prices" },
+                        ] as const
+                      ).map((link) => (
+                        <a
+                          key={link.key}
+                          href={squareSandboxDashboardUrl(link.key)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-info hover:underline sm:min-h-0"
+                        >
+                          {link.label}
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                    Sales in a round
+                    <input
+                      type="number"
+                      min={1}
+                      max={40}
+                      value={roundSize}
+                      onChange={(event) => setRoundSize(Number(event.target.value))}
+                      className="h-11 w-24 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                    Stock per add
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={stockToAdd}
+                      onChange={(event) => setStockToAdd(Number(event.target.value))}
+                      className="h-11 w-24 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
+                    />
+                  </label>
+                  <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11px] font-semibold text-admin-muted sm:max-w-xs">
+                    Favourite (sells 3× as often)
+                    <select
+                      value={favouriteId ?? ""}
+                      onChange={(event) =>
+                        setFavouriteId(event.target.value === "" ? null : Number(event.target.value))
+                      }
+                      className="h-11 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-medium text-admin-ink outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
+                    >
+                      <option value="">No favourite</option>
+                      {instruments.map((instrument) => (
+                        <option key={instrument.id} value={instrument.id}>
+                          {instrument.name} ({instrument.serve})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBusyRound}
+                    disabled={
+                      isPending || !Number.isFinite(roundSize) || roundSize < 1 || (viaSquare && !sandboxSeeded)
+                    }
+                    className={cn(PRIMARY_BUTTON, "flex-1 whitespace-nowrap sm:flex-none")}
+                  >
+                    {isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Zap className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {viaSquare ? "Busy round via Square" : "Busy round"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTickNow}
+                    disabled={isPending}
+                    className={cn(OUTLINE_BUTTON, "flex-1 whitespace-nowrap sm:flex-none")}
+                  >
+                    {isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <FastForward className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    Tick now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearSim}
+                    disabled={isPending || simPendingTotal === 0}
+                    className={cn(NEUTRAL_BUTTON, "whitespace-nowrap")}
+                  >
+                    <Eraser className="h-4 w-4" aria-hidden="true" />
+                    Clear queue
+                  </button>
+                </div>
+
+                {squareSim.recentOrders.length > 0 && (
+                  <div className="rounded-lg border border-admin-line bg-admin-card">
+                    <div className="flex items-center gap-2 border-b border-admin-line px-3 py-2">
+                      <Receipt className="h-4 w-4 text-admin-muted" aria-hidden="true" />
+                      <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                        Latest sandbox orders
+                      </p>
+                    </div>
+                    <ul className="m-0 list-none divide-y divide-admin-line/60">
+                      {squareSim.recentOrders.map((order) => (
+                        <li key={order.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-admin-ink">
+                              {order.units} × {order.name}
+                              <span className="font-normal text-admin-muted"> · {order.serve}</span>
+                            </p>
+                            <p className="truncate text-[11px] text-admin-muted">
+                              {new Date(order.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                              {order.tender ? ` · ${order.tender}` : ""}
+                              {order.orderId ? ` · order ${order.orderId.slice(0, 8)}…` : ""}
+                            </p>
+                          </div>
+                          {order.amount != null && (
+                            <span className="shrink-0 text-[13px] font-semibold text-admin-ink tabular-nums">
+                              {formatGbp(order.amount)}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full min-w-125 text-left">
               <thead>
@@ -1000,12 +1457,13 @@ export default function MarketClient({
                   <th className="py-2 pr-3 text-right">Now</th>
                   <th className="py-2 pr-3 text-right">Demand</th>
                   <th className="py-2 pr-3">Stock</th>
-                  <th className="py-2">Override</th>
+                  <th className="py-2 pr-3">Override</th>
+                  {simOpen && <th className="py-2">Sell / stock</th>}
                 </tr>
               </thead>
               <tbody>
                 {instruments.map((instrument) => {
-                  const stock = stockLabel(instrument.stockState);
+                  const stock = stockLabel(instrument.stockState, instrument.stockQty);
                   const up = instrument.currentPrice > instrument.basePrice;
                   const down = instrument.currentPrice < instrument.basePrice;
                   return (
@@ -1041,7 +1499,7 @@ export default function MarketClient({
                           {stock.label}
                         </span>
                       </td>
-                      <td className="py-2">
+                      <td className={cn("py-2", simOpen && "pr-3")}>
                         <StockSelect
                           instrument={instrument}
                           disabled={isPending}
@@ -1050,6 +1508,59 @@ export default function MarketClient({
                           }
                         />
                       </td>
+                      {simOpen && (
+                        <td className="py-2">
+                          <div className="flex items-center gap-1.5">
+                            {[1, 5].map((units) => (
+                              <button
+                                key={units}
+                                type="button"
+                                onClick={() => handleSimSale(instrument, units)}
+                                disabled={
+                                  isPending ||
+                                  instrument.stockState === "out" ||
+                                  (viaSquare && (!sandboxSeeded || !instrument.mapped))
+                                }
+                                title={
+                                  viaSquare
+                                    ? `Ring ${units} × ${instrument.name} through the Square sandbox`
+                                    : `Sell ${units} × ${instrument.name}`
+                                }
+                                className="flex h-9 min-w-11 items-center justify-center rounded-lg border border-admin-line bg-admin-card px-2 text-[12px] font-semibold text-admin-ink tabular-nums transition-colors hover:bg-admin-surface disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                +{units}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => handleAddStock(instrument)}
+                              disabled={
+                                isPending || !instrument.mapped || (sandboxAvailable && !sandboxSeeded)
+                              }
+                              aria-label={`Add ${stockToAdd} stock for ${instrument.name}`}
+                              title={
+                                !instrument.mapped
+                                  ? "Link this drink to Square first"
+                                  : sandboxAvailable && !sandboxSeeded
+                                    ? "Seed the sandbox catalog first"
+                                    : `Add ${stockToAdd} to Square inventory for ${instrument.name}`
+                              }
+                              className="flex h-9 min-w-11 items-center justify-center gap-1 rounded-lg border border-admin-line bg-admin-card px-2 text-[12px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <PackagePlus className="h-4 w-4" aria-hidden="true" />
+                              <span className="hidden lg:inline">Stock</span>
+                            </button>
+                            {instrument.simPending > 0 && (
+                              <span
+                                className="rounded-full bg-admin-warning-bg px-2 py-0.5 text-[11px] font-semibold text-admin-warning tabular-nums"
+                                title="Queued for the next tick"
+                              >
+                                {instrument.simPending} queued
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1195,7 +1706,7 @@ export default function MarketClient({
                     <div className="min-w-0">
                       <p className="text-[13px] font-semibold text-admin-ink">
                         {row.itemName}
-                        {row.isPrimary && (
+                        {row.onEvent && (
                           <span className="ml-1.5 rounded-full bg-admin-primary-soft px-1.5 py-0.5 text-[11px] font-semibold text-admin-primary">
                             on the board
                           </span>

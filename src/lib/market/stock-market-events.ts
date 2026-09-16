@@ -26,7 +26,7 @@ export type StockMarketEventSummary = {
   closeTime: string;
   config: MarketConfig;
   isActive: boolean;
-  menuItemIds: number[];
+  menuItemPriceIds: number[];
   lastRunAt: string | null;
   createdAt: string;
   createdBy: number | null;
@@ -65,7 +65,7 @@ export function formatTimeWindow(open: string, close: string): string {
 
 export function summariseEvent(
   row: StockMarketEventRow,
-  menuItemIds: number[],
+  menuItemPriceIds: number[],
   lastRunAt: string | null
 ): StockMarketEventSummary {
   return {
@@ -75,7 +75,7 @@ export function summariseEvent(
     closeTime: normaliseClock(row.close_time),
     config: eventConfig(row),
     isActive: row.is_active,
-    menuItemIds,
+    menuItemPriceIds,
     lastRunAt,
     createdAt: row.created_at,
     createdBy: row.created_by,

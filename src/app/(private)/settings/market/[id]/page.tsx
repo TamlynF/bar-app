@@ -6,6 +6,7 @@ import {
   type StockMarketEventRow,
 } from "@/lib/market/stock-market-events";
 import type { StockState } from "@/lib/market/types";
+import { serveOptionsFromCategories, type ServeCategoryRow } from "@/lib/market/event-serves";
 import {
   EMPTY_OVERRIDES,
   overridesFromRow,
@@ -22,11 +23,11 @@ import EventDetailClient, {
 export const dynamic = "force-dynamic";
 
 type EventRow = StockMarketEventRow & {
-  stock_market_event_items: ({ menu_item_id: number } & DrinkOverrideRow)[] | null;
+  stock_market_event_items: ({ menu_item_price_id: number } & DrinkOverrideRow)[] | null;
 };
 
 const EVENT_SELECT =
-  "*, stock_market_event_items(menu_item_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)";
+  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)";
 
 type CategoryJoin = {
   id: number;
@@ -35,37 +36,27 @@ type CategoryJoin = {
   market_only: boolean;
 } | null;
 
-type PriceRow = {
-  id: number;
-  serve: string;
-  amount: number | string;
-  display_order: number;
-  square_variation_id: string | null;
-};
-
-type MenuItemRow = {
+type ItemJoin = {
   id: number;
   name: string;
   is_active: boolean;
   menu_categories: CategoryJoin | CategoryJoin[];
-  menu_item_prices: PriceRow[];
-};
+} | null;
 
-type CategoryRow = {
+/* One row per serve on the event, with its item and category joined. */
+type EventServeRow = {
   id: number;
-  name: string;
+  menu_item_id: number;
+  serve: string;
+  amount: number | string;
   display_order: number;
-  menu_items: {
-    id: number;
-    name: string;
-    is_active: boolean;
-    menu_item_prices: PriceRow[];
-  }[];
+  square_variation_id: string | null;
+  menu_items: ItemJoin | ItemJoin[];
 };
 
 type InstrumentRow = {
   id: number;
-  menu_item_id: number;
+  menu_item_price_id: number;
   opening_price: number | string;
   current_price: number | string;
   demand_units: number | string;
@@ -74,17 +65,8 @@ type InstrumentRow = {
   crash_until_tick: number | null;
 };
 
-const ITEM_SELECT =
-  "id, name, is_active, menu_categories(id, name, display_order, market_only), menu_item_prices(id, serve, amount, display_order, square_variation_id)";
-
-function primaryPrice(prices: PriceRow[]): PriceRow | null {
-  return (
-    [...prices]
-      .filter((price) => Number(price.amount) > 0)
-      .sort((a, b) => a.display_order - b.display_order || a.id - b.id)[0] ??
-    null
-  );
-}
+const SERVE_SELECT =
+  "id, menu_item_id, serve, amount, display_order, square_variation_id, menu_items(id, name, is_active, menu_categories(id, name, display_order, market_only))";
 
 export default async function StockMarketEventPage({
   params,
@@ -106,20 +88,20 @@ export default async function StockMarketEventPage({
 
   const row = eventRow as EventRow;
   const eventItems = row.stock_market_event_items ?? [];
-  const menuItemIds = eventItems.map((item) => item.menu_item_id);
-  const overridesByItem = new Map<number, DrinkOverrides>(
-    eventItems.map((item) => [item.menu_item_id, overridesFromRow(item)]),
+  const menuItemPriceIds = eventItems.map((item) => item.menu_item_price_id);
+  const overridesByPrice = new Map<number, DrinkOverrides>(
+    eventItems.map((item) => [item.menu_item_price_id, overridesFromRow(item)]),
   );
 
   const [
-    { data: itemRows },
+    { data: serveRows },
     { data: categoryRows },
     { data: sessionRows },
     { data: liveRow },
   ] = await Promise.all([
-    menuItemIds.length > 0
-      ? supabase.from("menu_items").select(ITEM_SELECT).in("id", menuItemIds)
-      : Promise.resolve({ data: [] as MenuItemRow[] }),
+    menuItemPriceIds.length > 0
+      ? supabase.from("menu_item_prices").select(SERVE_SELECT).in("id", menuItemPriceIds)
+      : Promise.resolve({ data: [] as EventServeRow[] }),
     supabase
       .from("menu_categories")
       .select(
@@ -144,13 +126,13 @@ export default async function StockMarketEventPage({
     ? await supabase
         .from("market_instruments")
         .select(
-          "id, menu_item_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick",
+          "id, menu_item_price_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick",
         )
         .eq("session_id", liveRow!.id)
     : { data: [] as InstrumentRow[] };
-  const instrumentsByItem = new Map<number, LiveInstrument>(
+  const instrumentsByPrice = new Map<number, LiveInstrument>(
     ((instrumentRows ?? []) as InstrumentRow[]).map((instrument) => [
-      instrument.menu_item_id,
+      instrument.menu_item_price_id,
       {
         id: instrument.id,
         openingPrice: Number(instrument.opening_price),
@@ -165,54 +147,58 @@ export default async function StockMarketEventPage({
     ]),
   );
 
-  const drinks: EventDrink[] = ((itemRows ?? []) as MenuItemRow[])
-    .map((item) => {
+  const drinks: EventDrink[] = ((serveRows ?? []) as EventServeRow[])
+    .flatMap((serve) => {
+      const item = Array.isArray(serve.menu_items) ? serve.menu_items[0] : serve.menu_items;
+      if (!item) return [];
       const category = Array.isArray(item.menu_categories)
         ? item.menu_categories[0]
         : item.menu_categories;
-      const primary = primaryPrice(item.menu_item_prices);
-      return {
-        id: item.id,
-        name: item.name,
-        isActive: item.is_active,
-        categoryName: category?.market_only
-          ? "Tonight only"
-          : (category?.name ?? "The Bar"),
-        categoryOrder: category?.market_only
-          ? -1
-          : (category?.display_order ?? Number.MAX_SAFE_INTEGER),
-        nightOnly: Boolean(category?.market_only),
-        serve: primary?.serve ?? null,
-        basePrice: primary ? Number(primary.amount) : null,
-        linked: Boolean(primary?.square_variation_id),
-        overrides: overridesByItem.get(item.id) ?? EMPTY_OVERRIDES,
-        instrument: instrumentsByItem.get(item.id) ?? null,
-      };
+      const amount = Number(serve.amount);
+      return [
+        {
+          id: serve.id,
+          menuItemId: item.id,
+          name: item.name,
+          isActive: item.is_active,
+          categoryName: category?.market_only
+            ? "Tonight only"
+            : (category?.name ?? "The Bar"),
+          categoryOrder: category?.market_only
+            ? -1
+            : (category?.display_order ?? Number.MAX_SAFE_INTEGER),
+          nightOnly: Boolean(category?.market_only),
+          serve: serve.serve,
+          serveOrder: serve.display_order,
+          basePrice: amount > 0 ? amount : null,
+          linked: Boolean(serve.square_variation_id),
+          overrides: overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES,
+          instrument: instrumentsByPrice.get(serve.id) ?? null,
+        },
+      ];
     })
     .sort(
       (a, b) =>
         a.categoryOrder - b.categoryOrder ||
         a.categoryName.localeCompare(b.categoryName) ||
-        a.name.localeCompare(b.name),
+        a.name.localeCompare(b.name) ||
+        a.serveOrder - b.serveOrder ||
+        a.id - b.id,
     );
 
-  const inEvent = new Set(menuItemIds);
-  const available: AvailableDrink[] = (
-    (categoryRows ?? []) as CategoryRow[]
-  ).flatMap((cat) =>
-    cat.menu_items
-      .filter((item) => item.is_active && !inEvent.has(item.id))
-      .map((item) => ({ item, primary: primaryPrice(item.menu_item_prices) }))
-      .filter((entry) => entry.primary !== null)
-      .map(({ item, primary }) => ({
-        id: item.id,
-        name: item.name,
-        categoryName: cat.name,
-        serve: primary!.serve,
-        basePrice: Number(primary!.amount),
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name)),
-  );
+  const inEvent = new Set(menuItemPriceIds);
+  const available: AvailableDrink[] = serveOptionsFromCategories(
+    (categoryRows ?? []) as ServeCategoryRow[],
+  )
+    .filter((serve) => !inEvent.has(serve.id))
+    .map((serve) => ({
+      id: serve.id,
+      name: serve.name,
+      categoryName: serve.categoryName,
+      serve: serve.serve,
+      basePrice: serve.amount,
+      linked: serve.linked,
+    }));
 
   const sessions: EventSession[] = (sessionRows ?? []).map((session) => ({
     id: session.id,
@@ -223,7 +209,7 @@ export default async function StockMarketEventPage({
   }));
 
   const lastRunAt = sessions[0]?.startedAt ?? null;
-  const event = summariseEvent(row, menuItemIds, lastRunAt);
+  const event = summariseEvent(row, menuItemPriceIds, lastRunAt);
 
   return (
     <>

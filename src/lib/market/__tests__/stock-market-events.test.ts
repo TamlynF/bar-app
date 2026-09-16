@@ -75,7 +75,7 @@ describe("summariseEvent", () => {
     const summary = summariseEvent(row, [3, 4], "2026-09-03T20:00:00Z");
     expect(summary.openTime).toBe("19:00");
     expect(summary.closeTime).toBe("23:30");
-    expect(summary.menuItemIds).toEqual([3, 4]);
+    expect(summary.menuItemPriceIds).toEqual([3, 4]);
     expect(summary.lastRunAt).toBe("2026-09-03T20:00:00Z");
     expect(summary.config.tickIntervalSec).toBe(45);
   });

@@ -1,5 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveMarketConfig } from "@/lib/market/types";
+import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
+import { squareSimEnvironment } from "@/lib/market/square-sandbox";
+import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
 import {
   summariseEvent,
   type StockMarketEventRow,
@@ -7,11 +10,11 @@ import {
 } from "@/lib/market/stock-market-events";
 import MarketClient, {
   type CategoryOption,
-  type DrinkOption,
   type EmployeeOption,
   type InstrumentSummary,
   type MappingRow,
   type SessionSummary,
+  type SquareSimSummary,
   type TillRestoreSummary,
 } from "./market-client";
 
@@ -36,7 +39,7 @@ type CategoryRow = {
 };
 
 type EventRow = StockMarketEventRow & {
-  stock_market_event_items: { menu_item_id: number }[] | null;
+  stock_market_event_items: { menu_item_price_id: number }[] | null;
 };
 
 export default async function MarketSettingsPage({
@@ -64,7 +67,7 @@ export default async function MarketSettingsPage({
       .order("display_order", { ascending: true }),
     supabase
       .from("stock_market_events")
-      .select("*, stock_market_event_items(menu_item_id)")
+      .select("*, stock_market_event_items(menu_item_price_id)")
       .eq("is_active", true)
       .order("name", { ascending: true }),
     supabase
@@ -77,6 +80,13 @@ export default async function MarketSettingsPage({
 
   let session: SessionSummary | null = null;
   let instruments: InstrumentSummary[] = [];
+  const squareEnv = squareSimEnvironment();
+  const squareSim: SquareSimSummary = {
+    environment: squareEnv.environment,
+    locationId: squareEnv.locationId,
+    sandboxSeededAt: sessionRow?.sandbox_seeded_at ?? null,
+    recentOrders: [],
+  };
   if (sessionRow) {
     session = {
       id: sessionRow.id,
@@ -85,8 +95,9 @@ export default async function MarketSettingsPage({
       crashUntilTick: sessionRow.crash_until_tick,
       config: resolveMarketConfig(sessionRow.config),
       stockMarketEventId: sessionRow.stock_market_event_id ?? null,
+      squareSyncEnabled: sessionRow.square_sync_enabled !== false,
     };
-    const [{ data: instrumentRows }, { data: eventItemRows }] = await Promise.all([
+    const [{ data: instrumentRows }, { data: eventItemRows }, { data: simRows }] = await Promise.all([
       supabase
         .from("market_instruments")
         .select("*")
@@ -95,18 +106,52 @@ export default async function MarketSettingsPage({
       sessionRow.stock_market_event_id != null
         ? supabase
             .from("stock_market_event_items")
-            .select("menu_item_id")
+            .select("menu_item_price_id")
             .eq("event_id", sessionRow.stock_market_event_id)
         : Promise.resolve({ data: null }),
+      /* Simulated sales the next tick has not consumed yet - shown as a
+         "queued" badge so staff can see the sale registered before the
+         price moves. */
+      supabase
+        .from("market_sim_sales")
+        .select("instrument_id, units")
+        .eq("session_id", sessionRow.id)
+        .is("consumed_tick_no", null),
     ]);
-    /* Same rule as the public board: only drinks still on the open event are
+    const simPending = sumPendingUnits((simRows ?? []) as SimSaleRow[]);
+
+    const { data: orderRows } = await supabase
+      .from("market_sim_sales")
+      .select("id, units, amount, tender, square_order_id, created_at, market_instruments(display_name, serve)")
+      .eq("session_id", sessionRow.id)
+      .eq("source", "square_sandbox")
+      .order("id", { ascending: false })
+      .limit(8);
+    squareSim.recentOrders = (orderRows ?? []).map((row) => {
+      const joined = Array.isArray(row.market_instruments)
+        ? row.market_instruments[0]
+        : row.market_instruments;
+      return {
+        id: row.id as number,
+        name: (joined?.display_name as string | undefined) ?? "Drink",
+        serve: (joined?.serve as string | undefined) ?? "",
+        units: Number(row.units),
+        amount: row.amount == null ? null : Number(row.amount),
+        tender: (row.tender as "card" | "cash" | null) ?? null,
+        orderId: (row.square_order_id as string | null) ?? null,
+        at: row.created_at as string,
+      };
+    });
+    /* Same rule as the public board: only serves still on the open event are
        listed, so the trading floor matches what guests can see. */
     const onEvent =
       eventItemRows == null
         ? null
-        : new Set((eventItemRows as { menu_item_id: number }[]).map((row) => row.menu_item_id));
+        : new Set(
+            (eventItemRows as { menu_item_price_id: number }[]).map((row) => row.menu_item_price_id)
+          );
     instruments = (instrumentRows ?? [])
-      .filter((row) => onEvent == null || onEvent.has(row.menu_item_id))
+      .filter((row) => onEvent == null || onEvent.has(row.menu_item_price_id))
       .map((row) => ({
       id: row.id,
       name: row.display_name,
@@ -117,6 +162,8 @@ export default async function MarketSettingsPage({
       stockState: row.stock_state,
       stockOverride: row.stock_override,
       mapped: Boolean(row.square_variation_id),
+      stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
+      simPending: simPending.get(row.id) ?? 0,
     }));
   }
 
@@ -157,28 +204,7 @@ export default async function MarketSettingsPage({
     ).length,
   }));
 
-  const drinks: DrinkOption[] = activeCategories.flatMap((cat) =>
-    cat.menu_items
-      .filter((item) => item.menu_item_prices.some((price) => Number(price.amount) > 0))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((item) => ({ id: item.id, name: item.name, categoryId: cat.id, categoryName: cat.name }))
-  );
-
-  const mappingRows: MappingRow[] = activeCategories.flatMap((cat) =>
-    cat.menu_items.flatMap((item) =>
-      [...item.menu_item_prices]
-        .sort((a, b) => a.display_order - b.display_order || a.id - b.id)
-        .map((price, index) => ({
-          menuItemPriceId: price.id,
-          itemName: item.name,
-          categoryName: cat.name,
-          serve: price.serve,
-          amount: Number(price.amount),
-          isPrimary: index === 0,
-          squareVariationId: price.square_variation_id,
-        }))
-    )
-  );
+  const drinks: ServeOption[] = serveOptionsFromCategories(activeCategories);
 
   const lastRunByEvent = new Map<number, string>();
   for (const run of runRows ?? []) {
@@ -189,8 +215,27 @@ export default async function MarketSettingsPage({
   const events: StockMarketEventSummary[] = ((eventRows ?? []) as EventRow[]).map((row) =>
     summariseEvent(
       row,
-      (row.stock_market_event_items ?? []).map((item) => item.menu_item_id),
+      (row.stock_market_event_items ?? []).map((item) => item.menu_item_price_id),
       lastRunByEvent.get(row.id) ?? null
+    )
+  );
+
+  /* "On the board" in the Square links panel means the serve is on at least
+     one active event, so the badge sits on the serve that will trade. */
+  const onAnyEvent = new Set(events.flatMap((event) => event.menuItemPriceIds));
+  const mappingRows: MappingRow[] = activeCategories.flatMap((cat) =>
+    cat.menu_items.flatMap((item) =>
+      [...item.menu_item_prices]
+        .sort((a, b) => a.display_order - b.display_order || a.id - b.id)
+        .map((price) => ({
+          menuItemPriceId: price.id,
+          itemName: item.name,
+          categoryName: cat.name,
+          serve: price.serve,
+          amount: Number(price.amount),
+          onEvent: onAnyEvent.has(price.id),
+          squareVariationId: price.square_variation_id,
+        }))
     )
   );
 
@@ -207,6 +252,7 @@ export default async function MarketSettingsPage({
       employees={(employees ?? []) as EmployeeOption[]}
       mappingRows={mappingRows}
       tillRestore={tillRestore}
+      squareSim={squareSim}
       initialEditId={editId}
       initialOpenId={openId}
     />
