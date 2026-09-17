@@ -14,10 +14,12 @@ import { MarketTicker } from "@/components/market-ticker";
 export function PublicNavBar({
   currentPath,
   overlay = false,
+  ticker = true,
   instagramUrl,
 }: {
   currentPath?: string;
   overlay?: boolean;
+  ticker?: boolean;
   instagramUrl: string | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -209,8 +211,9 @@ export function PublicNavBar({
       {!overlay && <div className="h-14 sm:h-16" aria-hidden="true" />}
 
       {/* Overlay pages run their hero under the nav; pull the hero back up by
-          the nav height so the strip only costs its own 44px. */}
-      {!onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-14 -mb-14" : undefined} />}
+          the nav height so the strip only costs its own 44px. The home page
+          opts out and places the ticker under its poster instead. */}
+      {ticker && !onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-14 -mb-14" : undefined} />}
 
       <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} marketLive={marketLive} />
     </>

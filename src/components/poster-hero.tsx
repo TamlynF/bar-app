@@ -3,18 +3,21 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
-import { Check, ChevronDown, Clock } from "lucide-react";
+import { Clock, Ellipsis } from "lucide-react";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { EventActions } from "@/components/event-actions";
+import { HeroActionTray } from "@/components/hero-action-tray";
 import { MarketHeroCard } from "@/components/market-hero-card";
 import { cn } from "@/lib/utils";
+import { neonFlicker } from "@/lib/neon-flicker";
 import { entryText, formatGBP, parseDate, type SerializedEvent } from "@/lib/events-display";
 
 /* The first screen: one act fills it like a gig poster. Tonight's headline
    act when there is one, otherwise the next event with a "Next up" pill and
    a line saying the bar is still open. With several events on the night the
    rest sit in a bill card (desktop, bottom-right) and choosing one swaps the
-   poster in place; phones list them under the hero (AlsoOnList). */
+   poster in place. Phones get one primary key plus a "More" key that opens
+   an action tray (HeroActionTray) holding the bill and the quiet actions. */
 export function PosterHero({
   nightEvents,
   isTonight,
@@ -27,7 +30,7 @@ export function PosterHero({
   openTonight: string | null;
 }) {
   const [active, setActive] = useState(0);
-  const [billOpen, setBillOpen] = useState(false);
+  const [trayOpen, setTrayOpen] = useState(false);
   const event = nightEvents[Math.min(active, nightEvents.length - 1)];
   const light = useLightBackdrop(event?.imageUrl ?? null);
   if (!event) return null;
@@ -49,7 +52,7 @@ export function PosterHero({
     <section
       id="tonight"
       aria-label={isTonight ? "Tonight" : "Next up"}
-      className="relative h-150 overflow-hidden md:h-205"
+      className="relative h-[clamp(27rem,66svh,38rem)] overflow-hidden md:h-205"
       style={
         { "--ev-c": event.color, "--title-chars": longestWord, "--title-total": titleChars } as React.CSSProperties
       }
@@ -82,17 +85,8 @@ export function PosterHero({
       <div className="absolute inset-0 mx-auto w-full max-w-400">
       {/* Live / next-up pill */}
       <div className="absolute top-19 left-4 flex flex-col items-start gap-2.5 sm:top-22 sm:left-6 lg:left-10">
-        {/* With several acts the pill opens the bill for the night on a
-            phone; desktop has the bill card instead, so the pill stays inert. */}
-        <button
-          type="button"
-          onClick={() => acts > 1 && setBillOpen((o) => !o)}
-          aria-expanded={acts > 1 ? billOpen : undefined}
-          aria-label={acts > 1 ? `${isTonight ? "Live tonight" : "Next up"}: ${whenTail}. Show all ${acts} on this night` : undefined}
-          className={cn(
-            "inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 text-left backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3",
-            acts > 1 ? "md:pointer-events-none" : "pointer-events-none"
-          )}
+        <p
+          className="inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3"
         >
           {isTonight && <span className="ad-live-dot h-2 w-2 rounded-full bg-neon sm:h-2.5 sm:w-2.5" aria-hidden="true" />}
           <span className={cn("font-black text-[10px] tracking-[0.22em] uppercase sm:text-xs", isTonight ? "text-ink" : "text-gold")}>
@@ -104,37 +98,7 @@ export function PosterHero({
               <span className={cn("text-[11px] font-bold tabular-nums sm:text-[13px]", isTonight ? "text-ink-2" : "text-ink")}>{whenTail}</span>
             </>
           )}
-          {acts > 1 && (
-            <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-gold transition-transform md:hidden", billOpen && "rotate-180")} aria-hidden="true" />
-          )}
-        </button>
-        {acts > 1 && billOpen && (
-          <ul className="m-0 w-[calc(100vw-2rem)] max-w-xs list-none overflow-hidden rounded-2xl border border-gold/35 bg-canvas/90 p-1 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.9)] backdrop-blur-xl md:hidden">
-            {nightEvents.map((e, i) => (
-              <li key={e.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActive(i);
-                    setBillOpen(false);
-                  }}
-                  aria-pressed={i === active}
-                  className={cn(
-                    "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left",
-                    i === active ? "bg-gold/15" : "active:bg-ink/8"
-                  )}
-                >
-                  <span className="w-14 shrink-0 font-black text-[11px] text-gold tabular-nums">{e.startTimeLabel ?? "Late"}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-black text-[13px] leading-tight tracking-tight text-ink uppercase">{e.title}</span>
-                    <span className="block truncate text-[11px] text-ink-2">{[i === 0 ? "Headline" : "Support", e.subType].filter(Boolean).join(" · ")}</span>
-                  </span>
-                  {i === active && <Check className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        </p>
         {!isTonight && openTonight && (
           <p className="inline-flex items-center gap-2 text-[11px] font-bold text-ink-2 drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)] sm:text-[13px]">
             <Clock className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
@@ -144,7 +108,7 @@ export function PosterHero({
       </div>
 
       {/* Poster copy */}
-      <div className="absolute right-4 bottom-6 left-4 flex flex-col gap-3 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
+      <div className="absolute right-4 bottom-5 left-4 flex flex-col gap-2.5 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
         <div className="flex items-center gap-2 sm:gap-2.5">
           {event.subType && (
             <span className="rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
@@ -167,7 +131,7 @@ export function PosterHero({
             one per line rather than truncating. */}
         <h1
           key={event.id}
-          className="animate-reveal ad-extrude m-0 font-black leading-[0.85] tracking-tighter text-balance text-ink uppercase text-[clamp(1.5rem,min(calc((100vw-2rem)/(var(--title-chars)*0.72)),calc((100vw-2rem)*2.5/(var(--title-total)*0.72))),4.75rem)] md:text-[clamp(2.5rem,min(calc(min(50vw,44rem)/(var(--title-chars)*0.72)),calc(min(50vw,44rem)*2.5/(var(--title-total)*0.72))),6rem)]"
+          className="animate-reveal ad-extrude m-0 font-black leading-[0.85] tracking-tighter text-balance text-ink uppercase text-[clamp(1.5rem,min(calc((100vw-2rem)/(var(--title-chars)*0.72)),calc((100vw-2rem)*2.5/(var(--title-total)*0.72))),min(4.25rem,9.5svh))] md:text-[clamp(2.5rem,min(calc(min(50vw,44rem)/(var(--title-chars)*0.72)),calc(min(50vw,44rem)*2.5/(var(--title-total)*0.72))),6rem)]"
         >
           {event.title}
         </h1>
@@ -176,12 +140,24 @@ export function PosterHero({
             {isTonight ? timeLabel : [format(dateObj, "EEEE"), timeLabel].filter(Boolean).join(" · ")}
           </span>
           <span className={cn("text-xs sm:text-sm", light ? "text-ink" : "text-ink-2")}>
-            {[acts > 1 && active === 0 ? "Headline" : null, event.tagline, entryText(event)].filter(Boolean).join(" · ")}
+            {acts > 1 && active === 0 && "Headline · "}
+            {event.tagline && <span className="max-md:[@media(max-height:700px)]:hidden">{event.tagline} · </span>}
+            {entryText(event)}
           </span>
         </p>
-        <div className="mt-1 flex items-stretch gap-2.5 [&_a]:h-12 [&_a]:w-auto [&_a]:flex-1 [&_a]:px-5 [&_a]:text-[13px] [&_span]:h-12 [&_span]:w-auto [&_span]:flex-1 [&_span]:px-4 sm:gap-3 md:[&_a]:h-14 md:[&_a]:flex-none md:[&_a]:px-8 md:[&_span]:h-14 md:[&_span]:flex-none md:[&_span]:px-7">
+        <div onPointerDown={neonFlicker} className="mt-1 flex items-stretch gap-2.5 [&_a]:h-12 [&_a]:w-auto [&_a]:flex-1 [&_a]:px-5 [&_a]:text-[13px] [&_span]:h-12 [&_span]:w-auto [&_span]:flex-1 [&_span]:px-4 sm:gap-3 md:[&_a]:h-14 md:[&_a]:flex-none md:[&_a]:px-8 md:[&_span]:h-14 md:[&_span]:flex-none md:[&_span]:px-7">
           <BookingButton event={event} />
-          <EventActions event={event} className="[&_button]:h-12 [&_button]:w-12 [&_button]:rounded-xl [&_button]:border-white/15 [&_button]:text-ink md:[&_button]:h-14 md:[&_button]:w-14 md:[&_button]:rounded-[14px]" />
+          <button
+            type="button"
+            onClick={() => setTrayOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={trayOpen}
+            aria-label={`More options for ${event.title}`}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold/45 bg-canvas/70 text-ink shadow-[0_3px_0_rgba(0,0,0,0.55)] backdrop-blur-md transition-[translate,rotate,box-shadow] duration-150 active:translate-y-[3px] active:rotate-2 active:shadow-none md:hidden"
+          >
+            <Ellipsis className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <EventActions event={event} className="hidden md:inline-flex [&_button]:h-12 [&_button]:w-12 [&_button]:rounded-xl [&_button]:border-white/15 [&_button]:text-ink md:[&_button]:h-14 md:[&_button]:w-14 md:[&_button]:rounded-[14px]" />
         </div>
       </div>
 
@@ -236,6 +212,15 @@ export function PosterHero({
       )}
 
       </div>
+
+      <HeroActionTray
+        open={trayOpen}
+        onClose={() => setTrayOpen(false)}
+        nightEvents={nightEvents}
+        active={Math.min(active, nightEvents.length - 1)}
+        onSelect={setActive}
+        isTonight={isTonight}
+      />
     </section>
   );
 }

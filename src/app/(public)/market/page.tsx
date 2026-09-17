@@ -31,30 +31,35 @@ export default function MarketPage() {
 
       <PublicNav currentPath="/market" />
 
-      <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        <PageHeader
-          eyebrow="Live from the bar"
-          title="Market Night"
-          tone="live"
-          subtitle={
-            <>
-              <span className="sm:hidden">The board price is the bar price.</span>
-              <span className="hidden sm:inline">
-                Prices move with what people are drinking. The board price is the bar price.
-              </span>
-            </>
+      <div className="mx-auto w-full flex-1 px-4 py-6 max-md:max-w-2xl sm:px-6 sm:py-10 md:max-w-6xl">
+        <MarketFeed
+          header={
+            <PageHeader
+              eyebrow="Live from the bar"
+              title="Market Night"
+              tone="live"
+              subtitle={
+                <>
+                  <span className="sm:hidden">The board price is the bar price.</span>
+                  <span className="hidden sm:inline">
+                    Prices move with what people are drinking. The board price is the bar price.
+                  </span>
+                </>
+              }
+            />
+          }
+          footer={
+            <div className="mt-2 flex justify-center">
+              <Link
+                href="/market/board"
+                className="inline-flex min-h-11 items-center gap-2 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white"
+              >
+                <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+                Big screen view
+              </Link>
+            </div>
           }
         />
-        <MarketFeed />
-        <div className="mt-10 flex justify-center">
-          <Link
-            href="/market/board"
-            className="inline-flex min-h-11 items-center gap-2 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white"
-          >
-            <MonitorPlay className="h-4 w-4" aria-hidden="true" />
-            Big screen view
-          </Link>
-        </div>
       </div>
     </main>
   );

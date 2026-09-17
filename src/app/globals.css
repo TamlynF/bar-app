@@ -862,6 +862,24 @@ html:has([data-admin-shell]) body {
   background: linear-gradient(115deg, #ff6b35 0%, #e6392e 60%, #7a1f1f 100%);
   color: #fff4cc;
 }
+/* Phone LED ticker under the home poster: dot-matrix glass over near-black,
+   amber tube text that turns red under a crash. */
+.ad-led {
+  background-color: #0b0a05;
+  background-image: radial-gradient(rgb(255 244 204 / 0.045) 0.5px, transparent 0.7px);
+  background-size: 3px 3px;
+  box-shadow:
+    inset 0 0 0 1px rgb(253 204 75 / 0.22),
+    inset 0 0 18px rgb(0 0 0 / 0.85);
+}
+.ad-led-text {
+  color: #ffdc6b;
+  text-shadow: 0 0 6px rgb(253 204 75 / 0.35);
+}
+.ad-led-crash .ad-led-text {
+  color: #ff8a6a;
+  text-shadow: 0 0 6px rgb(255 107 53 / 0.35);
+}
 @keyframes ad-shimmer {
   0%,
   55% {

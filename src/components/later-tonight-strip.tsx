@@ -25,7 +25,7 @@ export function LaterTonightStrip({
           <li key={e.id} style={{ "--ev-c": e.color } as React.CSSProperties}>
             <Link
               href={`/whats-on/${e.id}`}
-              className="flex min-h-16 items-center gap-3 rounded-[14px] border border-gold/40 bg-gold/8 px-3 py-2 transition-colors active:bg-gold/15"
+              className="flex min-h-16 items-center gap-3 rounded-[14px] border border-gold/40 bg-gold/8 px-3 py-2 transition-[scale,background-color,border-color] duration-150 active:scale-[0.985] active:border-gold/70 active:bg-gold/15"
             >
               <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-canvas">
                 {e.imageUrl ? (

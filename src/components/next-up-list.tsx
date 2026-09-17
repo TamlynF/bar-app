@@ -36,7 +36,7 @@ export function NextUpList({ events }: { events: SerializedEvent[] }) {
                     <li key={e.id} className={cn(i > 0 && "border-t border-dashed border-ink/12")}>
                       <Link
                         href={`/whats-on/${e.id}`}
-                        className="flex min-h-16 items-center gap-2.5 py-2.5 pr-2.5 pl-3 transition-colors active:bg-ink/6"
+                        className="flex min-h-16 items-center gap-2.5 py-2.5 pr-2.5 pl-3 transition-[scale,background-color] duration-150 active:scale-[0.985] active:bg-ink/6"
                         aria-label={`${e.title}, ${format(date, "EEEE d MMMM")}${i > 0 ? ", same night" : ""}`}
                       >
                         <span className="min-w-0 flex-1">

@@ -48,17 +48,10 @@ function buildIcs(event: SerializedEvent, venue: string) {
   ].join("\r\n");
 }
 
-/* Two quiet icon actions for an event row: add to calendar (.ics) and share
-   (Web Share API, falling back to copying the link). */
-export function EventActions({
-  event,
-  venue = "Don Fenticas, Hinckley",
-  className,
-}: {
-  event: SerializedEvent;
-  venue?: string;
-  className?: string;
-}) {
+/* Calendar (.ics download) and share (Web Share API, falling back to
+   copying the link) for an event, shared by the icon pair and the phone
+   action tray. */
+export function useEventActions(event: SerializedEvent, venue = "Don Fenticas, Hinckley") {
   const [copied, setCopied] = useState(false);
 
   const addToCalendar = () => {
@@ -93,6 +86,22 @@ export function EventActions({
       /* ignore */
     }
   };
+
+  return { addToCalendar, share, copied };
+}
+
+/* Two quiet icon actions for an event row: add to calendar (.ics) and share
+   (Web Share API, falling back to copying the link). */
+export function EventActions({
+  event,
+  venue = "Don Fenticas, Hinckley",
+  className,
+}: {
+  event: SerializedEvent;
+  venue?: string;
+  className?: string;
+}) {
+  const { addToCalendar, share, copied } = useEventActions(event, venue);
 
   const btn =
     "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/12 text-ink-2 transition-colors hover:border-gold/50 hover:text-gold active:scale-95";

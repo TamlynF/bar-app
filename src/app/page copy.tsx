@@ -6,7 +6,6 @@ import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
 import { NextUpList } from "@/components/next-up-list";
 import { LaterTonightStrip } from "@/components/later-tonight-strip";
-import { HomeMarketTicker } from "@/components/home-market-ticker";
 import { TicketStrip } from "@/components/ticket-strip";
 import { SpecialsBand } from "@/components/specials-band";
 import { FloorStrip } from "@/components/floor-strip";
@@ -105,7 +104,7 @@ export default async function HomePage() {
   return (
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
       <SmoothScroll />
-      <PublicNav currentPath="/" overlay ticker={false} />
+      <PublicNav currentPath="/" overlay />
 
       {nightEvents.length > 0 ? (
         <>
@@ -115,7 +114,6 @@ export default async function HomePage() {
             doors={doors}
             openTonight={openTonight}
           />
-          <HomeMarketTicker />
           <LaterTonightStrip
             events={nightEvents.slice(1)}
             isTonight={isTonight}
@@ -130,8 +128,6 @@ export default async function HomePage() {
           </p>
         </section>
       )}
-
-      {nightEvents.length === 0 && <HomeMarketTicker />}
 
       <div className="mx-auto w-full max-w-400">
         <NextUpList events={nextUp} />

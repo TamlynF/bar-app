@@ -8,7 +8,7 @@ const base =
 /* Pressable "3D" treatment: a hard flank under the button that collapses on
    press, so it reads as a physical key rather than a flat pill. */
 const pressable =
-  "translate-y-0 transition-[transform,box-shadow,background-color] duration-150 active:translate-y-[3px] active:shadow-none";
+  "translate-y-0 transition-[translate,rotate,box-shadow,background-color] duration-150 hover:-translate-y-0.5 active:translate-y-[3px] active:-rotate-1 active:shadow-none";
 
 export function BookingButton({ event }: { event: SerializedEvent }) {
   if (event.isBookable && event.isFullyBooked) {

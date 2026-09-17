@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Bell, BellOff, BellRing, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { formatGbp } from "@/lib/price";
@@ -253,7 +253,11 @@ function useWatchedDrinks(): [number[], (id: number) => void] {
   return [watched, toggle];
 }
 
-export default function MarketFeed() {
+/* `header` (the page title) and `footer` (the big-screen link) are rendered
+   here so that from tablet up they can sit in a sticky side panel with the
+   market status and alert controls, leaving the whole right column to the
+   drinks. On a phone everything stacks in the same order as before. */
+export default function MarketFeed({ header, footer }: { header: ReactNode; footer: ReactNode }) {
   const { state, fresh } = useMarketState();
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
@@ -386,23 +390,31 @@ export default function MarketFeed() {
 
   if (!state) {
     return (
-      <div className="flex flex-col items-center gap-3 py-24 text-stone-400">
-        <TrendingUp className="h-8 w-8 animate-pulse" aria-hidden="true" />
-        <p className="font-black text-xs tracking-widest uppercase">Opening the floor…</p>
+      <div className="mx-auto max-w-2xl">
+        {header}
+        <div className="flex flex-col items-center gap-3 py-24 text-stone-400">
+          <TrendingUp className="h-8 w-8 animate-pulse" aria-hidden="true" />
+          <p className="font-black text-xs tracking-widest uppercase">Opening the floor…</p>
+        </div>
+        {footer}
       </div>
     );
   }
 
   if (state.status === "closed") {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-6 py-20 text-center">
-        <TrendingUp className="h-10 w-10 text-stone-500" aria-hidden="true" />
-        <p className="font-black text-2xl tracking-tighter text-ink uppercase">
-          Markets closed
-        </p>
-        <p className="max-w-xs text-sm text-stone-400">
-          The trading floor opens on market nights. Check the schedule and come thirsty.
-        </p>
+      <div className="mx-auto max-w-2xl">
+        {header}
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-white/10 bg-white/5 px-6 py-20 text-center">
+          <TrendingUp className="h-10 w-10 text-stone-500" aria-hidden="true" />
+          <p className="font-black text-2xl tracking-tighter text-ink uppercase">
+            Markets closed
+          </p>
+          <p className="max-w-xs text-sm text-stone-400">
+            The trading floor opens on market nights. Check the schedule and come thirsty.
+          </p>
+        </div>
+        {footer}
       </div>
     );
   }
@@ -414,7 +426,9 @@ export default function MarketFeed() {
   const alertsOff = !alertsAllowed;
 
   return (
-    <div className="space-y-8">
+    <div className="md:grid md:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-14">
+      <aside className="space-y-8 md:sticky md:top-24">
+      {header}
       <div className="-mt-2 flex items-center justify-between gap-3 font-black text-[10px] tracking-wider text-stone-500 uppercase">
         <span className="min-w-0 truncate">
           <span className="text-[#FDCC4B]">Market open</span>
@@ -488,8 +502,10 @@ export default function MarketFeed() {
           </p>
         </div>
       )}
+      </aside>
 
-      <ul className="space-y-3">
+      <div className="mt-8 space-y-8 md:mt-0">
+      <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
         {sortForPhone(instruments, state.pricingMode).map((instrument) => {
           const isWatched = watched.includes(instrument.id);
           return (
@@ -541,7 +557,7 @@ export default function MarketFeed() {
           );
         })}
         {instruments.length === 0 && (
-          <li className="rounded-2xl border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-stone-400">
+          <li className="rounded-2xl border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-stone-400 md:col-span-full">
             No drinks are trading yet.
           </li>
         )}
@@ -552,6 +568,8 @@ export default function MarketFeed() {
           ? "Deals first, top sellers last. You pay the price on the till when your drink is rung in."
           : "Prices move all night. What the board says is what the bar charges."}
       </p>
+      {footer}
+      </div>
     </div>
   );
 }
