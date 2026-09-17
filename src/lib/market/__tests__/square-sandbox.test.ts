@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/square", () => ({ squareClient: {} }));
 
-import { assertSandbox, inventoryAdditionChange, squareSimEnvironment } from "../square-sandbox";
+import {
+  assertSandbox,
+  inventoryAdditionChange,
+  planRoundTenders,
+  squareSimEnvironment,
+} from "../square-sandbox";
 
 const ENV_KEYS = ["SQUARE_ENVIRONMENT", "SQUARE_ACCESS_TOKEN", "SQUARE_LOCATION_ID"] as const;
 const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {};
@@ -66,5 +71,25 @@ describe("squareSimEnvironment", () => {
     process.env.SQUARE_ENVIRONMENT = "production";
     expect(squareSimEnvironment().environment).toBe("production");
     expect(squareSimEnvironment().isSandbox).toBe(false);
+  });
+});
+
+describe("planRoundTenders", () => {
+  it("uses one tender for every sale when a single type is picked", () => {
+    expect(planRoundTenders(3, "card")).toEqual(["card", "card", "card"]);
+    expect(planRoundTenders(2, "cash")).toEqual(["cash", "cash"]);
+    expect(planRoundTenders(0, "card")).toEqual([]);
+  });
+
+  it("splits a mixed round roughly 30% cash and spreads it out", () => {
+    const tenders = planRoundTenders(10, "mix");
+    expect(tenders).toHaveLength(10);
+    expect(tenders.filter((t) => t === "cash")).toHaveLength(3);
+    expect(tenders[0]).toBe("card");
+  });
+
+  it("always rings at least one cash sale in a mixed round", () => {
+    expect(planRoundTenders(1, "mix")).toEqual(["cash"]);
+    expect(planRoundTenders(2, "mix").filter((t) => t === "cash")).toHaveLength(1);
   });
 });

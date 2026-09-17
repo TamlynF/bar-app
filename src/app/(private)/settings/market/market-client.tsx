@@ -77,6 +77,8 @@ import {
   setStockOverrideAction,
   simulateBusyRoundAction,
   simulateSaleAction,
+  type RoundTenderMode,
+  type SeedMode,
   type SimMode,
 } from "./actions";
 import { squareSandboxDashboardUrl, squareTransactionUrl } from "@/lib/market/simulate";
@@ -989,7 +991,9 @@ export default function MarketClient({
   const [roundSize, setRoundSize] = useState(10);
   const [favouriteId, setFavouriteId] = useState<number | null>(null);
   const [simMode, setSimMode] = useState<SimMode>("queue");
+  const [roundTender, setRoundTender] = useState<RoundTenderMode>("mix");
   const [seedStock, setSeedStock] = useState(40);
+  const [seedMode, setSeedMode] = useState<SeedMode>("reuse");
   const [stockToAdd, setStockToAdd] = useState(12);
   const [floorOpen, setFloorOpen] = useState(true);
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -1218,7 +1222,12 @@ export default function MarketClient({
   async function handleBusyRound() {
     if (!(await confirmQueueSale())) return;
     startTransition(async () => {
-      const result = await simulateBusyRoundAction(roundSize, favouriteId, viaSquare ? "square" : "queue");
+      const result = await simulateBusyRoundAction(
+        roundSize,
+        favouriteId,
+        viaSquare ? "square" : "queue",
+        roundTender
+      );
       if ("error" in result && result.error) {
         toast.error(result.error);
         return;
@@ -1226,7 +1235,11 @@ export default function MarketClient({
       const sales = "sales" in result ? result.sales : 0;
       const units = "units" in result ? result.units : 0;
       if ("takings" in result && typeof result.takings === "number") {
-        toast.success(`${sales} sandbox orders paid - ${units} drinks, ${formatGbp(result.takings)} in the Square sandbox.`);
+        const split =
+          "cash" in result && "card" in result ? ` (${result.card} card, ${result.cash} cash)` : "";
+        toast.success(
+          `${sales} sandbox orders paid${split} - ${units} drinks, ${formatGbp(result.takings)} in the Square sandbox.`
+        );
         if ("partialError" in result && result.partialError) toast.error(`Round stopped early: ${result.partialError}`);
       } else {
         toast.success(`Busy round rung up - ${sales} sales, ${units} drinks queued.`);
@@ -1237,19 +1250,33 @@ export default function MarketClient({
 
   async function handleSeedSandbox() {
     const confirmed = await confirm({
-      title: "Seed the Square sandbox catalog?",
-      description: `Creates one sandbox item per drink on the live market, priced at the menu price with ${seedStock} in stock, and points this market's drinks at those sandbox items. Your real menu links are untouched.`,
-      confirmLabel: "Seed sandbox",
+      title: seedMode === "reuse" ? "Stock the mapped sandbox items?" : "Seed temporary sandbox items?",
+      description:
+        seedMode === "reuse"
+          ? `Points this market's drinks at the sandbox items their menu prices are already mapped to and sets each to ${seedStock} in stock. Nothing is created, so the catalog stays as it is. Drinks with no mapping get a temporary item.`
+          : `Deletes the temporary items a previous seed created, then makes a fresh one per drink at the menu price with ${seedStock} in stock. Mapped catalog items are never touched.`,
+      confirmLabel: seedMode === "reuse" ? "Stock items" : "Seed sandbox",
     });
     if (!confirmed) return;
     startTransition(async () => {
-      const result = await seedSandboxCatalogAction(seedStock);
+      const result = await seedSandboxCatalogAction(seedStock, seedMode);
       if ("error" in result && result.error) {
         toast.error(result.error);
         return;
       }
-      const seeded = "seeded" in result ? result.seeded : 0;
-      toast.success(`${seeded} drinks now live in the Square sandbox catalog.`);
+      const reused = "reused" in result ? result.reused : 0;
+      const created = "created" in result ? result.created : 0;
+      const deleted = "deleted" in result ? result.deleted : 0;
+      const parts = [
+        reused > 0 ? `${reused} existing` : null,
+        created > 0 ? `${created} new` : null,
+        deleted > 0 ? `${deleted} replaced` : null,
+      ].filter(Boolean);
+      toast.success(
+        parts.length > 0
+          ? `Sandbox ready - ${parts.join(", ")}.`
+          : "Nothing to seed on this market."
+      );
       setSimMode("square");
       router.refresh();
     });
@@ -1779,7 +1806,8 @@ export default function MarketClient({
                     way it finds a till sale, moves the price, and writes the new price back into the sandbox
                     catalog - open the sandbox dashboard alongside the board to show the loop end to end.
                     Square takes stock off as sales ring through; Add stock puts it back so you can show the
-                    restock alert.
+                    restock alert. Selling a single drink always rings as card; a busy round follows the
+                    round tender below.
                   </p>
                 ) : (
                   <p className="text-[12px] text-admin-muted">
@@ -1798,12 +1826,40 @@ export default function MarketClient({
                           {sandboxSeeded ? "Sandbox catalog seeded" : "Seed the sandbox catalog first"}
                         </p>
                         <p className="text-[11px] text-admin-muted">
-                          {sandboxSeeded
-                            ? "This market's drinks exist as sandbox items. Re-seed to reset prices and stock."
-                            : "The sandbox has its own catalog, so each drink on this market needs a sandbox item to sell."}
+                          {seedMode === "reuse"
+                            ? "Uses the sandbox items your menu prices already point at and only sets their stock."
+                            : "Replaces the temporary items from the last seed with fresh ones, so nothing duplicates."}
                         </p>
                       </div>
                       <div className="flex items-end gap-2">
+                        <div
+                          role="radiogroup"
+                          aria-label="How the sandbox catalog is seeded"
+                          className="flex rounded-lg border border-admin-line bg-admin-card p-0.5"
+                        >
+                          {(
+                            [
+                              { value: "reuse", label: "Use mapped items" },
+                              { value: "temp", label: "Temp items" },
+                            ] as { value: SeedMode; label: string }[]
+                          ).map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={seedMode === option.value}
+                              onClick={() => setSeedMode(option.value)}
+                              className={cn(
+                                "flex h-11 items-center rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-9",
+                                seedMode === option.value
+                                  ? "bg-admin-primary text-white"
+                                  : "text-admin-muted hover:bg-admin-surface"
+                              )}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
                         <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
                           Stock each
                           <input
@@ -1822,7 +1878,7 @@ export default function MarketClient({
                           className={cn(sandboxSeeded ? NEUTRAL_BUTTON : PRIMARY_BUTTON, "whitespace-nowrap")}
                         >
                           <Upload className="h-4 w-4" aria-hidden="true" />
-                          {sandboxSeeded ? "Re-seed" : "Seed sandbox"}
+                          {seedMode === "reuse" ? "Stock items" : sandboxSeeded ? "Re-seed" : "Seed sandbox"}
                         </button>
                       </div>
                     </div>
@@ -1888,6 +1944,41 @@ export default function MarketClient({
                     </select>
                   </label>
                 </div>
+                {viaSquare && (
+                  <div className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                    Round tender
+                    <div
+                      role="radiogroup"
+                      aria-label="How busy-round sales are paid in Square"
+                      className="flex rounded-lg border border-admin-line bg-admin-card p-0.5"
+                    >
+                      {(
+                        [
+                          { value: "mix", label: "Mixed" },
+                          { value: "card", label: "Card" },
+                          { value: "cash", label: "Cash" },
+                        ] as { value: RoundTenderMode; label: string }[]
+                      ).map((option) => {
+                        const active = roundTender === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => setRoundTender(option.value)}
+                            className={cn(
+                              "flex h-10 items-center rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-8",
+                              active ? "bg-admin-primary text-white" : "text-admin-muted hover:bg-admin-surface"
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"

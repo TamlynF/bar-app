@@ -49,10 +49,13 @@ import {
 import {
   addInventory,
   assertSandbox,
+  planRoundTenders,
   ringSaleThroughSquare,
   seedSandboxCatalog,
   squareSimEnvironment,
+  type RoundTenderMode,
   type RungSale,
+  type SeedMode,
 } from "@/lib/market/square-sandbox";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -1436,6 +1439,7 @@ async function liveSimSession(supabase: ServerClient): Promise<SimSession | { er
 }
 
 export type SimMode = "queue" | "square";
+export type { SeedMode, RoundTenderMode };
 
 type SimInstrumentRow = {
   id: number;
@@ -1485,10 +1489,6 @@ async function recordSquareSales(
 
 const NOT_SEEDED = "Seed the sandbox catalog first so this market's drinks exist in Square sandbox.";
 
-function pickTender(): "card" | "cash" {
-  return Math.random() < 0.3 ? "cash" : "card";
-}
-
 export async function simulateSaleAction(
   instrumentId: number,
   units: number,
@@ -1523,7 +1523,7 @@ export async function simulateSaleAction(
       rung = await ringSaleThroughSquare(
         guard.locationId,
         [{ variationId: instrument.square_variation_id, quantity: units }],
-        pickTender()
+        "card"
       );
     } catch (err) {
       console.error("[market] sandbox sale failed:", err);
@@ -1556,7 +1556,8 @@ export async function simulateSaleAction(
 export async function simulateBusyRoundAction(
   sales: number,
   favouriteId?: number | null,
-  mode: SimMode = "queue"
+  mode: SimMode = "queue",
+  tenderMode: RoundTenderMode = "mix"
 ) {
   const supabase = await createClient();
   if (!Number.isFinite(sales) || sales < 1) return { error: "Pick how many sales to ring up." };
@@ -1584,14 +1585,15 @@ export async function simulateBusyRoundAction(
     if (plan.length === 0) return { error: "Every drink on the board is sold out - nothing to sell." };
 
     const variationById = new Map(linked.map((row) => [row.id, row.square_variation_id as string]));
+    const tenders = planRoundTenders(plan.length, tenderMode);
     const rung: { instrumentId: number; units: number; rung: RungSale }[] = [];
     let failure: string | null = null;
-    for (const sale of plan) {
+    for (const [index, sale] of plan.entries()) {
       try {
         const result = await ringSaleThroughSquare(
           guard.locationId,
           [{ variationId: variationById.get(sale.instrumentId) as string, quantity: sale.units }],
-          pickTender()
+          tenders[index]
         );
         rung.push({ instrumentId: sale.instrumentId, units: sale.units, rung: result });
       } catch (err) {
@@ -1606,7 +1608,16 @@ export async function simulateBusyRoundAction(
     if (rung.length === 0) return { error: failure ?? "Square sandbox rejected the round." };
     const units = rung.reduce((sum, sale) => sum + sale.units, 0);
     const takings = rung.reduce((sum, sale) => sum + sale.rung.amount, 0);
-    return { success: true, sales: rung.length, units, takings, partialError: failure };
+    const cash = rung.filter((sale) => sale.rung.tender === "cash").length;
+    return {
+      success: true,
+      sales: rung.length,
+      units,
+      takings,
+      cash,
+      card: rung.length - cash,
+      partialError: failure,
+    };
   }
 
   const plan = planBusyRound(
@@ -1634,14 +1645,14 @@ export async function simulateBusyRoundAction(
   return { success: true, sales: plan.length, units };
 }
 
-export async function seedSandboxCatalogAction(stockQty: number) {
+export async function seedSandboxCatalogAction(stockQty: number, mode: SeedMode = "temp") {
   const supabase = await createClient();
   const session = await liveSimSession(supabase);
   if ("error" in session) return session;
   const qty = Number.isFinite(stockQty) ? Math.max(0, Math.min(999, Math.floor(stockQty))) : 40;
 
   try {
-    const result = await seedSandboxCatalog(supabase, session.id, qty);
+    const result = await seedSandboxCatalog(supabase, session.id, qty, mode);
     if ("error" in result) return result;
     revalidateMarket();
     return { success: true, ...result, stockQty: qty };
