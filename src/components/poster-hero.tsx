@@ -110,7 +110,7 @@ export function PosterHero({
       </div>
 
       {/* Phone date stamp, like the corner of a gig poster */}
-      <div className="absolute top-3 right-3 flex flex-col items-center rounded-[10px] border border-gold/40 bg-canvas/80 px-2.5 py-1.5 leading-none text-ink shadow-lg shadow-black/50 backdrop-blur-md md:hidden">
+      <div className="absolute top-3 right-3 flex rotate-3 flex-col items-center rounded-[10px] border border-gold/40 bg-canvas/80 px-2.5 py-1.5 leading-none text-ink shadow-lg shadow-black/50 backdrop-blur-md md:hidden">
         <span className="font-black text-[9px] tracking-[0.2em] text-gold uppercase">{isTonight ? "Tonight" : format(dateObj, "EEE")}</span>
         <span className="mt-1 font-black text-[22px] tracking-tighter tabular-nums">{format(dateObj, "d")}</span>
         <span className="mt-0.5 font-black text-[9px] tracking-[0.2em] uppercase">{format(dateObj, "MMM")}</span>
@@ -120,13 +120,13 @@ export function PosterHero({
       <div className="absolute right-3 bottom-4 left-3 flex flex-col gap-2.5 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
         <div className="flex items-center gap-2 sm:gap-2.5">
           {event.subType && (
-            <span className="rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
+            <span className="-rotate-2 rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
               {event.subType}
             </span>
           )}
           <span
             className={cn(
-              "rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase shadow-lg shadow-black/40 sm:px-3 sm:text-[11px]",
+              "animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase shadow-lg shadow-black/40 sm:px-3 sm:text-[11px]",
               paid ? "bg-gold text-on-gold" : "border border-gold/60 bg-canvas/85 text-gold backdrop-blur-sm"
             )}
           >
@@ -154,7 +154,7 @@ export function PosterHero({
             {entryText(event)}
           </span>
         </p>
-        <div onPointerDown={neonFlicker} className="mt-1 flex items-stretch gap-2.5 [&_a]:h-12 [&_a]:w-auto [&_a]:flex-1 [&_a]:px-5 [&_a]:text-[13px] [&_span]:h-12 [&_span]:w-auto [&_span]:flex-1 [&_span]:px-4 sm:gap-3 md:[&_a]:h-14 md:[&_a]:flex-none md:[&_a]:px-8 md:[&_span]:h-14 md:[&_span]:flex-none md:[&_span]:px-7">
+        <div onPointerDown={neonFlicker} className="ad-pulse-cta mt-1 flex items-stretch gap-2.5 [&_a]:h-12 [&_a]:w-auto [&_a]:flex-1 [&_a]:px-5 [&_a]:text-[13px] [&_span]:h-12 [&_span]:w-auto [&_span]:flex-1 [&_span]:px-4 sm:gap-3 md:[&_a]:h-14 md:[&_a]:flex-none md:[&_a]:px-8 md:[&_span]:h-14 md:[&_span]:flex-none md:[&_span]:px-7">
           <BookingButton event={event} />
           <button
             type="button"

@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
 import type { MerchandiseRow } from "@/components/merchandise-section";
 import { formatGBP } from "@/lib/events-display";
+import { floatingVariant } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 export function MerchRail({ merchandise, className }: { merchandise: MerchandiseRow[]; className?: string }) {
@@ -15,15 +16,15 @@ export function MerchRail({ merchandise, className }: { merchandise: Merchandise
       {merchandise.map((item) => {
         const price = item.price == null ? null : Number(item.price);
         return (
-          <li key={item.id} className="w-36 shrink-0 snap-start md:w-40">
-            <div className="relative aspect-square overflow-hidden rounded-xl border border-ink/15 bg-[radial-gradient(70%_60%_at_50%_35%,#2a2f1c,#14180a)] text-ink">
+          <li key={item.id} className="ad-float group w-36 shrink-0 snap-start md:w-40" style={floatingVariant(`merch-${item.id}`)}>
+            <div className="ad-card-lift relative aspect-square overflow-hidden rounded-xl border border-ink/15 bg-[radial-gradient(70%_60%_at_50%_35%,#2a2f1c,#14180a)] text-ink">
               {item.image_url ? (
-                <Image src={item.image_url} alt="" fill sizes="(max-width: 768px) 144px, 160px" className="object-cover" />
+                <Image src={item.image_url} alt="" fill sizes="(max-width: 768px) 144px, 160px" className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03] group-active:scale-[1.03]" />
               ) : (
                 <ShoppingBag className="absolute top-1/2 left-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2" strokeWidth={1.6} aria-hidden="true" />
               )}
               {price !== null && (
-                <span className="absolute top-1.5 right-1.5 rounded-full bg-gold px-2 py-0.5 font-black text-[10px] tracking-wide md:px-1.5 md:text-[9px] text-on-gold tabular-nums shadow-md shadow-black/40">
+                <span className="absolute top-1.5 right-1.5 animate-[ad-fade-in_1s_ease-in_both] rounded-full bg-gold px-2 py-0.5 font-black text-[10px] tracking-wide md:px-1.5 md:text-[9px] text-on-gold tabular-nums shadow-md shadow-black/40">
                   {formatGBP(price)}
                 </span>
               )}

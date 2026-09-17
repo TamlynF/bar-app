@@ -21,15 +21,15 @@ export function LaterTonightStrip({
   return (
     <section aria-label={label} className="mx-4 mt-3 md:hidden">
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {events.map((e) => (
-          <li key={e.id} style={{ "--ev-c": e.color } as React.CSSProperties}>
+        {events.map((e, i) => (
+          <li key={e.id} data-reveal style={{ "--ev-c": e.color, "--reveal-delay": `${i * 70}ms` } as React.CSSProperties}>
             <Link
               href={`/whats-on/${e.id}`}
-              className="flex min-h-16 items-center gap-3 rounded-[14px] border border-gold/40 bg-gold/8 px-3 py-2 transition-[scale,background-color,border-color] duration-150 active:scale-[0.985] active:border-gold/70 active:bg-gold/15"
+              className="ad-card-lift group flex min-h-16 items-center gap-3 rounded-[14px] border border-gold/40 bg-gold/8 px-3 py-2 hover:border-gold/70 active:border-gold/70 active:bg-gold/15"
             >
               <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-canvas">
                 {e.imageUrl ? (
-                  <Image src={e.imageUrl} alt="" fill sizes="44px" className="object-cover object-[center_70%]" />
+                  <Image src={e.imageUrl} alt="" fill sizes="44px" className="object-cover object-[center_70%] transition-transform duration-300 ease-out group-hover:scale-[1.03] group-active:scale-[1.03]" />
                 ) : (
                   <span className="absolute inset-0 bg-linear-to-br from-(--ev-c)/60 to-canvas" aria-hidden="true" />
                 )}

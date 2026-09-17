@@ -6,6 +6,8 @@ import { ChevronRight, Martini } from "lucide-react";
 import { RichTextContent } from "@/components/rich-text-content";
 import { SpecialDetailModal } from "@/components/special-detail-modal";
 import type { SpecialRow } from "@/components/specials-section";
+import { Waveform } from "@/components/ui/waveform";
+import { floatingVariant } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 const DAY_SHORT = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -56,7 +58,11 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
       <div className="relative md:flex md:items-center md:gap-7">
         <div className="flex items-end justify-between gap-3 md:w-60 md:shrink-0 md:flex-col md:items-start md:justify-center md:gap-2">
           <div>
-            <h2 id="specials-heading" className="m-0 font-black text-[22px] leading-none tracking-tighter text-ink uppercase md:text-[40px]">
+            <span className="mb-1.5 flex items-center gap-2 font-black text-[9px] tracking-[0.24em] text-gold uppercase md:hidden">
+              <Waveform bars={5} className="h-2.5 text-gold" />
+              Food &amp; drink
+            </span>
+            <h2 id="specials-heading" className="m-0 font-black text-[26px] leading-[0.9] tracking-tighter text-ink uppercase md:text-[40px] md:leading-none">
               Specials
             </h2>
             <p className="mt-2 mb-0 hidden text-[13px] leading-snug font-semibold text-gold md:block">
@@ -75,18 +81,18 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
             const tonight = runsToday(s, today);
             const badge = s.badges?.[0] ?? null;
             return (
-              <li key={s.id} className="min-w-0">
+              <li key={s.id} className="ad-float min-w-0" style={floatingVariant(`special-${s.id}`)}>
                 <button
                   type="button"
                   onClick={() => setOpen(s)}
                   aria-label={`${s.title} - details`}
                   className={cn(
-                    "relative block aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left transition-[scale] duration-150 active:scale-[0.97]",
+                    "ad-card-lift group relative block aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left",
                     tonight ? "border-gold shadow-[0_0_0_1px_rgba(0,0,0,0.6),0_0_18px_-4px_rgba(253,204,75,0.6)]" : "border-ink/35"
                   )}
                 >
                   {s.image_url ? (
-                    <Image src={s.image_url} alt="" fill sizes="(max-width: 768px) 50vw, 168px" className="object-cover" />
+                    <Image src={s.image_url} alt="" fill sizes="(max-width: 768px) 50vw, 168px" className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03] group-active:scale-[1.03]" />
                   ) : (
                     <span className="absolute inset-0 flex items-center justify-center text-gold" aria-hidden="true">
                       <Martini className="h-8 w-8" strokeWidth={1.6} />
@@ -94,7 +100,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   )}
                   <span
                     className={cn(
-                      "absolute top-2 left-2 rounded-full px-2 py-0.5 font-black text-[10px] tracking-[0.14em] uppercase",
+                      "absolute top-2 left-2 animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2 py-0.5 font-black text-[10px] tracking-[0.14em] uppercase",
                       tonight ? "bg-gold text-on-gold" : "bg-black/70 text-ink"
                     )}
                   >
@@ -124,13 +130,13 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   onClick={() => setOpen(s)}
                   aria-label={`${s.title} - details`}
                   className={cn(
-                    "flex w-full items-center gap-3 overflow-hidden rounded-xl border bg-black/25 p-2 text-left transition-colors hover:bg-black/35 md:gap-4 md:rounded-2xl md:p-2.5",
+                    "ad-card-lift group flex w-full items-center gap-3 overflow-hidden rounded-xl border bg-black/25 p-2 text-left hover:bg-black/35 md:gap-4 md:rounded-2xl md:p-2.5",
                     tonight ? "border-gold/60" : "border-ink/15"
                   )}
                 >
                   <span className="relative h-18 w-18 shrink-0 overflow-hidden rounded-lg bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] md:h-30 md:w-42 md:rounded-xl">
                     {s.image_url ? (
-                      <Image src={s.image_url} alt="" fill sizes="(max-width: 768px) 72px, 168px" className="object-cover" />
+                      <Image src={s.image_url} alt="" fill sizes="(max-width: 768px) 72px, 168px" className="object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]" />
                     ) : (
                       <span className="absolute inset-0 flex items-center justify-center text-gold" aria-hidden="true">
                         <Martini className="h-7 w-7 md:h-10 md:w-10" strokeWidth={1.6} />

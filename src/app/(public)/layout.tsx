@@ -8,7 +8,7 @@ export default function PublicLayout({
   return (
     <>
       <SmoothScroll />
-      {children}
+      <div className="max-sm:pb-[calc(env(safe-area-inset-bottom)+4.5rem)]">{children}</div>
     </>
   );
 }

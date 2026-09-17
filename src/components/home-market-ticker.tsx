@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { ArrowCta } from "@/components/ui/arrow-cta";
 import { RollingPrice } from "@/components/rolling-price";
 import { useMarketState } from "@/hooks/use-market-live";
 import { formatGbp } from "@/lib/price";
@@ -121,16 +121,9 @@ export function HomeMarketTicker() {
               </li>
             ))}
           </ul>
-          <Link
-            href="/market"
-            className={cn(
-              "mt-2 flex h-11 items-center justify-center gap-2 rounded-xl font-black text-xs tracking-[0.12em] text-on-gold uppercase transition-[scale] duration-150 active:scale-[0.98]",
-              crash ? "ad-market-cta-crash" : "ad-market-cta"
-            )}
-          >
+          <ArrowCta href="/market" className={cn("mt-2 w-full", crash ? "ad-market-cta-crash" : "ad-market-cta")}>
             Open the market
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          </ArrowCta>
         </div>
       )}
     </section>

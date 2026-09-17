@@ -1,13 +1,18 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
 import { SmoothScroll } from "@/components/smooth-scroll";
+import { RevealOnScroll } from "@/components/reveal-on-scroll";
+import { HomeSkeleton } from "@/components/home-skeleton";
+import { GrainOverlay } from "@/components/ui/grain-overlay";
+import { NowPlaying } from "@/components/home/now-playing";
+import { Reveal } from "@/components/animations/reveal";
 import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
-import { NextUpList } from "@/components/next-up-list";
+import { DateSleeves } from "@/components/home/date-sleeves";
 import { LaterTonightStrip } from "@/components/later-tonight-strip";
 import { HomeMarketTicker } from "@/components/home-market-ticker";
-import { TicketStrip } from "@/components/ticket-strip";
 import { SpecialsBand } from "@/components/specials-band";
 import { FloorStrip } from "@/components/floor-strip";
 import { VisitFooter } from "@/components/visit-footer";
@@ -27,7 +32,6 @@ import { format } from "date-fns";
 
 export const revalidate = 300;
 
-const NEXT_NIGHTS = 3;
 const CAROUSEL_EVENTS = 8;
 const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
@@ -36,7 +40,7 @@ function clock(hhmm: string | null | undefined) {
   return m == null ? null : formatClock(m);
 }
 
-export default async function HomePage() {
+async function HomeContent() {
   const supabase = await createClient();
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
@@ -80,18 +84,9 @@ export default async function HomePage() {
   const isTonight = featuredDate === todayStr;
   const nightEvents = featuredDate ? events.filter((e) => e.date === featuredDate) : [];
   const later = featuredDate ? events.filter((e) => e.date > featuredDate) : events;
-  const nextDates = Array.from(new Set(later.map((e) => e.date))).slice(0, NEXT_NIGHTS);
-  const nextUp = later.filter((e) => nextDates.includes(e.date));
-  const rangeLabel =
-    nextUp.length > 1
-      ? `${format(parseDate(nextUp[0].date), "d MMM")} – ${format(parseDate(nextUp[nextUp.length - 1].date), "d MMM")}`
-      : nextUp.length === 1
-        ? format(parseDate(nextUp[0].date), "EEEE d MMM")
-        : null;
 
   const hours = info?.opening_hours ?? null;
   const featuredDay = featuredDate ? DOW_KEYS[parseDate(featuredDate).getDay()] : DOW_KEYS[today.getDay()];
-  const doorsFor = (date: string) => clock(hours?.[DOW_KEYS[parseDate(date).getDay()]]?.open);
   const doors = clock(hours?.[featuredDay]?.open);
   const todayOpen = clock(hours?.[DOW_KEYS[today.getDay()]]?.open);
   const todayClose = clock(hours?.[DOW_KEYS[today.getDay()]]?.close);
@@ -104,8 +99,7 @@ export default async function HomePage() {
   const promos = (rawPromos ?? []) as PromoRow[];
 
   return (
-    <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
-      <SmoothScroll />
+    <>
       <PublicNav currentPath="/" overlay ticker={false} />
 
       {nightEvents.length > 0 ? (
@@ -122,6 +116,7 @@ export default async function HomePage() {
             isTonight={isTonight}
             dayName={format(parseDate(featuredDate as string), "EEEE")}
           />
+          <NowPlaying event={nightEvents[0]} isTonight={isTonight} />
         </>
       ) : (
         <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
@@ -132,18 +127,41 @@ export default async function HomePage() {
         </section>
       )}
 
-      {nightEvents.length === 0 && <HomeMarketTicker />}
+      {nightEvents.length === 0 && (
+        <>
+          <HomeMarketTicker />
+          <NowPlaying event={null} isTonight={false} />
+        </>
+      )}
 
       <div className="mx-auto w-full max-w-400">
-        <NextUpList events={later.slice(0, CAROUSEL_EVENTS)} />
-        <TicketStrip events={nextUp} rangeLabel={rangeLabel} doorsFor={doorsFor} />
+        <DateSleeves events={later.slice(0, CAROUSEL_EVENTS)} />
         <div className="mt-14 hidden px-6 sm:block lg:px-10">
           <MarketSection />
         </div>
-        <SpecialsBand specials={specials} today={today} />
-        <FloorStrip posts={promos} merchandise={merchandise} instagram={info?.instagram ?? null} />
-        <VisitFooter info={info} />
+        <Reveal index={0}>
+          <SpecialsBand specials={specials} today={today} />
+        </Reveal>
+        <Reveal index={1}>
+          <FloorStrip posts={promos} merchandise={merchandise} instagram={info?.instagram ?? null} />
+        </Reveal>
+        <Reveal index={2}>
+          <VisitFooter info={info} />
+        </Reveal>
       </div>
+      <RevealOnScroll />
+    </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <main className="relative isolate min-h-dvh w-full bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.5rem)] text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
+      <SmoothScroll />
+      <GrainOverlay fixed />
+      <Suspense fallback={<HomeSkeleton />}>
+        <HomeContent />
+      </Suspense>
     </main>
   );
 }

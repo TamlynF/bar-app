@@ -51,7 +51,7 @@ export function PublicNavBar({
     { href: "/contact", label: "Contact" },
   ];
 
-  const mobileLinks = [{ href: "/", label: "Home" }, ...primaryLinks];
+  const drawerLinks = primaryLinks.filter((l) => l.href === "/gallery" || l.href === "/contact");
 
   return (
     <>
@@ -210,14 +210,7 @@ export function PublicNavBar({
             className="animate-in border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl duration-200 fade-in slide-in-from-top-2 sm:hidden"
           >
             <div className="mx-auto flex w-full max-w-400 flex-col px-4 py-3">
-              <Link
-                href="/book"
-                onClick={() => setMenuOpen(false)}
-                className="mb-2 inline-flex h-12 items-center justify-center rounded-2xl bg-[#FDCC4B] font-black text-sm tracking-wide text-[#1a2008]! uppercase transition-colors hover:bg-[#e5b843] active:scale-95"
-              >
-                Book
-              </Link>
-              {mobileLinks.map((link) => (
+              {drawerLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -267,7 +260,7 @@ export function PublicNavBar({
           opts out and places the ticker under its poster instead. */}
       {ticker && !onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-12 -mb-12" : undefined} />}
 
-      <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} marketLive={marketLive} />
+      <MobileBottomBar currentPath={currentPath} marketLive={marketLive} />
     </>
   );
 }
