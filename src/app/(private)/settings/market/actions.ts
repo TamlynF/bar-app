@@ -45,6 +45,7 @@ import {
   SIM_MAX_ROUND_SALES,
   SIM_MAX_UNITS_PER_SALE,
   SIM_MAX_SQUARE_ROUND_SALES,
+  squareItemUrl,
 } from "@/lib/market/simulate";
 import {
   addInventory,
@@ -1104,6 +1105,40 @@ export async function crashInstrumentAction(instrumentId: number) {
 
   revalidateMarket();
   return { success: true };
+}
+
+/* The table shows "Linked" per drink; this is what that link opens. The stored
+   id is the ITEM_VARIATION, and the Square dashboard addresses items by their
+   parent ITEM, so the variation is read back to find it. */
+export async function squareItemLinkAction(instrumentId: number) {
+  const supabase = await createClient();
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("display_name, square_variation_id")
+    .eq("id", instrumentId)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not trading on the live market." };
+  if (!instrument.square_variation_id) {
+    return { error: `${instrument.display_name} is not linked to a Square item.` };
+  }
+
+  try {
+    const res = await squareClient.catalog.batchGet({
+      objectIds: [instrument.square_variation_id],
+      includeRelatedObjects: false,
+      includeDeletedObjects: false,
+    });
+    const variation = res.objects?.[0];
+    const itemId =
+      variation?.type === "ITEM_VARIATION" ? variation.itemVariationData?.itemId : null;
+    if (!itemId) {
+      return { error: `Square no longer has a variation with that id for ${instrument.display_name}.` };
+    }
+    return { url: squareItemUrl(squareSimEnvironment().environment, itemId) };
+  } catch (err) {
+    console.error("[market] square item lookup failed:", err);
+    return { error: "Could not reach the Square catalog." };
+  }
 }
 
 export async function setStockOverrideAction(instrumentId: number, value: string) {

@@ -4,6 +4,7 @@ import {
   isValidSaleUnits,
   mergeUnits,
   planBusyRound,
+  squareItemUrl,
   sumPendingUnits,
 } from "../simulate";
 
@@ -82,5 +83,20 @@ describe("isValidSaleUnits", () => {
     expect(isValidSaleUnits(51)).toBe(false);
     expect(isValidSaleUnits(2.5)).toBe(false);
     expect(isValidSaleUnits("3")).toBe(false);
+  });
+});
+
+describe("squareItemUrl", () => {
+  it("points at the right dashboard for each environment", () => {
+    expect(squareItemUrl("sandbox", "ITEM_1")).toBe(
+      "https://app.squareupsandbox.com/dashboard/items/library/ITEM_1"
+    );
+    expect(squareItemUrl("production", "ITEM_1")).toBe(
+      "https://app.squareup.com/dashboard/items/library/ITEM_1"
+    );
+  });
+
+  it("escapes an id so it cannot break out of the path", () => {
+    expect(squareItemUrl("sandbox", "a/b?c")).toContain("a%2Fb%3Fc");
   });
 });

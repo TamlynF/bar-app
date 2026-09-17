@@ -78,6 +78,7 @@ import {
   setStockOverrideAction,
   simulateBusyRoundAction,
   simulateSaleAction,
+  squareItemLinkAction,
   type SimMode,
 } from "./actions";
 import type { RoundTenderMode } from "@/lib/market/square-sandbox";
@@ -678,6 +679,48 @@ function StockSelect({
   );
 }
 
+/* "Linked" opens the drink in the Square dashboard. The instrument stores the
+   ITEM_VARIATION id and the dashboard wants the parent ITEM, so the tab is
+   opened up front and pointed at the item once Square has answered - opening
+   it after the await would be treated as a pop-up. */
+function SquareItemLink({ instrument }: { instrument: InstrumentSummary }) {
+  const [loading, setLoading] = useState(false);
+
+  if (!instrument.mapped) return <span className="text-admin-warning">Not linked</span>;
+
+  async function open() {
+    const tab = window.open("about:blank", "_blank", "noopener,noreferrer");
+    setLoading(true);
+    const result = await squareItemLinkAction(instrument.id);
+    setLoading(false);
+    if ("error" in result && result.error) {
+      tab?.close();
+      toast.error(result.error);
+      return;
+    }
+    if (!("url" in result) || !result.url) return;
+    if (tab) tab.location.href = result.url;
+    else window.open(result.url, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={open}
+      disabled={loading}
+      title={`Open ${instrument.name} in the Square dashboard`}
+      className="flex min-h-11 items-center gap-1 text-[13px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-0"
+    >
+      Linked
+      {loading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      ) : (
+        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
 function stockLabel(state: StockState, qty: number | null): { label: string; className: string } {
   const count = qty == null ? "" : ` · ${Math.max(0, Math.round(qty))} left`;
   if (state === "out") return { label: `Sold out${count}`, className: "bg-admin-error-bg text-admin-error" };
@@ -833,7 +876,8 @@ const FLOOR_FIELDS: FloorField[] = [
   },
   {
     key: "override",
-    label: "Override",
+    label: "Stock override",
+    detail: true,
     help: "Force the stock state by hand. Auto follows Square; any other choice holds until you set it back to Auto.",
   },
   {
@@ -879,7 +923,7 @@ const FLOOR_FIELDS: FloorField[] = [
     key: "link",
     label: "Square link",
     detail: true,
-    help: "Whether this serve is linked to a Square catalog item. Only linked serves pick up real till sales and push their market price back to the till.",
+    help: "Whether this serve is linked to a Square catalog item. Only linked serves pick up real till sales and push their market price back to the till. Click Linked to open the item in the Square dashboard.",
   },
 ];
 
@@ -950,8 +994,6 @@ function detailValue(field: FloorField, instrument: InstrumentSummary, warmedUp:
       );
     case "change":
       return changeSinceOpen(instrument);
-    case "link":
-      return instrument.mapped ? "Linked" : <span className="text-admin-warning">Not linked</span>;
     default:
       return null;
   }
@@ -2143,7 +2185,7 @@ export default function MarketClient({
                     <FloorHeading
                       key={field.key}
                       field={field}
-                      className={field.key === "override" && !simOpen ? "pr-0" : undefined}
+                      className={field.key === "stock" && !simOpen ? "pr-0" : undefined}
                     />
                   ))}
                   {simOpen && <th className="py-2">Sell / stock</th>}
@@ -2228,7 +2270,7 @@ export default function MarketClient({
                       >
                         {formatGbp(instrument.currentPrice)}
                       </td>
-                      <td className="py-2 pr-3">
+                      <td className={cn("py-2", simOpen && "pr-3")}>
                         <span
                           className={cn(
                             "rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
@@ -2237,15 +2279,6 @@ export default function MarketClient({
                         >
                           {stock.label}
                         </span>
-                      </td>
-                      <td className={cn("py-2", simOpen && "pr-3")} onClick={(event) => event.stopPropagation()}>
-                        <StockSelect
-                          instrument={instrument}
-                          disabled={isPending}
-                          onChange={(value) =>
-                            run(() => setStockOverrideAction(instrument.id, value))
-                          }
-                        />
                       </td>
                       {simOpen && (
                         <td className="py-2" onClick={(event) => event.stopPropagation()}>
@@ -2304,12 +2337,28 @@ export default function MarketClient({
                         <td colSpan={columnCount} className="px-3 pt-1 pb-3">
                           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-admin-line bg-admin-card p-3 sm:grid-cols-4 lg:grid-cols-7">
                             {detailFields.map((field) => (
-                              <div key={field.key} className="min-w-0">
+                              <div
+                                key={field.key}
+                                className="min-w-0"
+                                onClick={(event) => event.stopPropagation()}
+                              >
                                 <dt className="text-[11px] font-semibold text-admin-muted">
                                   <FieldTip field={field} align="start" />
                                 </dt>
                                 <dd className="mt-0.5 text-[13px] font-semibold text-admin-ink tabular-nums">
-                                  {detailValue(field, instrument, warmedUp)}
+                                  {field.key === "override" ? (
+                                    <StockSelect
+                                      instrument={instrument}
+                                      disabled={isPending}
+                                      onChange={(value) =>
+                                        run(() => setStockOverrideAction(instrument.id, value))
+                                      }
+                                    />
+                                  ) : field.key === "link" ? (
+                                    <SquareItemLink instrument={instrument} />
+                                  ) : (
+                                    detailValue(field, instrument, warmedUp)
+                                  )}
                                 </dd>
                               </div>
                             ))}

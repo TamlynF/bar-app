@@ -87,6 +87,14 @@ export function squareSandboxDashboardUrl(section: "orders" | "items" | "transac
   return `https://app.squareupsandbox.com${paths[section]}`;
 }
 
+/* The Square dashboard addresses an item by its ITEM id, which is not what we
+   store - instruments carry the ITEM_VARIATION id from the menu mapping, so
+   the parent has to be read back from the catalog before this can be built. */
+export function squareItemUrl(environment: "sandbox" | "production", itemId: string): string {
+  const host = environment === "sandbox" ? "app.squareupsandbox.com" : "app.squareup.com";
+  return `https://${host}/dashboard/items/library/${encodeURIComponent(itemId)}`;
+}
+
 export function squareTransactionUrl(
   environment: "sandbox" | "production",
   paymentId: string,
