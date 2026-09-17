@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,6 +12,7 @@ import {
   Eraser,
   ExternalLink,
   FastForward,
+  Info,
   Link2,
   Loader2,
   MonitorPlay,
@@ -31,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +79,8 @@ import {
   simulateSaleAction,
   type SimMode,
 } from "./actions";
-import { squareSandboxDashboardUrl } from "@/lib/market/simulate";
+import { squareSandboxDashboardUrl, squareTransactionUrl } from "@/lib/market/simulate";
+import type { MarketStatePayload } from "@/lib/market/tick";
 import {
   CONFIG_FIELDS,
   ConfigHelp,
@@ -114,6 +116,7 @@ export type InstrumentSummary = {
   name: string;
   serve: string;
   basePrice: number;
+  openingPrice: number;
   currentPrice: number;
   demandUnits: number;
   stockState: StockState;
@@ -123,6 +126,14 @@ export type InstrumentSummary = {
   stockQty: number | null;
   /* Simulated units queued for the next tick (0 when nothing is waiting). */
   simPending: number;
+  /* Tier leaderboard figures written by the engine each tick; all null or 0
+     under demand pricing and before the market has warmed up. */
+  normalUnitsPerNight: number | null;
+  normalUnitsSource: string | null;
+  pace: number | null;
+  rankPos: number | null;
+  tierPct: number | null;
+  targetPrice: number | null;
 };
 
 export type SquareSimOrder = {
@@ -133,6 +144,7 @@ export type SquareSimOrder = {
   amount: number | null;
   tender: "card" | "cash" | null;
   orderId: string | null;
+  paymentId: string | null;
   at: string;
 };
 
@@ -666,6 +678,10 @@ function stockLabel(state: StockState, qty: number | null): { label: string; cla
 /* The seven raw config numbers, read as a person would say them. */
 function settingTiles(config: MarketConfig): { label: string; value: string }[] {
   return [
+    {
+      label: "Pricing",
+      value: PRICING_MODES.find((option) => option.value === config.pricingMode)?.label ?? config.pricingMode,
+    },
     { label: "Prices move", value: `every ${config.tickIntervalSec}s` },
     { label: "Volatility", value: String(config.noiseSigma) },
     { label: "Price range", value: `${config.floorPct}× to ${config.ceilPct}× base` },
@@ -674,6 +690,261 @@ function settingTiles(config: MarketConfig): { label: string; value: string }[] 
     { label: "Leaderboard shows", value: config.leaderboardRows > 0 ? `top ${config.leaderboardRows}` : "as many as fit" },
     { label: "Phone alerts", value: config.pushAlertsEnabled ? "On" : "Off" },
   ];
+}
+
+const LIVE_POLL_MS = 5000;
+
+function formatCountdown(ms: number): string {
+  const clamped = Math.max(0, ms);
+  const minutes = Math.floor(clamped / 60000);
+  const seconds = Math.floor((clamped % 60000) / 1000);
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function useCountdown(remainingSec: number | null | undefined): string {
+  const endsAtRef = useRef<number | null>(null);
+  const [countdown, setCountdown] = useState("0:00");
+
+  useEffect(() => {
+    if (remainingSec != null) endsAtRef.current = Date.now() + remainingSec * 1000;
+  }, [remainingSec]);
+
+  useEffect(() => {
+    const update = () => {
+      const endsAt = endsAtRef.current ?? Date.now();
+      setCountdown(formatCountdown(endsAt - Date.now()));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return countdown;
+}
+
+/* Mirrors the public board: poll the state endpoint every few seconds and,
+   once the engine has ticked, pull fresh server props so the floor moves
+   without a manual reload. */
+function useLiveTick(enabled: boolean, initialTickNo: number | null, onTick: () => void): MarketStatePayload | null {
+  const [state, setState] = useState<MarketStatePayload | null>(null);
+  const lastTickRef = useRef<number | null>(initialTickNo);
+  const onTickRef = useRef(onTick);
+
+  useEffect(() => {
+    onTickRef.current = onTick;
+  }, [onTick]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/market/state", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as MarketStatePayload;
+        if (cancelled) return;
+        setState(data);
+        const tickNo = data.status === "live" ? (data.tickNo ?? null) : null;
+        if (tickNo !== lastTickRef.current) {
+          lastTickRef.current = tickNo;
+          onTickRef.current();
+        }
+      } catch {
+        /* transient network failure - next poll retries */
+      }
+    }
+
+    poll();
+    const interval = setInterval(poll, LIVE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [enabled]);
+
+  return state;
+}
+
+function tierLabel(pct: number | null): string | null {
+  if (pct == null || pct === 0) return null;
+  return `${pct > 0 ? "+" : "−"}${Math.round(Math.abs(pct) * 100)}%`;
+}
+
+type FloorField = {
+  key: string;
+  label: string;
+  help: string;
+  align?: "right";
+  tiersOnly?: boolean;
+  /* Shown in the row's expanded panel rather than as a table column. */
+  detail?: boolean;
+};
+
+/* The row keeps what changes tick to tick; the expanded panel holds the
+   inputs that explain it, in the order a tier price is built: what the drink
+   usually sells → how it is selling tonight → the tier that earns. */
+const FLOOR_FIELDS: FloorField[] = [
+  {
+    key: "drink",
+    label: "Drink",
+    help: "The serve trading on the board. Each size is its own row, so a pint and a half of the same beer move separately. Click a row for the numbers behind its price.",
+  },
+  {
+    key: "opening",
+    label: "Opening",
+    align: "right",
+    help: "The price this drink started the night at when the market opened. The board's change percentage is measured from here.",
+  },
+  {
+    key: "rank",
+    label: "Rank",
+    align: "right",
+    tiersOnly: true,
+    help: "Leaderboard position at the last re-rank. 1 is the fastest pace on the board. Ranks near the top earn a mark-up, ranks near the bottom a discount, and the middle stays at base price.",
+  },
+  {
+    key: "target",
+    label: "Target",
+    align: "right",
+    tiersOnly: true,
+    help: "Where the price is heading: base price plus the tier. The board price glides part of the way there each tick instead of jumping, so Now catches up with Target over a few ticks. During a crash the target is the crash price instead.",
+  },
+  {
+    key: "now",
+    label: "Now",
+    align: "right",
+    help: "The price on the board and the till at the last tick. Green when above base, red when below.",
+  },
+  {
+    key: "stock",
+    label: "Stock",
+    help: "Stock as Square last reported it. Running low and Sold out follow the event's thresholds, and Sold out freezes the price until stock comes back.",
+  },
+  {
+    key: "override",
+    label: "Override",
+    help: "Force the stock state by hand. Auto follows Square; any other choice holds until you set it back to Auto.",
+  },
+  {
+    key: "base",
+    label: "Base price",
+    detail: true,
+    help: "The normal menu price. Every move is measured from here, and the till goes back to it when the market closes.",
+  },
+  {
+    key: "normal",
+    label: "Normal / night",
+    detail: true,
+    tiersOnly: true,
+    help: "How many of this serve the bar usually sells on a night like tonight, averaged from past Square sales over the event's hours. Every other tier number is measured against it.",
+  },
+  {
+    key: "demand",
+    label: "Demand",
+    detail: true,
+    help: "Recent sales heat. Every unit sold adds one, and the total fades a little each tick, so it shows what is selling right now rather than all night.",
+  },
+  {
+    key: "pace",
+    label: "Pace",
+    detail: true,
+    tiersOnly: true,
+    help: "Demand compared with this drink's own normal. 1.00× means it is selling as fast as usual for this point in the night, 2.00× twice as fast, 0.50× half as fast. Drinks are ranked on pace, so a small seller can still rank high if it is busier than its own normal.",
+  },
+  {
+    key: "tier",
+    label: "Tier",
+    detail: true,
+    tiersOnly: true,
+    help: "The price move this drink's rank has earned. +10% means it is heading for 10% above its base price, −20% for 20% below. Blank means no tier yet, either because the market is still warming up or because the rank sits in the middle band.",
+  },
+  {
+    key: "change",
+    label: "Since open",
+    detail: true,
+    help: "How far the price has moved from its opening price tonight, as a percentage. This is the figure guests see next to the drink on the board.",
+  },
+  {
+    key: "link",
+    label: "Square link",
+    detail: true,
+    help: "Whether this serve is linked to a Square catalog item. Only linked serves pick up real till sales and push their market price back to the till.",
+  },
+];
+
+function FieldTip({ field, align }: { field: FloorField; align: "start" | "end" }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded underline decoration-dotted underline-offset-4 whitespace-nowrap transition-colors hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
+        >
+          {field.label}
+          <Info className="h-3 w-3" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align={align} className="space-y-1 p-3">
+        <p className="text-[12px] leading-snug font-semibold text-admin-ink">{field.label}</p>
+        <p className="text-[11px] leading-snug text-admin-muted">{field.help}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function FloorHeading({ field, className }: { field: FloorField; className?: string }) {
+  return (
+    <th scope="col" className={cn("py-2 pr-3", field.align === "right" && "text-right", className)}>
+      <FieldTip field={field} align={field.align === "right" ? "end" : "start"} />
+    </th>
+  );
+}
+
+function changeSinceOpen(instrument: InstrumentSummary): string {
+  if (instrument.openingPrice <= 0) return "—";
+  const pct = ((instrument.currentPrice - instrument.openingPrice) / instrument.openingPrice) * 100;
+  const rounded = Math.round(pct * 10) / 10;
+  return `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}%`;
+}
+
+function detailValue(field: FloorField, instrument: InstrumentSummary, warmedUp: boolean): ReactNode {
+  const tier = tierLabel(instrument.tierPct);
+  switch (field.key) {
+    case "base":
+      return formatGbp(instrument.basePrice);
+    case "normal":
+      return (
+        <>
+          {instrument.normalUnitsPerNight == null ? "—" : instrument.normalUnitsPerNight.toFixed(1)}
+          {instrument.normalUnitsSource && (
+            <span className="block text-[11px] font-normal text-admin-muted">{instrument.normalUnitsSource}</span>
+          )}
+        </>
+      );
+    case "demand":
+      return instrument.demandUnits.toFixed(1);
+    case "pace":
+      return instrument.pace == null ? "—" : `${instrument.pace.toFixed(2)}×`;
+    case "tier":
+      if (!warmedUp || !tier) return <span className="text-admin-muted">—</span>;
+      return (
+        <span
+          className={cn(
+            "rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+            (instrument.tierPct ?? 0) > 0 ? "bg-admin-error-bg text-admin-error" : "bg-admin-success-bg text-admin-success"
+          )}
+        >
+          {tier}
+        </span>
+      );
+    case "change":
+      return changeSinceOpen(instrument);
+    case "link":
+      return instrument.mapped ? "Linked" : <span className="text-admin-warning">Not linked</span>;
+    default:
+      return null;
+  }
 }
 
 function formatRunDate(iso: string | null): string {
@@ -720,6 +991,9 @@ export default function MarketClient({
   const [simMode, setSimMode] = useState<SimMode>("queue");
   const [seedStock, setSeedStock] = useState(40);
   const [stockToAdd, setStockToAdd] = useState(12);
+  const [floorOpen, setFloorOpen] = useState(true);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(() => new Set());
 
   const sheet = useRecordSheet<StockMarketEventSummary>({
     records: events,
@@ -761,6 +1035,21 @@ export default function MarketClient({
   }
 
   const live = session !== null;
+  const liveState = useLiveTick(live, session?.tickNo ?? null, router.refresh);
+  const nextTickCountdown = useCountdown(liveState?.nextTickInSec);
+  const tiersLive = session?.config.pricingMode === "tiers";
+  const warmedUp = liveState?.warmedUp ?? true;
+  const floorFields = FLOOR_FIELDS.filter((field) => tiersLive || !field.tiersOnly);
+  const floorColumns = floorFields.filter((field) => !field.detail);
+  const detailFields = floorFields.filter((field) => field.detail);
+  function toggleExpanded(id: number) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const liveEventId = session?.stockMarketEventId ?? null;
   const liveEventName = events.find((event) => event.id === liveEventId)?.name ?? null;
   const tradeableCount = categories.reduce((sum, cat) => sum + cat.tradeableCount, 0);
@@ -1341,9 +1630,28 @@ export default function MarketClient({
       </RecordSheet>
 
       {live && (
-        <section className={CARD}>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold text-admin-ink">Trading floor</h3>
+        <section className={cn(CARD, !floorOpen && "py-2 sm:py-2")}>
+          <div className={cn("flex items-center justify-between gap-3", floorOpen && "mb-3")}>
+            <button
+              type="button"
+              onClick={() => setFloorOpen((open) => !open)}
+              aria-expanded={floorOpen}
+              className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
+            >
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200",
+                  !floorOpen && "-rotate-90"
+                )}
+                aria-hidden="true"
+              />
+              <span className="text-sm font-bold text-admin-ink">Trading floor</span>
+              {session && (
+                <span className="hidden text-[11px] text-admin-muted tabular-nums sm:inline">
+                  · Tick {liveState?.tickNo ?? session.tickNo} · next in {nextTickCountdown}
+                </span>
+              )}
+            </button>
             {liveEventName && liveEventId != null && (
               <Link
                 href={`/settings/market/${liveEventId}`}
@@ -1361,6 +1669,8 @@ export default function MarketClient({
               </Link>
             )}
           </div>
+          {floorOpen && (
+          <>
           {/* The event row only carries Stop; the live market's other two
               actions live here, beside the prices they affect. */}
           <div className="mb-4 flex items-center gap-2 sm:max-w-md">
@@ -1620,50 +1930,109 @@ export default function MarketClient({
 
                 {squareSim.recentOrders.length > 0 && (
                   <div className="rounded-lg border border-admin-line bg-admin-card">
-                    <div className="flex items-center gap-2 border-b border-admin-line px-3 py-2">
-                      <Receipt className="h-4 w-4 text-admin-muted" aria-hidden="true" />
-                      <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-                        Latest sandbox orders
-                      </p>
-                    </div>
-                    <ul className="m-0 list-none divide-y divide-admin-line/60">
-                      {squareSim.recentOrders.map((order) => (
-                        <li key={order.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold text-admin-ink">
-                              {order.units} × {order.name}
-                              <span className="font-normal text-admin-muted"> · {order.serve}</span>
-                            </p>
-                            <p className="truncate text-[11px] text-admin-muted">
-                              {new Date(order.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                              {order.tender ? ` · ${order.tender}` : ""}
-                              {order.orderId ? ` · order ${order.orderId.slice(0, 8)}…` : ""}
-                            </p>
-                          </div>
-                          {order.amount != null && (
-                            <span className="shrink-0 text-[13px] font-semibold text-admin-ink tabular-nums">
-                              {formatGbp(order.amount)}
-                            </span>
+                    <button
+                      type="button"
+                      onClick={() => setOrdersOpen((open) => !open)}
+                      aria-expanded={ordersOpen}
+                      className={cn(
+                        "flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left",
+                        ordersOpen && "border-b border-admin-line"
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Receipt className="h-4 w-4 shrink-0 text-admin-muted" aria-hidden="true" />
+                        <span className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                          Latest sandbox orders
+                        </span>
+                        <span className="hidden text-[11px] text-admin-muted sm:inline">
+                          · tap an order to open it in Square
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-admin-muted tabular-nums">
+                          {squareSim.recentOrders.length}
+                        </span>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 text-admin-muted transition-transform duration-200",
+                            ordersOpen && "rotate-180"
                           )}
-                        </li>
-                      ))}
-                    </ul>
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </button>
+                    {ordersOpen && (
+                      <ul className="m-0 list-none divide-y divide-admin-line/60">
+                        {squareSim.recentOrders.map((order) => {
+                          const body = (
+                            <>
+                              <div className="min-w-0">
+                                <p className="truncate text-[13px] font-semibold text-admin-ink">
+                                  {order.units} × {order.name}
+                                  <span className="font-normal text-admin-muted"> · {order.serve}</span>
+                                </p>
+                                <p className="truncate text-[11px] text-admin-muted">
+                                  {new Date(order.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                                  {order.tender ? ` · ${order.tender}` : ""}
+                                  {order.orderId ? ` · order ${order.orderId.slice(0, 8)}…` : ""}
+                                </p>
+                              </div>
+                              <span className="flex shrink-0 items-center gap-2">
+                                {order.amount != null && (
+                                  <span className="text-[13px] font-semibold text-admin-ink tabular-nums">
+                                    {formatGbp(order.amount)}
+                                  </span>
+                                )}
+                                {order.paymentId && (
+                                  <ExternalLink className="h-3.5 w-3.5 text-admin-muted" aria-hidden="true" />
+                                )}
+                              </span>
+                            </>
+                          );
+                          return (
+                            <li key={order.id}>
+                              {order.paymentId ? (
+                                <a
+                                  href={squareTransactionUrl(squareSim.environment, order.paymentId, squareSim.locationId)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Open this transaction in Square"
+                                  className="flex min-h-11 items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-admin-surface"
+                                >
+                                  {body}
+                                </a>
+                              ) : (
+                                <div className="flex min-h-11 items-center justify-between gap-3 px-3 py-2">{body}</div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
 
+          {tiersLive && !warmedUp && (
+            <p className="mb-2 text-[11px] text-admin-muted">
+              Warming up · {liveState?.unitsSoldTotal ?? 0} of {session?.config.warmupUnits} drinks sold before tiers start.
+              Rank, tier and target fill in once the bar reaches that number.
+            </p>
+          )}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-125 text-left">
+            <TooltipProvider>
+            <table className={cn("w-full text-left", tiersLive ? "min-w-160" : "min-w-125")}>
               <thead>
                 <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-                  <th className="py-2 pr-3">Drink</th>
-                  <th className="py-2 pr-3 text-right">Base</th>
-                  <th className="py-2 pr-3 text-right">Now</th>
-                  <th className="py-2 pr-3 text-right">Demand</th>
-                  <th className="py-2 pr-3">Stock</th>
-                  <th className="py-2 pr-3">Override</th>
+                  {floorColumns.map((field) => (
+                    <FloorHeading
+                      key={field.key}
+                      field={field}
+                      className={field.key === "override" && !simOpen ? "pr-0" : undefined}
+                    />
+                  ))}
                   {simOpen && <th className="py-2">Sell / stock</th>}
                 </tr>
               </thead>
@@ -1672,18 +2041,72 @@ export default function MarketClient({
                   const stock = stockLabel(instrument.stockState, instrument.stockQty);
                   const up = instrument.currentPrice > instrument.basePrice;
                   const down = instrument.currentPrice < instrument.basePrice;
+                  const total = instruments.length;
+                  const expanded = expandedIds.has(instrument.id);
+                  const columnCount = floorColumns.length + (simOpen ? 1 : 0);
                   return (
-                    <tr key={instrument.id} className="border-b border-admin-line/60">
+                    <Fragment key={instrument.id}>
+                    <tr
+                      onClick={(event) => {
+                        const control = (event.target as HTMLElement).closest("button, select, a, input, label");
+                        if (!control) toggleExpanded(instrument.id);
+                      }}
+                      className={cn(
+                        "cursor-pointer transition-colors hover:bg-admin-surface/60",
+                        expanded ? "bg-admin-surface/40" : "border-b border-admin-line/60"
+                      )}
+                    >
                       <td className="py-2 pr-3">
-                        <p className="text-[13px] font-semibold text-admin-ink">{instrument.name}</p>
-                        <p className="text-[11px] text-admin-muted">
-                          {instrument.serve}
-                          {!instrument.mapped && " · not linked to Square"}
-                        </p>
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          aria-label={`${expanded ? "Hide" : "Show"} details for ${instrument.name} (${instrument.serve})`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleExpanded(instrument.id);
+                          }}
+                          className="flex min-h-9 items-start gap-1.5 text-left"
+                        >
+                          <ChevronRight
+                            className={cn(
+                              "mt-0.5 h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200",
+                              expanded && "rotate-90"
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span>
+                            <span className="block text-[13px] font-semibold text-admin-ink">{instrument.name}</span>
+                            <span className="block text-[11px] text-admin-muted">
+                              {instrument.serve}
+                              {!instrument.mapped && " · not linked to Square"}
+                            </span>
+                          </span>
+                        </button>
                       </td>
                       <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
-                        {formatGbp(instrument.basePrice)}
+                        {formatGbp(instrument.openingPrice)}
                       </td>
+                      {tiersLive && (
+                        <>
+                          <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+                            {!warmedUp || instrument.rankPos == null ? (
+                              <span className="text-admin-muted">—</span>
+                            ) : (
+                              <>
+                                {instrument.rankPos}
+                                <span className="text-admin-muted"> / {total}</span>
+                              </>
+                            )}
+                          </td>
+                          <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+                            {!warmedUp || instrument.targetPrice == null ? (
+                              <span className="text-admin-muted">—</span>
+                            ) : (
+                              formatGbp(instrument.targetPrice)
+                            )}
+                          </td>
+                        </>
+                      )}
                       <td
                         className={cn(
                           "py-2 pr-3 text-right text-[13px] font-semibold tabular-nums",
@@ -1692,20 +2115,17 @@ export default function MarketClient({
                       >
                         {formatGbp(instrument.currentPrice)}
                       </td>
-                      <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
-                        {instrument.demandUnits.toFixed(1)}
-                      </td>
                       <td className="py-2 pr-3">
                         <span
                           className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                            "rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
                             stock.className
                           )}
                         >
                           {stock.label}
                         </span>
                       </td>
-                      <td className={cn("py-2", simOpen && "pr-3")}>
+                      <td className={cn("py-2", simOpen && "pr-3")} onClick={(event) => event.stopPropagation()}>
                         <StockSelect
                           instrument={instrument}
                           disabled={isPending}
@@ -1715,7 +2135,7 @@ export default function MarketClient({
                         />
                       </td>
                       {simOpen && (
-                        <td className="py-2">
+                        <td className="py-2" onClick={(event) => event.stopPropagation()}>
                           <div className="flex items-center gap-1.5">
                             {[1, 5].map((units) => (
                               <button
@@ -1768,11 +2188,33 @@ export default function MarketClient({
                         </td>
                       )}
                     </tr>
+                    {expanded && (
+                      <tr className="border-b border-admin-line/60 bg-admin-surface/40">
+                        <td colSpan={columnCount} className="px-3 pt-1 pb-3">
+                          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-admin-line bg-admin-card p-3 sm:grid-cols-4 lg:grid-cols-7">
+                            {detailFields.map((field) => (
+                              <div key={field.key} className="min-w-0">
+                                <dt className="text-[11px] font-semibold text-admin-muted">
+                                  <FieldTip field={field} align="start" />
+                                </dt>
+                                <dd className="mt-0.5 text-[13px] font-semibold text-admin-ink tabular-nums">
+                                  {detailValue(field, instrument, warmedUp)}
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
             </table>
+            </TooltipProvider>
           </div>
+          </>
+          )}
         </section>
       )}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
+  ChevronDown,
   ChevronRight,
   History,
   Loader2,
@@ -104,6 +105,7 @@ export type EventDrink = {
   serveOrder: number;
   basePrice: number | null;
   linked: boolean;
+  squareVariationId: string | null;
   overrides: DrinkOverrides;
   instrument: LiveInstrument | null;
 };
@@ -606,6 +608,7 @@ export default function EventDetailClient({
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
+  const [drinksOpen, setDrinksOpen] = useState(true);
   const [priceDrafts, setPriceDrafts] = useState<Record<number, PriceDraft>>({});
   const [priceEdit, setPriceEdit] = useState<{ instrumentId: number; value: string } | null>(null);
 
@@ -931,13 +934,28 @@ export default function EventDetailClient({
       </section>
 
       <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-admin-ink">
-            Drinks on the board{" "}
-            <span className="font-medium text-admin-muted">
-              ({shownDrinks.length})
-            </span>
-          </h3>
+        <div className={cn("flex flex-wrap items-center justify-between gap-3", drinksOpen && "mb-3")}>
+          <button
+            type="button"
+            onClick={() => setDrinksOpen((open) => !open)}
+            aria-expanded={drinksOpen}
+            className="flex min-h-11 items-center gap-2 text-left"
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200",
+                !drinksOpen && "-rotate-90"
+              )}
+              aria-hidden="true"
+            />
+            <h3 className="text-sm font-bold text-admin-ink">
+              Drinks on the board{" "}
+              <span className="font-medium text-admin-muted">
+                ({shownDrinks.length})
+              </span>
+            </h3>
+          </button>
+          {drinksOpen && (
           <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
             <button
               type="button"
@@ -972,7 +990,10 @@ export default function EventDetailClient({
               </button>
             )}
           </div>
+          )}
         </div>
+        {drinksOpen && (
+        <>
         <div className="mb-3">
           <ListSearchInput
             value={query}
@@ -1237,7 +1258,7 @@ export default function EventDetailClient({
                     <th className="py-2 pr-3">Drink</th>
                     <th className="py-2 pr-3">Serve</th>
                     <th className="py-2 pr-3 text-right">Base</th>
-                    <th className="py-2 pr-3 text-right">Opening</th>
+                    <th className={cn("py-2 pr-3", isLive ? "text-right" : "text-center")}>Opening</th>
                     {isLive ? (
                       <>
                         <th className="py-2 pr-3 text-right">Now</th>
@@ -1248,9 +1269,9 @@ export default function EventDetailClient({
                       </>
                     ) : (
                       <>
-                        <th className="py-2 pr-3 text-right">Min</th>
-                        <th className="py-2 pr-3 text-right">Max</th>
-                        <th className="py-2 pr-3 text-right">Crash</th>
+                        <th className="py-2 pr-3 text-center">Min</th>
+                        <th className="py-2 pr-3 text-center">Max</th>
+                        <th className="py-2 pr-3 text-center">Crash</th>
                       </>
                     )}
                     <th className="py-2 pr-3">Square</th>
@@ -1348,14 +1369,14 @@ export default function EventDetailClient({
                               </>
                             ) : settings ? (
                               PRICE_KEYS.map((key) => (
-                                <td key={key} className="py-1.5 pr-2" onClick={(e) => e.stopPropagation()}>
+                                <td key={key} className="py-1.5 pr-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   <PriceInput
                                     label={`${PRICE_LABELS[key]} price for ${drink.name}`}
                                     value={draft[key]}
                                     placeholder={settings.defaults[key].toFixed(2)}
                                     disabled={isPending}
                                     onChange={(value) => setDraft(drink, key, value)}
-                                    className="w-20"
+                                    className="mx-auto w-20"
                                   />
                                 </td>
                               ))
@@ -1456,6 +1477,8 @@ export default function EventDetailClient({
             </div>
           </>
         )}
+        </>
+        )}
       </section>
 
       <RecordSheet
@@ -1513,7 +1536,20 @@ export default function EventDetailClient({
               <DetailCell
                 dense
                 label="Square"
-                value={selectedDrink.linked ? "Linked" : "Not linked"}
+                value={
+                  selectedDrink.linked ? (
+                    <>
+                      Linked
+                      {selectedDrink.squareVariationId && (
+                        <span className="block text-[11px] font-normal break-all text-admin-muted">
+                          {selectedDrink.squareVariationId}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    "Not linked"
+                  )
+                }
               />
             </DetailCard>
             <h4 className="px-1 text-[12px] font-semibold text-admin-ink">

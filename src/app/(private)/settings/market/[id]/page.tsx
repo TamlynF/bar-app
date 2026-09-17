@@ -188,6 +188,7 @@ export default async function StockMarketEventPage({
           serveOrder: serve.display_order,
           basePrice: amount > 0 ? amount : null,
           linked: Boolean(serve.square_variation_id),
+          squareVariationId: serve.square_variation_id ?? null,
           overrides: overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES,
           instrument: instrumentsByPrice.get(serve.id) ?? null,
         },

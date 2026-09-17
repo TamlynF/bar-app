@@ -86,3 +86,13 @@ export function squareSandboxDashboardUrl(section: "orders" | "items" | "transac
   } as const;
   return `https://app.squareupsandbox.com${paths[section]}`;
 }
+
+export function squareTransactionUrl(
+  environment: "sandbox" | "production",
+  paymentId: string,
+  locationId: string | null
+): string {
+  const host = environment === "sandbox" ? "app.squareupsandbox.com" : "app.squareup.com";
+  const base = `https://${host}/dashboard/sales/transactions/${encodeURIComponent(paymentId)}`;
+  return locationId ? `${base}/by-unit/${encodeURIComponent(locationId)}` : base;
+}

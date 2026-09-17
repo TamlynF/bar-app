@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveMarketConfig } from "@/lib/market/types";
+import { optionalNumber } from "@/lib/market/drink-overrides";
 import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
 import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
@@ -122,7 +123,7 @@ export default async function MarketSettingsPage({
 
     const { data: orderRows } = await supabase
       .from("market_sim_sales")
-      .select("id, units, amount, tender, square_order_id, created_at, market_instruments(display_name, serve)")
+      .select("id, units, amount, tender, square_order_id, square_payment_id, created_at, market_instruments(display_name, serve)")
       .eq("session_id", sessionRow.id)
       .eq("source", "square_sandbox")
       .order("id", { ascending: false })
@@ -139,6 +140,7 @@ export default async function MarketSettingsPage({
         amount: row.amount == null ? null : Number(row.amount),
         tender: (row.tender as "card" | "cash" | null) ?? null,
         orderId: (row.square_order_id as string | null) ?? null,
+        paymentId: (row.square_payment_id as string | null) ?? null,
         at: row.created_at as string,
       };
     });
@@ -157,6 +159,7 @@ export default async function MarketSettingsPage({
       name: row.display_name,
       serve: row.serve,
       basePrice: Number(row.base_price),
+      openingPrice: Number(row.opening_price),
       currentPrice: Number(row.current_price),
       demandUnits: Number(row.demand_units),
       stockState: row.stock_state,
@@ -164,6 +167,12 @@ export default async function MarketSettingsPage({
       mapped: Boolean(row.square_variation_id),
       stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       simPending: simPending.get(row.id) ?? 0,
+      normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
+      normalUnitsSource: (row.normal_units_source as string | null) ?? null,
+      pace: optionalNumber(row.pace),
+      rankPos: (row.rank_pos as number | null) ?? null,
+      tierPct: optionalNumber(row.tier_pct),
+      targetPrice: optionalNumber(row.target_price),
     }));
   }
 
