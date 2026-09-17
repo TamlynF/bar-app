@@ -52,7 +52,7 @@ export function PosterHero({
     <section
       id="tonight"
       aria-label={isTonight ? "Tonight" : "Next up"}
-      className="relative h-[clamp(27rem,66svh,38rem)] overflow-hidden md:h-205"
+      className="relative h-[clamp(27rem,66svh,38rem)] overflow-hidden max-md:mx-2 max-md:mt-14 max-md:rounded-2xl max-md:shadow-[inset_0_0_0_1px_rgba(253,204,75,0.28),inset_0_0_0_3px_rgba(11,10,5,0.9),inset_0_0_36px_rgba(0,0,0,0.65)] md:h-205"
       style={
         { "--ev-c": event.color, "--title-chars": longestWord, "--title-total": titleChars } as React.CSSProperties
       }
@@ -80,11 +80,13 @@ export function PosterHero({
         aria-hidden="true"
       />
       <div className="absolute inset-0 hidden bg-linear-to-r from-canvas/75 via-canvas/25 via-45% to-transparent md:block" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.16)_0_1px,transparent_1px_3px)] opacity-70 mix-blend-multiply md:hidden" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-gold/25 md:hidden" aria-hidden="true" />
 
       {/* Everything on the poster shares the page container so it lines up with the sections below */}
       <div className="absolute inset-0 mx-auto w-full max-w-400">
       {/* Live / next-up pill */}
-      <div className="absolute top-19 left-4 flex flex-col items-start gap-2.5 sm:top-22 sm:left-6 lg:left-10">
+      <div className={cn("absolute top-3 left-3 flex flex-col items-start gap-2.5 sm:top-22 sm:left-6 lg:left-10", isTonight && "max-md:hidden")}>
         <p
           className="inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3"
         >
@@ -107,8 +109,15 @@ export function PosterHero({
         )}
       </div>
 
+      {/* Phone date stamp, like the corner of a gig poster */}
+      <div className="absolute top-3 right-3 flex flex-col items-center rounded-[10px] border border-gold/40 bg-canvas/80 px-2.5 py-1.5 leading-none text-ink shadow-lg shadow-black/50 backdrop-blur-md md:hidden">
+        <span className="font-black text-[9px] tracking-[0.2em] text-gold uppercase">{isTonight ? "Tonight" : format(dateObj, "EEE")}</span>
+        <span className="mt-1 font-black text-[22px] tracking-tighter tabular-nums">{format(dateObj, "d")}</span>
+        <span className="mt-0.5 font-black text-[9px] tracking-[0.2em] uppercase">{format(dateObj, "MMM")}</span>
+      </div>
+
       {/* Poster copy */}
-      <div className="absolute right-4 bottom-5 left-4 flex flex-col gap-2.5 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
+      <div className="absolute right-3 bottom-4 left-3 flex flex-col gap-2.5 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
         <div className="flex items-center gap-2 sm:gap-2.5">
           {event.subType && (
             <span className="rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">

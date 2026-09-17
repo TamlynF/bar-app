@@ -11,16 +11,22 @@ import { useMarketState } from "@/hooks/use-market-live";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 import { MarketTicker } from "@/components/market-ticker";
 
+export type TopBarStatus = { tone: "live" | "open"; label: string };
+
 export function PublicNavBar({
   currentPath,
   overlay = false,
   ticker = true,
   instagramUrl,
+  instagramHandle = null,
+  status = null,
 }: {
   currentPath?: string;
   overlay?: boolean;
   ticker?: boolean;
   instagramUrl: string | null;
+  instagramHandle?: string | null;
+  status?: TopBarStatus | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -51,7 +57,7 @@ export function PublicNavBar({
     <>
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[calc(env(safe-area-inset-top)+3.5rem)] bg-linear-to-b from-canvas via-canvas/55 to-canvas/0 sm:h-[calc(env(safe-area-inset-top)+4rem)]"
+        className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[calc(env(safe-area-inset-top)+3rem)] bg-linear-to-b from-canvas via-canvas/55 to-canvas/0 sm:h-[calc(env(safe-area-inset-top)+4rem)]"
       />
       <nav
         className={cn(
@@ -61,34 +67,63 @@ export function PublicNavBar({
             : "border-transparent bg-transparent"
         )}
       >
-        <div className="mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-4 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
-          <Link
-            href="/"
-            className="inline-flex w-fit shrink-0 flex-col items-start gap-1"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Don Fenticas - home"
-          >
-            <Image
-              src="/CompanyName.png"
-              alt=""
-              width={869}
-              height={176}
-              className={cn(
-                "h-8 w-auto object-contain sm:h-10",
-                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]"
-              )}
-              priority
-            />
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 font-black text-[7px] leading-none tracking-[0.28em] text-ink uppercase sm:text-[9px]",
-                !solid && "drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]"
-              )}
+        <div className="mx-auto flex h-12 w-full max-w-400 items-center justify-between gap-3 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
+          <div className="flex min-w-0 shrink items-center gap-2.5">
+            <Link
+              href="/"
+              className="inline-flex w-fit shrink-0 flex-col items-start gap-1"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Don Fenticas - home"
             >
-              <span className="inline-block h-px w-2.5 bg-ink" aria-hidden="true" />
-              Live music bar
-            </span>
-          </Link>
+              <Image
+                src="/short_logo_transparent.png"
+                alt=""
+                width={2000}
+                height={2000}
+                sizes="36px"
+                className={cn("h-9 w-9 object-contain sm:hidden", !solid && "drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]")}
+                priority
+              />
+              <Image
+                src="/CompanyName.png"
+                alt=""
+                width={869}
+                height={176}
+                className={cn(
+                  "hidden h-10 w-auto object-contain sm:block",
+                  !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]"
+                )}
+                priority
+              />
+              <span
+                className={cn(
+                  "hidden items-center gap-1.5 font-black text-[9px] leading-none tracking-[0.28em] text-ink uppercase sm:inline-flex",
+                  !solid && "drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]"
+                )}
+              >
+                <span className="inline-block h-px w-2.5 bg-ink" aria-hidden="true" />
+                Live music bar
+              </span>
+            </Link>
+            {status && (
+              <Link
+                href="/#tonight"
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  "inline-flex h-8 min-w-0 items-center gap-2 rounded-full border border-gold/50 py-1 pr-3 pl-2.5 backdrop-blur-md transition-colors active:bg-gold/15 sm:hidden",
+                  solid ? "bg-gold/10" : "bg-canvas/70 shadow-md shadow-black/40"
+                )}
+              >
+                <span
+                  className={cn("ad-live-dot h-2 w-2 shrink-0 rounded-full", status.tone === "live" ? "bg-neon" : "bg-gold")}
+                  aria-hidden="true"
+                />
+                <span className={cn("truncate font-black text-[10px] leading-none tracking-[0.22em] uppercase", status.tone === "live" ? "text-ink" : "text-gold")}>
+                  {status.label}
+                </span>
+              </Link>
+            )}
+          </div>
 
           <div className="hidden items-center gap-7 sm:flex lg:gap-9">
             {primaryLinks.map((link) => (
@@ -126,12 +161,12 @@ export function PublicNavBar({
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
                 className={cn(
-                  "ad-installed-hidden inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:h-9 sm:w-9 lg:h-10 lg:w-auto lg:px-4",
+                  "ad-installed-hidden hidden h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:inline-flex lg:h-10 lg:w-auto lg:px-4",
                   !solid && "ring-2 ring-canvas/60 shadow-lg shadow-black/40",
                   SOCIAL_BRANDS.instagram.solid
                 )}
               >
-                <SiInstagram className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" aria-hidden="true" />
+                <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="hidden font-black text-[11px] tracking-wide whitespace-nowrap uppercase lg:inline">
                   Follow us
                 </span>
@@ -203,17 +238,34 @@ export function PublicNavBar({
                   )}
                 </Link>
               ))}
+              {instagramUrl && (
+                <a
+                  href={instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMenuOpen(false)}
+                  className="mt-2 flex min-h-13 items-center gap-3 rounded-xl border-t border-white/10 px-3 pt-3 text-stone-400 transition-colors hover:text-ink active:bg-canvas-2"
+                >
+                  <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full", SOCIAL_BRANDS.instagram.solid)}>
+                    <SiInstagram className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold tracking-wide uppercase">Follow us</span>
+                    {instagramHandle && <span className="block truncate text-xs text-ink-2 normal-case">{instagramHandle}</span>}
+                  </span>
+                </a>
+              )}
             </div>
           </div>
         )}
       </nav>
 
-      {!overlay && <div className="h-14 sm:h-16" aria-hidden="true" />}
+      {!overlay && <div className="h-12 sm:h-16" aria-hidden="true" />}
 
       {/* Overlay pages run their hero under the nav; pull the hero back up by
           the nav height so the strip only costs its own 44px. The home page
           opts out and places the ticker under its poster instead. */}
-      {ticker && !onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-14 -mb-14" : undefined} />}
+      {ticker && !onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-12 -mb-12" : undefined} />}
 
       <MobileBottomBar currentPath={currentPath} instagramUrl={instagramUrl} marketLive={marketLive} />
     </>

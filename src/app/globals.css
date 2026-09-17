@@ -880,6 +880,16 @@ html:has([data-admin-shell]) body {
   color: #ff8a6a;
   text-shadow: 0 0 6px rgb(255 107 53 / 0.35);
 }
+.ad-led-live .ad-led-text {
+  color: #7dffb0;
+  text-shadow: 0 0 6px rgb(61 255 138 / 0.4);
+}
+.ad-led-live,
+.ad-led-open {
+  box-shadow:
+    inset 0 0 0 1px rgb(253 204 75 / 0.18),
+    inset 0 0 10px rgb(0 0 0 / 0.8);
+}
 @keyframes ad-shimmer {
   0%,
   55% {

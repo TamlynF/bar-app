@@ -28,6 +28,7 @@ import { format } from "date-fns";
 export const revalidate = 300;
 
 const NEXT_NIGHTS = 3;
+const CAROUSEL_EVENTS = 8;
 const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 function clock(hhmm: string | null | undefined) {
@@ -134,7 +135,7 @@ export default async function HomePage() {
       {nightEvents.length === 0 && <HomeMarketTicker />}
 
       <div className="mx-auto w-full max-w-400">
-        <NextUpList events={nextUp} />
+        <NextUpList events={later.slice(0, CAROUSEL_EVENTS)} />
         <TicketStrip events={nextUp} rangeLabel={rangeLabel} doorsFor={doorsFor} />
         <div className="mt-14 hidden px-6 sm:block lg:px-10">
           <MarketSection />

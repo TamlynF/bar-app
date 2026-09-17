@@ -31,8 +31,8 @@ function whenLabel(s: SpecialRow, today: Date) {
   return next === (t % 7) + 1 ? "Tomorrow" : days.map((d) => DAY_SHORT[d]).join(" · ");
 }
 
-/* The burgundy Specials band. Phones: two-up photo cards with the title
-   overlaid, swiping sideways for a third or fourth. From md the title sits
+/* The burgundy Specials band. Phones: a two-column grid of photo cards with
+   the title overlaid, tonight's ringed in gold. From md the title sits
    left and each special is a photo-and-copy pair beside it, as in the
    design. Tonight's run first. Tapping opens the special's own popup;
    nothing leaves the page. */
@@ -70,18 +70,19 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
           )}
         </div>
 
-        <ul className="no-scrollbar relative -mx-4 mt-3 flex snap-x snap-mandatory list-none gap-3 overflow-x-auto scroll-px-4 px-4 pb-1 md:hidden">
+        <ul className={cn("relative m-0 mt-3 grid list-none gap-3 p-0 md:hidden", ordered.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
           {ordered.map((s) => {
             const tonight = runsToday(s, today);
+            const badge = s.badges?.[0] ?? null;
             return (
-              <li key={s.id} className={cn("shrink-0 snap-start", ordered.length === 1 ? "w-full" : "w-[calc(50%-0.375rem)]")}>
+              <li key={s.id} className="min-w-0">
                 <button
                   type="button"
                   onClick={() => setOpen(s)}
                   aria-label={`${s.title} - details`}
                   className={cn(
-                    "relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left transition-transform active:scale-[0.97]",
-                    tonight ? "ring-2 ring-gold ring-offset-2 ring-offset-[#7a1f1f]" : "border border-ink/15"
+                    "relative block aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left transition-[scale] duration-150 active:scale-[0.97]",
+                    tonight ? "border-gold shadow-[0_0_0_1px_rgba(0,0,0,0.6),0_0_18px_-4px_rgba(253,204,75,0.6)]" : "border-ink/35"
                   )}
                 >
                   {s.image_url ? (
@@ -99,7 +100,12 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   >
                     {whenLabel(s, today)}
                   </span>
-                  <span className="absolute inset-x-0 bottom-0 block rounded-b-xl bg-black/85 px-2.5 py-2">
+                  {badge && (
+                    <span className="absolute top-2 right-2 rounded-md bg-[#7a1f1f] px-1.5 py-0.5 font-black text-[9px] tracking-[0.12em] text-ink uppercase ring-1 ring-ink/30">
+                      {badge}
+                    </span>
+                  )}
+                  <span className="absolute inset-x-0 bottom-0 block bg-black/85 px-2.5 py-2">
                     <span className="line-clamp-3 font-black text-[13px] leading-tight tracking-tight text-gold uppercase">{s.title}</span>
                   </span>
                 </button>

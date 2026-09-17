@@ -47,6 +47,13 @@ export async function getContactEmail(): Promise<string> {
   return info?.email?.trim() || DEFAULT_CONTACT_EMAIL;
 }
 
+export function instagramHandle(handle: string | null | undefined): string | null {
+  const value = handle?.trim().replace(/\/+$/, "");
+  if (!value) return null;
+  const name = value.startsWith("http") ? value.split("/").pop() : value;
+  return name ? `@${name.replace("@", "")}` : null;
+}
+
 export function instagramUrl(handle: string | null | undefined): string | null {
   const value = handle?.trim();
   if (!value) return null;

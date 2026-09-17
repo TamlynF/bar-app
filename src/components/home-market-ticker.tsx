@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { displayPrice } from "@/app/(public)/market/market-ui";
 
-const TRENDING = 2;
+const TRENDING = 5;
+const REPEATS = 2;
 
 function shown(i: MarketInstrumentPayload) {
   return displayPrice(i) ?? i.price;
@@ -31,9 +32,10 @@ export function trendingDeals(instruments: MarketInstrumentPayload[] | undefined
   return [...dropped, ...rest].slice(0, n);
 }
 
-/* Phone-only LED readout under the home poster while the drinks market
-   trades: the top two trending deals, one per line, and "Expand" opens a
-   compact panel with their rolling prices and the way into the market. */
+/* Phone-only LED ticker under the home poster while the drinks market
+   trades: the five best deals roll past on one line (paused under a finger),
+   and "Expand" opens a compact panel listing them with rolling prices and
+   the way into the market. */
 export function HomeMarketTicker() {
   const state = useMarketState();
   const [expanded, setExpanded] = useState(false);
@@ -54,24 +56,37 @@ export function HomeMarketTicker() {
       <p className="sr-only">
         {crash ? "Market crash." : "Drinks market open."} {summary}
       </p>
-      <div className="flex min-h-14 items-stretch">
+      <div className="flex h-11 items-stretch">
         <span className="ad-led-text flex shrink-0 flex-col items-center justify-center gap-1 border-r border-gold/20 px-2 font-black text-[8px] tracking-[0.2em] uppercase">
           <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
           {crash ? "Crash" : "Live"}
         </span>
-        <ul aria-hidden="true" className="m-0 flex min-w-0 flex-1 list-none flex-col justify-center gap-0.5 px-3 py-1.5">
-          {deals.map((d) => (
-            <li key={d.id} className="ad-led-text flex items-center gap-2 font-black text-[13px] leading-none tracking-tight whitespace-nowrap uppercase tabular-nums">
-              <span className="min-w-0 flex-1 truncate">{d.name}</span>
-              <span className="shrink-0">{formatGbp(shown(d))}</span>
-              {changeLabel(d) && (
-                <span className={cn("w-9 shrink-0 text-right text-[11px]", d.changePct < 0 ? "text-[#6EE7B7]" : "text-[#FF6B6B]")}>
-                  {changeLabel(d)}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div
+          aria-hidden="true"
+          className="relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_6%,#000_94%,transparent)]"
+        >
+          <div className="ad-marquee-track h-full items-center" style={{ "--marquee-duration": `${deals.length * 6}s` } as React.CSSProperties}>
+            {Array.from({ length: 2 }, (_, half) => (
+              <div key={half} className="flex">
+                {Array.from({ length: REPEATS }, (_, r) =>
+                  deals.map((d) => (
+                    <span
+                      key={`${r}-${d.id}`}
+                      className="ad-led-text inline-flex items-center gap-2 pr-3 font-black text-[13px] leading-none tracking-tight whitespace-nowrap uppercase tabular-nums"
+                    >
+                      <span>{d.name}</span>
+                      <span>{formatGbp(shown(d))}</span>
+                      {changeLabel(d) && (
+                        <span className={cn("text-[11px]", d.changePct < 0 ? "text-[#6EE7B7]" : "text-[#FF6B6B]")}>{changeLabel(d)}</span>
+                      )}
+                      <span className="pl-1 text-gold/40">·</span>
+                    </span>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         <button
           type="button"
           onClick={() => setExpanded((o) => !o)}

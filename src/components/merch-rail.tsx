@@ -1,0 +1,37 @@
+import Image from "next/image";
+import { ShoppingBag } from "lucide-react";
+import type { MerchandiseRow } from "@/components/merchandise-section";
+import { formatGBP } from "@/lib/events-display";
+import { cn } from "@/lib/utils";
+
+export function MerchRail({ merchandise, className }: { merchandise: MerchandiseRow[]; className?: string }) {
+  return (
+    <ul
+      className={cn(
+        "no-scrollbar -mx-4 mt-3 flex snap-x snap-mandatory list-none gap-2.5 overflow-x-auto scroll-px-4 px-4 pb-1 md:mx-0 md:mt-0 md:min-w-0 md:flex-1 md:gap-4 md:scroll-px-0 md:px-0",
+        className
+      )}
+    >
+      {merchandise.map((item) => {
+        const price = item.price == null ? null : Number(item.price);
+        return (
+          <li key={item.id} className="w-36 shrink-0 snap-start md:w-40">
+            <div className="relative aspect-square overflow-hidden rounded-xl border border-ink/15 bg-[radial-gradient(70%_60%_at_50%_35%,#2a2f1c,#14180a)] text-ink">
+              {item.image_url ? (
+                <Image src={item.image_url} alt="" fill sizes="(max-width: 768px) 144px, 160px" className="object-cover" />
+              ) : (
+                <ShoppingBag className="absolute top-1/2 left-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2" strokeWidth={1.6} aria-hidden="true" />
+              )}
+              {price !== null && (
+                <span className="absolute top-1.5 right-1.5 rounded-full bg-gold px-2 py-0.5 font-black text-[10px] tracking-wide md:px-1.5 md:text-[9px] text-on-gold tabular-nums shadow-md shadow-black/40">
+                  {formatGBP(price)}
+                </span>
+              )}
+            </div>
+            <p className="mt-1.5 line-clamp-2 font-black text-[11px] leading-tight tracking-wide text-ink uppercase md:text-xs">{item.name}</p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
