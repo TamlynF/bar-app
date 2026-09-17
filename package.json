@@ -16,7 +16,8 @@
     "db:stop": "npx supabase stop",
     "postinstall": "node scripts/patch-locator-tsconfig.mjs",
     "prepare": "husky",
-    "till:sim": "jiti scripts/simulate-till.ts"
+    "till:sim": "jiti scripts/simulate-till.ts",
+    "sandbox:clean": "jiti scripts/clean-sandbox-items.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"
