@@ -157,7 +157,7 @@ export function orderToSaleRow(
     total_collected: round2(net + tips - refunds),
     category_breakdown: breakdown,
     source: "square",
-    raw: order,
+    raw: JSON.parse(JSON.stringify(order, (_, v) => (typeof v === "bigint" ? Number(v) : v))),
   };
 }
 
