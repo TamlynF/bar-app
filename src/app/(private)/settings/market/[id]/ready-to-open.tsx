@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Link2, Loader2, Play, Plus, RefreshCw } from "lucide-react";
+import { ChevronDown, Download, Link2, Loader2, Play, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EventReadiness } from "@/lib/market/event-readiness";
 import { StepMark, drinksStepText, linksStepText, normalsStepText } from "../readiness-ui";
@@ -18,20 +18,26 @@ export function ReadyToOpenChecklist({
   anyLive,
   isPending,
   readingNormals,
+  syncingSales,
+  salesSyncedAt,
   canReadNormals,
   onOpen,
   onAddDrinks,
   onReadNormals,
+  onSyncSales,
 }: {
   readiness: EventReadiness;
   eventId: number;
   anyLive: boolean;
   isPending: boolean;
   readingNormals: boolean;
+  syncingSales: boolean;
+  salesSyncedAt: string | null;
   canReadNormals: boolean;
   onOpen: () => void;
   onAddDrinks: () => void;
   onReadNormals: () => void;
+  onSyncSales: () => void;
 }) {
   const [expanded, setExpanded] = useState(!readiness.ready);
   const open = readiness.ready ? expanded : true;
@@ -87,20 +93,31 @@ export function ReadyToOpenChecklist({
     {
       key: "normals",
       number: 3,
-      label: "Read normal sales",
+      label: "Work out normal sales",
       step: readiness.steps.normals,
-      text: canReadNormals ? normalsStepText(readiness) : "Set which days this event runs on first",
-      action: (
-        <button
-          type="button"
-          onClick={onReadNormals}
-          disabled={readingNormals || !canReadNormals}
-          className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
-        >
-          <RefreshCw className={cn("h-4 w-4", readingNormals && "animate-spin")} aria-hidden="true" />
-          {readiness.normalsComputedAt ? "Read again" : "Read from Square"}
-        </button>
-      ),
+      text: canReadNormals ? normalsStepText(readiness, salesSyncedAt) : "Set which days this event runs on first",
+      action:
+        salesSyncedAt === null ? (
+          <button
+            type="button"
+            onClick={onSyncSales}
+            disabled={syncingSales || readingNormals}
+            className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
+          >
+            <Download className={cn("h-4 w-4", syncingSales && "animate-pulse")} aria-hidden="true" />
+            Sync sales from Square
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onReadNormals}
+            disabled={readingNormals || syncingSales || !canReadNormals}
+            className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
+          >
+            <RefreshCw className={cn("h-4 w-4", readingNormals && "animate-spin")} aria-hidden="true" />
+            {readiness.normalsComputedAt ? "Recalculate" : "Work out now"}
+          </button>
+        ),
     },
     {
       key: "open",

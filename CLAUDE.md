@@ -238,6 +238,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `menu_categories` / `menu_items` | Public menu |
 | `company_information` | Address, socials, opening hours, capacity |
 | `market_push_subscriptions` | Web Push endpoints from the public Market Night page - one row per phone, `watched_instrument_ids` empty = alert on every drop. Written only via the admin client from `src/app/(public)/market/actions.ts`; sent to after each tick by `src/lib/market/push-alerts.ts`, dead endpoints (404/410) self-delete |
+| `square_sales` / `square_sale_lines` | Square orders pulled nightly by `/api/square/sync` (Vercel cron, watermark in `square_sync_state`): one row per order for the dashboard's venue sales, one row per line item for the market's normal sales. `trading_night` is the London date rolled back a day before 06:00, so a 01:45 sale belongs to the night before |
 | `employees` | Staff records, separate from Supabase Auth users |
 
 ---

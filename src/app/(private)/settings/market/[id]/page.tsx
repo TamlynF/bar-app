@@ -14,6 +14,7 @@ import {
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
 import { eventReadiness } from "@/lib/market/event-readiness";
+import { lastSalesSyncAt } from "@/lib/market/normal-units-server";
 import type { NormalUnitsView } from "./normal-units-card";
 import EventDetailClient, {
   type AvailableDrink,
@@ -179,12 +180,15 @@ export default async function StockMarketEventPage({
   const lastRunAt = sessions[0]?.startedAt ?? null;
   const event = summariseEvent(row, menuItemPriceIds, lastRunAt);
 
-  const { data: normalRows } = menuItemPriceIds.length
-    ? await supabase
-        .from("market_normal_units")
-        .select("menu_item_price_id, weekday, units_avg, nights_sampled, computed_at")
-        .in("menu_item_price_id", menuItemPriceIds)
-    : { data: [] as never[] };
+  const [{ data: normalRows }, salesSyncedAt] = await Promise.all([
+    menuItemPriceIds.length
+      ? supabase
+          .from("market_normal_units")
+          .select("menu_item_price_id, weekday, units_avg, nights_sampled, computed_at")
+          .in("menu_item_price_id", menuItemPriceIds)
+      : Promise.resolve({ data: [] as never[] }),
+    lastSalesSyncAt(supabase),
+  ]);
   const normalsByPrice = new Map<number, { weekday: number; unitsAvg: number; nightsSampled: number }[]>();
   let computedAt: string | null = null;
   for (const n of (normalRows ?? []) as {
@@ -206,6 +210,7 @@ export default async function StockMarketEventPage({
     eventId: event.id,
     weekdays: event.weekdays,
     computedAt,
+    salesSyncedAt,
     rows: drinks
       .filter((drink) => drink.basePrice != null)
       .map((drink) => ({

@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
-  aggregateUnits,
   isBankHolidayNight,
   nightOf,
   profileWeekdayFor,
   resolveNormalUnits,
   sampleNightDates,
+  samplesFromLines,
   sessionTicksFor,
   summariseSamples,
   toYmd,
-  tradingNightWindow,
+  tradingNightOf,
   weekdayOf,
   zonedTimeToUtc,
 } from "../normal-units";
@@ -28,30 +28,31 @@ describe("calendar helpers", () => {
     expect(zonedTimeToUtc("2026-12-05", "20:00").toISOString()).toBe("2026-12-05T20:00:00.000Z");
   });
 
-  it("assigns a session to the London date it opened on", () => {
-    expect(nightOf(new Date("2026-09-19T20:30:00Z"))).toBe("2026-09-19");
-    expect(nightOf(new Date("2026-09-19T23:30:00Z"))).toBe("2026-09-20");
+  it("reads the London calendar date", () => {
+    expect(toYmd(new Date("2026-09-19T23:30:00Z"))).toBe("2026-09-20");
     expect(toYmd(new Date("2026-12-31T23:30:00Z"))).toBe("2026-12-31");
   });
 });
 
-describe("tradingNightWindow", () => {
-  it("runs into the next calendar day when close is at or before open", () => {
-    const w = tradingNightWindow("2026-09-19", "20:00", "02:00");
-    expect(w.start.toISOString()).toBe("2026-09-19T19:00:00.000Z");
-    expect(w.end.toISOString()).toBe("2026-09-20T01:00:00.000Z");
+describe("tradingNightOf", () => {
+  it("keeps evening sales on their date and rolls the small hours back to the night before", () => {
+    expect(tradingNightOf(new Date("2026-09-19T22:50:00Z"))).toBe("2026-09-19");
+    expect(tradingNightOf(new Date("2026-09-20T00:45:00Z"))).toBe("2026-09-19");
+    expect(tradingNightOf(new Date("2026-09-20T04:59:00Z"))).toBe("2026-09-19");
+    expect(tradingNightOf(new Date("2026-09-20T05:00:00Z"))).toBe("2026-09-20");
+    expect(tradingNightOf(new Date("2026-09-20T10:00:00Z"))).toBe("2026-09-20");
   });
 
-  it("stays on the same day when close is after open", () => {
-    const w = tradingNightWindow("2026-09-19", "19:00", "23:30");
-    expect(w.start.toISOString()).toBe("2026-09-19T18:00:00.000Z");
-    expect(w.end.toISOString()).toBe("2026-09-19T22:30:00.000Z");
+  it("uses London time either side of the clock changes", () => {
+    expect(tradingNightOf(new Date("2026-10-25T05:30:00Z"))).toBe("2026-10-24");
+    expect(tradingNightOf(new Date("2026-10-25T06:00:00Z"))).toBe("2026-10-25");
+    expect(tradingNightOf(new Date("2026-03-29T04:30:00Z"))).toBe("2026-03-28");
+    expect(tradingNightOf(new Date("2026-03-29T05:00:00Z"))).toBe("2026-03-29");
   });
 
-  it("handles the clocks-change night", () => {
-    const w = tradingNightWindow("2026-10-24", "20:00", "02:00");
-    expect(w.start.toISOString()).toBe("2026-10-24T19:00:00.000Z");
-    expect(w.end.toISOString()).toBe("2026-10-25T02:00:00.000Z");
+  it("assigns a session to the night it opened on, even after midnight", () => {
+    expect(nightOf(new Date("2026-09-19T20:30:00Z"))).toBe("2026-09-19");
+    expect(nightOf(new Date("2026-09-19T23:30:00Z"))).toBe("2026-09-19");
   });
 });
 
@@ -61,11 +62,13 @@ describe("sampleNightDates", () => {
     expect(dates).toEqual(["2026-09-12", "2026-09-05", "2026-08-29"]);
   });
 
-  it("respects the lookback, the history window and exclusions", () => {
+  it("respects the lookback and exclusions", () => {
     expect(sampleNightDates(6, { today: "2026-09-19", count: 6, lookbackWeeks: 2 })).toEqual(["2026-09-12", "2026-09-05"]);
-    expect(sampleNightDates(6, { today: "2026-09-19", count: 6, historyFrom: "2026-09-01" })).toEqual(["2026-09-12", "2026-09-05"]);
-    expect(sampleNightDates(6, { today: "2026-09-19", count: 2, historyTo: "2026-09-06" })).toEqual(["2026-09-05", "2026-08-29"]);
     expect(sampleNightDates(6, { today: "2026-09-19", count: 2, exclude: new Set(["2026-09-12"]) })).toEqual(["2026-09-05", "2026-08-29"]);
+  });
+
+  it("covers twelve weeks by default", () => {
+    expect(sampleNightDates(6, { today: "2026-09-19", count: 20 })).toHaveLength(12);
   });
 });
 
@@ -82,22 +85,22 @@ describe("bank holidays", () => {
   });
 });
 
-describe("aggregate and summarise", () => {
-  const window = tradingNightWindow("2026-09-19", "20:00", "02:00");
-
-  it("sums line items inside the window and attributes Sunday-morning sales to Saturday", () => {
-    const units = aggregateUnits(
+describe("samplesFromLines and summariseSamples", () => {
+  it("groups synced lines by night and leaves a night with no lines empty", () => {
+    const samples = samplesFromLines(
+      ["2026-09-12", "2026-09-05"],
       [
-        { closedAt: "2026-09-19T19:30:00Z", lineItems: [{ catalogObjectId: "G", quantity: "2" }] },
-        { closedAt: "2026-09-20T00:30:00Z", lineItems: [{ catalogObjectId: "G", quantity: "3" }, { catalogObjectId: "X", quantity: "1" }] },
-        { closedAt: "2026-09-20T00:59:00Z", lineItems: [{ catalogObjectId: "G", quantity: "1" }] },
-        { closedAt: "2026-09-20T01:00:00Z", lineItems: [{ catalogObjectId: "G", quantity: "7" }] },
-        { closedAt: "2026-09-19T18:59:00Z", lineItems: [{ catalogObjectId: "G", quantity: "9" }] },
-      ],
-      window
+        { tradingNight: "2026-09-12", variationId: "G", quantity: "2" },
+        { tradingNight: "2026-09-12", variationId: "G", quantity: 3 },
+        { tradingNight: "2026-09-12", variationId: "X", quantity: 1 },
+        { tradingNight: "2026-09-12", variationId: null, quantity: 4 },
+        { tradingNight: "2026-08-29", variationId: "G", quantity: 9 },
+      ]
     );
-    expect(units.get("G")).toBe(6);
-    expect(units.get("X")).toBe(1);
+    expect(samples).toHaveLength(2);
+    expect(samples[0].units.get("G")).toBe(5);
+    expect(samples[0].units.get("X")).toBe(1);
+    expect(samples[1].units.size).toBe(0);
   });
 
   it("averages over open nights, counts a zero night, drops closed nights and unmapped variations", () => {

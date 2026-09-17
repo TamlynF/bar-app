@@ -22,8 +22,6 @@ export type StockMarketEventRow = {
   leaderboard_rows?: number | string | null;
   weekdays?: number[] | null;
   bank_holiday_profile?: number | null;
-  history_from?: string | null;
-  history_to?: string | null;
   exclude_market_nights?: boolean | null;
   is_active: boolean;
   created_at: string;
@@ -40,8 +38,6 @@ export type StockMarketEventSummary = {
   config: MarketConfig;
   weekdays: number[];
   bankHolidayProfile: number | null;
-  historyFrom: string | null;
-  historyTo: string | null;
   excludeMarketNights: boolean;
   isActive: boolean;
   menuItemPriceIds: number[];
@@ -113,8 +109,6 @@ export function summariseEvent(
     config: eventConfig(row),
     weekdays: (row.weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
     bankHolidayProfile: row.bank_holiday_profile ?? null,
-    historyFrom: row.history_from ?? null,
-    historyTo: row.history_to ?? null,
     excludeMarketNights: row.exclude_market_nights ?? true,
     isActive: row.is_active,
     menuItemPriceIds,

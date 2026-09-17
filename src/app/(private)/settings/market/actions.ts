@@ -18,6 +18,7 @@ import {
   type NormalUnitsEventRow,
   type ResolvedNormals,
 } from "@/lib/market/normal-units-server";
+import { syncSquareSales } from "@/lib/square-sync";
 import {
   EMPTY_OVERRIDES,
   optionalNumber,
@@ -329,13 +330,6 @@ function readOptionalWeekday(formData: FormData, key: string): number | null {
   return Number.isInteger(n) && n >= 0 && n <= 6 ? n : null;
 }
 
-const YMD = /^\d{4}-\d{2}-\d{2}$/;
-
-function readOptionalDate(formData: FormData, key: string): string | null {
-  const raw = formData.get(key)?.toString().trim() ?? "";
-  return YMD.test(raw) ? raw : null;
-}
-
 function readMenuItemPriceIds(formData: FormData): number[] {
   try {
     const raw = JSON.parse(formData.get("menu_item_price_ids")?.toString() || "[]");
@@ -401,8 +395,6 @@ export async function saveStockMarketEventAction(formData: FormData) {
     pace_floor_units: tier.paceFloorUnits,
     weekdays: readWeekdays(formData),
     bank_holiday_profile: readOptionalWeekday(formData, "bank_holiday_profile"),
-    history_from: readOptionalDate(formData, "history_from"),
-    history_to: readOptionalDate(formData, "history_to"),
     exclude_market_nights: formData.get("exclude_market_nights") !== "off",
   };
 
@@ -493,12 +485,8 @@ export async function deactivateStockMarketEventAction(id: number) {
 function normalUnitsEventRow(row: StockMarketEventRow): NormalUnitsEventRow {
   return {
     id: row.id,
-    open_time: row.open_time,
-    close_time: row.close_time,
     weekdays: row.weekdays ?? [],
     bank_holiday_profile: row.bank_holiday_profile ?? null,
-    history_from: row.history_from ?? null,
-    history_to: row.history_to ?? null,
     exclude_market_nights: row.exclude_market_nights ?? true,
   };
 }
@@ -1376,10 +1364,27 @@ export async function recalculateNormalUnitsAction(eventId: number) {
       serves: new Set(result.rows.map((r) => r.menuItemPriceId)).size,
       nights,
       unmappedServes: result.unmappedServes,
+      lastSyncedAt: result.lastSyncedAt,
     };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Could not read sales history from Square." };
+    return {
+      error: err instanceof Error ? err.message : "Could not work out normal sales from the synced Square orders.",
+    };
   }
+}
+
+/* The same pull the nightly cron does, on demand. Runs as the service role
+   because square_sales is written by the cron, never by a signed-in user. */
+export async function syncSquareSalesAction() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to sync sales." };
+  const result = await syncSquareSales(createAdminClient());
+  if (result.status === "error") return { error: result.error ?? "Could not sync sales from Square." };
+  revalidateMarket();
+  return { success: true, ordersSynced: result.ordersSynced, linesSynced: result.linesSynced };
 }
 
 export async function saveEventNormalUnitsAction(eventId: number, menuItemPriceId: number, value: number | null) {

@@ -1,22 +1,19 @@
 import type { MarketConfig } from "./types";
 
 /* "What does this serve normally sell on a night like tonight?" — built from
-   Square's own order history, per weekday, over the event's trading hours
+   the Square order lines the nightly sync keeps locally, per weekday
    (docs/market-tier-engine-plan.md §3.4). Everything in this file is pure;
-   the Square and Supabase calls live in normal-units-server.ts. */
+   the Supabase calls live in normal-units-server.ts. */
 
 export const VENUE_TIME_ZONE = "Europe/London";
 export const DEFAULT_SAMPLE_NIGHTS = 6;
 export const DEFAULT_LOOKBACK_WEEKS = 12;
 export const SATURDAY = 6;
+/* A trading night runs from this hour to the same hour next morning, so a
+   sale rung at 01:45 on Sunday belongs to Saturday. */
+export const NIGHT_ROLLOVER_HOUR = 6;
 
 export type Ymd = string;
-
-export type NightWindow = {
-  night: Ymd;
-  start: Date;
-  end: Date;
-};
 
 export type UnitsByVariation = Map<string, number>;
 
@@ -106,47 +103,44 @@ function clockMinutes(clock: string): number {
   return hh * 60 + (mm ?? 0);
 }
 
-/* The trading night that STARTS on `night`. A close time at or before the
-   open time rolls into the next calendar day, so a Saturday 20:00–02:00 event
-   covers Saturday 20:00 → Sunday 02:00, and those Sunday-morning sales belong
-   to Saturday. */
-export function tradingNightWindow(
-  night: Ymd,
-  openTime: string,
-  closeTime: string,
-  timeZone: string = VENUE_TIME_ZONE
-): NightWindow {
-  const closesNextDay = clockMinutes(closeTime) <= clockMinutes(openTime);
-  const start = zonedTimeToUtc(night, openTime, timeZone);
-  const end = zonedTimeToUtc(closesNextDay ? addDays(night, 1) : night, closeTime, timeZone);
-  return { night, start, end };
+/* The trading night an instant belongs to: the venue-local date, rolled back
+   a day before NIGHT_ROLLOVER_HOUR. Saturday 23:50 and Sunday 01:45 are both
+   Saturday; Sunday 11:00 is Sunday. */
+export function tradingNightOf(at: Date, timeZone: string = VENUE_TIME_ZONE): Ymd {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+  }).formatToParts(at);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const date = `${get("year")}-${get("month")}-${get("day")}`;
+  return Number(get("hour")) < NIGHT_ROLLOVER_HOUR ? addDays(date, -1) : date;
 }
 
-/* The night a session belongs to is the calendar day it OPENED on, in the
-   venue's zone — a market opened Saturday 21:00 that closes Sunday 01:30 is a
-   Saturday. */
+/* The night a session belongs to follows the same rule, so a market opened
+   at 00:30 counts as the night before. */
 export function nightOf(startedAt: Date, timeZone: string = VENUE_TIME_ZONE): Ymd {
-  return toYmd(startedAt, timeZone);
+  return tradingNightOf(startedAt, timeZone);
 }
 
 export type SampleOptions = {
   today: Ymd;
   count?: number;
   lookbackWeeks?: number;
-  historyFrom?: Ymd | null;
-  historyTo?: Ymd | null;
   exclude?: Set<Ymd>;
 };
 
 /* Most recent `count` dates of `weekday` strictly before today, newest first,
-   inside the lookback and the optional history window, skipping excluded
-   nights (bank holidays and their eves, previous market nights). */
+   inside the lookback, skipping excluded nights (bank holidays and their
+   eves, previous market nights). */
 export function sampleNightDates(weekday: number, options: SampleOptions): Ymd[] {
   const count = options.count ?? DEFAULT_SAMPLE_NIGHTS;
   const lookbackWeeks = options.lookbackWeeks ?? DEFAULT_LOOKBACK_WEEKS;
-  const latest = options.historyTo && options.historyTo < options.today ? options.historyTo : addDays(options.today, -1);
-  const lookbackFloor = addDays(options.today, -7 * lookbackWeeks);
-  const earliest = options.historyFrom && options.historyFrom > lookbackFloor ? options.historyFrom : lookbackFloor;
+  const latest = addDays(options.today, -1);
+  const earliest = addDays(options.today, -7 * lookbackWeeks);
 
   const out: Ymd[] = [];
   let cursor = latest;
@@ -174,32 +168,31 @@ export function profileWeekdayFor(
   return weekdayOf(night);
 }
 
-export type OrderLike = {
-  closedAt?: string | null;
-  lineItems?: { catalogObjectId?: string | null; quantity?: string | number | null }[] | null;
-};
-
-export function aggregateUnits(orders: OrderLike[], window?: NightWindow): UnitsByVariation {
-  const units: UnitsByVariation = new Map();
-  for (const order of orders) {
-    if (window && order.closedAt) {
-      const closed = new Date(order.closedAt).getTime();
-      if (closed < window.start.getTime() || closed >= window.end.getTime()) continue;
-    }
-    for (const li of order.lineItems ?? []) {
-      if (!li.catalogObjectId) continue;
-      const qty = Number(li.quantity ?? 1);
-      if (!Number.isFinite(qty) || qty <= 0) continue;
-      units.set(li.catalogObjectId, (units.get(li.catalogObjectId) ?? 0) + qty);
-    }
-  }
-  return units;
-}
-
 export type NightSample = {
   night: Ymd;
   units: UnitsByVariation;
 };
+
+export type SaleLineLike = {
+  tradingNight: Ymd;
+  variationId: string | null;
+  quantity: number | string;
+};
+
+/* One sample per requested night from the synced order lines. A night with
+   no lines at all comes back with an empty map, which summariseSamples
+   reads as the bar being closed. */
+export function samplesFromLines(nights: Ymd[], lines: SaleLineLike[]): NightSample[] {
+  const byNight = new Map<Ymd, UnitsByVariation>(nights.map((night) => [night, new Map()]));
+  for (const line of lines) {
+    const units = byNight.get(line.tradingNight);
+    if (!units || !line.variationId) continue;
+    const qty = Number(line.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    units.set(line.variationId, (units.get(line.variationId) ?? 0) + qty);
+  }
+  return nights.map((night) => ({ night, units: byNight.get(night) ?? new Map() }));
+}
 
 /* Mean units per sampled night for every mapped serve. A night the bar was
    open (any orders at all) but sold none of a serve counts as zero for it;

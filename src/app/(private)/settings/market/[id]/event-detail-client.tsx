@@ -51,6 +51,7 @@ import {
   saveEventDrinkPricesAction,
   saveEventDrinkPricingAction,
   saveNightOnlyDrinkAction,
+  syncSquareSalesAction,
 } from "../actions";
 
 export type { EventSession } from "./market-nights-menu";
@@ -488,6 +489,7 @@ export default function EventDetailClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [readingNormals, startReadingNormals] = useTransition();
+  const [syncingSales, startSyncingSales] = useTransition();
   const [query, setQuery] = useState("");
   const [drinksOpen, setDrinksOpen] = useState(true);
   const [priceDrafts, setPriceDrafts] = useState<Record<number, PriceDraft>>({});
@@ -573,8 +575,21 @@ export default function EventDetailClient({
         result.unmappedServes > 0
           ? ` ${result.unmappedServes} serve(s) are not linked to Square and were skipped.`
           : "";
-      toast.success(`Read ${result.nights} night(s) from Square for ${result.serves} serve(s).${unmapped}`);
+      toast.success(`Worked out normal sales for ${result.serves} serve(s) over ${result.nights} night(s).${unmapped}`);
       router.refresh();
+    });
+  }
+
+  function handleSyncSales() {
+    startSyncingSales(async () => {
+      const result = await syncSquareSalesAction();
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square.`);
+      if (normalUnits.weekdays.length > 0) handleReadNormals();
+      else router.refresh();
     });
   }
 
@@ -690,10 +705,13 @@ export default function EventDetailClient({
             anyLive={anyLive}
             isPending={isPending}
             readingNormals={readingNormals}
+            syncingSales={syncingSales}
+            salesSyncedAt={normalUnits.salesSyncedAt}
             canReadNormals={normalUnits.weekdays.length > 0}
             onOpen={handleOpen}
             onAddDrinks={addSheet.openAdd}
             onReadNormals={handleReadNormals}
+            onSyncSales={handleSyncSales}
           />
         )}
       </section>
@@ -1138,7 +1156,9 @@ export default function EventDetailClient({
         view={normalUnits}
         defaultOpen={!normalUnits.computedAt && normalUnits.weekdays.length > 0}
         reading={readingNormals}
+        syncing={syncingSales}
         onRecalculate={handleReadNormals}
+        onSync={handleSyncSales}
       />
     </div>
   );

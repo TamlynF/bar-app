@@ -42,8 +42,14 @@ export function linksStepText(readiness: EventReadiness): string {
   return `${readiness.linked} of ${readiness.drinks} linked to Square`;
 }
 
-export function normalsStepText(readiness: EventReadiness): string {
-  if (readiness.normalsComputedAt) return `Read from Square ${formatShortStamp(readiness.normalsComputedAt)}`;
-  if (readiness.steps.normals === "optional") return "Not read · optional for demand pricing";
-  return "Not read from Square yet";
+/* `salesSyncedAt` is the last nightly pull of Square orders; pass null when
+   it is known to have never run, leave it out where it is not loaded. */
+export function normalsStepText(readiness: EventReadiness, salesSyncedAt?: string | null): string {
+  if (salesSyncedAt === null) return "Sales not synced from Square yet";
+  if (readiness.normalsComputedAt) {
+    const synced = salesSyncedAt ? ` · sales synced ${formatShortStamp(salesSyncedAt)}` : "";
+    return `Worked out ${formatShortStamp(readiness.normalsComputedAt)}${synced}`;
+  }
+  if (readiness.steps.normals === "optional") return "Not worked out · optional for demand pricing";
+  return "Not worked out yet";
 }

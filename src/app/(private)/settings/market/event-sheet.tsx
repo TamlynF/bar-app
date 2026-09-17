@@ -65,14 +65,6 @@ function WeekdayPicker({ selected }: { selected: number[] }) {
   );
 }
 
-function historySummary(event: StockMarketEventSummary | null): string {
-  const from = event?.historyFrom ?? null;
-  const to = event?.historyTo ?? null;
-  const range = from || to ? `${from ?? "start"} to ${to ?? "today"}` : "last 12 weeks";
-  const skip = (event?.excludeMarketNights ?? true) ? "market nights skipped" : "market nights included";
-  return `${range} · ${skip}`;
-}
-
 function TierPctInputs({ field, values }: { field: { key: string; label: string; help: string }; values: number[] }) {
   return (
     <span className="flex flex-1 items-center justify-end gap-1.5">
@@ -374,62 +366,24 @@ function EventForm({
             ))}
           </select>
         </FormRow>
-      </DetailCard>
-
-      <DetailCard>
-        <details className="group/history">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold tracking-wide text-admin-muted">
-                Sales history used for &ldquo;normal&rdquo;
-              </span>
-              <span className="mt-0.5 block truncate text-[12px] text-admin-ink group-open/history:hidden">
-                {historySummary(event)}
-              </span>
-            </span>
-            <ChevronDown
-              className="h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200 group-open/history:rotate-180"
-              aria-hidden="true"
+        <FormRow label="Skip market nights" dense>
+          <span className="flex flex-1 items-center justify-end">
+            <input type="hidden" name="exclude_market_nights" value="off" />
+            <input
+              type="checkbox"
+              name="exclude_market_nights"
+              value="on"
+              aria-label="Leave previous market nights out of the sales history"
+              defaultChecked={event?.excludeMarketNights ?? true}
+              className="h-4 w-4 cursor-pointer accent-admin-primary"
             />
-          </summary>
-          <div className="divide-y divide-admin-line/50 border-t border-admin-line">
-            <FormRow label="From" dense>
-              <input
-                type="date"
-                name="history_from"
-                aria-label="Earliest date of sales history to use"
-                defaultValue={event?.historyFrom ?? ""}
-                className={cn(FIELD_INPUT, "w-40 flex-none")}
-              />
-            </FormRow>
-            <FormRow label="To" dense>
-              <input
-                type="date"
-                name="history_to"
-                aria-label="Latest date of sales history to use"
-                defaultValue={event?.historyTo ?? ""}
-                className={cn(FIELD_INPUT, "w-40 flex-none")}
-              />
-            </FormRow>
-            <FormRow label="Skip market nights" dense>
-              <span className="flex flex-1 items-center justify-end">
-                <input type="hidden" name="exclude_market_nights" value="off" />
-                <input
-                  type="checkbox"
-                  name="exclude_market_nights"
-                  value="on"
-                  aria-label="Leave previous market nights out of the sales history"
-                  defaultChecked={event?.excludeMarketNights ?? true}
-                  className="h-4 w-4 cursor-pointer accent-admin-primary"
-                />
-              </span>
-            </FormRow>
-            <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
-              Blank dates mean the last 12 weeks. Each drink&rsquo;s &ldquo;normal&rdquo; is the average of its last six nights on the
-              chosen weekday, counted over the event&rsquo;s hours from Square orders. Bank holidays and their eves are left out.
-            </p>
-          </div>
-        </details>
+          </span>
+        </FormRow>
+        <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+          Each drink&rsquo;s &ldquo;normal&rdquo; is the average of its last six nights on that weekday over the last 12 weeks,
+          from Square sales synced every night. A night runs from 6am to 6am, so sales after midnight count for the night
+          before. Bank holidays and their eves are left out.
+        </p>
       </DetailCard>
 
       {/* The seven tuning numbers are rarely touched, so they start folded

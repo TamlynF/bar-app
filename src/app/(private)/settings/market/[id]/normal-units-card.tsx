@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { WEEKDAY_NAMES } from "@/lib/market/normal-units";
 import { saveEventNormalUnitsAction } from "../actions";
-import { OUTLINE_BUTTON, formatShortStamp } from "../ui";
+import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatShortStamp } from "../ui";
 
 export type NormalUnitsRowView = {
   menuItemPriceId: number;
@@ -21,6 +21,8 @@ export type NormalUnitsView = {
   eventId: number;
   weekdays: number[];
   computedAt: string | null;
+  /* When the nightly Square sync last ran; null when it never has. */
+  salesSyncedAt: string | null;
   rows: NormalUnitsRowView[];
 };
 
@@ -57,22 +59,37 @@ function OverrideInput({ eventId, row }: { eventId: number; row: NormalUnitsRowV
   );
 }
 
-/* Per-drink "normal" figures the tier engine ranks against. Folded once
-   they have been read, since after that the checklist above carries the
-   state and this is only opened to check a figure or override one. */
+function subtitle(view: NormalUnitsView): string {
+  if (view.weekdays.length === 0) return "Pick which day(s) this event runs on to work out normal sales.";
+  const synced = view.salesSyncedAt
+    ? `Sales synced from Square ${formatShortStamp(view.salesSyncedAt)}`
+    : "Sales not synced from Square yet";
+  const computed = view.computedAt ? `worked out ${formatShortStamp(view.computedAt)}` : "not worked out yet";
+  return `${synced} · ${computed}`;
+}
+
+/* Per-drink "normal" figures the tier engine ranks against, worked out from
+   the synced Square order lines. Folded once they exist, since after that
+   the checklist above carries the state and this is only opened to check a
+   figure or override one. */
 export default function NormalUnitsCard({
   view,
   defaultOpen,
   reading,
+  syncing,
   onRecalculate,
+  onSync,
 }: {
   view: NormalUnitsView;
   defaultOpen: boolean;
   reading: boolean;
+  syncing: boolean;
   onRecalculate: () => void;
+  onSync: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const weekdays = view.weekdays;
+  const busy = reading || syncing;
 
   return (
     <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
@@ -89,25 +106,25 @@ export default function NormalUnitsCard({
           />
           <span className="min-w-0">
             <span className="block text-sm font-bold text-admin-ink">Normal sales per night</span>
-            <span className="block text-[12px] text-admin-muted">
-              {weekdays.length === 0
-                ? "Pick which day(s) this event runs on to read sales history from Square."
-                : view.computedAt
-                  ? `From Square orders over the event's hours · last read ${formatShortStamp(view.computedAt)}`
-                  : "Not read from Square yet."}
-            </span>
+            <span className="block text-[12px] text-admin-muted">{subtitle(view)}</span>
           </span>
         </button>
         {open && (
-          <button
-            type="button"
-            onClick={onRecalculate}
-            disabled={reading || weekdays.length === 0}
-            className={cn(OUTLINE_BUTTON, "max-sm:w-full")}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", reading && "animate-spin")} aria-hidden="true" />
-            Read from Square
-          </button>
+          <div className="flex flex-wrap items-center gap-2 max-sm:w-full [&_button]:max-sm:flex-1">
+            <button type="button" onClick={onSync} disabled={busy} className={cn(NEUTRAL_BUTTON, "whitespace-nowrap")}>
+              <Download className={cn("h-3.5 w-3.5", syncing && "animate-pulse")} aria-hidden="true" />
+              Sync sales from Square
+            </button>
+            <button
+              type="button"
+              onClick={onRecalculate}
+              disabled={busy || weekdays.length === 0}
+              className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", reading && "animate-spin")} aria-hidden="true" />
+              Recalculate
+            </button>
+          </div>
         )}
       </div>
 
@@ -156,7 +173,8 @@ export default function NormalUnitsCard({
             </tbody>
           </table>
           <p className="mt-2 text-[11px] text-admin-muted">
-            Average units per night, with how many nights were sampled. An override replaces the Square figure for that drink; leave it blank to use history.
+            Average units per night over the last six nights on that weekday, with how many nights were sampled. A night
+            runs 6am to 6am. An override replaces the figure for that drink; leave it blank to use history.
           </p>
         </div>
       )}

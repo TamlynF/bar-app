@@ -1,5 +1,6 @@
 import { squareClient } from "@/lib/square";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { tradingNightOf } from "@/lib/market/normal-units";
 
 type Money = { amount?: bigint | number | null } | null | undefined;
 
@@ -82,8 +83,10 @@ type SquareOrder = {
   closedAt?: string;
   state?: string;
   lineItems?: Array<{
+    uid?: string | null;
     name?: string | null;
     catalogObjectId?: string | null;
+    quantity?: string | number | null;
     grossSalesMoney?: Money;
     totalMoney?: Money;
   }> | null;
@@ -111,6 +114,39 @@ export type SquareSaleRow = {
   source: string;
   raw: unknown;
 };
+
+export type SquareSaleLineRow = {
+  square_order_id: string;
+  line_uid: string;
+  variation_id: string | null;
+  quantity: number;
+  closed_at: string;
+  trading_night: string;
+};
+
+/* One row per line item, the shape the market's normal-sales maths reads.
+   The trading night follows the venue rule (before 06:00 counts as the night
+   before) rather than the UTC business_date on the order row. */
+export function orderToLineRows(order: SquareOrder): SquareSaleLineRow[] {
+  const orderId = order.id;
+  if (!orderId) return [];
+  const closed = order.closedAt ?? order.createdAt ?? new Date().toISOString();
+  const tradingNight = tradingNightOf(new Date(closed));
+  const rows: SquareSaleLineRow[] = [];
+  (order.lineItems ?? []).forEach((li, index) => {
+    const quantity = Number(li.quantity ?? 1);
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    rows.push({
+      square_order_id: orderId,
+      line_uid: li.uid || String(index + 1),
+      variation_id: li.catalogObjectId ?? null,
+      quantity,
+      closed_at: closed,
+      trading_night: tradingNight,
+    });
+  });
+  return rows;
+}
 
 export function orderToSaleRow(
   order: SquareOrder,
@@ -227,10 +263,32 @@ async function searchCompletedOrders(
 
 export type SyncResult = {
   ordersSynced: number;
+  linesSynced: number;
   from: string;
   status: "ok" | "error";
   error?: string;
 };
+
+const CHUNK = 500;
+
+/* An order's lines are replaced wholesale, so a line that Square has since
+   voided disappears here too instead of lingering under an old uid. */
+async function replaceSaleLines(supabase: SupabaseClient, orders: SquareOrder[]): Promise<number> {
+  const lines = orders.flatMap(orderToLineRows);
+  const orderIds = orders.map((o) => o.id).filter((id): id is string => Boolean(id));
+  for (let i = 0; i < orderIds.length; i += CHUNK) {
+    const { error } = await supabase
+      .from("square_sale_lines")
+      .delete()
+      .in("square_order_id", orderIds.slice(i, i + CHUNK));
+    if (error) throw new Error(error.message);
+  }
+  for (let i = 0; i < lines.length; i += CHUNK) {
+    const { error } = await supabase.from("square_sale_lines").insert(lines.slice(i, i + CHUNK));
+    if (error) throw new Error(error.message);
+  }
+  return lines.length;
+}
 
 export async function syncSquareSales(
   supabase: SupabaseClient,
@@ -238,7 +296,7 @@ export async function syncSquareSales(
 ): Promise<SyncResult> {
   const locationId = process.env.SQUARE_LOCATION_ID;
   if (!locationId) {
-    return { ordersSynced: 0, from: "", status: "error", error: "SQUARE_LOCATION_ID not set" };
+    return { ordersSynced: 0, linesSynced: 0, from: "", status: "error", error: "SQUARE_LOCATION_ID not set" };
   }
 
   const { data: state } = await supabase
@@ -270,14 +328,15 @@ export async function syncSquareSales(
       .filter((r): r is SquareSaleRow => r !== null);
 
     if (rows.length > 0) {
-      for (let i = 0; i < rows.length; i += 500) {
-        const chunk = rows.slice(i, i + 500);
+      for (let i = 0; i < rows.length; i += CHUNK) {
+        const chunk = rows.slice(i, i + CHUNK);
         const { error } = await supabase
           .from("square_sales")
           .upsert(chunk, { onConflict: "square_order_id" });
         if (error) throw new Error(error.message);
       }
     }
+    const linesSynced = await replaceSaleLines(supabase, orders);
 
     await supabase
       .from("square_sync_state")
@@ -291,7 +350,7 @@ export async function syncSquareSales(
       })
       .eq("id", 1);
 
-    return { ordersSynced: rows.length, from: beginTime, status: "ok" };
+    return { ordersSynced: rows.length, linesSynced, from: beginTime, status: "ok" };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await supabase
@@ -303,6 +362,6 @@ export async function syncSquareSales(
         updated_at: now.toISOString(),
       })
       .eq("id", 1);
-    return { ordersSynced: 0, from: beginTime, status: "error", error: message };
+    return { ordersSynced: 0, linesSynced: 0, from: beginTime, status: "error", error: message };
   }
 }
