@@ -682,6 +682,59 @@ function StockSelect({
   );
 }
 
+/* The Square note is four sentences of context that is read once and then in
+   the way, so it collapses to a single ellipsised line. */
+function SimNote({
+  open,
+  onToggle,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      title={open ? "Hide the detail" : "Show the rest"}
+      className="flex w-full items-start gap-1.5 text-left"
+    >
+      <span className={cn("min-w-0 flex-1 text-[12px] text-admin-muted", !open && "line-clamp-1")}>
+        {children}
+      </span>
+      <ChevronDown
+        className={cn(
+          "mt-0.5 h-3.5 w-3.5 shrink-0 text-admin-muted transition-transform duration-200",
+          open && "rotate-180"
+        )}
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
+
+/* Shaped like the event config fields so the same ConfigHelp tooltip renders
+   them; these describe the simulator's controls, not anything stored. */
+const SIM_FIELD_HELP = {
+  roundSize: {
+    label: "Sales in a round",
+    hint: "How many separate sales one Busy round rings up",
+    help: "A busy round fakes a rush. This is how many individual sales it makes - each one picks a drink at random from the board, weighted towards the favourite, and sells one or two of it. More sales means a bigger jolt to the prices on the next tick.",
+  },
+  stockToAdd: {
+    label: "Stock per add",
+    hint: "Units the Stock button adds to a drink in Square",
+    help: "The Stock button on each drink row adds this many units to that drink's Square inventory. Use it to put stock back after sales have run a drink low, so the running low and back in stock alerts can be shown.",
+  },
+  roundTender: {
+    label: "Round tender",
+    hint: "How a busy round's sales are paid in Square",
+    help: "Only applies to Busy round via Square. Mixed pays about a third of the round in cash and the rest by card, spread through the round like a real till; Card and Cash make every sale in the round the same. Selling a single drink from its row always rings as card. Under Queue only nothing reaches Square, so tender is not used at all.",
+  },
+} as const;
+
 const SQUARE_LINK_CLASS =
   "flex min-h-11 items-center gap-1 text-[13px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-0";
 
@@ -1071,6 +1124,7 @@ export default function MarketClient({
   const [favouriteId, setFavouriteId] = useState<number | null>(null);
   const [simMode, setSimMode] = useState<SimMode>("queue");
   const [roundTender, setRoundTender] = useState<RoundTenderMode>("mix");
+  const [simHelpOpen, setSimHelpOpen] = useState(false);
   const [seedStock, setSeedStock] = useState(40);
   const [seedMode, setSeedMode] = useState<SeedMode>("reuse");
   const [stockToAdd, setStockToAdd] = useState(12);
@@ -1479,7 +1533,7 @@ export default function MarketClient({
   }, [selected, drinkNames]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 py-3 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full max-w-4xl space-y-4 py-3 sm:px-4 sm:py-0 md:px-6 xl:max-w-6xl 2xl:max-w-[100rem]">
       {ConfirmDialogUI}
 
 
@@ -1851,6 +1905,7 @@ export default function MarketClient({
               </span>
             </button>
             {simOpen && (
+              <TooltipProvider>
               <div className="space-y-3 border-t border-admin-line px-3 py-3 sm:px-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <div
@@ -1890,41 +1945,49 @@ export default function MarketClient({
                   </StatusPill>
                 </div>
 
-                {viaSquare ? (
-                  <p className="text-[12px] text-admin-muted">
-                    Every sale becomes a real order and payment in the Square{" "}
-                    <span className="font-semibold text-admin-ink">sandbox</span>. The market finds it the same
-                    way it finds a till sale, moves the price, and writes the new price back into the sandbox
-                    catalog - open the sandbox dashboard alongside the board to show the loop end to end.
-                    Square takes stock off as sales ring through; Add stock puts it back so you can show the
-                    restock alert. Any drink mapped to Square is sellable straight away on whatever stock
-                    Square already holds - seeding below is only for setting a known stock level, or for
-                    covering drinks with no mapping. Selling a single drink always rings as card; a busy
-                    round follows the round tender below.
-                  </p>
-                ) : (
-                  <p className="text-[12px] text-admin-muted">
-                    Sales go straight into the tick queue without touching Square. Use{" "}
-                    <span className="font-semibold text-admin-ink">Ring through Square</span> when the app is
-                    pointed at the sandbox to show the real integration.
-                    {!sandboxAvailable && " Square is set to production here, so sandbox sales are locked."}
-                  </p>
-                )}
+                <SimNote open={simHelpOpen} onToggle={() => setSimHelpOpen((open) => !open)}>
+                  {viaSquare ? (
+                    <>
+                      Every sale becomes a real order and payment in the Square{" "}
+                      <span className="font-semibold text-admin-ink">sandbox</span>. The market finds it the
+                      same way it finds a till sale, moves the price, and writes the new price back into the
+                      sandbox catalog - open the sandbox dashboard alongside the board to show the loop end to
+                      end. Square takes stock off as sales ring through; Add stock puts it back so you can
+                      show the restock alert. Any drink mapped to Square is sellable straight away on whatever
+                      stock Square already holds - seeding below is only for setting a known stock level, or
+                      for covering drinks with no mapping. Selling a single drink always rings as card; a busy
+                      round follows the round tender below.
+                    </>
+                  ) : (
+                    <>
+                      Sales go straight into the tick queue without touching Square. Use{" "}
+                      <span className="font-semibold text-admin-ink">Ring through Square</span> when the app
+                      is pointed at the sandbox to show the real integration.
+                      {!sandboxAvailable && " Square is set to production here, so sandbox sales are locked."}
+                    </>
+                  )}
+                </SimNote>
 
                 {viaSquare && (
                   <div className="rounded-lg border border-admin-info/40 bg-admin-info-bg px-3 py-2.5">
-                    <div className="flex flex-wrap items-end justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-semibold text-admin-ink">
-                          {sandboxSeeded ? "Sandbox catalog seeded" : "Set the sandbox stock (optional)"}
-                        </p>
-                        <p className="text-[11px] text-admin-muted">
-                          {seedMode === "reuse"
-                            ? "Mapped drinks already sell through Square; this only resets their sandbox stock to a known number."
-                            : "Replaces the temporary items from the last seed with fresh ones, so nothing duplicates. Use this for drinks with no Square mapping."}
-                        </p>
-                      </div>
-                      <div className="flex items-end gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <p className="flex min-w-0 items-center gap-0.5 text-[12px] font-semibold text-admin-ink">
+                        {sandboxSeeded ? "Sandbox catalog seeded" : "Set the sandbox stock (optional)"}
+                        <ConfigHelp
+                          field={{
+                            label: seedMode === "reuse" ? "Stock mapped items" : "Seed temporary items",
+                            hint:
+                              seedMode === "reuse"
+                                ? "Sets the stock Square holds for this market's drinks"
+                                : "Creates a throwaway catalog item per drink",
+                            help:
+                              seedMode === "reuse"
+                                ? "Mapped drinks already sell through Square, so nothing is created here - this only resets their sandbox stock to a known number so a demo has headroom."
+                                : "Replaces the temporary items from the last seed with fresh ones, so nothing duplicates. Use this for drinks with no Square mapping. They are deleted again when the market closes.",
+                          }}
+                        />
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
                         <div
                           role="radiogroup"
                           aria-label="How the sandbox catalog is seeded"
@@ -1953,7 +2016,7 @@ export default function MarketClient({
                             </button>
                           ))}
                         </div>
-                        <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                        <label className="flex items-center gap-1.5 text-[11px] font-semibold text-admin-muted">
                           Stock each
                           <input
                             type="number"
@@ -1961,7 +2024,7 @@ export default function MarketClient({
                             max={999}
                             value={seedStock}
                             onChange={(event) => setSeedStock(Number(event.target.value))}
-                            className="h-11 w-20 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
+                            className="h-11 w-16 rounded-lg border border-admin-line bg-admin-card px-2 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
                           />
                         </label>
                         <button
@@ -1973,32 +2036,38 @@ export default function MarketClient({
                           <Upload className="h-4 w-4" aria-hidden="true" />
                           {seedMode === "reuse" ? "Stock items" : sandboxSeeded ? "Re-seed" : "Seed sandbox"}
                         </button>
+                        {/* Sits on the seed row wherever there is width for it
+                            and wraps underneath when there is not. */}
+                        <div className="flex items-center gap-1 rounded-lg border border-admin-info/30 bg-admin-card px-1">
+                          {(
+                            [
+                              { key: "orders", label: "Orders" },
+                              { key: "items", label: "Items & prices" },
+                            ] as const
+                          ).map((link) => (
+                            <a
+                              key={link.key}
+                              href={squareSandboxDashboardUrl(link.key)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={`Open the sandbox ${link.label.toLowerCase()} in the Square dashboard`}
+                              className="flex h-11 items-center gap-1 rounded-md px-2 text-[11px] font-semibold whitespace-nowrap text-admin-info transition-colors hover:bg-admin-info-bg sm:h-8"
+                            >
+                              {link.label}
+                              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                            </a>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      {(
-                        [
-                          { key: "orders", label: "Sandbox orders" },
-                          { key: "items", label: "Sandbox items & prices" },
-                        ] as const
-                      ).map((link) => (
-                        <a
-                          key={link.key}
-                          href={squareSandboxDashboardUrl(link.key)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-info hover:underline sm:min-h-0"
-                        >
-                          {link.label}
-                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        </a>
-                      ))}
                     </div>
                   </div>
                 )}
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
-                    Sales in a round
+                    <span className="flex items-center gap-0.5">
+                      Sales in a round
+                      <ConfigHelp field={SIM_FIELD_HELP.roundSize} />
+                    </span>
                     <input
                       type="number"
                       min={1}
@@ -2009,7 +2078,10 @@ export default function MarketClient({
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
-                    Stock per add
+                    <span className="flex items-center gap-0.5">
+                      Stock per add
+                      <ConfigHelp field={SIM_FIELD_HELP.stockToAdd} />
+                    </span>
                     <input
                       type="number"
                       min={1}
@@ -2039,7 +2111,10 @@ export default function MarketClient({
                 </div>
                 {viaSquare && (
                   <div className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
-                    Round tender
+                    <span className="flex items-center gap-0.5">
+                      Round tender
+                      <ConfigHelp field={SIM_FIELD_HELP.roundTender} />
+                    </span>
                     <div
                       role="radiogroup"
                       aria-label="How busy-round sales are paid in Square"
@@ -2079,6 +2154,11 @@ export default function MarketClient({
                     disabled={
                       isPending || !Number.isFinite(roundSize) || roundSize < 1 || (viaSquare && !anyMapped)
                     }
+                    title={
+                      viaSquare
+                        ? "Rings a rush of sales into Square now. Prices do not move until the next tick."
+                        : "Queues a rush of sales for the next tick. Prices do not move until then."
+                    }
                     className={cn(PRIMARY_BUTTON, "flex-1 whitespace-nowrap sm:flex-none")}
                   >
                     {isPending ? (
@@ -2092,6 +2172,7 @@ export default function MarketClient({
                     type="button"
                     onClick={handleTickNow}
                     disabled={isPending}
+                    title="Runs the pricing engine straight away instead of waiting for the next tick, so sales already made show on the board now."
                     className={cn(OUTLINE_BUTTON, "flex-1 whitespace-nowrap sm:flex-none")}
                   >
                     {isPending ? (
@@ -2196,6 +2277,7 @@ export default function MarketClient({
                   </div>
                 )}
               </div>
+              </TooltipProvider>
             )}
           </div>
 
