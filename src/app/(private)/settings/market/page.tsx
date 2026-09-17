@@ -3,6 +3,7 @@ import { resolveMarketConfig } from "@/lib/market/types";
 import { optionalNumber } from "@/lib/market/drink-overrides";
 import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
+import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
 import {
   summariseEvent,
@@ -173,7 +174,27 @@ export default async function MarketSettingsPage({
       rankPos: (row.rank_pos as number | null) ?? null,
       tierPct: optionalNumber(row.tier_pct),
       targetPrice: optionalNumber(row.target_price),
+      squareItemId: null,
     }));
+
+    /* One cached pass over the catalog turns every mapped drink into a real
+       anchor into the Square dashboard; a miss falls back to resolving the
+       item on click. */
+    if (instruments.some((instrument) => instrument.mapped)) {
+      const itemIds = await squareItemIdsByVariation();
+      if (itemIds.size > 0) {
+        const variationByInstrument = new Map(
+          (instrumentRows ?? []).map((row) => [row.id as number, row.square_variation_id as string | null])
+        );
+        instruments = instruments.map((instrument) => {
+          const variationId = variationByInstrument.get(instrument.id);
+          return {
+            ...instrument,
+            squareItemId: variationId ? (itemIds.get(variationId) ?? null) : null,
+          };
+        });
+      }
+    }
   }
 
   /* Any session (live or ended) whose drinks still hold a market price in

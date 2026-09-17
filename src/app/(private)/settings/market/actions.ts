@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
@@ -47,6 +47,7 @@ import {
   SIM_MAX_SQUARE_ROUND_SALES,
   squareItemUrl,
 } from "@/lib/market/simulate";
+import { SQUARE_ITEM_MAP_TAG } from "@/lib/market/square-item-links";
 import {
   addInventory,
   assertSandbox,
@@ -67,6 +68,13 @@ const MARKET_PATHS = ["/market", "/market/board"] as const;
 function revalidateMarket() {
   revalidatePath("/settings/market", "layout");
   for (const path of MARKET_PATHS) revalidatePath(path);
+}
+
+/* Only for the four things that change which items exist or which variation a
+   drink points at. The map is cached for an hour precisely so ordinary ticks
+   do not re-read the catalog, so this must not go in revalidateMarket. */
+function revalidateSquareItemMap() {
+  updateTag(SQUARE_ITEM_MAP_TAG);
 }
 
 const configSchema = z.object({
@@ -965,6 +973,7 @@ async function sweepSeededItems(supabase: ServerClient, sessionId: number): Prom
       .from("market_instruments")
       .update({ sandbox_item_id: null })
       .eq("session_id", sessionId);
+    revalidateSquareItemMap();
     return deleted;
   } catch (err) {
     console.error("[market] sandbox item sweep failed:", err);
@@ -1241,6 +1250,7 @@ export async function autoMatchMappingsAction() {
   }
   await syncMappingsToLiveSession(supabase, new Map(proposals));
 
+  revalidateSquareItemMap();
   revalidateMarket();
   return { success: true, matched: proposals.size, unmatched: targets.length - proposals.size };
 }
@@ -1253,6 +1263,7 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
     .eq("id", menuItemPriceId);
   if (error) return { error: error.message };
   await syncMappingsToLiveSession(supabase, new Map([[menuItemPriceId, variationId]]));
+  revalidateSquareItemMap();
   revalidateMarket();
   return { success: true };
 }
@@ -1339,6 +1350,7 @@ export async function pushMenuToSquareAction() {
     }
     await syncMappingsToLiveSession(supabase, new Map(variationIds));
 
+    revalidateSquareItemMap();
     revalidateMarket();
     return {
       success: true,
@@ -1723,6 +1735,7 @@ export async function seedSandboxCatalogAction(stockQty: number, mode: SeedMode 
   try {
     const result = await seedSandboxCatalog(supabase, session.id, qty, mode);
     if ("error" in result) return result;
+    revalidateSquareItemMap();
     revalidateMarket();
     return { success: true, ...result, stockQty: qty };
   } catch (err) {

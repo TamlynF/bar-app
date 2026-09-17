@@ -83,7 +83,7 @@ import {
 } from "./actions";
 import type { RoundTenderMode } from "@/lib/market/square-sandbox";
 import type { SeedMode } from "@/lib/market/types";
-import { squareSandboxDashboardUrl, squareTransactionUrl } from "@/lib/market/simulate";
+import { squareItemUrl, squareSandboxDashboardUrl, squareTransactionUrl } from "@/lib/market/simulate";
 import type { MarketStatePayload } from "@/lib/market/tick";
 import {
   CONFIG_FIELDS,
@@ -138,6 +138,9 @@ export type InstrumentSummary = {
   rankPos: number | null;
   tierPct: number | null;
   targetPrice: number | null;
+  /* Resolved from the cached catalog map at render; null when the mapping is
+     newer than the cache, which makes the link resolve on click instead. */
+  squareItemId: string | null;
 };
 
 export type SquareSimOrder = {
@@ -679,14 +682,40 @@ function StockSelect({
   );
 }
 
-/* "Linked" opens the drink in the Square dashboard. The instrument stores the
-   ITEM_VARIATION id and the dashboard wants the parent ITEM, so the tab is
-   opened up front and pointed at the item once Square has answered - opening
-   it after the await would be treated as a pop-up. */
-function SquareItemLink({ instrument }: { instrument: InstrumentSummary }) {
+const SQUARE_LINK_CLASS =
+  "flex min-h-11 items-center gap-1 text-[13px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-0";
+
+/* "Linked" opens the drink in the Square dashboard. Usually a plain anchor:
+   the page resolves the parent ITEM id for every mapped drink from a cached
+   pass over the catalog. A mapping saved since that pass has no id yet, so it
+   falls back to looking the item up on click - and there the tab is opened up
+   front and pointed at the item once Square answers, because opening it after
+   the await would be treated as a pop-up. */
+function SquareItemLink({
+  instrument,
+  environment,
+}: {
+  instrument: InstrumentSummary;
+  environment: "sandbox" | "production";
+}) {
   const [loading, setLoading] = useState(false);
 
   if (!instrument.mapped) return <span className="text-admin-warning">Not linked</span>;
+
+  if (instrument.squareItemId) {
+    return (
+      <a
+        href={squareItemUrl(environment, instrument.squareItemId)}
+        target="_blank"
+        rel="noreferrer"
+        title={`Open ${instrument.name} in the Square dashboard`}
+        className={SQUARE_LINK_CLASS}
+      >
+        Linked
+        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+      </a>
+    );
+  }
 
   async function open() {
     const tab = window.open("about:blank", "_blank", "noopener,noreferrer");
@@ -709,7 +738,7 @@ function SquareItemLink({ instrument }: { instrument: InstrumentSummary }) {
       onClick={open}
       disabled={loading}
       title={`Open ${instrument.name} in the Square dashboard`}
-      className="flex min-h-11 items-center gap-1 text-[13px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-0"
+      className={SQUARE_LINK_CLASS}
     >
       Linked
       {loading ? (
@@ -2355,7 +2384,10 @@ export default function MarketClient({
                                       }
                                     />
                                   ) : field.key === "link" ? (
-                                    <SquareItemLink instrument={instrument} />
+                                    <SquareItemLink
+                                      instrument={instrument}
+                                      environment={squareSim.environment}
+                                    />
                                   ) : (
                                     detailValue(field, instrument, warmedUp)
                                   )}
