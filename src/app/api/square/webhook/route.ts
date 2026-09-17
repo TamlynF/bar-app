@@ -47,8 +47,12 @@ export async function POST(req: NextRequest) {
     const expected = hmac.digest("base64");
     try {
       const isValid = timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-      if (!isValid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      if (!isValid) {
+        console.error("[square] signature mismatch, signed against:", WEBHOOK_URL);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
     } catch {
+      console.error("[square] signature length mismatch, signed against:", WEBHOOK_URL);
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
   }
