@@ -1157,6 +1157,10 @@ export default function MarketClient({
 
   const sandboxAvailable = squareSim.environment === "sandbox";
   const sandboxSeeded = squareSim.sandboxSeededAt !== null;
+  /* A drink rings through Square on the variation id it already carries from
+     the menu mapping; seeding only sets stock levels and covers unmapped
+     drinks with temporary items. */
+  const anyMapped = instruments.some((instrument) => instrument.mapped);
   const viaSquare = simMode === "square" && sandboxAvailable;
   const tillSyncOn = session?.squareSyncEnabled ?? false;
   /* Queue-only sales still move prices, and with sync on those prices land on
@@ -1261,7 +1265,7 @@ export default function MarketClient({
       title: seedMode === "reuse" ? "Stock the mapped sandbox items?" : "Seed temporary sandbox items?",
       description:
         seedMode === "reuse"
-          ? `Points this market's drinks at the sandbox items their menu prices are already mapped to and sets each to ${seedStock} in stock. Nothing is created, so the catalog stays as it is. Drinks with no mapping get a temporary item.`
+          ? `Overwrites the sandbox stock count for this market's drinks, setting each to ${seedStock}. Nothing is created in the catalog. Drinks with no mapping get a temporary item.`
           : `Deletes the temporary items a previous seed created, then makes a fresh one per drink at the menu price with ${seedStock} in stock. Mapped catalog items are never touched.`,
       confirmLabel: seedMode === "reuse" ? "Stock items" : "Seed sandbox",
     });
@@ -1822,8 +1826,10 @@ export default function MarketClient({
                     way it finds a till sale, moves the price, and writes the new price back into the sandbox
                     catalog - open the sandbox dashboard alongside the board to show the loop end to end.
                     Square takes stock off as sales ring through; Add stock puts it back so you can show the
-                    restock alert. Selling a single drink always rings as card; a busy round follows the
-                    round tender below.
+                    restock alert. Any drink mapped to Square is sellable straight away on whatever stock
+                    Square already holds - seeding below is only for setting a known stock level, or for
+                    covering drinks with no mapping. Selling a single drink always rings as card; a busy
+                    round follows the round tender below.
                   </p>
                 ) : (
                   <p className="text-[12px] text-admin-muted">
@@ -1839,12 +1845,12 @@ export default function MarketClient({
                     <div className="flex flex-wrap items-end justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-[12px] font-semibold text-admin-ink">
-                          {sandboxSeeded ? "Sandbox catalog seeded" : "Seed the sandbox catalog first"}
+                          {sandboxSeeded ? "Sandbox catalog seeded" : "Set the sandbox stock (optional)"}
                         </p>
                         <p className="text-[11px] text-admin-muted">
                           {seedMode === "reuse"
-                            ? "Uses the sandbox items your menu prices already point at and only sets their stock."
-                            : "Replaces the temporary items from the last seed with fresh ones, so nothing duplicates."}
+                            ? "Mapped drinks already sell through Square; this only resets their sandbox stock to a known number."
+                            : "Replaces the temporary items from the last seed with fresh ones, so nothing duplicates. Use this for drinks with no Square mapping."}
                         </p>
                       </div>
                       <div className="flex items-end gap-2">
@@ -2000,7 +2006,7 @@ export default function MarketClient({
                     type="button"
                     onClick={handleBusyRound}
                     disabled={
-                      isPending || !Number.isFinite(roundSize) || roundSize < 1 || (viaSquare && !sandboxSeeded)
+                      isPending || !Number.isFinite(roundSize) || roundSize < 1 || (viaSquare && !anyMapped)
                     }
                     className={cn(PRIMARY_BUTTON, "flex-1 whitespace-nowrap sm:flex-none")}
                   >
@@ -2252,12 +2258,14 @@ export default function MarketClient({
                                 disabled={
                                   isPending ||
                                   instrument.stockState === "out" ||
-                                  (viaSquare && (!sandboxSeeded || !instrument.mapped))
+                                  (viaSquare && !instrument.mapped)
                                 }
                                 title={
-                                  viaSquare
-                                    ? `Ring ${units} × ${instrument.name} through the Square sandbox`
-                                    : `Sell ${units} × ${instrument.name}`
+                                  viaSquare && !instrument.mapped
+                                    ? "Link this drink to Square first, or seed a temporary item for it"
+                                    : viaSquare
+                                      ? `Ring ${units} × ${instrument.name} through the Square sandbox`
+                                      : `Sell ${units} × ${instrument.name}`
                                 }
                                 className="flex h-9 min-w-11 items-center justify-center rounded-lg border border-admin-line bg-admin-card px-2 text-[12px] font-semibold text-admin-ink tabular-nums transition-colors hover:bg-admin-surface disabled:cursor-not-allowed disabled:opacity-40"
                               >
@@ -2267,16 +2275,12 @@ export default function MarketClient({
                             <button
                               type="button"
                               onClick={() => handleAddStock(instrument)}
-                              disabled={
-                                isPending || !instrument.mapped || (sandboxAvailable && !sandboxSeeded)
-                              }
+                              disabled={isPending || !instrument.mapped}
                               aria-label={`Add ${stockToAdd} stock for ${instrument.name}`}
                               title={
                                 !instrument.mapped
                                   ? "Link this drink to Square first"
-                                  : sandboxAvailable && !sandboxSeeded
-                                    ? "Seed the sandbox catalog first"
-                                    : `Add ${stockToAdd} to Square inventory for ${instrument.name}`
+                                  : `Add ${stockToAdd} to Square inventory for ${instrument.name}`
                               }
                               className="flex h-9 min-w-11 items-center justify-center gap-1 rounded-lg border border-admin-line bg-admin-card px-2 text-[12px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface disabled:cursor-not-allowed disabled:opacity-40"
                             >

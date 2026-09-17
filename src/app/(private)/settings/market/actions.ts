@@ -1425,12 +1425,12 @@ export async function setInstrumentPriceAction(instrumentId: number, price: numb
    done - without a sandbox catalog or a real customer. Prices, alerts and the
    Square price sync all behave exactly as they would for a real sale. */
 
-type SimSession = { id: number; tick_no: number; config: unknown; sandbox_seeded_at: string | null };
+type SimSession = { id: number; tick_no: number; config: unknown };
 
 async function liveSimSession(supabase: ServerClient): Promise<SimSession | { error: string }> {
   const { data: session, error } = await supabase
     .from("market_sessions")
-    .select("id, tick_no, config, sandbox_seeded_at")
+    .select("id, tick_no, config")
     .eq("status", "live")
     .maybeSingle();
   if (error) return { error: error.message };
@@ -1486,7 +1486,11 @@ async function recordSquareSales(
   return error ? { error: error.message } : null;
 }
 
-const NOT_SEEDED = "Seed the sandbox catalog first so this market's drinks exist in Square sandbox.";
+/* A sale only needs the variation id the instrument already carries from the
+   menu mapping, so seeding is a convenience (known stock levels, throwaway
+   items for unmapped drinks) rather than a prerequisite. */
+const NOT_LINKED =
+  "No drinks on this market are linked to Square - map them on the menu, or seed temporary items.";
 
 export async function simulateSaleAction(
   instrumentId: number,
@@ -1513,9 +1517,10 @@ export async function simulateSaleAction(
   if (mode === "square") {
     const guard = assertSandbox();
     if ("error" in guard) return guard;
-    if (!session.sandbox_seeded_at) return { error: NOT_SEEDED };
     if (!instrument.square_variation_id) {
-      return { error: `${instrument.display_name} is not in the sandbox catalog - seed it first.` };
+      return {
+        error: `${instrument.display_name} is not linked to Square - map it on the menu, or seed a temporary item for it.`,
+      };
     }
     let rung: RungSale;
     try {
@@ -1570,9 +1575,8 @@ export async function simulateBusyRoundAction(
   if (mode === "square") {
     const guard = assertSandbox();
     if ("error" in guard) return guard;
-    if (!session.sandbox_seeded_at) return { error: NOT_SEEDED };
     const linked = rows.filter((row) => row.square_variation_id);
-    if (linked.length === 0) return { error: "No drinks are in the sandbox catalog yet - seed it first." };
+    if (linked.length === 0) return { error: NOT_LINKED };
 
     const plan = planBusyRound(
       linked.map((row) => ({
@@ -1737,7 +1741,6 @@ export async function addStockAction(instrumentId: number, quantity: number) {
   const env = squareSimEnvironment();
   if (!process.env.SQUARE_ACCESS_TOKEN) return { error: "SQUARE_ACCESS_TOKEN is not set." };
   if (!env.locationId) return { error: "SQUARE_LOCATION_ID is not set." };
-  if (env.isSandbox && !session.sandbox_seeded_at) return { error: NOT_SEEDED };
 
   const { data: instrument } = await supabase
     .from("market_instruments")
