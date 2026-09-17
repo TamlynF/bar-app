@@ -104,6 +104,8 @@ export type MarketInstrumentPayload = {
   pace: number | null;
   rankPos: number | null;
   normalUnitsPerNight: number | null;
+  /* Square's IN_STOCK count at the last tick; null when unlinked or unknown. */
+  stockQty: number | null;
 };
 
 export type MarketEventPayload = {
@@ -635,6 +637,7 @@ export async function readMarketState(
         pace: config.pricingMode === "tiers" ? (optionalNumber(row.pace) ?? 0) : null,
         rankPos: config.pricingMode === "tiers" ? (row.rank_pos ?? null) : null,
         normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
+        stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       };
     }),
     events: (eventRows ?? [])

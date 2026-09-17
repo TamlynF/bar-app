@@ -522,17 +522,26 @@ export default function PrivateLayoutClient({
                         ],
                     }
                 }
+                if (leaf === "square-links") {
+                    return {
+                        title: "Market",
+                        subtitle: "Square links",
+                        backHref: marketHref,
+                        trail: [
+                            { label: "Settings", href: "/settings" },
+                            { label: "Market", href: marketHref },
+                            { label: "Square links" },
+                        ],
+                    }
+                }
                 if (leaf) {
-                    /* Back lands on the list with this event's sheet open,
-                       which is where the visitor came from. */
-                    const sheetHref = `${marketHref}?open=${leaf}`
                     return {
                         title: "Market",
                         subtitle: `#${leaf}`,
-                        backHref: sheetHref,
+                        backHref: marketHref,
                         trail: [
                             { label: "Settings", href: "/settings" },
-                            { label: "Market", href: sheetHref },
+                            { label: "Market", href: marketHref },
                             { label: `#${leaf}` },
                         ],
                     }

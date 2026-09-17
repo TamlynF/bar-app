@@ -17,6 +17,7 @@ export function RecordList({
   onAdd,
   addLabel = "Create",
   collapsible = true,
+  defaultCollapsed = false,
   toolbar,
   filters,
   activeFilterCount = 0,
@@ -38,6 +39,8 @@ export function RecordList({
   onAdd?: () => void;
   addLabel?: string;
   collapsible?: boolean;
+  // Starts folded to its header row; only honoured when collapsible.
+  defaultCollapsed?: boolean;
   toolbar?: React.ReactNode;
   // Filter pills, tucked behind a Filters button next to the search box.
   filters?: React.ReactNode;
@@ -46,7 +49,7 @@ export function RecordList({
   detail?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [showFilters, setShowFilters] = useState(activeFilterCount > 0);
 
   if (variant === "cards") {

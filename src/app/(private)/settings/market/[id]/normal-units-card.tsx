@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { WEEKDAY_NAMES } from "@/lib/market/normal-units";
-import { recalculateNormalUnitsAction, saveEventNormalUnitsAction } from "../actions";
+import { saveEventNormalUnitsAction } from "../actions";
+import { OUTLINE_BUTTON, formatShortStamp } from "../ui";
 
 export type NormalUnitsRowView = {
   menuItemPriceId: number;
@@ -22,10 +23,6 @@ export type NormalUnitsView = {
   computedAt: string | null;
   rows: NormalUnitsRowView[];
 };
-
-function formatStamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 
 function OverrideInput({ eventId, row }: { eventId: number; row: NormalUnitsRowView }) {
   const [value, setValue] = useState(row.override?.toString() ?? "");
@@ -60,47 +57,61 @@ function OverrideInput({ eventId, row }: { eventId: number; row: NormalUnitsRowV
   );
 }
 
-export default function NormalUnitsCard({ view }: { view: NormalUnitsView }) {
-  const [isPending, startTransition] = useTransition();
+/* Per-drink "normal" figures the tier engine ranks against. Folded once
+   they have been read, since after that the checklist above carries the
+   state and this is only opened to check a figure or override one. */
+export default function NormalUnitsCard({
+  view,
+  defaultOpen,
+  reading,
+  onRecalculate,
+}: {
+  view: NormalUnitsView;
+  defaultOpen: boolean;
+  reading: boolean;
+  onRecalculate: () => void;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const weekdays = view.weekdays;
-
-  function recalculate() {
-    startTransition(async () => {
-      const result = await recalculateNormalUnitsAction(view.eventId);
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      const unmapped = result.unmappedServes > 0 ? ` ${result.unmappedServes} serve(s) are not linked to Square and were skipped.` : "";
-      toast.success(`Read ${result.nights} night(s) from Square for ${result.serves} serve(s).${unmapped}`);
-    });
-  }
 
   return (
     <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-bold text-admin-ink">Normal sales per night</h3>
-          <p className="text-[12px] text-admin-muted">
-            {weekdays.length === 0
-              ? "Pick which day(s) this event runs on to read sales history from Square."
-              : view.computedAt
-                ? `From Square orders over the event's hours · last read ${formatStamp(view.computedAt)}`
-                : "Not read from Square yet."}
-          </p>
-        </div>
+      <div className={cn("flex flex-wrap items-center justify-between gap-3", open && "mb-3")}>
         <button
           type="button"
-          onClick={recalculate}
-          disabled={isPending || weekdays.length === 0}
-          className="flex h-11 items-center gap-1.5 rounded-lg border border-[#34451F] px-4 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8] disabled:opacity-50 sm:h-9"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
         >
-          <RefreshCw className={cn("h-3.5 w-3.5", isPending && "animate-spin")} aria-hidden="true" />
-          Read from Square
+          <ChevronDown
+            className={cn("h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200", !open && "-rotate-90")}
+            aria-hidden="true"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-admin-ink">Normal sales per night</span>
+            <span className="block text-[12px] text-admin-muted">
+              {weekdays.length === 0
+                ? "Pick which day(s) this event runs on to read sales history from Square."
+                : view.computedAt
+                  ? `From Square orders over the event's hours · last read ${formatShortStamp(view.computedAt)}`
+                  : "Not read from Square yet."}
+            </span>
+          </span>
         </button>
+        {open && (
+          <button
+            type="button"
+            onClick={onRecalculate}
+            disabled={reading || weekdays.length === 0}
+            className={cn(OUTLINE_BUTTON, "max-sm:w-full")}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", reading && "animate-spin")} aria-hidden="true" />
+            Read from Square
+          </button>
+        )}
       </div>
 
-      {weekdays.length > 0 && (
+      {open && weekdays.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full min-w-120 text-[13px]">
             <thead>

@@ -7,6 +7,7 @@ import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { squareClient } from "@/lib/square";
 import type { Square } from "square";
 import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
+import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
 import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig, type PricingMode } from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import { sessionTicksFor } from "@/lib/market/normal-units";
@@ -1160,23 +1161,6 @@ export async function setStockOverrideAction(instrumentId: number, value: string
   if (error) return { error: error.message };
   revalidateMarket();
   return { success: true };
-}
-
-async function fetchCatalogVariations(): Promise<CatalogVariation[]> {
-  const variations: CatalogVariation[] = [];
-  const page = await squareClient.catalog.list({ types: "ITEM" });
-  for await (const obj of page) {
-    if (obj.type !== "ITEM" || !obj.itemData?.name) continue;
-    for (const variation of obj.itemData.variations ?? []) {
-      if (variation.type !== "ITEM_VARIATION" || !variation.id) continue;
-      variations.push({
-        variationId: variation.id,
-        itemName: obj.itemData.name,
-        variationName: variation.itemVariationData?.name ?? "",
-      });
-    }
-  }
-  return variations;
 }
 
 /* Mappings snapshot into market_instruments when a session opens, so a link

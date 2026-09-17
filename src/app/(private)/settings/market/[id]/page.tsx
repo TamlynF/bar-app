@@ -5,7 +5,6 @@ import {
   summariseEvent,
   type StockMarketEventRow,
 } from "@/lib/market/stock-market-events";
-import { resolveMarketConfig, type StockState } from "@/lib/market/types";
 import { serveOptionsFromCategories, type ServeCategoryRow } from "@/lib/market/event-serves";
 import {
   EMPTY_OVERRIDES,
@@ -14,12 +13,12 @@ import {
   type DrinkOverrideRow,
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
+import { eventReadiness } from "@/lib/market/event-readiness";
 import type { NormalUnitsView } from "./normal-units-card";
 import EventDetailClient, {
   type AvailableDrink,
   type EventDrink,
   type EventSession,
-  type LiveInstrument,
 } from "./event-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -56,23 +55,6 @@ type EventServeRow = {
   display_order: number;
   square_variation_id: string | null;
   menu_items: ItemJoin | ItemJoin[];
-};
-
-type InstrumentRow = {
-  id: number;
-  menu_item_price_id: number;
-  opening_price: number | string;
-  current_price: number | string;
-  demand_units: number | string;
-  stock_state: StockState;
-  stock_override: StockState | null;
-  crash_until_tick: number | null;
-  pace: number | string | null;
-  rank_pos: number | null;
-  tier_pct: number | string | null;
-  target_price: number | string | null;
-  normal_units_per_night: number | string | null;
-  normal_units_source: string | null;
 };
 
 const SERVE_SELECT =
@@ -126,42 +108,12 @@ export default async function StockMarketEventPage({
       .order("started_at", { ascending: false }),
     supabase
       .from("market_sessions")
-      .select("id, stock_market_event_id, tick_no, config, warmed_up_tick, units_sold_total")
+      .select("id, stock_market_event_id")
       .eq("status", "live")
       .maybeSingle(),
   ]);
 
   const isLive = liveRow?.stock_market_event_id === id;
-  const { data: instrumentRows } = isLive
-    ? await supabase
-        .from("market_instruments")
-        .select(
-          "id, menu_item_price_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick, pace, rank_pos, tier_pct, target_price, normal_units_per_night, normal_units_source",
-        )
-        .eq("session_id", liveRow!.id)
-    : { data: [] as InstrumentRow[] };
-  const instrumentsByPrice = new Map<number, LiveInstrument>(
-    ((instrumentRows ?? []) as InstrumentRow[]).map((instrument) => [
-      instrument.menu_item_price_id,
-      {
-        id: instrument.id,
-        openingPrice: Number(instrument.opening_price),
-        currentPrice: Number(instrument.current_price),
-        demandUnits: Number(instrument.demand_units),
-        stockState: instrument.stock_state,
-        stockOverride: instrument.stock_override,
-        crashing:
-          instrument.crash_until_tick != null &&
-          (liveRow?.tick_no ?? 0) <= instrument.crash_until_tick,
-        pace: optionalNumber(instrument.pace),
-        rankPos: instrument.rank_pos,
-        tierPct: optionalNumber(instrument.tier_pct),
-        targetPrice: optionalNumber(instrument.target_price),
-        normalUnitsPerNight: optionalNumber(instrument.normal_units_per_night),
-        normalUnitsSource: instrument.normal_units_source,
-      },
-    ]),
-  );
 
   const drinks: EventDrink[] = ((serveRows ?? []) as EventServeRow[])
     .flatMap((serve) => {
@@ -190,7 +142,6 @@ export default async function StockMarketEventPage({
           linked: Boolean(serve.square_variation_id),
           squareVariationId: serve.square_variation_id ?? null,
           overrides: overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES,
-          instrument: instrumentsByPrice.get(serve.id) ?? null,
         },
       ];
     })
@@ -267,6 +218,15 @@ export default async function StockMarketEventPage({
       })),
   };
 
+  const readiness = eventReadiness({
+    menuItemPriceIds,
+    tradeableIds: drinks.filter((drink) => drink.basePrice != null).map((drink) => drink.id),
+    linkedIds: drinks.filter((drink) => drink.linked).map((drink) => drink.id),
+    normalsReadIds: [...normalsByPrice.keys()],
+    normalsComputedAt: computedAt,
+    pricingMode: event.config.pricingMode,
+  });
+
   return (
     <>
       <AdminPageTitle title={event.name} />
@@ -277,17 +237,8 @@ export default async function StockMarketEventPage({
         sessions={sessions}
         isLive={isLive}
         anyLive={Boolean(liveRow)}
+        readiness={readiness}
         normalUnits={normalUnits}
-        liveTiers={
-          isLive && liveRow
-            ? {
-                pricingMode: resolveMarketConfig(liveRow.config).pricingMode,
-                warmedUp: liveRow.warmed_up_tick != null,
-                unitsSoldTotal: Number(liveRow.units_sold_total ?? 0),
-                warmupUnits: resolveMarketConfig(liveRow.config).warmupUnits,
-              }
-            : null
-        }
       />
     </>
   );

@@ -5,20 +5,22 @@ import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
 import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
+import { eventReadiness, type EventReadiness } from "@/lib/market/event-readiness";
 import {
   summariseEvent,
   type StockMarketEventRow,
   type StockMarketEventSummary,
 } from "@/lib/market/stock-market-events";
-import MarketClient, {
-  type CategoryOption,
-  type EmployeeOption,
-  type InstrumentSummary,
-  type MappingRow,
-  type SessionSummary,
-  type SquareSimSummary,
-  type TillRestoreSummary,
-} from "./market-client";
+import MarketClient from "./market-client";
+import type {
+  CategoryOption,
+  EmployeeOption,
+  InstrumentSummary,
+  SessionSummary,
+  SquareLinksSummary,
+  SquareSimSummary,
+  TillRestoreSummary,
+} from "./types";
 
 export const dynamic = "force-dynamic";
 
@@ -165,6 +167,7 @@ export default async function MarketSettingsPage({
       demandUnits: Number(row.demand_units),
       stockState: row.stock_state,
       stockOverride: row.stock_override,
+      crashing: row.crash_until_tick != null && sessionRow.tick_no <= row.crash_until_tick,
       mapped: Boolean(row.square_variation_id),
       stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       simPending: simPending.get(row.id) ?? 0,
@@ -250,24 +253,48 @@ export default async function MarketSettingsPage({
     )
   );
 
-  /* "On the board" in the Square links panel means the serve is on at least
-     one active event, so the badge sits on the serve that will trade. */
-  const onAnyEvent = new Set(events.flatMap((event) => event.menuItemPriceIds));
-  const mappingRows: MappingRow[] = activeCategories.flatMap((cat) =>
-    cat.menu_items.flatMap((item) =>
-      [...item.menu_item_prices]
-        .sort((a, b) => a.display_order - b.display_order || a.id - b.id)
-        .map((price) => ({
-          menuItemPriceId: price.id,
-          itemName: item.name,
-          categoryName: cat.name,
-          serve: price.serve,
-          amount: Number(price.amount),
-          onEvent: onAnyEvent.has(price.id),
-          squareVariationId: price.square_variation_id,
-        }))
+  /* What each event still needs before it can open: which of its serves
+     trade, which are linked to Square, and whether their normal sales have
+     been read. All from rows already loaded, plus one pass over the cache. */
+  const tradeableIds = new Set(drinks.map((drink) => drink.id));
+  const linkedIds = new Set(
+    activeCategories.flatMap((cat) =>
+      cat.menu_items.flatMap((item) =>
+        item.menu_item_prices.filter((price) => price.square_variation_id).map((price) => price.id)
+      )
     )
   );
+  const onAnyEvent = [...new Set(events.flatMap((event) => event.menuItemPriceIds))];
+  const { data: normalRows } = onAnyEvent.length
+    ? await supabase
+        .from("market_normal_units")
+        .select("menu_item_price_id, computed_at")
+        .in("menu_item_price_id", onAnyEvent)
+    : { data: [] as { menu_item_price_id: number; computed_at: string }[] };
+  const normalsComputedAt = new Map<number, string>();
+  for (const row of (normalRows ?? []) as { menu_item_price_id: number; computed_at: string }[]) {
+    const current = normalsComputedAt.get(row.menu_item_price_id);
+    if (!current || row.computed_at > current) normalsComputedAt.set(row.menu_item_price_id, row.computed_at);
+  }
+  const readinessById: Record<number, EventReadiness> = {};
+  for (const event of events) {
+    const stamps = event.menuItemPriceIds
+      .map((id) => normalsComputedAt.get(id))
+      .filter((stamp): stamp is string => Boolean(stamp));
+    readinessById[event.id] = eventReadiness({
+      menuItemPriceIds: event.menuItemPriceIds,
+      tradeableIds,
+      linkedIds,
+      normalsReadIds: [...normalsComputedAt.keys()],
+      normalsComputedAt: stamps.length ? stamps.reduce((a, b) => (a > b ? a : b)) : null,
+      pricingMode: event.config.pricingMode,
+    });
+  }
+
+  const squareLinks: SquareLinksSummary = {
+    onBoard: onAnyEvent.length,
+    linked: onAnyEvent.filter((id) => linkedIds.has(id)).length,
+  };
 
   const editId = edit && /^\d+$/.test(edit) ? Number(edit) : null;
   const openId = open && /^\d+$/.test(open) ? Number(open) : null;
@@ -280,7 +307,8 @@ export default async function MarketSettingsPage({
       drinks={drinks}
       events={events}
       employees={(employees ?? []) as EmployeeOption[]}
-      mappingRows={mappingRows}
+      readinessById={readinessById}
+      squareLinks={squareLinks}
       tillRestore={tillRestore}
       squareSim={squareSim}
       initialEditId={editId}
