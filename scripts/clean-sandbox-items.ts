@@ -8,9 +8,11 @@
    second (third, fourth) copy in the catalog, nothing pointing at them.
 
    What counts as an orphan here: an ITEM whose variations are referenced by
-   NOTHING in menu_item_prices.square_variation_id, and whose name matches a
-   drink that has traded on a market. A mapped item can never be a candidate,
-   so the menu's real catalog links are safe even when the names collide.
+   NOTHING in menu_item_prices.square_variation_id, and which is either in the
+   "Market demo (temporary)" category the seed now tags its items with, or is
+   named after a drink that has traded on a market. A mapped item can never be
+   a candidate, so the menu's real catalog links are safe even when the names
+   collide. The name rule is what catches items seeded before the tag existed.
 
    Usage (SQUARE_ENVIRONMENT=sandbox, SQUARE_ACCESS_TOKEN=<sandbox token>):
      npx jiti scripts/clean-sandbox-items.ts            # dry run, lists what would go
@@ -34,6 +36,10 @@ const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")
 const DELETE = flags.has("--delete");
 const KEEP_NEWEST = flags.has("--keep-newest");
 const DELETE_CHUNK = 200;
+/* Mirrors DEMO_CATEGORY_NAME in src/lib/market/square-sandbox.ts - copied
+   rather than imported because that module resolves "@/" aliases jiti does
+   not. Keep the two in step. */
+const DEMO_CATEGORY_NAME = "Market demo (temporary)";
 
 type Candidate = {
   itemId: string;
@@ -87,10 +93,19 @@ async function marketDrinkNames(supabase: AdminClient) {
   return new Set((data ?? []).map((row) => (row.display_name as string).trim().toLowerCase()));
 }
 
+async function demoCategoryId(square: SquareClient, name: string): Promise<string | null> {
+  const page = await square.catalog.list({ types: "CATEGORY" });
+  for await (const obj of page) {
+    if (obj.type === "CATEGORY" && obj.id && obj.categoryData?.name === name) return obj.id;
+  }
+  return null;
+}
+
 async function findCandidates(
   square: SquareClient,
   mapped: Set<string>,
-  names: Set<string>
+  names: Set<string>,
+  demoCategory: string | null
 ): Promise<Candidate[]> {
   const candidates: Candidate[] = [];
   const page = await square.catalog.list({ types: "ITEM" });
@@ -100,7 +115,10 @@ async function findCandidates(
       .map((variation) => variation.id)
       .filter((id): id is string => Boolean(id));
     if (mapped.has(obj.id) || variationIds.some((id) => mapped.has(id))) continue;
-    if (!names.has(obj.itemData.name.trim().toLowerCase())) continue;
+    const tagged =
+      demoCategory != null &&
+      (obj.itemData.categories ?? []).some((category) => category.id === demoCategory);
+    if (!tagged && !names.has(obj.itemData.name.trim().toLowerCase())) continue;
     candidates.push({
       itemId: obj.id,
       name: obj.itemData.name,
@@ -151,7 +169,10 @@ async function main() {
     `Protecting ${menuMapped.size} mapped variations + ${liveIds.size} objects in use by the live market · matching against ${names.size} market drink names`
   );
 
-  const candidates = await findCandidates(squareClient, mapped, names);
+  const demoCategory = await demoCategoryId(squareClient, DEMO_CATEGORY_NAME);
+  if (demoCategory) console.log(`Found the "${DEMO_CATEGORY_NAME}" category - tagged items included`);
+
+  const candidates = await findCandidates(squareClient, mapped, names, demoCategory);
   if (candidates.length === 0) {
     console.log("Nothing to clean - no unmapped copies of a market drink in the sandbox catalog.");
     return;

@@ -15,6 +15,51 @@ export type { SeedMode };
 
 const CURRENCY: Square.Currency = "GBP";
 
+/* Temp items carry the drink's real name, so nothing in the catalog tells them
+   apart from the menu's own items. They go in a category of their own instead,
+   which makes cleanup exact rather than guessed at - and shows the demo items
+   as their own section in the Square dashboard. */
+export const DEMO_CATEGORY_NAME = "Market demo (temporary)";
+
+async function findDemoCategoryId(): Promise<string | null> {
+  const page = await squareClient.catalog.list({ types: "CATEGORY" });
+  for await (const obj of page) {
+    if (obj.type === "CATEGORY" && obj.id && obj.categoryData?.name === DEMO_CATEGORY_NAME) {
+      return obj.id;
+    }
+  }
+  return null;
+}
+
+/* Looked up before it is created, so repeated seeds share one category instead
+   of leaving a trail of them. A failure here is never fatal: the seed goes on
+   without the tag and the items are still findable by name. */
+export async function ensureDemoCategory(): Promise<string | null> {
+  try {
+    const existing = await findDemoCategoryId();
+    if (existing) return existing;
+    const res = await squareClient.catalog.batchUpsert({
+      idempotencyKey: randomUUID(),
+      batches: [
+        {
+          objects: [
+            {
+              type: "CATEGORY",
+              id: "#market-demo-category",
+              presentAtAllLocations: true,
+              categoryData: { name: DEMO_CATEGORY_NAME },
+            },
+          ],
+        },
+      ],
+    });
+    return res.objects?.[0]?.id ?? res.idMappings?.[0]?.objectId ?? null;
+  } catch (err) {
+    console.error("[market] demo category upsert failed:", err);
+    return null;
+  }
+}
+
 export type SquareSimEnvironment = {
   environment: "sandbox" | "production";
   isSandbox: boolean;
@@ -121,6 +166,8 @@ export async function seedSandboxCatalog(
 
   const deleted = await deleteSeededItems(itemIdsToDelete(rows, mode));
 
+  const demoCategoryId = creating.size > 0 ? await ensureDemoCategory() : null;
+
   const objects: Square.CatalogObject[] = rows
     .filter((row) => creating.has(row.id))
     .map((row) => {
@@ -131,6 +178,12 @@ export async function seedSandboxCatalog(
         presentAtAllLocations: true,
         itemData: {
           name: row.display_name,
+          ...(demoCategoryId
+            ? {
+                categories: [{ id: demoCategoryId }],
+                reportingCategory: { id: demoCategoryId },
+              }
+            : {}),
           variations: [
             {
               type: "ITEM_VARIATION",
@@ -230,7 +283,7 @@ export async function seedSandboxCatalog(
    rejects the whole batch if any id has already gone, so a failure here is
    logged and the seed continues - a leftover duplicate is better than a seed
    that cannot run. */
-async function deleteSeededItems(itemIds: string[]): Promise<number> {
+export async function deleteSeededItems(itemIds: string[]): Promise<number> {
   if (itemIds.length === 0) return 0;
   let deleted = 0;
   for (let i = 0; i < itemIds.length; i += 200) {

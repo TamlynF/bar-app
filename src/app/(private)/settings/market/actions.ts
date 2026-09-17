@@ -49,6 +49,7 @@ import {
 import {
   addInventory,
   assertSandbox,
+  deleteSeededItems,
   planRoundTenders,
   ringSaleThroughSquare,
   seedSandboxCatalog,
@@ -931,13 +932,43 @@ export async function endMarketAction() {
     return { error: "Could not reach Square to restore the till prices. Try again." };
   }
 
+  const swept = await sweepSeededItems(supabase, session.id);
+
   const { error } = await supabase
     .from("market_sessions")
     .update({ status: "ended", ended_at: new Date().toISOString() })
     .eq("id", session.id);
   if (error) return { error: error.message };
   revalidateMarket();
-  return { success: true, restored };
+  return { success: true, restored, swept };
+}
+
+/* Temporary sandbox items only ever exist for the market that seeded them, so
+   they go when it closes - otherwise every temp seed leaves another copy of
+   every drink in the catalog. Mapped items have no sandbox_item_id and are
+   never touched, and a failure here never blocks the close. */
+async function sweepSeededItems(supabase: ServerClient, sessionId: number): Promise<number> {
+  if (!squareSimEnvironment().isSandbox) return 0;
+  const { data } = await supabase
+    .from("market_instruments")
+    .select("sandbox_item_id")
+    .eq("session_id", sessionId)
+    .not("sandbox_item_id", "is", null);
+  const itemIds = (data ?? [])
+    .map((row) => row.sandbox_item_id as string | null)
+    .filter((id): id is string => Boolean(id));
+  if (itemIds.length === 0) return 0;
+  try {
+    const deleted = await deleteSeededItems(itemIds);
+    await supabase
+      .from("market_instruments")
+      .update({ sandbox_item_id: null })
+      .eq("session_id", sessionId);
+    return deleted;
+  } catch (err) {
+    console.error("[market] sandbox item sweep failed:", err);
+    return 0;
+  }
 }
 
 /* "Restore till prices" button. Works on the live market (engine misbehaved)
