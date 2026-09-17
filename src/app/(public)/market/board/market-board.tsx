@@ -1,29 +1,37 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { useMarketState } from "../use-market-state";
-import { FlipPrice, eventCopy, formatChangePct } from "../market-ui";
+import { FlipPrice, eventCopy, formatChangePct, formatDisplayPrice } from "../market-ui";
+import type { MarketStatePayload } from "@/lib/market/tick";
 
-export type BoardView = "categories" | "table" | "movers";
+export type BoardView = "categories" | "table" | "movers" | "leaderboard";
 
 type Trend = "up" | "down" | "flat";
 
 const VIEW_CYCLE: Record<BoardView, BoardView> = {
+  leaderboard: "categories",
   categories: "table",
   table: "movers",
-  movers: "categories",
+  movers: "leaderboard",
 };
 
 const VIEW_TOGGLE_LABEL: Record<BoardView, string> = {
+  leaderboard: "Category view",
   categories: "Table view",
   table: "Movers view",
-  movers: "Category view",
+  movers: "Leaderboard view",
 };
 
 const UNCATEGORISED = "The Bar";
+
+/* A falling price is good news for the punter, so drops are green and rises
+   are red - the opposite of a share-price board. */
+const DOWN_TEXT = "text-[#8CFF6A]";
+const UP_TEXT = "text-[#FF4D6D]";
 
 function trendOf(changePct: number): Trend {
   if (changePct > 0.5) return "up";
@@ -54,9 +62,17 @@ function byChangeDesc(a: MarketInstrumentPayload, b: MarketInstrumentPayload): n
   return a.name.localeCompare(b.name);
 }
 
-function OpenCell({ instrument }: { instrument: MarketInstrumentPayload }) {
+function OpenCell({
+  instrument,
+  size = "text-[1.35vw]",
+  align = "text-right",
+}: {
+  instrument: MarketInstrumentPayload;
+  size?: string;
+  align?: string;
+}) {
   return (
-    <span className="block font-board-mono text-[1.35vw] leading-none text-right text-[#a9ae8d] tabular-nums">
+    <span className={`block font-board-mono ${size} leading-none ${align} text-[#a9ae8d] tabular-nums`}>
       {formatGbp(instrument.openingPrice)}
     </span>
   );
@@ -65,22 +81,26 @@ function OpenCell({ instrument }: { instrument: MarketInstrumentPayload }) {
 function NameCell({
   instrument,
   chevron,
+  size = "text-[1.5vw]",
+  flip = false,
+  showServe = true,
 }: {
   instrument: MarketInstrumentPayload;
   chevron?: ReactNode;
+  size?: string;
+  flip?: boolean;
+  showServe?: boolean;
 }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[1.5vw] font-medium text-[#f3f0dc]">
+      <p className={`truncate ${size} font-medium text-[#f3f0dc]`}>
         {chevron}
-        {instrument.name}
+        {flip ? <FlipPrice value={instrument.name} /> : instrument.name}
       </p>
       {instrument.stock === "out" ? (
-        <p className="text-[0.8vw] tracking-[0.1em] text-[#FF4D6D] uppercase">sold out</p>
+        <p className={`text-[0.8vw] tracking-[0.1em] ${UP_TEXT} uppercase`}>sold out</p>
       ) : (
-        instrument.serve !== "each" && (
-          <p className="text-[0.8vw] text-[#a9ae8d]">{instrument.serve}</p>
-        )
+        showServe && instrument.serve !== "each" && <p className="text-[0.8vw] text-[#a9ae8d]">{instrument.serve}</p>
       )}
     </div>
   );
@@ -91,25 +111,29 @@ function PriceCell({
   trend,
   atFloor,
   crash,
+  size = "text-[3vw]",
+  align = "text-right",
 }: {
   instrument: MarketInstrumentPayload;
   trend: Trend;
   atFloor: boolean;
   crash: boolean;
+  size?: string;
+  align?: string;
 }) {
   const colour = crash
     ? "text-white"
     : atFloor
       ? "text-[#FDCC4B]"
       : trend === "up"
-        ? "text-[#8CFF6A]"
+        ? UP_TEXT
         : trend === "down"
-          ? "text-[#FF4D6D]"
+          ? DOWN_TEXT
           : "text-[#f3f0dc]";
   return (
     <FlipPrice
-      value={formatGbp(instrument.price)}
-      className={`block font-board-display text-[3vw] leading-none text-right ${colour}`}
+      value={formatDisplayPrice(instrument)}
+      className={`block font-board-display ${size} leading-none ${align} ${colour}`}
     />
   );
 }
@@ -126,21 +150,17 @@ function ChangePill({
   crash: boolean;
 }) {
   const base =
-    "justify-self-end rounded-[0.3vw] px-[0.5vw] py-[0.25vw] text-[1.05vw] font-semibold text-right";
+    "justify-self-end rounded-[0.3vw] px-[0.5vw] py-[0.25vw] text-[1.05vw] font-semibold whitespace-nowrap text-right";
   if (crash) return <span className={`${base} bg-[#ff2e4c] text-white`}>FLOOR</span>;
   if (atFloor) return <span className={`${base} bg-[#FDCC4B] text-[#1a2008]`}>FLOOR</span>;
   if (trend === "up") {
     return (
-      <span className={`${base} bg-[#8CFF6A]/10 text-[#8CFF6A]`}>
-        ▲ {formatChangePct(changePct)}
-      </span>
+      <FlipPrice value={`▲ ${formatChangePct(changePct)}`} className={`${base} bg-[#FF4D6D]/[.12] ${UP_TEXT}`} />
     );
   }
   if (trend === "down") {
     return (
-      <span className={`${base} bg-[#FF4D6D]/[.12] text-[#FF4D6D]`}>
-        ▼ {formatChangePct(changePct)}
-      </span>
+      <FlipPrice value={`▼ ${formatChangePct(changePct)}`} className={`${base} bg-[#8CFF6A]/10 ${DOWN_TEXT}`} />
     );
   }
   return <span className={`${base} bg-white/5 text-[#a9ae8d]`}>- 0.0%</span>;
@@ -312,7 +332,7 @@ function RankChevron({ delta }: { delta: number }) {
   return (
     <span
       aria-hidden="true"
-      className={`mr-[0.4vw] text-[0.9vw] ${delta < 0 ? "text-[#8CFF6A]" : "text-[#FF4D6D]"}`}
+      className={`mr-[0.4vw] text-[0.9vw] ${delta < 0 ? UP_TEXT : DOWN_TEXT}`}
     >
       {delta < 0 ? "▲" : "▼"}
     </span>
@@ -356,6 +376,254 @@ function MoversView({
   );
 }
 
+const BOARD_COLUMNS = "grid grid-cols-[2vw_1fr_6vw_8vw_7vw] items-center gap-[0.8vw]";
+const LEADERBOARD_MIN = 5;
+const LEADERBOARD_MAX = 15;
+
+type LeaderboardRow = { instrument: MarketInstrumentPayload; rank: number };
+type LeaderboardGroup = { category: string; rows: LeaderboardRow[] };
+
+/* The top N in ranking order, then regrouped under their category headers in
+   the order the categories first appear in that ranking - so "Draught" with
+   two pints, then "Bottled selection" with one, then "Classic cocktails" with
+   two, each drink keeping its overall rank number. */
+function groupLeaderboard(ranked: MarketInstrumentPayload[], limit: number): LeaderboardGroup[] {
+  const groups: LeaderboardGroup[] = [];
+  ranked.slice(0, limit).forEach((instrument, index) => {
+    const category = instrument.category ?? UNCATEGORISED;
+    let group = groups.find((g) => g.category === category);
+    if (!group) {
+      group = { category, rows: [] };
+      groups.push(group);
+    }
+    group.rows.push({ instrument, rank: index + 1 });
+  });
+  return groups;
+}
+
+type ColumnMetrics = { available: number; row: number; group: number };
+
+/* How many ranked drinks fit in the column once their category headers are
+   counted - a bigger or taller screen shows a longer list, a 16:9 TV about
+   five to eight. Never fewer than five. */
+function rowsThatFit(ranked: MarketInstrumentPayload[], metrics: ColumnMetrics | null): number {
+  if (!metrics || metrics.row <= 0) return LEADERBOARD_MIN;
+  for (let n = Math.min(LEADERBOARD_MAX, ranked.length); n > LEADERBOARD_MIN; n--) {
+    const groups = groupLeaderboard(ranked, n).length;
+    if (groups * metrics.group + n * metrics.row <= metrics.available) return n;
+  }
+  return LEADERBOARD_MIN;
+}
+
+function tallest(elements: NodeListOf<HTMLElement>): number {
+  let max = 0;
+  elements.forEach((el) => {
+    max = Math.max(max, el.offsetHeight);
+  });
+  return max;
+}
+
+/* Sized from the tallest row and header on screen, so a "sold out" line or
+   a wrapped name cannot push the last drink below the fold. */
+function measureColumn(column: HTMLElement | null): ColumnMetrics | null {
+  if (!column) return null;
+  const head = column.querySelector<HTMLElement>("[data-board-head]");
+  const rows = column.querySelectorAll<HTMLElement>("[data-board-row]");
+  const groups = column.querySelectorAll<HTMLElement>("[data-board-group]");
+  if (!head || rows.length === 0 || groups.length === 0) return null;
+  return {
+    available: column.clientHeight - head.offsetHeight,
+    row: tallest(rows),
+    group: tallest(groups),
+  };
+}
+
+function LeaderboardColumn({
+  title,
+  subtitle,
+  shown,
+  arrow,
+  accent,
+  accentBg,
+  accentBand,
+  ranked,
+  limit,
+  crash,
+  columnRef,
+}: {
+  title: string;
+  subtitle: string;
+  shown: number;
+  arrow: string;
+  accent: string;
+  accentBg: string;
+  accentBand: string;
+  ranked: MarketInstrumentPayload[];
+  limit: number;
+  crash: boolean;
+  columnRef: RefObject<HTMLDivElement | null>;
+}) {
+  const groups = groupLeaderboard(ranked, limit);
+  return (
+    <div ref={columnRef} className="min-h-0 min-w-0 overflow-hidden">
+      <div data-board-head>
+        <div
+          className={`flex items-center justify-between gap-[1vw] rounded-[0.4vw] border-l-[0.3vw] px-[1vw] py-[0.55vw] ${
+            crash ? "border-white bg-white/10" : accentBand
+          }`}
+        >
+          <p className={`shrink-0 font-board-display text-[2.1vw] leading-none tracking-[0.1em] ${crash ? "text-white" : accent}`}>
+            {arrow} {title}
+          </p>
+          <p className="flex min-w-0 items-center gap-[0.6vw] text-[0.95vw] leading-tight text-[#f3f0dc]">
+            <span
+              className={`shrink-0 rounded-[0.25vw] px-[0.5vw] py-[0.25vw] font-board-display text-[1.05vw] tracking-[0.12em] ${
+                crash ? "bg-white text-[#7a0f1e]" : `${accentBg} text-[#1a2008]`
+              }`}
+            >
+              TOP {shown}
+            </span>
+            <span className="truncate">{subtitle}</span>
+          </p>
+        </div>
+        <div className={`${BOARD_COLUMNS} mt-[0.9vw] border-b border-[#3a4520] pb-[0.35vw] text-[0.75vw] tracking-[0.18em] text-[#a9ae8d] uppercase`}>
+          <span />
+          <span>Drink</span>
+          <span className="text-center">Menu price</span>
+          <span className="text-center">Now</span>
+          <span className="text-right">Change</span>
+        </div>
+      </div>
+      {groups.map((group, groupIndex) => (
+        <div key={groupIndex}>
+          <p
+            data-board-group
+            className={`pt-[0.7vw] pb-[0.2vw] font-board-display text-[1.25vw] tracking-[0.14em] ${crash ? "text-white" : "text-[#FDCC4B]"}`}
+          >
+            <FlipPrice value={group.category} />
+          </p>
+          {group.rows.map(({ instrument, rank }) => {
+            const trend = trendOf(instrument.changePct);
+            const atFloor = isAtFloor(instrument);
+            return (
+              <div key={rank} data-board-row className={`${BOARD_COLUMNS} border-t border-[#3a4520] py-[0.4vw]`}>
+                <span
+                  className={`grid h-[1.9vw] w-[1.9vw] place-items-center rounded-[0.3vw] font-board-display text-[1.2vw] leading-none ${
+                    rank === 1 ? `${accentBg} text-[#1a2008]` : `bg-white/5 ${accent}`
+                  }`}
+                >
+                  {rank}
+                </span>
+                <NameCell instrument={instrument} size="text-[1.3vw]" flip showServe={false} />
+                <OpenCell instrument={instrument} size="text-[1.1vw]" align="text-center" />
+                <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} size="text-[2.3vw]" align="text-center" />
+                <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
+              </div>
+            );
+          })}
+        </div>
+      ))}
+      {groups.length === 0 && <p className="py-[1vw] text-[1vw] text-[#a9ae8d]">Nothing here yet</p>}
+    </div>
+  );
+}
+
+/* Deals on the left, the drinks going up on the right. Tier mode ranks by
+   tier then pace (slowest vs normal = best deal), and a drink only appears
+   once its price has actually crossed the menu price in its tier's direction
+   - a drink just promoted to the top tier that is still gliding up from a
+   discount waits off the board rather than showing as a "riser" at a lower
+   price. Demand mode has no tiers, so the same layout ranks by change since
+   open instead. Each column shows as many drinks as the screen has room for
+   (five at least), or the event's leaderboard row count when that is set
+   and fits. */
+function LeaderboardView({
+  instruments,
+  crash,
+  state,
+}: {
+  instruments: MarketInstrumentPayload[];
+  crash: boolean;
+  state: MarketStatePayload;
+}) {
+  const tiers = state.pricingMode === "tiers";
+  const dealsRef = useRef<HTMLDivElement | null>(null);
+  const risersRef = useRef<HTMLDivElement | null>(null);
+  const [limit, setLimit] = useState(LEADERBOARD_MIN);
+
+  const deals = tiers
+    ? instruments
+        .filter((i) => (i.tierPct ?? 0) < 0 && i.price < i.openingPrice)
+        .sort((a, b) => (a.tierPct ?? 0) - (b.tierPct ?? 0) || (a.pace ?? 0) - (b.pace ?? 0))
+    : [...instruments].sort(byChangeDesc).reverse();
+  const risers = tiers
+    ? instruments
+        .filter((i) => (i.tierPct ?? 0) > 0 && i.price > i.openingPrice)
+        .sort((a, b) => (b.tierPct ?? 0) - (a.tierPct ?? 0) || (b.pace ?? 0) - (a.pace ?? 0))
+    : [...instruments].sort(byChangeDesc);
+  const requested = state.leaderboardRows ?? 0;
+  useLayoutEffect(() => {
+    const fit = () => {
+      const fits = Math.max(
+        LEADERBOARD_MIN,
+        Math.min(rowsThatFit(deals, measureColumn(dealsRef.current)), rowsThatFit(risers, measureColumn(risersRef.current)))
+      );
+      const next = requested > 0 ? Math.min(requested, fits) : fits;
+      setLimit((current) => (current === next ? current : next));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    if (dealsRef.current) observer.observe(dealsRef.current);
+    if (risersRef.current) observer.observe(risersRef.current);
+    return () => observer.disconnect();
+  }, [deals, risers, requested]);
+
+  if (tiers && state.warmedUp === false) {
+    const sold = state.unitsSoldTotal ?? 0;
+    const need = state.warmupUnits ?? 0;
+    return (
+      <div className="flex flex-col items-center justify-center gap-[1vw] text-center">
+        <p className="font-board-display text-[7vw] leading-none text-[#FDCC4B]">MARKET WARMING UP</p>
+        <p className="font-board-mono text-[1.4vw] tracking-[0.2em] text-[#f3f0dc] uppercase">
+          {sold} of {need} drinks sold · prices move once the bar is busy
+        </p>
+      </div>
+    );
+  }
+
+  const shown = Math.min(limit, Math.max(deals.length, risers.length, 1));
+  return (
+    <div className="grid h-full min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[3vw] overflow-hidden">
+      <LeaderboardColumn
+        title="Best deals"
+        subtitle={tiers ? "slow tonight, price coming down" : "biggest drops since open"}
+        shown={shown}
+        arrow="▼"
+        accent={DOWN_TEXT}
+        accentBg="bg-[#8CFF6A]"
+        accentBand="border-[#8CFF6A] bg-[#8CFF6A]/10"
+        ranked={deals}
+        limit={limit}
+        crash={crash}
+        columnRef={dealsRef}
+      />
+      <LeaderboardColumn
+        title="Top shelf"
+        subtitle={tiers ? "selling fast, price going up" : "biggest rises since open"}
+        shown={shown}
+        arrow="▲"
+        accent={UP_TEXT}
+        accentBg="bg-[#FF4D6D]"
+        accentBand="border-[#FF4D6D] bg-[#FF4D6D]/10"
+        ranked={risers}
+        limit={limit}
+        crash={crash}
+        columnRef={risersRef}
+      />
+    </div>
+  );
+}
+
 function TickerSeparator() {
   return <span className="mx-[0.6vw] text-[#a9ae8d]">·</span>;
 }
@@ -394,11 +662,11 @@ function TickerSegments({
     segments.push(
       <span key="top">
         <span className="font-semibold text-[#FDCC4B]">TOP</span> {top.name}{" "}
-        <span className="text-[#8CFF6A]">▲</span>
+        <span className={UP_TEXT}>▲</span>
       </span>,
       <span key="bargain">
         <span className="font-semibold text-[#FDCC4B]">BARGAIN</span> {bargain.name}{" "}
-        <span className="text-[#FF4D6D]">▼</span> {formatGbp(bargain.price)}
+        <span className={DOWN_TEXT}>▼</span> {formatDisplayPrice(bargain)}
       </span>
     );
   }
@@ -455,6 +723,8 @@ export default function MarketBoard({
   const crash = state?.crashActive === true;
   const crashCountdown = useCountdown(state?.crashRemainingSec);
   const nextTickCountdown = useCountdown(state?.nextTickInSec);
+  const rerankCountdown = useCountdown(state?.nextRerankInSec ?? undefined);
+  const tiersLive = state?.pricingMode === "tiers";
 
   if (!state || state.status === "closed") {
     return (
@@ -479,7 +749,7 @@ export default function MarketBoard({
       }`}
     >
       <header
-        className={`grid grid-cols-[1fr_auto_auto_auto] items-end gap-[2vw] border-b-2 pb-[0.8vw] ${
+        className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-end gap-[2vw] border-b-2 pb-[0.8vw] ${
           crash ? "border-white" : "border-[#FDCC4B]"
         }`}
       >
@@ -505,6 +775,16 @@ export default function MarketBoard({
             {crash ? "CRASH" : "OPEN"}
           </p>
         </div>
+        {tiersLive && !crash && (
+          <div className="text-right">
+            <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">
+              {state.warmedUp === false ? "Warming up" : "Next re-rank"}
+            </p>
+            <p className="font-board-display text-[3.4vw] leading-none text-[#8CFF6A]">
+              {state.warmedUp === false ? `${state.unitsSoldTotal ?? 0}/${state.warmupUnits ?? 0}` : rerankCountdown}
+            </p>
+          </div>
+        )}
         <div className="text-right">
           <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">
             {crash ? "Recovery in" : "Next update"}
@@ -543,6 +823,8 @@ export default function MarketBoard({
         <CategoriesView instruments={instruments} crash={crash} />
       ) : view === "table" ? (
         <TableView instruments={instruments} crash={crash} />
+      ) : view === "leaderboard" ? (
+        <LeaderboardView instruments={instruments} crash={crash} state={state} />
       ) : (
         <MoversView instruments={instruments} crash={crash} />
       )}

@@ -9,11 +9,12 @@ import { useMarketState } from "@/hooks/use-market-live";
 import { formatGbp } from "@/lib/price";
 import { cn } from "@/lib/utils";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
+import { displayPrice } from "@/app/(public)/market/market-ui";
 
 const MAX_MOVERS = 4;
 
 function shown(i: MarketInstrumentPayload) {
-  return i.tillPrice ?? i.price;
+  return displayPrice(i) ?? i.price;
 }
 function headlineDeal(instruments: MarketInstrumentPayload[]) {
   const pool = instruments.filter((i) => i.stock !== "out");

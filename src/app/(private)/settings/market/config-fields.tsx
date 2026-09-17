@@ -55,6 +55,67 @@ export const CONFIG_FIELDS: ConfigField[] = [
     hint: "Units left before 'running low'",
     help: "The Square inventory count at or below which a drink is marked running low and a low-stock alert goes out. Zero units marks it sold out and freezes its price until restocked. Only applies to drinks linked to a Square variation; the Override column bypasses it.",
   },
+  {
+    key: "leaderboardRows",
+    label: "Leaderboard drinks per column",
+    step: "1",
+    hint: "0 = as many as fit the screen",
+    help: "How many drinks the big-screen leaderboard view lists under Best deals and Top shelf. Leave at 0 and the board works out how many fit the screen it is on (a 16:9 TV shows about six, a taller projector more). A number caps the list at that many; it is still trimmed if the screen cannot fit them all, so nothing is cut off.",
+  },
+];
+
+/* Tier leaderboard dials (docs/market-tier-engine-plan.md, workbook tab 10). */
+export const TIER_FIELDS: ConfigField[] = [
+  {
+    key: "rerankEveryTicks",
+    label: "Re-rank every (ticks)",
+    step: "1",
+    hint: "5 = league table rebuilt every 5 ticks",
+    help: "How often the drinks are re-sorted into tiers. Between re-ranks every drink keeps its tier and its price just glides towards the tier target, so one stray sale cannot re-price two drinks every minute.",
+  },
+  {
+    key: "glidePct",
+    label: "Glide per tick",
+    step: "0.05",
+    hint: "0.35 = close 35% of the gap each tick",
+    help: "How fast a price walks towards where its tier says it should be. 0.35 gets about 88% of the way there in five ticks. 1 = jump straight there.",
+  },
+  {
+    key: "warmupUnits",
+    label: "Warm-up (units sold)",
+    step: "5",
+    hint: "Tiers off until this many drinks have sold",
+    help: "Early in the night most drinks are tied on zero, so any ranking is a coin toss. Until the bar has sold this many units in total every price stays at base and the board shows 'market warming up'.",
+  },
+  {
+    key: "paceFloorUnits",
+    label: "Pace floor (units / night)",
+    step: "1",
+    hint: "Treat every drink as selling at least this many",
+    help: "Ranking compares each drink's recent sales to what it normally sells. A drink that normally sells one a night would read as 15x its normal from a single sale; this floor keeps rare drinks honest.",
+  },
+];
+
+export const TIER_BANDS = ["1–5", "6–10", "11–15"] as const;
+
+export type TierPctField = { key: string; label: string; help: string };
+
+export const TIER_PCT_FIELDS: { down: TierPctField; up: TierPctField } = {
+  down: {
+    key: "tierDown",
+    label: "Slowest sellers get off (%)",
+    help: "Discounts for the five slowest-selling drinks, the next five and the five after that, relative to each drink's normal rate.",
+  },
+  up: {
+    key: "tierUp",
+    label: "Fastest sellers go up (%)",
+    help: "Mark-ups for the five fastest-selling drinks, the next five and the five after that. Try gentler mark-ups than discounts if pint drinkers grumble.",
+  },
+};
+
+export const PRICING_MODES: { value: MarketConfig["pricingMode"]; label: string; hint: string }[] = [
+  { value: "demand", label: "Demand engine", hint: "Each drink moves on its own sales; volatility adds a wobble" },
+  { value: "tiers", label: "Tier leaderboard", hint: "Drinks ranked on pace; top and bottom tiers set target prices" },
 ];
 
 export const PUSH_ALERTS_FIELD = {
@@ -64,6 +125,19 @@ export const PUSH_ALERTS_FIELD = {
 };
 
 export function configSummary(config: MarketConfig): string {
+  if (config.pricingMode === "tiers") {
+    const pct = (v: number) => `${Math.round(v * 100)}`;
+    return [
+      "tier leaderboard",
+      `${config.tickIntervalSec}s ticks`,
+      `re-rank every ${config.rerankEveryTicks}`,
+      `glide ${Math.round(config.glidePct * 100)}%`,
+      `warm-up ${config.warmupUnits}`,
+      `+${config.tierPcts.up.map(pct).join("/")} · −${config.tierPcts.down.map(pct).join("/")}`,
+      config.leaderboardRows > 0 ? `board top ${config.leaderboardRows}` : "board fills screen",
+      config.pushAlertsEnabled ? "phone alerts on" : "phone alerts off",
+    ].join(" · ");
+  }
   return [
     `${config.tickIntervalSec}s ticks`,
     `volatility ${config.noiseSigma}`,

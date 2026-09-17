@@ -1,0 +1,6219 @@
+{
+ "source": "docs/Drinks_Market_Explained.xlsx tab 10 Recommended Simulation (17 Sep 2026)",
+ "config": {
+  "pricingMode": "tiers",
+  "rerankEveryTicks": 5,
+  "glidePct": 0.35,
+  "warmupUnits": 30,
+  "tierPcts": {
+   "down": [
+    0.3,
+    0.2,
+    0.1
+   ],
+   "up": [
+    0.3,
+    0.2,
+    0.1
+   ],
+   "bands": [
+    5,
+    10,
+    15
+   ]
+  },
+  "paceFloorUnits": 8.0,
+  "sessionTicksHint": 15,
+  "decayK": 0.6,
+  "floorPct": 0.7,
+  "ceilPct": 1.5,
+  "roundStep": 0.05,
+  "crashFactor": 0.75,
+  "moveNotifyPct": 0.05,
+  "lowStockThreshold": 5
+ },
+ "session": [
+  {
+   "tick": 1,
+   "unitsSoldTotal": 9,
+   "warmedUp": false,
+   "reranked": false
+  },
+  {
+   "tick": 2,
+   "unitsSoldTotal": 16,
+   "warmedUp": false,
+   "reranked": false
+  },
+  {
+   "tick": 3,
+   "unitsSoldTotal": 28,
+   "warmedUp": false,
+   "reranked": false
+  },
+  {
+   "tick": 4,
+   "unitsSoldTotal": 60,
+   "warmedUp": true,
+   "reranked": true
+  },
+  {
+   "tick": 5,
+   "unitsSoldTotal": 86,
+   "warmedUp": true,
+   "reranked": true
+  },
+  {
+   "tick": 6,
+   "unitsSoldTotal": 112,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 7,
+   "unitsSoldTotal": 148,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 8,
+   "unitsSoldTotal": 189,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 9,
+   "unitsSoldTotal": 226,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 10,
+   "unitsSoldTotal": 256,
+   "warmedUp": true,
+   "reranked": true
+  },
+  {
+   "tick": 11,
+   "unitsSoldTotal": 298,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 12,
+   "unitsSoldTotal": 321,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 13,
+   "unitsSoldTotal": 352,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 14,
+   "unitsSoldTotal": 386,
+   "warmedUp": true,
+   "reranked": false
+  },
+  {
+   "tick": 15,
+   "unitsSoldTotal": 416,
+   "warmedUp": true,
+   "reranked": true
+  }
+ ],
+ "drinks": [
+  {
+   "id": 1,
+   "name": "Peroni 0%",
+   "basePrice": 3.5,
+   "normalUnitsPerNight": 4.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 3.15
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 2.9
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 16,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 2.75
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 26,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 2.65
+    },
+    {
+     "heat": 1.36,
+     "pace": 2.55,
+     "rank": 17,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 2.6
+    },
+    {
+     "heat": 0.816,
+     "pace": 1.53,
+     "rank": 27,
+     "tierPct": -0.3,
+     "target": 2.45,
+     "price": 2.55
+    },
+    {
+     "heat": 0.49,
+     "pace": 0.919,
+     "rank": 31,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 2.75
+    },
+    {
+     "heat": 0.294,
+     "pace": 0.551,
+     "rank": 33,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 2.9
+    },
+    {
+     "heat": 0.176,
+     "pace": 0.33,
+     "rank": 33,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.0
+    },
+    {
+     "heat": 0.106,
+     "pace": 0.199,
+     "rank": 36,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.05
+    },
+    {
+     "heat": 1.064,
+     "pace": 1.995,
+     "rank": 26,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.1
+    },
+    {
+     "heat": 0.638,
+     "pace": 1.196,
+     "rank": 31,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.1
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Archers (single)",
+   "basePrice": 3.5,
+   "normalUnitsPerNight": 3.0,
+   "units": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 4,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 37,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.047,
+     "pace": 1.963,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.628,
+     "pace": 1.178,
+     "rank": 29,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.4
+    },
+    {
+     "heat": 0.377,
+     "pace": 0.707,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.3
+    },
+    {
+     "heat": 0.226,
+     "pace": 0.424,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.25
+    },
+    {
+     "heat": 0.136,
+     "pace": 0.255,
+     "rank": 35,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.2
+    },
+    {
+     "heat": 1.082,
+     "pace": 2.029,
+     "rank": 25,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.2
+    },
+    {
+     "heat": 0.649,
+     "pace": 1.217,
+     "rank": 30,
+     "tierPct": -0.1,
+     "target": 3.15,
+     "price": 3.2
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "name": "Passoa (single)",
+   "basePrice": 3.5,
+   "normalUnitsPerNight": 5.0,
+   "units": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 5,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 35,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 2.078,
+     "pace": 3.896,
+     "rank": 9,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.247,
+     "pace": 2.338,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.748,
+     "pace": 1.403,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.449,
+     "pace": 2.717,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.869,
+     "pace": 1.629,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.521,
+     "pace": 0.977,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 0.313,
+     "pace": 0.587,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 3.5,
+     "price": 3.5
+    },
+    {
+     "heat": 1.188,
+     "pace": 2.228,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 3.85,
+     "price": 3.6
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "name": "Amaretto (single)",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 4.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 36,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 3.2,
+     "price": 3.7
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.4
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 15,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.2
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 25,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.05
+    },
+    {
+     "heat": 1.36,
+     "pace": 2.55,
+     "rank": 16,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.95
+    },
+    {
+     "heat": 0.816,
+     "pace": 1.53,
+     "rank": 26,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.9
+    },
+    {
+     "heat": 0.49,
+     "pace": 0.919,
+     "rank": 30,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.15
+    },
+    {
+     "heat": 1.294,
+     "pace": 2.426,
+     "rank": 18,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.3
+    },
+    {
+     "heat": 1.776,
+     "pace": 3.33,
+     "rank": 8,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.4
+    },
+    {
+     "heat": 1.066,
+     "pace": 1.999,
+     "rank": 20,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.45
+    },
+    {
+     "heat": 0.64,
+     "pace": 1.2,
+     "rank": 29,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.5
+    },
+    {
+     "heat": 0.384,
+     "pace": 0.72,
+     "rank": 33,
+     "tierPct": -0.2,
+     "target": 3.2,
+     "price": 3.4
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "name": "Baby Guinness",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 22.0,
+   "units": [
+    1,
+    1,
+    0,
+    3,
+    1,
+    1,
+    0,
+    1,
+    5,
+    2,
+    1,
+    3,
+    1,
+    1,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 0.682,
+     "rank": 6,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 1.6,
+     "pace": 1.091,
+     "rank": 6,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.96,
+     "pace": 0.655,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 3.576,
+     "pace": 2.438,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.4
+    },
+    {
+     "heat": 3.146,
+     "pace": 2.145,
+     "rank": 12,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.4
+    },
+    {
+     "heat": 2.888,
+     "pace": 1.969,
+     "rank": 12,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.4
+    },
+    {
+     "heat": 1.733,
+     "pace": 1.182,
+     "rank": 23,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.4
+    },
+    {
+     "heat": 2.04,
+     "pace": 1.391,
+     "rank": 26,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.4
+    },
+    {
+     "heat": 6.224,
+     "pace": 4.244,
+     "rank": 5,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.4
+    },
+    {
+     "heat": 5.734,
+     "pace": 3.91,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.7
+    },
+    {
+     "heat": 4.44,
+     "pace": 3.027,
+     "rank": 14,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.9
+    },
+    {
+     "heat": 5.664,
+     "pace": 3.862,
+     "rank": 7,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 5.0
+    },
+    {
+     "heat": 4.398,
+     "pace": 2.999,
+     "rank": 10,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 5.05
+    },
+    {
+     "heat": 3.639,
+     "pace": 2.481,
+     "rank": 18,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 5.1
+    },
+    {
+     "heat": 3.183,
+     "pace": 2.17,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.7
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "name": "Beefeater Dry (single)",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 9.0,
+   "units": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.667,
+     "rank": 4,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.0,
+     "rank": 10,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.6,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.36,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.85
+    },
+    {
+     "heat": 1.13,
+     "pace": 1.883,
+     "rank": 13,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.75
+    },
+    {
+     "heat": 0.678,
+     "pace": 1.13,
+     "rank": 24,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.7
+    },
+    {
+     "heat": 0.407,
+     "pace": 0.678,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 1.244,
+     "pace": 2.073,
+     "rank": 21,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 0.746,
+     "pace": 1.243,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 1.448,
+     "pace": 2.413,
+     "rank": 20,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 0.869,
+     "pace": 1.448,
+     "rank": 25,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 0.521,
+     "pace": 0.868,
+     "rank": 30,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 0.313,
+     "pace": 0.522,
+     "rank": 35,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 1.188,
+     "pace": 1.98,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.75
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "name": "Fireball",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 16.0,
+   "units": [
+    0,
+    0,
+    2,
+    0,
+    2,
+    1,
+    4,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 2.0,
+     "pace": 1.875,
+     "rank": 3,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 1.2,
+     "pace": 1.125,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 2.72,
+     "pace": 2.55,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.3
+    },
+    {
+     "heat": 2.632,
+     "pace": 2.468,
+     "rank": 8,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.45
+    },
+    {
+     "heat": 5.579,
+     "pace": 5.23,
+     "rank": 2,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.55
+    },
+    {
+     "heat": 4.347,
+     "pace": 4.075,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.65
+    },
+    {
+     "heat": 2.608,
+     "pace": 2.445,
+     "rank": 17,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.7
+    },
+    {
+     "heat": 2.565,
+     "pace": 2.405,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.45
+    },
+    {
+     "heat": 2.539,
+     "pace": 2.38,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.3
+    },
+    {
+     "heat": 2.523,
+     "pace": 2.365,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.2
+    },
+    {
+     "heat": 2.514,
+     "pace": 2.357,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.15
+    },
+    {
+     "heat": 2.508,
+     "pace": 2.351,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.1
+    },
+    {
+     "heat": 2.505,
+     "pace": 2.348,
+     "rank": 14,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.2
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "name": "Jagermeister",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 12.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    4,
+    0,
+    1,
+    1,
+    0,
+    3,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 37,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.6
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.25,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.75
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.75,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.85
+    },
+    {
+     "heat": 1.36,
+     "pace": 1.7,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.9
+    },
+    {
+     "heat": 0.816,
+     "pace": 1.02,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.95
+    },
+    {
+     "heat": 4.49,
+     "pace": 5.613,
+     "rank": 2,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 3.95
+    },
+    {
+     "heat": 2.694,
+     "pace": 3.368,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.25
+    },
+    {
+     "heat": 2.616,
+     "pace": 3.27,
+     "rank": 11,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.45
+    },
+    {
+     "heat": 2.57,
+     "pace": 3.213,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.55
+    },
+    {
+     "heat": 1.542,
+     "pace": 1.928,
+     "rank": 21,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.65
+    },
+    {
+     "heat": 3.925,
+     "pace": 4.906,
+     "rank": 2,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.7
+    },
+    {
+     "heat": 3.355,
+     "pace": 4.194,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.75
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Jack Daniel's (single)",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 7.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 35,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 35,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 14,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.15
+    },
+    {
+     "heat": 1.6,
+     "pace": 3.0,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.4
+    },
+    {
+     "heat": 1.96,
+     "pace": 3.675,
+     "rank": 2,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.55
+    },
+    {
+     "heat": 2.176,
+     "pace": 4.08,
+     "rank": 4,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.65
+    },
+    {
+     "heat": 1.306,
+     "pace": 2.449,
+     "rank": 20,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.7
+    },
+    {
+     "heat": 1.784,
+     "pace": 3.345,
+     "rank": 14,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.75
+    },
+    {
+     "heat": 1.07,
+     "pace": 2.006,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.5
+    },
+    {
+     "heat": 1.642,
+     "pace": 3.079,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.35
+    },
+    {
+     "heat": 0.985,
+     "pace": 1.847,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.25
+    },
+    {
+     "heat": 0.591,
+     "pace": 1.108,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.15
+    },
+    {
+     "heat": 0.355,
+     "pace": 0.666,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.1
+    },
+    {
+     "heat": 0.213,
+     "pace": 0.399,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 3.2,
+     "price": 3.8
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "name": "Jose Cuervo Blanco (single)",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 10.0,
+   "units": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    2,
+    1,
+    1,
+    0,
+    0,
+    2,
+    0,
+    2
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 36,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 36,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.5,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.9,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.54,
+     "rank": 29,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.85
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.324,
+     "rank": 35,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.75
+    },
+    {
+     "heat": 1.13,
+     "pace": 1.695,
+     "rank": 18,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.7
+    },
+    {
+     "heat": 2.678,
+     "pace": 4.017,
+     "rank": 7,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 2.607,
+     "pace": 3.911,
+     "rank": 8,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.65
+    },
+    {
+     "heat": 2.564,
+     "pace": 3.846,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.05
+    },
+    {
+     "heat": 1.538,
+     "pace": 2.307,
+     "rank": 22,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.3
+    },
+    {
+     "heat": 0.923,
+     "pace": 1.385,
+     "rank": 26,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.45
+    },
+    {
+     "heat": 2.554,
+     "pace": 3.831,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.55
+    },
+    {
+     "heat": 1.532,
+     "pace": 2.298,
+     "rank": 23,
+     "tierPct": 0.2,
+     "target": 4.8,
+     "price": 4.65
+    },
+    {
+     "heat": 2.919,
+     "pace": 4.379,
+     "rank": 3,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.85
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "name": "Smirnoff Ice",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 3.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    2
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 37,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 37,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.6
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.3
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.15
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.05
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.9
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 23,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 30,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 2.36,
+     "pace": 4.425,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 3.65
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "name": "TJ Vodka (single)",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 15.0,
+   "units": [
+    1,
+    0,
+    0,
+    0,
+    3,
+    0,
+    4,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 1.0,
+     "rank": 4,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.6,
+     "rank": 9,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.36,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.216,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 3.6,
+     "price": 3.85
+    },
+    {
+     "heat": 3.13,
+     "pace": 3.13,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.3
+    },
+    {
+     "heat": 1.878,
+     "pace": 1.878,
+     "rank": 14,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.6
+    },
+    {
+     "heat": 5.127,
+     "pace": 5.127,
+     "rank": 3,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.8
+    },
+    {
+     "heat": 4.076,
+     "pace": 4.076,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.95
+    },
+    {
+     "heat": 3.446,
+     "pace": 3.446,
+     "rank": 11,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 5.05
+    },
+    {
+     "heat": 3.068,
+     "pace": 3.068,
+     "rank": 12,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.8
+    },
+    {
+     "heat": 2.841,
+     "pace": 2.841,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.65
+    },
+    {
+     "heat": 2.705,
+     "pace": 2.705,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.55
+    },
+    {
+     "heat": 2.623,
+     "pace": 2.623,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.5
+    },
+    {
+     "heat": 3.574,
+     "pace": 3.574,
+     "rank": 7,
+     "tierPct": 0.1,
+     "target": 4.4,
+     "price": 4.45
+    },
+    {
+     "heat": 2.144,
+     "pace": 2.144,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.3
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "name": "Peroni 330ml",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 11.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    4,
+    1,
+    1,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.6
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.3
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.364,
+     "rank": 22,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.15
+    },
+    {
+     "heat": 4.6,
+     "pace": 6.273,
+     "rank": 1,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.05
+    },
+    {
+     "heat": 3.76,
+     "pace": 5.127,
+     "rank": 3,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.95
+    },
+    {
+     "heat": 3.256,
+     "pace": 4.44,
+     "rank": 4,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.9
+    },
+    {
+     "heat": 2.954,
+     "pace": 4.028,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 3.7
+    },
+    {
+     "heat": 1.772,
+     "pace": 2.416,
+     "rank": 19,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.2
+    },
+    {
+     "heat": 1.063,
+     "pace": 1.45,
+     "rank": 24,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.55
+    },
+    {
+     "heat": 1.638,
+     "pace": 2.234,
+     "rank": 19,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.8
+    },
+    {
+     "heat": 0.983,
+     "pace": 1.34,
+     "rank": 28,
+     "tierPct": 0.3,
+     "target": 5.2,
+     "price": 4.95
+    },
+    {
+     "heat": 1.59,
+     "pace": 2.168,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.6
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "name": "Guinness 0%",
+   "basePrice": 4.0,
+   "normalUnitsPerNight": 2.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": 0.0,
+     "target": 4.0,
+     "price": 4.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.6
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.3
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.15
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 3.05
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.9
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 42,
+     "tierPct": -0.3,
+     "target": 2.8,
+     "price": 2.85
+    }
+   ]
+  },
+  {
+   "id": 15,
+   "name": "Desperados 330ml",
+   "basePrice": 4.5,
+   "normalUnitsPerNight": 8.0,
+   "units": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    2,
+    1,
+    0,
+    3,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 1,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 5,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 12,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 33,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 4.2
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 4.0
+    },
+    {
+     "heat": 0.047,
+     "pace": 0.088,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 3.85
+    },
+    {
+     "heat": 0.028,
+     "pace": 0.053,
+     "rank": 39,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 3.75
+    },
+    {
+     "heat": 1.017,
+     "pace": 1.907,
+     "rank": 23,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 3.7
+    },
+    {
+     "heat": 2.61,
+     "pace": 4.894,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 4.45
+    },
+    {
+     "heat": 2.566,
+     "pace": 4.811,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 4.95
+    },
+    {
+     "heat": 1.54,
+     "pace": 2.888,
+     "rank": 12,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.25
+    },
+    {
+     "heat": 3.924,
+     "pace": 7.358,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.45
+    },
+    {
+     "heat": 3.354,
+     "pace": 6.289,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.6
+    },
+    {
+     "heat": 2.012,
+     "pace": 3.773,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.55
+    }
+   ]
+  },
+  {
+   "id": 16,
+   "name": "Jagerbomb",
+   "basePrice": 4.5,
+   "normalUnitsPerNight": 20.0,
+   "units": [
+    0,
+    0,
+    1,
+    2,
+    1,
+    0,
+    2,
+    2,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 1.0,
+     "pace": 0.75,
+     "rank": 11,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 2.6,
+     "pace": 1.95,
+     "rank": 8,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 4.8
+    },
+    {
+     "heat": 2.56,
+     "pace": 1.92,
+     "rank": 14,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.85
+    },
+    {
+     "heat": 1.536,
+     "pace": 1.152,
+     "rank": 27,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.9
+    },
+    {
+     "heat": 2.922,
+     "pace": 2.192,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.9
+    },
+    {
+     "heat": 3.753,
+     "pace": 2.815,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.9
+    },
+    {
+     "heat": 2.252,
+     "pace": 1.689,
+     "rank": 24,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.9
+    },
+    {
+     "heat": 2.351,
+     "pace": 1.763,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.75
+    },
+    {
+     "heat": 2.411,
+     "pace": 1.808,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.65
+    },
+    {
+     "heat": 2.447,
+     "pace": 1.835,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.6
+    },
+    {
+     "heat": 2.468,
+     "pace": 1.851,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 2.481,
+     "pace": 1.861,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 1.489,
+     "pace": 1.117,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 4.05,
+     "price": 4.4
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "name": "Jamesons (single)",
+   "basePrice": 4.5,
+   "normalUnitsPerNight": 6.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    1,
+    2,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 4.95,
+     "price": 4.65
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.6
+    },
+    {
+     "heat": 1.36,
+     "pace": 2.55,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 0.816,
+     "pace": 1.53,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 0.49,
+     "pace": 0.919,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 1.294,
+     "pace": 2.426,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.55
+    },
+    {
+     "heat": 1.776,
+     "pace": 3.33,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 4.85
+    },
+    {
+     "heat": 1.066,
+     "pace": 1.999,
+     "rank": 26,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.05
+    },
+    {
+     "heat": 1.64,
+     "pace": 3.075,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.15
+    },
+    {
+     "heat": 2.984,
+     "pace": 5.595,
+     "rank": 3,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.25
+    },
+    {
+     "heat": 1.79,
+     "pace": 3.356,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.3
+    },
+    {
+     "heat": 2.074,
+     "pace": 3.889,
+     "rank": 7,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.35
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "name": "Whitley Neill Rhubarb & Ginger (single)",
+   "basePrice": 4.5,
+   "normalUnitsPerNight": 9.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    3,
+    0,
+    1,
+    1,
+    1,
+    2,
+    1,
+    0,
+    1,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 35,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 3.6,
+     "price": 4.2
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.667,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.3
+    },
+    {
+     "heat": 3.6,
+     "pace": 6.0,
+     "rank": 1,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.35
+    },
+    {
+     "heat": 2.16,
+     "pace": 3.6,
+     "rank": 5,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.4
+    },
+    {
+     "heat": 2.296,
+     "pace": 3.827,
+     "rank": 10,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.45
+    },
+    {
+     "heat": 2.378,
+     "pace": 3.963,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 4.5,
+     "price": 4.45
+    },
+    {
+     "heat": 2.427,
+     "pace": 4.045,
+     "rank": 3,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 4.95
+    },
+    {
+     "heat": 3.456,
+     "pace": 5.76,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.25
+    },
+    {
+     "heat": 3.074,
+     "pace": 5.123,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.45
+    },
+    {
+     "heat": 1.844,
+     "pace": 3.073,
+     "rank": 9,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.6
+    },
+    {
+     "heat": 2.106,
+     "pace": 3.51,
+     "rank": 8,
+     "tierPct": 0.3,
+     "target": 5.85,
+     "price": 5.7
+    },
+    {
+     "heat": 2.264,
+     "pace": 3.773,
+     "rank": 8,
+     "tierPct": 0.2,
+     "target": 5.4,
+     "price": 5.6
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "name": "Damm Lemon (pint)",
+   "basePrice": 4.75,
+   "normalUnitsPerNight": 14.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    2,
+    0,
+    0,
+    2,
+    2,
+    3,
+    1,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 4.75,
+     "price": 4.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 4.75,
+     "price": 4.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 4.75,
+     "price": 4.75
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.071,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 4.75,
+     "price": 4.75
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.643,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 4.28,
+     "price": 4.6
+    },
+    {
+     "heat": 1.36,
+     "pace": 1.457,
+     "rank": 21,
+     "tierPct": -0.1,
+     "target": 4.28,
+     "price": 4.5
+    },
+    {
+     "heat": 2.816,
+     "pace": 3.017,
+     "rank": 10,
+     "tierPct": -0.1,
+     "target": 4.28,
+     "price": 4.4
+    },
+    {
+     "heat": 1.69,
+     "pace": 1.811,
+     "rank": 24,
+     "tierPct": -0.1,
+     "target": 4.28,
+     "price": 4.35
+    },
+    {
+     "heat": 1.014,
+     "pace": 1.086,
+     "rank": 31,
+     "tierPct": -0.1,
+     "target": 4.28,
+     "price": 4.3
+    },
+    {
+     "heat": 2.608,
+     "pace": 2.794,
+     "rank": 14,
+     "tierPct": 0.1,
+     "target": 5.22,
+     "price": 4.6
+    },
+    {
+     "heat": 3.565,
+     "pace": 3.82,
+     "rank": 7,
+     "tierPct": 0.1,
+     "target": 5.22,
+     "price": 4.8
+    },
+    {
+     "heat": 5.139,
+     "pace": 5.506,
+     "rank": 1,
+     "tierPct": 0.1,
+     "target": 5.22,
+     "price": 4.95
+    },
+    {
+     "heat": 4.083,
+     "pace": 4.375,
+     "rank": 5,
+     "tierPct": 0.1,
+     "target": 5.22,
+     "price": 5.05
+    },
+    {
+     "heat": 3.45,
+     "pace": 3.696,
+     "rank": 5,
+     "tierPct": 0.1,
+     "target": 5.22,
+     "price": 5.1
+    },
+    {
+     "heat": 2.07,
+     "pace": 2.218,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.75,
+     "price": 5.0
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "name": "DF Session Lager (pint)",
+   "basePrice": 4.95,
+   "normalUnitsPerNight": 38.0,
+   "units": [
+    1,
+    1,
+    4,
+    1,
+    1,
+    1,
+    4,
+    3,
+    2,
+    3,
+    1,
+    0,
+    0,
+    5,
+    3
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 0.395,
+     "rank": 8,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 1.6,
+     "pace": 0.632,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 4.96,
+     "pace": 1.958,
+     "rank": 1,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 3.976,
+     "pace": 1.569,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 3.386,
+     "pace": 1.337,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 3.032,
+     "pace": 1.197,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 5.819,
+     "pace": 2.297,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 6.491,
+     "pace": 2.562,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 5.895,
+     "pace": 2.327,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 6.537,
+     "pace": 2.58,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.1
+    },
+    {
+     "heat": 4.922,
+     "pace": 1.943,
+     "rank": 27,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.2
+    },
+    {
+     "heat": 2.953,
+     "pace": 1.166,
+     "rank": 29,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.3
+    },
+    {
+     "heat": 1.772,
+     "pace": 0.699,
+     "rank": 33,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.35
+    },
+    {
+     "heat": 6.063,
+     "pace": 2.393,
+     "rank": 19,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.4
+    },
+    {
+     "heat": 6.638,
+     "pace": 2.62,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.4
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "name": "DF Session IPA (pint)",
+   "basePrice": 4.95,
+   "normalUnitsPerNight": 21.0,
+   "units": [
+    0,
+    0,
+    0,
+    3,
+    2,
+    2,
+    2,
+    1,
+    6,
+    3,
+    5,
+    0,
+    3,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 3.0,
+     "pace": 2.143,
+     "rank": 7,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.3
+    },
+    {
+     "heat": 3.8,
+     "pace": 2.714,
+     "rank": 8,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.5
+    },
+    {
+     "heat": 4.28,
+     "pace": 3.057,
+     "rank": 4,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.65
+    },
+    {
+     "heat": 4.568,
+     "pace": 3.263,
+     "rank": 7,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.75
+    },
+    {
+     "heat": 3.741,
+     "pace": 2.672,
+     "rank": 13,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.8
+    },
+    {
+     "heat": 8.245,
+     "pace": 5.889,
+     "rank": 1,
+     "tierPct": 0.2,
+     "target": 5.94,
+     "price": 5.85
+    },
+    {
+     "heat": 7.947,
+     "pace": 5.676,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 6.05
+    },
+    {
+     "heat": 9.768,
+     "pace": 6.977,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 6.2
+    },
+    {
+     "heat": 5.861,
+     "pace": 4.186,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 6.3
+    },
+    {
+     "heat": 6.517,
+     "pace": 4.655,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 6.35
+    },
+    {
+     "heat": 3.91,
+     "pace": 2.793,
+     "rank": 15,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 6.4
+    },
+    {
+     "heat": 3.346,
+     "pace": 2.39,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 6.05
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "name": "Guinness (pint)",
+   "basePrice": 4.95,
+   "normalUnitsPerNight": 46.0,
+   "units": [
+    1,
+    0,
+    1,
+    1,
+    2,
+    3,
+    2,
+    9,
+    2,
+    1,
+    8,
+    2,
+    2,
+    2,
+    2
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 0.326,
+     "rank": 9,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.196,
+     "rank": 12,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 1.36,
+     "pace": 0.443,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 1.816,
+     "pace": 0.592,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 3.09,
+     "pace": 1.008,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 4.854,
+     "pace": 1.583,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 4.912,
+     "pace": 1.602,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 11.947,
+     "pace": 3.896,
+     "rank": 8,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 9.168,
+     "pace": 2.99,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 6.501,
+     "pace": 2.12,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 11.901,
+     "pace": 3.881,
+     "rank": 5,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 9.141,
+     "pace": 2.981,
+     "rank": 11,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 7.485,
+     "pace": 2.441,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 6.491,
+     "pace": 2.117,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 5.895,
+     "pace": 1.922,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "name": "Beppe Morchetta Spumante (glass)",
+   "basePrice": 4.95,
+   "normalUnitsPerNight": 9.0,
+   "units": [
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 4.95,
+     "price": 4.95
+    },
+    {
+     "heat": 2.0,
+     "pace": 3.333,
+     "rank": 3,
+     "tierPct": 0.3,
+     "target": 6.43,
+     "price": 5.45
+    },
+    {
+     "heat": 1.2,
+     "pace": 2.0,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.45
+    },
+    {
+     "heat": 0.72,
+     "pace": 1.2,
+     "rank": 25,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.45
+    },
+    {
+     "heat": 0.432,
+     "pace": 0.72,
+     "rank": 30,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.45
+    },
+    {
+     "heat": 0.259,
+     "pace": 0.432,
+     "rank": 34,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.45
+    },
+    {
+     "heat": 0.155,
+     "pace": 0.258,
+     "rank": 36,
+     "tierPct": 0.1,
+     "target": 5.45,
+     "price": 5.45
+    },
+    {
+     "heat": 0.093,
+     "pace": 0.155,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.95
+    },
+    {
+     "heat": 0.056,
+     "pace": 0.093,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.6
+    },
+    {
+     "heat": 0.034,
+     "pace": 0.057,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.4
+    },
+    {
+     "heat": 1.02,
+     "pace": 1.7,
+     "rank": 25,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.25
+    },
+    {
+     "heat": 0.612,
+     "pace": 1.02,
+     "rank": 31,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.15
+    },
+    {
+     "heat": 0.367,
+     "pace": 0.612,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 3.96,
+     "price": 4.1
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "name": "Grey Goose (single)",
+   "basePrice": 5.0,
+   "normalUnitsPerNight": 4.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.0
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 12,
+     "tierPct": 0.1,
+     "target": 5.5,
+     "price": 5.15
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.1
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.05
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.05
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 35,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.05
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 37,
+     "tierPct": 0.0,
+     "target": 5.0,
+     "price": 5.05
+    },
+    {
+     "heat": 0.047,
+     "pace": 0.088,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 4.0,
+     "price": 4.7
+    },
+    {
+     "heat": 0.028,
+     "pace": 0.053,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 4.0,
+     "price": 4.45
+    },
+    {
+     "heat": 0.017,
+     "pace": 0.032,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 4.0,
+     "price": 4.3
+    },
+    {
+     "heat": 0.01,
+     "pace": 0.019,
+     "rank": 38,
+     "tierPct": -0.2,
+     "target": 4.0,
+     "price": 4.2
+    },
+    {
+     "heat": 0.006,
+     "pace": 0.011,
+     "rank": 38,
+     "tierPct": -0.2,
+     "target": 4.0,
+     "price": 4.15
+    },
+    {
+     "heat": 0.004,
+     "pace": 0.008,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 3.5,
+     "price": 3.9
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "name": "Hawkstone Cider (pint)",
+   "basePrice": 5.25,
+   "normalUnitsPerNight": 17.0,
+   "units": [
+    1,
+    0,
+    0,
+    3,
+    2,
+    1,
+    1,
+    0,
+    3,
+    1,
+    4,
+    1,
+    1,
+    1,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 0.882,
+     "rank": 5,
+     "tierPct": 0.0,
+     "target": 5.25,
+     "price": 5.25
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.529,
+     "rank": 10,
+     "tierPct": 0.0,
+     "target": 5.25,
+     "price": 5.25
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.318,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 5.25,
+     "price": 5.25
+    },
+    {
+     "heat": 3.216,
+     "pace": 2.838,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 5.8
+    },
+    {
+     "heat": 3.93,
+     "pace": 3.468,
+     "rank": 3,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 6.15
+    },
+    {
+     "heat": 3.358,
+     "pace": 2.963,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 6.4
+    },
+    {
+     "heat": 3.015,
+     "pace": 2.66,
+     "rank": 12,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 6.55
+    },
+    {
+     "heat": 1.809,
+     "pace": 1.596,
+     "rank": 25,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 6.65
+    },
+    {
+     "heat": 4.085,
+     "pace": 3.604,
+     "rank": 10,
+     "tierPct": 0.3,
+     "target": 6.83,
+     "price": 6.7
+    },
+    {
+     "heat": 3.451,
+     "pace": 3.045,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 6.4
+    },
+    {
+     "heat": 6.071,
+     "pace": 5.357,
+     "rank": 3,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 6.2
+    },
+    {
+     "heat": 4.643,
+     "pace": 4.097,
+     "rank": 6,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 6.05
+    },
+    {
+     "heat": 3.786,
+     "pace": 3.341,
+     "rank": 8,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 5.95
+    },
+    {
+     "heat": 3.272,
+     "pace": 2.887,
+     "rank": 14,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 5.9
+    },
+    {
+     "heat": 2.963,
+     "pace": 2.614,
+     "rank": 12,
+     "tierPct": 0.1,
+     "target": 5.78,
+     "price": 5.85
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "name": "Hawkstone Premium Lager (pint)",
+   "basePrice": 5.5,
+   "normalUnitsPerNight": 29.0,
+   "units": [
+    1,
+    0,
+    0,
+    3,
+    3,
+    3,
+    2,
+    2,
+    0,
+    3,
+    2,
+    1,
+    2,
+    3,
+    5
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 0.517,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.31,
+     "rank": 11,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.186,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 3.216,
+     "pace": 1.663,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 6.05,
+     "price": 5.7
+    },
+    {
+     "heat": 4.93,
+     "pace": 2.55,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 6.6,
+     "price": 6.0
+    },
+    {
+     "heat": 5.958,
+     "pace": 3.082,
+     "rank": 3,
+     "tierPct": 0.2,
+     "target": 6.6,
+     "price": 6.2
+    },
+    {
+     "heat": 5.575,
+     "pace": 2.884,
+     "rank": 11,
+     "tierPct": 0.2,
+     "target": 6.6,
+     "price": 6.35
+    },
+    {
+     "heat": 5.345,
+     "pace": 2.765,
+     "rank": 12,
+     "tierPct": 0.2,
+     "target": 6.6,
+     "price": 6.45
+    },
+    {
+     "heat": 3.207,
+     "pace": 1.659,
+     "rank": 25,
+     "tierPct": 0.2,
+     "target": 6.6,
+     "price": 6.5
+    },
+    {
+     "heat": 4.924,
+     "pace": 2.547,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 6.15
+    },
+    {
+     "heat": 4.954,
+     "pace": 2.562,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.9
+    },
+    {
+     "heat": 3.972,
+     "pace": 2.054,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.75
+    },
+    {
+     "heat": 4.383,
+     "pace": 2.267,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.65
+    },
+    {
+     "heat": 5.63,
+     "pace": 2.912,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.6
+    },
+    {
+     "heat": 8.378,
+     "pace": 4.333,
+     "rank": 4,
+     "tierPct": 0.3,
+     "target": 7.15,
+     "price": 6.15
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "name": "Shiraz \u2013 Camden Park (small)",
+   "basePrice": 5.5,
+   "normalUnitsPerNight": 5.0,
+   "units": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 3,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 9,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 5.5,
+     "price": 5.5
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 31,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.3
+    },
+    {
+     "heat": 1.13,
+     "pace": 2.119,
+     "rank": 11,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.2
+    },
+    {
+     "heat": 1.678,
+     "pace": 3.146,
+     "rank": 9,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.1
+    },
+    {
+     "heat": 1.007,
+     "pace": 1.888,
+     "rank": 21,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.05
+    },
+    {
+     "heat": 0.604,
+     "pace": 1.133,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 0.362,
+     "pace": 0.679,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 1.217,
+     "pace": 2.282,
+     "rank": 23,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 0.73,
+     "pace": 1.369,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 0.438,
+     "pace": 0.821,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 1.263,
+     "pace": 2.368,
+     "rank": 21,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    },
+    {
+     "heat": 0.758,
+     "pace": 1.421,
+     "rank": 29,
+     "tierPct": -0.1,
+     "target": 4.95,
+     "price": 5.0
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "name": "Pinot Grigio (small)",
+   "basePrice": 5.95,
+   "normalUnitsPerNight": 8.0,
+   "units": [
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 5.95,
+     "price": 5.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 5.95,
+     "price": 5.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 5.95,
+     "price": 5.95
+    },
+    {
+     "heat": 2.0,
+     "pace": 3.75,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 7.74,
+     "price": 6.55
+    },
+    {
+     "heat": 1.2,
+     "pace": 2.25,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 6.54,
+     "price": 6.55
+    },
+    {
+     "heat": 0.72,
+     "pace": 1.35,
+     "rank": 23,
+     "tierPct": 0.1,
+     "target": 6.54,
+     "price": 6.55
+    },
+    {
+     "heat": 0.432,
+     "pace": 0.81,
+     "rank": 29,
+     "tierPct": 0.1,
+     "target": 6.54,
+     "price": 6.55
+    },
+    {
+     "heat": 0.259,
+     "pace": 0.486,
+     "rank": 33,
+     "tierPct": 0.1,
+     "target": 6.54,
+     "price": 6.55
+    },
+    {
+     "heat": 0.155,
+     "pace": 0.291,
+     "rank": 35,
+     "tierPct": 0.1,
+     "target": 6.54,
+     "price": 6.55
+    },
+    {
+     "heat": 0.093,
+     "pace": 0.174,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 4.76,
+     "price": 5.9
+    },
+    {
+     "heat": 0.056,
+     "pace": 0.105,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 4.76,
+     "price": 5.5
+    },
+    {
+     "heat": 0.034,
+     "pace": 0.064,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 4.76,
+     "price": 5.25
+    },
+    {
+     "heat": 1.02,
+     "pace": 1.913,
+     "rank": 22,
+     "tierPct": -0.2,
+     "target": 4.76,
+     "price": 5.1
+    },
+    {
+     "heat": 1.612,
+     "pace": 3.023,
+     "rank": 12,
+     "tierPct": -0.2,
+     "target": 4.76,
+     "price": 5.0
+    },
+    {
+     "heat": 0.967,
+     "pace": 1.813,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 5.95,
+     "price": 5.35
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "name": "Hennessy (single)",
+   "basePrice": 6.0,
+   "normalUnitsPerNight": 2.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 6.0,
+     "price": 6.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 6.0,
+     "price": 6.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 6.0,
+     "price": 6.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 5.6
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 5.3
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 5.15
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 5.05
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 4.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.2,
+     "target": 4.8,
+     "price": 4.9
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.65
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.5
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.4
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.35
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.3
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 41,
+     "tierPct": -0.3,
+     "target": 4.2,
+     "price": 4.25
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "name": "Malbec \u2013 El Mestengo (small)",
+   "basePrice": 6.75,
+   "normalUnitsPerNight": 4.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 7.42,
+     "price": 7.0
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.9
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.85
+    },
+    {
+     "heat": 1.216,
+     "pace": 2.28,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 0.73,
+     "pace": 1.369,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 0.438,
+     "pace": 0.821,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 1.263,
+     "pace": 2.368,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 1.758,
+     "pace": 3.296,
+     "rank": 10,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 1.055,
+     "pace": 1.978,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 0.633,
+     "pace": 1.187,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 0.38,
+     "pace": 0.713,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.8
+    },
+    {
+     "heat": 0.228,
+     "pace": 0.428,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 6.3
+    }
+   ]
+  },
+  {
+   "id": 31,
+   "name": "Sauvignon Blanc (small)",
+   "basePrice": 6.75,
+   "normalUnitsPerNight": 7.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 6.75,
+     "price": 6.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 6.3
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 36,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 6.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.8
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 39,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.65
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 23,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.55
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 30,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.45
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.45
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.45
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.45
+    },
+    {
+     "heat": 0.047,
+     "pace": 0.088,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 5.4,
+     "price": 5.45
+    },
+    {
+     "heat": 0.028,
+     "pace": 0.053,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 4.72,
+     "price": 5.2
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "name": "Passionfruit Iced Tea",
+   "basePrice": 7.95,
+   "normalUnitsPerNight": 3.0,
+   "units": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 2,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 32,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 36,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.047,
+     "pace": 0.088,
+     "rank": 38,
+     "tierPct": 0.0,
+     "target": 7.95,
+     "price": 7.95
+    },
+    {
+     "heat": 0.028,
+     "pace": 0.053,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 7.1
+    },
+    {
+     "heat": 0.017,
+     "pace": 0.032,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 6.55
+    },
+    {
+     "heat": 0.01,
+     "pace": 0.019,
+     "rank": 38,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 6.2
+    },
+    {
+     "heat": 0.006,
+     "pace": 0.011,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 6.0
+    },
+    {
+     "heat": 0.004,
+     "pace": 0.008,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 5.85
+    },
+    {
+     "heat": 0.002,
+     "pace": 0.004,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 5.57,
+     "price": 5.75
+    }
+   ]
+  },
+  {
+   "id": 33,
+   "name": "Aperol Spritz",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 12.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    2,
+    1,
+    1,
+    0,
+    1,
+    2,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 31,
+     "tierPct": -0.1,
+     "target": 8.05,
+     "price": 8.65
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 35,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 8.15
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.25,
+     "rank": 24,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 7.8
+    },
+    {
+     "heat": 1.6,
+     "pace": 2.0,
+     "rank": 16,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 7.6
+    },
+    {
+     "heat": 1.96,
+     "pace": 2.45,
+     "rank": 19,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 7.45
+    },
+    {
+     "heat": 3.176,
+     "pace": 3.97,
+     "rank": 6,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 7.35
+    },
+    {
+     "heat": 2.906,
+     "pace": 3.633,
+     "rank": 7,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 8.55
+    },
+    {
+     "heat": 2.744,
+     "pace": 3.43,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 9.3
+    },
+    {
+     "heat": 1.646,
+     "pace": 2.058,
+     "rank": 17,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 9.8
+    },
+    {
+     "heat": 1.988,
+     "pace": 2.485,
+     "rank": 14,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.15
+    },
+    {
+     "heat": 3.193,
+     "pace": 3.991,
+     "rank": 3,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.35
+    },
+    {
+     "heat": 2.916,
+     "pace": 3.645,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.5
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "name": "Pornstar Martini",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 15.0,
+   "units": [
+    1,
+    0,
+    0,
+    2,
+    0,
+    1,
+    0,
+    2,
+    1,
+    1,
+    2,
+    3,
+    3,
+    0,
+    3
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 1.0,
+     "rank": 3,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.6,
+     "pace": 0.6,
+     "rank": 8,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.36,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 2.216,
+     "pace": 2.216,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 9.6
+    },
+    {
+     "heat": 1.33,
+     "pace": 1.33,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.35
+    },
+    {
+     "heat": 1.798,
+     "pace": 1.798,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.2
+    },
+    {
+     "heat": 1.079,
+     "pace": 1.079,
+     "rank": 28,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.1
+    },
+    {
+     "heat": 2.647,
+     "pace": 2.647,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.05
+    },
+    {
+     "heat": 2.588,
+     "pace": 2.588,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 2.553,
+     "pace": 2.553,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 3.532,
+     "pace": 3.532,
+     "rank": 8,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 5.119,
+     "pace": 5.119,
+     "rank": 3,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 6.071,
+     "pace": 6.071,
+     "rank": 2,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 3.643,
+     "pace": 3.643,
+     "rank": 6,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.0
+    },
+    {
+     "heat": 5.186,
+     "pace": 5.186,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 9.9
+    }
+   ]
+  },
+  {
+   "id": 35,
+   "name": "Classic Espresso Martini",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 13.0,
+   "units": [
+    1,
+    2,
+    0,
+    3,
+    0,
+    0,
+    2,
+    2,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 1.0,
+     "pace": 1.154,
+     "rank": 2,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 2.6,
+     "pace": 3.0,
+     "rank": 1,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 1.56,
+     "pace": 1.8,
+     "rank": 6,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 3.936,
+     "pace": 4.542,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 9.9
+    },
+    {
+     "heat": 2.362,
+     "pace": 2.725,
+     "rank": 7,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.2
+    },
+    {
+     "heat": 1.417,
+     "pace": 1.635,
+     "rank": 19,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.4
+    },
+    {
+     "heat": 2.85,
+     "pace": 3.288,
+     "rank": 6,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.5
+    },
+    {
+     "heat": 3.71,
+     "pace": 4.281,
+     "rank": 4,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.6
+    },
+    {
+     "heat": 3.226,
+     "pace": 3.722,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.65
+    },
+    {
+     "heat": 2.936,
+     "pace": 3.388,
+     "rank": 8,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.7
+    },
+    {
+     "heat": 1.762,
+     "pace": 2.033,
+     "rank": 25,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.7
+    },
+    {
+     "heat": 2.057,
+     "pace": 2.373,
+     "rank": 15,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.7
+    },
+    {
+     "heat": 2.234,
+     "pace": 2.578,
+     "rank": 12,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.7
+    },
+    {
+     "heat": 2.34,
+     "pace": 2.7,
+     "rank": 16,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 10.7
+    },
+    {
+     "heat": 1.404,
+     "pace": 1.62,
+     "rank": 26,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 10.1
+    }
+   ]
+  },
+  {
+   "id": 36,
+   "name": "Classic Mojito",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 6.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 10,
+     "tierPct": 0.2,
+     "target": 10.74,
+     "price": 9.6
+    },
+    {
+     "heat": 1.6,
+     "pace": 3.0,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.3
+    },
+    {
+     "heat": 0.96,
+     "pace": 1.8,
+     "rank": 17,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.75
+    },
+    {
+     "heat": 0.576,
+     "pace": 1.08,
+     "rank": 27,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.05
+    },
+    {
+     "heat": 1.346,
+     "pace": 2.524,
+     "rank": 18,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.25
+    },
+    {
+     "heat": 1.808,
+     "pace": 3.39,
+     "rank": 13,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.4
+    },
+    {
+     "heat": 1.085,
+     "pace": 2.034,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 10.55
+    },
+    {
+     "heat": 0.651,
+     "pace": 1.221,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 10.0
+    },
+    {
+     "heat": 0.391,
+     "pace": 0.733,
+     "rank": 31,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.65
+    },
+    {
+     "heat": 1.235,
+     "pace": 2.316,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.4
+    },
+    {
+     "heat": 1.741,
+     "pace": 3.264,
+     "rank": 11,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.25
+    },
+    {
+     "heat": 1.045,
+     "pace": 1.959,
+     "rank": 22,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.15
+    }
+   ]
+  },
+  {
+   "id": 37,
+   "name": "Margarita",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 5.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 16,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 18,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 32,
+     "tierPct": -0.1,
+     "target": 8.05,
+     "price": 8.65
+    },
+    {
+     "heat": 2.0,
+     "pace": 3.75,
+     "rank": 1,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 9.7
+    },
+    {
+     "heat": 1.2,
+     "pace": 2.25,
+     "rank": 9,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.4
+    },
+    {
+     "heat": 0.72,
+     "pace": 1.35,
+     "rank": 22,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.85
+    },
+    {
+     "heat": 0.432,
+     "pace": 0.81,
+     "rank": 31,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.1
+    },
+    {
+     "heat": 0.259,
+     "pace": 0.486,
+     "rank": 34,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.3
+    },
+    {
+     "heat": 1.155,
+     "pace": 2.166,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 10.5
+    },
+    {
+     "heat": 1.693,
+     "pace": 3.174,
+     "rank": 12,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.95
+    },
+    {
+     "heat": 1.016,
+     "pace": 1.905,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.6
+    },
+    {
+     "heat": 0.61,
+     "pace": 1.144,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.35
+    },
+    {
+     "heat": 1.366,
+     "pace": 2.561,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.2
+    },
+    {
+     "heat": 0.82,
+     "pace": 1.538,
+     "rank": 27,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.1
+    }
+   ]
+  },
+  {
+   "id": 38,
+   "name": "Old Fashioned",
+   "basePrice": 8.95,
+   "normalUnitsPerNight": 4.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    1,
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 17,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 25,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 8.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 33,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 8.3
+    },
+    {
+     "heat": 2.0,
+     "pace": 3.75,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 9.45
+    },
+    {
+     "heat": 1.2,
+     "pace": 2.25,
+     "rank": 10,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.2
+    },
+    {
+     "heat": 1.72,
+     "pace": 3.225,
+     "rank": 8,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 10.7
+    },
+    {
+     "heat": 3.032,
+     "pace": 5.685,
+     "rank": 2,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.05
+    },
+    {
+     "heat": 1.819,
+     "pace": 3.411,
+     "rank": 12,
+     "tierPct": 0.3,
+     "target": 11.63,
+     "price": 11.25
+    },
+    {
+     "heat": 1.091,
+     "pace": 2.046,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 10.45
+    },
+    {
+     "heat": 0.655,
+     "pace": 1.228,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.9
+    },
+    {
+     "heat": 0.393,
+     "pace": 0.737,
+     "rank": 30,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.55
+    },
+    {
+     "heat": 0.236,
+     "pace": 0.443,
+     "rank": 34,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.35
+    },
+    {
+     "heat": 0.142,
+     "pace": 0.266,
+     "rank": 36,
+     "tierPct": 0.0,
+     "target": 8.95,
+     "price": 9.2
+    },
+    {
+     "heat": 0.085,
+     "pace": 0.159,
+     "rank": 37,
+     "tierPct": -0.2,
+     "target": 7.16,
+     "price": 8.5
+    }
+   ]
+  },
+  {
+   "id": 39,
+   "name": "Cherryburster (Cherry)",
+   "basePrice": 9.95,
+   "normalUnitsPerNight": 7.0,
+   "units": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 12,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 9,
+     "tierPct": 0.2,
+     "target": 11.94,
+     "price": 10.65
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.4
+    },
+    {
+     "heat": 1.36,
+     "pace": 2.55,
+     "rank": 6,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.25
+    },
+    {
+     "heat": 0.816,
+     "pace": 1.53,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.15
+    },
+    {
+     "heat": 0.49,
+     "pace": 0.919,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.1
+    },
+    {
+     "heat": 0.294,
+     "pace": 0.551,
+     "rank": 33,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.05
+    },
+    {
+     "heat": 1.176,
+     "pace": 2.205,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.0
+    },
+    {
+     "heat": 0.706,
+     "pace": 1.324,
+     "rank": 29,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.0
+    },
+    {
+     "heat": 1.424,
+     "pace": 2.67,
+     "rank": 14,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.0
+    },
+    {
+     "heat": 1.854,
+     "pace": 3.476,
+     "rank": 7,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.0
+    },
+    {
+     "heat": 2.112,
+     "pace": 3.96,
+     "rank": 4,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.0
+    },
+    {
+     "heat": 2.267,
+     "pace": 4.251,
+     "rank": 5,
+     "tierPct": 0.3,
+     "target": 12.94,
+     "price": 11.05
+    }
+   ]
+  },
+  {
+   "id": 40,
+   "name": "Wundersauce (Tropical)",
+   "basePrice": 9.95,
+   "normalUnitsPerNight": 6.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    3,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 15,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 21,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 9.95
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 30,
+     "tierPct": -0.1,
+     "target": 8.96,
+     "price": 9.6
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 15,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.05
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 28,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.35
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 31,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.55
+    },
+    {
+     "heat": 3.216,
+     "pace": 6.03,
+     "rank": 1,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.7
+    },
+    {
+     "heat": 2.93,
+     "pace": 5.494,
+     "rank": 3,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.8
+    },
+    {
+     "heat": 1.758,
+     "pace": 3.296,
+     "rank": 11,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.85
+    },
+    {
+     "heat": 2.055,
+     "pace": 3.853,
+     "rank": 6,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.9
+    },
+    {
+     "heat": 2.233,
+     "pace": 4.187,
+     "rank": 4,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.9
+    },
+    {
+     "heat": 1.34,
+     "pace": 2.513,
+     "rank": 13,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.9
+    },
+    {
+     "heat": 1.804,
+     "pace": 3.383,
+     "rank": 9,
+     "tierPct": 0.1,
+     "target": 10.95,
+     "price": 10.9
+    },
+    {
+     "heat": 1.082,
+     "pace": 2.029,
+     "rank": 20,
+     "tierPct": 0.0,
+     "target": 9.95,
+     "price": 10.55
+    }
+   ]
+  },
+  {
+   "id": 41,
+   "name": "Wairu Cove (bottle)",
+   "basePrice": 23.0,
+   "normalUnitsPerNight": 1.0,
+   "units": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 11,
+     "tierPct": 0.0,
+     "target": 23.0,
+     "price": 23.0
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 2,
+     "tierPct": 0.0,
+     "target": 23.0,
+     "price": 23.0
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 8,
+     "tierPct": 0.0,
+     "target": 23.0,
+     "price": 23.0
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 23,
+     "tierPct": 0.0,
+     "target": 23.0,
+     "price": 23.0
+    },
+    {
+     "heat": 0.216,
+     "pace": 0.405,
+     "rank": 30,
+     "tierPct": -0.1,
+     "target": 20.7,
+     "price": 22.2
+    },
+    {
+     "heat": 0.13,
+     "pace": 0.244,
+     "rank": 36,
+     "tierPct": -0.1,
+     "target": 20.7,
+     "price": 21.7
+    },
+    {
+     "heat": 0.078,
+     "pace": 0.146,
+     "rank": 36,
+     "tierPct": -0.1,
+     "target": 20.7,
+     "price": 21.35
+    },
+    {
+     "heat": 0.047,
+     "pace": 0.088,
+     "rank": 38,
+     "tierPct": -0.1,
+     "target": 20.7,
+     "price": 21.1
+    },
+    {
+     "heat": 0.028,
+     "pace": 0.053,
+     "rank": 39,
+     "tierPct": -0.1,
+     "target": 20.7,
+     "price": 20.95
+    },
+    {
+     "heat": 0.017,
+     "pace": 0.032,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 16.1,
+     "price": 19.25
+    },
+    {
+     "heat": 0.01,
+     "pace": 0.019,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 16.1,
+     "price": 18.15
+    },
+    {
+     "heat": 0.006,
+     "pace": 0.011,
+     "rank": 39,
+     "tierPct": -0.3,
+     "target": 16.1,
+     "price": 17.45
+    },
+    {
+     "heat": 0.004,
+     "pace": 0.008,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 16.1,
+     "price": 17.0
+    },
+    {
+     "heat": 0.002,
+     "pace": 0.004,
+     "rank": 40,
+     "tierPct": -0.3,
+     "target": 16.1,
+     "price": 16.7
+    },
+    {
+     "heat": 1.001,
+     "pace": 1.877,
+     "rank": 24,
+     "tierPct": 0.0,
+     "target": 23.0,
+     "price": 18.9
+    }
+   ]
+  },
+  {
+   "id": 42,
+   "name": "Oyster Bay (bottle)",
+   "basePrice": 25.0,
+   "normalUnitsPerNight": 2.0,
+   "units": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0
+   ],
+   "expected": [
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 10,
+     "tierPct": 0.0,
+     "target": 25.0,
+     "price": 25.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 13,
+     "tierPct": 0.0,
+     "target": 25.0,
+     "price": 25.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 19,
+     "tierPct": 0.0,
+     "target": 25.0,
+     "price": 25.0
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 29,
+     "tierPct": -0.1,
+     "target": 22.5,
+     "price": 24.15
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 34,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 22.7
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 21.75
+    },
+    {
+     "heat": 0.0,
+     "pace": 0.0,
+     "rank": 38,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 21.15
+    },
+    {
+     "heat": 1.0,
+     "pace": 1.875,
+     "rank": 22,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.75
+    },
+    {
+     "heat": 0.6,
+     "pace": 1.125,
+     "rank": 29,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.5
+    },
+    {
+     "heat": 0.36,
+     "pace": 0.675,
+     "rank": 33,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.3
+    },
+    {
+     "heat": 1.216,
+     "pace": 2.28,
+     "rank": 24,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.2
+    },
+    {
+     "heat": 0.73,
+     "pace": 1.369,
+     "rank": 27,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.15
+    },
+    {
+     "heat": 0.438,
+     "pace": 0.821,
+     "rank": 31,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.1
+    },
+    {
+     "heat": 1.263,
+     "pace": 2.368,
+     "rank": 20,
+     "tierPct": -0.2,
+     "target": 20.0,
+     "price": 20.05
+    },
+    {
+     "heat": 0.758,
+     "pace": 1.421,
+     "rank": 28,
+     "tierPct": -0.1,
+     "target": 22.5,
+     "price": 20.9
+    }
+   ]
+  }
+ ]
+}

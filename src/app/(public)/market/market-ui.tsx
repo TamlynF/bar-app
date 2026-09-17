@@ -3,7 +3,61 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { formatGbp } from "@/lib/price";
-import type { MarketEventPayload, MarketInstrumentPayload } from "@/lib/market/tick";
+import type { MarketEventPayload, MarketInstrumentPayload, MarketStatePayload } from "@/lib/market/tick";
+
+/* The price a punter can be charged. A drink linked to Square shows only what
+   Square has acknowledged (null until the first sync lands - render as
+   "updating"); an unlinked drink has nothing to sync, so the engine price is
+   the price. */
+export function displayPrice(instrument: Pick<MarketInstrumentPayload, "linkedToTill" | "tillPrice" | "price">): number | null {
+  return instrument.linkedToTill ? instrument.tillPrice : instrument.price;
+}
+
+export const PRICE_PENDING = "…";
+
+export function formatDisplayPrice(instrument: Pick<MarketInstrumentPayload, "linkedToTill" | "tillPrice" | "price">): string {
+  const value = displayPrice(instrument);
+  return value == null ? PRICE_PENDING : formatGbp(value);
+}
+
+export function tierLabel(pct: number | null | undefined): string | null {
+  if (pct == null || pct === 0) return null;
+  return `${pct > 0 ? "+" : "−"}${Math.round(Math.abs(pct) * 100)}%`;
+}
+
+/* Deals first: −30% … −10%, then the unchanged middle, then the mark-ups
+   ending on +30%; inside a tier the drink furthest into its discount (lowest
+   pace) leads. Demand mode keeps the server's order. */
+export function sortForPhone(
+  instruments: MarketInstrumentPayload[],
+  pricingMode: MarketStatePayload["pricingMode"]
+): MarketInstrumentPayload[] {
+  if (pricingMode !== "tiers") return instruments;
+  return [...instruments].sort((a, b) => {
+    const tierA = a.tierPct ?? 0;
+    const tierB = b.tierPct ?? 0;
+    if (tierA !== tierB) return tierA - tierB;
+    const paceA = a.pace ?? 0;
+    const paceB = b.pace ?? 0;
+    if (paceA !== paceB) return tierA <= 0 ? paceA - paceB : paceB - paceA;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+export function TierBadge({ pct, className }: { pct: number | null | undefined; className?: string }) {
+  const label = tierLabel(pct);
+  if (!label) return null;
+  const up = (pct ?? 0) > 0;
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-1.5 py-0.5 font-black text-[10px] tracking-widest uppercase ${
+        up ? "bg-[#FF4D6D]/15 text-[#FF4D6D]" : "bg-[#8CFF6A]/15 text-[#8CFF6A]"
+      } ${className ?? ""}`}
+    >
+      {up ? "Top seller" : "Deal"} {label}
+    </span>
+  );
+}
 
 const FLIP_STEP_MS = 70;
 
@@ -110,7 +164,7 @@ export function FlipPrice({ value, className }: { value: string; className?: str
           aria-hidden="true"
           className={isDigit(glyph) ? "ad-flap inline-block w-[1ch] text-center" : "ad-flap"}
         >
-          {glyph}
+          {glyph === " " ? "\u00A0" : glyph}
         </span>
       ))}
     </span>
@@ -139,12 +193,20 @@ export function eventCopy(event: MarketEventPayload): string {
       return `${name} back on the bar`;
     case "crash":
       return name ? `${name} crashing - buy the dip` : "Market crash - prices tumbling";
+    case "tier_up":
+      return `${name} climbing the board${event.pct != null ? ` - heading ${formatChangePct(event.pct)}` : ""}`;
+    case "tier_down":
+      return `${name} sliding down the board${event.pct != null ? ` - heading ${formatChangePct(event.pct)}` : ""}`;
+    case "rerank":
+      return "Board re-ranked - new deals on";
+    case "warmup_done":
+      return "Market open - prices now moving";
   }
 }
 
 export function directionClass(direction: MarketInstrumentPayload["direction"]): string {
-  if (direction === "up") return "text-[#FDCC4B]";
-  if (direction === "down") return "text-[#FF6B35]";
+  if (direction === "up") return "text-[#FF4D6D]";
+  if (direction === "down") return "text-[#8CFF6A]";
   return "text-stone-400";
 }
 

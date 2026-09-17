@@ -7,6 +7,7 @@ import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
 import { detectInstallPlatform } from "@/lib/pwa-install";
 import { useMarketState } from "./use-market-state";
+import { TierBadge, formatDisplayPrice, sortForPhone } from "./market-ui";
 import { removeMarketPushSubscription, saveMarketPushSubscription } from "./actions";
 import InstallCard from "./install-card";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
@@ -60,14 +61,14 @@ function ChangePill({
     "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-ui text-[11px] font-semibold tabular-nums";
   if (direction === "up") {
     return (
-      <span className={`${base} bg-[#8CFF6A]/10 text-[#8CFF6A]`}>
+      <span className={`${base} bg-[#FF4D6D]/[.12] text-[#FF4D6D]`}>
         <span aria-label="Rising">▲</span> {formatChangePct(changePct)}
       </span>
     );
   }
   if (direction === "down") {
     return (
-      <span className={`${base} bg-[#FF4D6D]/[.12] text-[#FF4D6D]`}>
+      <span className={`${base} bg-[#8CFF6A]/10 text-[#8CFF6A]`}>
         <span aria-label="Falling">▼</span> {formatChangePct(changePct)}
       </span>
     );
@@ -88,7 +89,7 @@ function formatCountdown(seconds: number): string {
 
 /* Remounted by the parent (key = tick number) so the clock restarts from the
    server's figure on every tick instead of drifting on the poll interval. */
-function NextTickCountdown({ seconds }: { seconds: number }) {
+function NextTickCountdown({ seconds, label = "Next update" }: { seconds: number; label?: string }) {
   const [remaining, setRemaining] = useState(seconds);
   useEffect(() => {
     const startedAt = Date.now();
@@ -99,7 +100,7 @@ function NextTickCountdown({ seconds }: { seconds: number }) {
   }, [seconds]);
   return (
     <span className="tabular-nums" aria-live="off">
-      {remaining <= 0 ? "Updating…" : `Next update ${formatCountdown(remaining)}`}
+      {remaining <= 0 ? "Updating…" : `${label} ${formatCountdown(remaining)}`}
     </span>
   );
 }
@@ -407,6 +408,7 @@ export default function MarketFeed() {
   }
 
   const watchedCount = instruments.filter((instrument) => watched.includes(instrument.id)).length;
+  const tiersLive = state.pricingMode === "tiers";
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
   const alertsOff = !alertsAllowed;
@@ -419,10 +421,16 @@ export default function MarketFeed() {
           {" · "}
           {tradingCount} {tradingCount === 1 ? "drink" : "drinks"}
         </span>
-        {state.nextTickInSec != null && (
+        {tiersLive && state.warmedUp && state.nextRerankInSec != null ? (
           <span className="shrink-0 whitespace-nowrap">
-            <NextTickCountdown key={state.tickNo ?? 0} seconds={state.nextTickInSec} />
+            <NextTickCountdown key={`rerank-${state.tickNo ?? 0}`} seconds={state.nextRerankInSec} label="Re-rank in" />
           </span>
+        ) : (
+          state.nextTickInSec != null && (
+            <span className="shrink-0 whitespace-nowrap">
+              <NextTickCountdown key={state.tickNo ?? 0} seconds={state.nextTickInSec} />
+            </span>
+          )
         )}
       </div>
 
@@ -472,8 +480,17 @@ export default function MarketFeed() {
       )}
       {!alertsOff && (pushState === "needs-install" || pushState === "page-only") && <InstallCard />}
 
+      {tiersLive && state.warmedUp === false && (
+        <div className="rounded-2xl border border-[#FDCC4B]/30 bg-[#FDCC4B]/5 px-4 py-3 text-center">
+          <p className="font-black text-xs tracking-widest text-[#FDCC4B] uppercase">Market warming up</p>
+          <p className="mt-1 text-[12px] text-stone-400">
+            {state.unitsSoldTotal ?? 0} of {state.warmupUnits ?? 0} drinks sold - deals and mark-ups kick in once the bar is busy.
+          </p>
+        </div>
+      )}
+
       <ul className="space-y-3">
-        {instruments.map((instrument) => {
+        {sortForPhone(instruments, state.pricingMode).map((instrument) => {
           const isWatched = watched.includes(instrument.id);
           return (
           <li
@@ -503,15 +520,19 @@ export default function MarketFeed() {
               <p className="font-ui text-[15px] leading-tight font-bold tracking-wide text-ink uppercase">
                 {instrument.name}
               </p>
-              {instrument.stock !== "ok" && (
-                <p className="mt-1.5 flex items-center">
-                  <StockBadge stock={instrument.stock} />
+              {(instrument.stock !== "ok" || (tiersLive && instrument.tierPct)) && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {instrument.stock !== "ok" && <StockBadge stock={instrument.stock} />}
+                  {tiersLive && <TierBadge pct={instrument.tierPct} />}
+                  {tiersLive && instrument.tierPct != null && instrument.tierPct !== 0 && instrument.targetPrice != null && (
+                    <span className="text-[10px] text-stone-500">heading to {formatGbp(instrument.targetPrice)}</span>
+                  )}
                 </p>
               )}
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <FlipPrice
-                value={formatGbp(instrument.price)}
+                value={formatDisplayPrice(instrument)}
                 className="block font-display text-2xl leading-none tracking-wide text-ink"
               />
               <ChangePill direction={instrument.direction} changePct={instrument.changePct} />
@@ -527,7 +548,9 @@ export default function MarketFeed() {
       </ul>
 
       <p className="text-center text-[10px] text-stone-500">
-        Prices move all night. What the board says is what the bar charges.
+        {tiersLive
+          ? "Deals first, top sellers last. You pay the price on the till when your drink is rung in."
+          : "Prices move all night. What the board says is what the bar charges."}
       </p>
     </div>
   );

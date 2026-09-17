@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leaderboard preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#1a2008; --ink:#f3f0dc; --muted:#a9ae8d; --line:#3a4520; --gold:#FDCC4B; --down:#8CFF6A; --up:#FF4D6D; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#0f1305; color:var(--ink); font-family:"JetBrains Mono",monospace; padding:16px; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; font-size:13px; color:var(--muted); }
+  .bar button { font:inherit; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:#1a2008; color:var(--ink); cursor:pointer; }
+  .bar button[aria-pressed="true"] { background:var(--gold); color:#1a2008; border-color:var(--gold); }
+  .frame { width:100%; max-width:1600px; margin:0 auto; background:var(--bg); container-type:inline-size; position:relative; overflow:hidden; }
+  .frame[data-ratio="16:9"] { aspect-ratio:16/9; }
+  .frame[data-ratio="16:10"] { aspect-ratio:16/10; }
+  .frame[data-ratio="4:3"] { aspect-ratio:4/3; }
+  .frame[data-ratio="9:16"] { aspect-ratio:9/16; max-width:520px; }
+  .board { position:absolute; inset:0; display:grid; grid-template-rows:auto 1fr auto; gap:1.2cqw; padding:1.6cqw 2cqw 0; font-variant-numeric:tabular-nums; }
+  header { display:grid; grid-template-columns:1fr auto auto; gap:2cqw; align-items:end; border-bottom:.15cqw solid var(--gold); padding-bottom:.8cqw; }
+  .disp { font-family:"Bebas Neue",sans-serif; }
+  .brand { font-size:5cqw; line-height:.9; color:var(--gold); letter-spacing:.02em; }
+  .sub { font-size:1.5cqw; letter-spacing:.18em; }
+  .stat { text-align:right; } .stat small { display:block; font-size:.9cqw; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .stat b { font-family:"Bebas Neue",sans-serif; font-weight:400; font-size:3.4cqw; line-height:1; }
+  main { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:minmax(0,1fr); gap:3cqw; min-height:0; overflow:hidden; }
+  .col { min-height:0; min-width:0; overflow:hidden; }
+  .title { display:flex; justify-content:space-between; align-items:baseline; gap:1cqw; }
+  .title h2 { margin:0; font-family:"Bebas Neue",sans-serif; font-weight:400; font-size:1.9cqw; letter-spacing:.1em; line-height:1; }
+  .title span { font-size:.8cqw; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .cols, .row { display:grid; grid-template-columns:2cqw 1fr 6cqw 8cqw 7cqw; gap:.8cqw; align-items:center; }
+  .cols { margin-top:.5cqw; border-bottom:1px solid var(--line); padding-bottom:.3cqw; font-size:.75cqw; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+  .r { text-align:right; }
+  .group { margin:0; padding:.7cqw 0 .2cqw; font-family:"Bebas Neue",sans-serif; font-size:1.25cqw; letter-spacing:.14em; color:var(--gold); }
+  .row { border-top:1px solid var(--line); padding:.4cqw 0; }
+  .rank { display:grid; place-items:center; width:1.9cqw; height:1.9cqw; border-radius:.3cqw; background:rgba(255,255,255,.05); font-family:"Bebas Neue",sans-serif; font-size:1.2cqw; }
+  .name { min-width:0; } .name p { margin:0; } .name .n { font-size:1.3cqw; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .name .s { display:flex; gap:.5cqw; align-items:center; font-size:.8cqw; color:var(--muted); }
+  .tag { border-radius:.2cqw; padding:.1cqw .35cqw; font-size:.7cqw; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+  .tag.down { background:rgba(140,255,106,.15); color:var(--down); } .tag.up { background:rgba(255,77,109,.15); color:var(--up); }
+  .open { font-size:1.1cqw; color:var(--muted); text-align:right; }
+  .now { font-family:"Bebas Neue",sans-serif; font-size:2.3cqw; line-height:1; text-align:right; }
+  .pill { justify-self:end; white-space:nowrap; border-radius:.3cqw; padding:.25cqw .5cqw; font-size:1.05cqw; font-weight:600; }
+  .down { color:var(--down); } .up { color:var(--up); } .flat { color:var(--muted); }
+  .pill.down { background:rgba(140,255,106,.1); } .pill.up { background:rgba(255,77,109,.12); } .pill.flat { background:rgba(255,255,255,.05); }
+  .deals .rank.one { background:var(--down); color:#1a2008; } .risers .rank.one { background:var(--up); color:#1a2008; }
+  .deals .rank:not(.one) { color:var(--down); } .risers .rank:not(.one) { color:var(--up); }
+  footer { border-top:.15cqw solid var(--gold); padding:.6cqw 0; white-space:nowrap; overflow:hidden; font-size:1.3cqw; letter-spacing:.06em; color:var(--ink); }
+  footer b { color:var(--gold); }
+  .note { margin:10px auto 0; max-width:1600px; font-size:12px; color:var(--muted); line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span>Screen shape:</span>
+  <button data-ratio="16:9" aria-pressed="true">16:9 TV</button>
+  <button data-ratio="16:10">16:10</button>
+  <button data-ratio="4:3">4:3</button>
+  <button data-ratio="9:16">Portrait</button>
+  <span id="fit"></span>
+</div>
+
+<div class="frame" id="frame" data-ratio="16:9">
+  <div class="board">
+    <header>
+      <div><div class="disp brand">Don Fenticas</div><div class="sub">DRINK EXCHANGE · HINCKLEY</div></div>
+      <div class="stat"><small>Market</small><b style="color:var(--down)">OPEN</b></div>
+      <div class="stat"><small>Next re-rank</small><b style="color:var(--down)">4:55</b></div>
+    </header>
+    <main>
+      <section class="col deals" id="deals"></section>
+      <section class="col risers" id="risers"></section>
+    </main>
+    <footer><b>DFX</b> · prices move with what you buy · slow sellers get cheaper · <b>TOP</b> Guinness <span class="up">▲</span> · <b>BARGAIN</b> Smirnoff Ice 275ml <span class="down">▼</span> £3.95 · karaoke thursdays · live music saturdays ·</footer>
+  </div>
+</div>
+<p class="note">Sample data. Same rules as the live board: every size is a share of the screen width, so a bigger TV of the same shape looks the same, only larger. A taller shape (16:10, 4:3, portrait) has more room, so each column fills it with more drinks - never fewer than five, up to fifteen. Deals are green, rises are red.</p>
+
+<script>
+  const deals = [
+    ["Smirnoff Ice 275ml","Alcopops","",4.20,3.95,"-30%"],["Peroni 330ml","Bottled Selection","",4.00,3.75,"-30%"],["Sol 330ml","Bottled Selection","",4.20,3.95,"-30%"],
+    ["Desperados 330ml","Bottled Selection","",4.50,4.25,"-30%"],["Damm Lemon","Draught","pint",4.75,4.35,"-30%"],["Pinot Grigio","White Wine","175ml",6.20,5.60,"-20%"],
+    ["Mojito","Classic Cocktails","",8.95,8.10,"-20%"],["DF Session IPA","Draught","pint",4.90,4.45,"-20%"],["Hawkstone Cider","Draught","pint",5.25,4.80,"-20%"],
+    ["Aperol Spritz","Classic Cocktails","",8.85,8.10,"-20%"],["Corona 330ml","Bottled Selection","",4.30,4.00,"-10%"],["Oyster Bay","White Wine","175ml",7.20,6.70,"-10%"],
+    ["Bud Light 330ml","Bottled Selection","",3.90,3.65,"-10%"],["Amaretto Sour","Classic Cocktails","",8.95,8.35,"-10%"],["Malbec","Red Wine","175ml",6.80,6.35,"-10%"],
+  ];
+  const risers = [
+    ["Guinness","Draught","pint",4.85,5.55,"+30%"],["Hawkstone Dark Fruit 500ml","Bottled Selection","",5.35,6.15,"+30%"],["Espresso Martini","Classic Cocktails","",9.50,10.60,"+30%"],
+    ["Hawkstone Premium Lager","Draught","pint",5.65,6.45,"+30%"],["Pornstar Martini","Classic Cocktails","",9.50,10.55,"+30%"],["DF Session Lager","Draught","pint",4.95,5.50,"+20%"],
+    ["Sauvignon Blanc","White Wine","175ml",6.50,7.15,"+20%"],["Margarita","Classic Cocktails","",8.95,9.85,"+20%"],["Madri","Draught","pint",5.40,5.95,"+20%"],
+    ["Prosecco","Sparkling","125ml",6.00,6.55,"+20%"],["Jack & Coke","Spirits & Mixers","",6.20,6.55,"+10%"],["Old Fashioned","Classic Cocktails","",9.80,10.40,"+10%"],
+    ["Rioja","Red Wine","175ml",6.90,7.30,"+10%"],["Stella 330ml","Bottled Selection","",4.40,4.65,"+10%"],["Gin & Tonic","Spirits & Mixers","",6.50,6.85,"+10%"],
+  ];
+  const gbp = (n) => "£" + n.toFixed(2);
+  const pct = (o, n) => { const c = (n - o) / o * 100; const cls = c > .5 ? "up" : c < -.5 ? "down" : "flat"; const s = cls === "up" ? "▲ +" : cls === "down" ? "▼ " : "- "; return [cls, s + c.toFixed(1) + "%"]; };
+  function group(list, limit) {
+    const out = []; list.slice(0, limit).forEach((d, i) => { let g = out.find((x) => x.cat === d[1]); if (!g) out.push(g = { cat: d[1], rows: [] }); g.rows.push({ d, rank: i + 1 }); }); return out;
+  }
+  function render(el, list, limit, title, sub, arrow, cls) {
+    const groups = group(list, limit);
+    el.innerHTML = `<div data-head><div class="title"><h2 class="${cls}">${arrow} ${title}</h2><span>Top ${Math.min(limit, list.length)} · ${sub}</span></div>
+      <div class="cols"><span></span><span></span><span class="r">Menu price</span><span class="r">Now</span><span class="r">Change</span></div></div>` +
+      groups.map((g) => `<div><p class="group">${g.cat}</p>` + g.rows.map(({ d, rank }) => { const [c, t] = pct(d[3], d[4]);
+        return `<div class="row"><span class="rank ${rank === 1 ? "one" : ""}">${rank}</span>
+          <div class="name"><p class="n">${d[0]}</p><p class="s">${d[2] ? `<span>${d[2]}</span>` : ""}<span class="tag ${d[5].startsWith("-") ? "down" : "up"}">${d[5]}</span></p></div>
+          <span class="open">${gbp(d[3])}</span><span class="now ${c}">${gbp(d[4])}</span><span class="pill ${c}">${t}</span></div>`; }).join("") + "</div>").join("");
+  }
+  const MIN = 5, MAX = 15;
+  function fitsIn(el, list) {
+    const head = el.querySelector("[data-head]"), row = el.querySelector(".row"), grp = el.querySelector(".group");
+    if (!head || !row || !grp) return MIN;
+    const avail = el.clientHeight - head.offsetHeight;
+    for (let n = Math.min(MAX, list.length); n > MIN; n--) if (group(list, n).length * grp.offsetHeight + n * row.offsetHeight <= avail) return n;
+    return MIN;
+  }
+  const dEl = document.getElementById("deals"), rEl = document.getElementById("risers");
+  function draw(limit) {
+    render(dEl, deals, limit, "Best deals", "slow tonight, price coming down", "▼", "down");
+    render(rEl, risers, limit, "Top shelf", "selling fast, price going up", "▲", "up");
+  }
+  function refit() {
+    draw(MIN);
+    const limit = Math.max(MIN, Math.min(fitsIn(dEl, deals), fitsIn(rEl, risers)));
+    draw(limit);
+    document.getElementById("fit").textContent = `→ ${limit} drinks fit per column`;
+  }
+  document.querySelectorAll(".bar button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".bar button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    document.getElementById("frame").dataset.ratio = b.dataset.ratio; refit();
+  }));
+  new ResizeObserver(refit).observe(document.getElementById("frame"));
+  document.fonts.ready.then(refit); refit();
+</script>
+</body>
+</html>

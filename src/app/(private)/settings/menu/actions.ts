@@ -30,6 +30,7 @@ import {
   type CurrentCategory,
   type MenuChange,
 } from "@/lib/menu-import";
+import { LIVE_MARKET_MENU_MESSAGE, menuItemIsTrading } from "@/lib/market/live-guard";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 type OrderedTable = "menu_categories" | "menu_items";
@@ -226,6 +227,7 @@ async function writeServes(
 export async function saveItemAction(formData: FormData) {
   const supabase = await createClient();
   const id = formData.get("id")?.toString();
+  if (id && (await menuItemIsTrading(supabase, Number(id)))) return { error: LIVE_MARKET_MENU_MESSAGE };
 
   const categoryId = parseInt(formData.get("category_id")?.toString() || "0", 10);
   const name = formData.get("name")?.toString().trim() || "";
@@ -698,6 +700,7 @@ export async function applyMenuImportAction(
 
 export async function deleteItemAction(id: number) {
   const supabase = await createClient();
+  if (await menuItemIsTrading(supabase, id)) return { error: LIVE_MARKET_MENU_MESSAGE };
   try {
     const { data: item, error: lookupError } = await supabase
       .from("menu_items")

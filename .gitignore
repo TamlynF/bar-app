@@ -52,3 +52,7 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 design_handoff_event_categories/
+Claude outputs/Drinks_Market_Explained.xlsx
+.gitignore
+docs/Drinks_Market_Explained.xlsx
+docs/Market-Night-Pricing-Explained-v3.xlsx

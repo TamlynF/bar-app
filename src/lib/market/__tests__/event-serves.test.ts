@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   groupServesForPicker,
+  isTradeableServe,
   serveLabel,
   serveOptionsFromCategories,
   type ServeCategoryRow,
@@ -16,9 +17,10 @@ const categories: ServeCategoryRow[] = [
         name: "Guinness",
         is_active: true,
         menu_item_prices: [
-          { id: 101, serve: "half", amount: "3.20", display_order: 1, square_variation_id: null },
+          { id: 101, serve: "half pint", amount: "3.20", display_order: 1, square_variation_id: null },
           { id: 100, serve: "pint", amount: "6.20", display_order: 0, square_variation_id: "VAR_PINT" },
           { id: 102, serve: "taster", amount: 0, display_order: 2, square_variation_id: null },
+          { id: 103, serve: "schooner", amount: "4.40", display_order: 3, square_variation_id: null },
         ],
       },
       {
@@ -48,9 +50,9 @@ const categories: ServeCategoryRow[] = [
 ];
 
 describe("serveOptionsFromCategories", () => {
-  it("lists every priced serve of every active item, serves in display order", () => {
+  it("lists every priced, tradeable serve of every active item, serves in display order", () => {
     const options = serveOptionsFromCategories(categories);
-    expect(options.map((o) => o.id)).toEqual([100, 101, 200]);
+    expect(options.map((o) => o.id)).toEqual([100, 103, 200]);
     expect(options[0]).toMatchObject({
       menuItemId: 10,
       name: "Guinness",
@@ -69,7 +71,20 @@ describe("groupServesForPicker", () => {
     const groups = groupServesForPicker(serveOptionsFromCategories(categories));
     expect(groups.map((g) => g.name)).toEqual(["Draught", "Soft"]);
     expect(groups[0].items).toHaveLength(1);
-    expect(groups[0].items[0].serves.map((s) => s.serve)).toEqual(["pint", "half"]);
+    expect(groups[0].items[0].serves.map((s) => s.serve)).toEqual(["pint", "schooner"]);
+  });
+});
+
+describe("isTradeableServe", () => {
+  it("keeps halves, bottles and small glasses off the market", () => {
+    expect(isTradeableServe("pint")).toBe(true);
+    expect(isTradeableServe("large")).toBe(true);
+    expect(isTradeableServe("glass")).toBe(true);
+    expect(isTradeableServe("each")).toBe(true);
+    expect(isTradeableServe("Half Pint")).toBe(false);
+    expect(isTradeableServe("half")).toBe(false);
+    expect(isTradeableServe("bottle")).toBe(false);
+    expect(isTradeableServe("small")).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ import { headlineDeal } from "@/components/market-cta";
 import { useMarketState } from "@/hooks/use-market-live";
 import { formatGbp } from "@/lib/price";
 import { cn } from "@/lib/utils";
+import { displayPrice } from "@/app/(public)/market/market-ui";
 
 /* Desktop-only card in the top-right of the poster hero while the drinks
    market trades: the best deal, its session line and the way in. Renders
@@ -18,7 +19,7 @@ export function MarketHeroCard({ className }: { className?: string }) {
 
   const deal = headlineDeal(state.instruments);
   const crash = state.crashActive;
-  const price = deal ? (deal.tillPrice ?? deal.price) : null;
+  const price = deal ? (displayPrice(deal) ?? deal.price) : null;
   const down = (deal?.changePct ?? 0) < 0;
 
   return (

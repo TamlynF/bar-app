@@ -6,7 +6,21 @@ export type MarketEventKind =
   | "crash"
   | "low_stock"
   | "out_of_stock"
-  | "restock";
+  | "restock"
+  | "tier_up"
+  | "tier_down"
+  | "rerank"
+  | "warmup_done";
+
+export type PricingMode = "demand" | "tiers";
+
+/* Rank bands are cumulative upper bounds: bands [5, 10, 15] with down
+   [0.3, 0.2, 0.1] means fewest-sold ranks 1–5 → −30%, 6–10 → −20%, 11–15 → −10%. */
+export type TierPcts = {
+  down: number[];
+  up: number[];
+  bands: number[];
+};
 
 export type MarketConfig = {
   tickIntervalSec: number;
@@ -22,6 +36,14 @@ export type MarketConfig = {
   crashFactor: number;
   crashDurationTicks: number;
   pushAlertsEnabled: boolean;
+  pricingMode: PricingMode;
+  rerankEveryTicks: number;
+  glidePct: number;
+  warmupUnits: number;
+  tierPcts: TierPcts;
+  paceFloorUnits: number;
+  sessionTicksHint: number;
+  leaderboardRows: number;
 };
 
 export type MarketConfigNumberKey = {
@@ -44,7 +66,36 @@ export const DEFAULT_MARKET_CONFIG: MarketConfig = {
   crashFactor: 0.75,
   crashDurationTicks: 5,
   pushAlertsEnabled: true,
+  pricingMode: "demand",
+  rerankEveryTicks: 5,
+  glidePct: 0.35,
+  warmupUnits: 30,
+  tierPcts: { down: [0.3, 0.2, 0.1], up: [0.3, 0.2, 0.1], bands: [5, 10, 15] },
+  paceFloorUnits: 8,
+  sessionTicksHint: 120,
+  leaderboardRows: 0,
 };
+
+/* warmupUnits may legitimately be 0 (tiers from the first tick) and
+   leaderboardRows 0 means "fill the screen"; every other numeric dial is
+   meaningless at zero and falls back to its default. */
+const ZERO_ALLOWED = new Set<keyof MarketConfig>(["warmupUnits", "leaderboardRows"]);
+
+function numberList(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const list = value.map(Number);
+  return list.every((n) => Number.isFinite(n)) ? list : null;
+}
+
+export function resolveTierPcts(raw: unknown): TierPcts {
+  const source = (raw ?? {}) as Partial<Record<keyof TierPcts, unknown>>;
+  const defaults = DEFAULT_MARKET_CONFIG.tierPcts;
+  const bands = numberList(source.bands) ?? defaults.bands;
+  const down = numberList(source.down) ?? defaults.down;
+  const up = numberList(source.up) ?? defaults.up;
+  const size = Math.min(bands.length, down.length, up.length);
+  return { bands: bands.slice(0, size), down: down.slice(0, size), up: up.slice(0, size) };
+}
 
 export function resolveMarketConfig(raw: unknown): MarketConfig {
   const source = (raw ?? {}) as Partial<Record<keyof MarketConfig, unknown>>;
@@ -54,8 +105,18 @@ export function resolveMarketConfig(raw: unknown): MarketConfig {
       if (typeof source[key] === "boolean") config[key] = source[key];
       continue;
     }
+    if (key === "pricingMode") {
+      if (source[key] === "demand" || source[key] === "tiers") config[key] = source[key];
+      continue;
+    }
+    if (key === "tierPcts") {
+      if (source[key] !== undefined) config[key] = resolveTierPcts(source[key]);
+      continue;
+    }
     const value = Number(source[key]);
-    if (Number.isFinite(value) && value > 0) config[key] = value;
+    if (Number.isFinite(value) && (value > 0 || (value === 0 && ZERO_ALLOWED.has(key)))) {
+      config[key] = value;
+    }
   }
   return config;
 }
@@ -69,6 +130,11 @@ export type InstrumentState = {
   stockState: StockState;
   stockOverride: StockState | null;
   squareVariationId: string | null;
+  /* Tier engine only. normalUnitsPerNight is what this serve usually sells on
+     a night like tonight; lastSaleTick / tierPct carry between ticks. */
+  normalUnitsPerNight?: number | null;
+  lastSaleTick?: number | null;
+  tierPct?: number;
   /* Absolute per-drink limits set on the event; null falls back to the
      session config multipliers against basePrice. */
   minPrice?: number | null;

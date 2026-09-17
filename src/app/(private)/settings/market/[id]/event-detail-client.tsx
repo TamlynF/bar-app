@@ -8,6 +8,7 @@ import {
   ChevronRight,
   History,
   Loader2,
+  ListOrdered,
   MonitorPlay,
   Play,
   Plus,
@@ -21,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import NormalUnitsCard, { type NormalUnitsView } from "./normal-units-card";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
@@ -49,6 +51,7 @@ import {
   addEventDrinksAction,
   crashInstrumentAction,
   crashMarketAction,
+  rerankNowAction,
   endMarketAction,
   openStockMarketEventAction,
   removeEventDrinkAction,
@@ -67,7 +70,25 @@ export type LiveInstrument = {
   stockState: StockState;
   stockOverride: StockState | null;
   crashing: boolean;
+  pace: number | null;
+  rankPos: number | null;
+  tierPct: number | null;
+  targetPrice: number | null;
+  normalUnitsPerNight: number | null;
+  normalUnitsSource: string | null;
 };
+
+export type LiveTiers = {
+  pricingMode: "demand" | "tiers";
+  warmedUp: boolean;
+  unitsSoldTotal: number;
+  warmupUnits: number;
+};
+
+function tierLabel(pct: number | null): string | null {
+  if (pct == null || pct === 0) return null;
+  return `${pct > 0 ? "+" : "−"}${Math.round(Math.abs(pct) * 100)}%`;
+}
 
 /* One serve on the event: `id` is the menu_item_prices row, which is what
    the event link, the overrides and the live instrument are keyed on. */
@@ -568,6 +589,8 @@ export default function EventDetailClient({
   sessions,
   isLive,
   anyLive,
+  normalUnits,
+  liveTiers = null,
 }: {
   event: StockMarketEventSummary;
   drinks: EventDrink[];
@@ -575,7 +598,10 @@ export default function EventDetailClient({
   sessions: EventSession[];
   isLive: boolean;
   anyLive: boolean;
+  normalUnits: NormalUnitsView;
+  liveTiers?: LiveTiers | null;
 }) {
+  const tiersLive = isLive && liveTiers?.pricingMode === "tiers";
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
@@ -722,6 +748,10 @@ export default function EventDetailClient({
     if (confirmed) run(crashMarketAction, "Crash triggered - watch the board.");
   }
 
+  function handleRerank() {
+    run(rerankNowAction, liveTiers?.warmedUp ? "Re-ranked - tiers updated." : "Warm-up skipped - tiers are on.");
+  }
+
   function handleRemove() {
     const drink = drinkSheet.selected;
     if (!drink) return;
@@ -864,6 +894,23 @@ export default function EventDetailClient({
                 <MonitorPlay className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Big screen</span>
               </a>
+              {tiersLive && (
+                <button
+                  type="button"
+                  onClick={handleRerank}
+                  disabled={isPending}
+                  aria-label={liveTiers?.warmedUp ? "Re-rank now" : "Skip warm-up and re-rank"}
+                  title={
+                    liveTiers?.warmedUp
+                      ? "Re-rank now"
+                      : `Skip warm-up (${liveTiers?.unitsSoldTotal ?? 0} of ${liveTiers?.warmupUnits ?? 0} units sold)`
+                  }
+                  className={cn(NEUTRAL_BUTTON, "flex-1 max-sm:px-0 sm:flex-none")}
+                >
+                  <ListOrdered className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{liveTiers?.warmedUp ? "Re-rank now" : "Skip warm-up"}</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleCrash}
@@ -1086,6 +1133,25 @@ export default function EventDetailClient({
                               <p className="text-[11px] text-admin-muted tabular-nums">
                                 Demand {instrument.demandUnits.toFixed(1)} · Range{" "}
                                 {formatGbp(settings.effective.minPrice)} to {formatGbp(settings.effective.maxPrice)}
+                                {tiersLive && (
+                                  <>
+                                    {" "}· Rank {instrument.rankPos ?? "—"} · Pace {(instrument.pace ?? 0).toFixed(2)}×
+                                    {instrument.normalUnitsPerNight != null && ` of ${instrument.normalUnitsPerNight}/night`}
+                                    {tierLabel(instrument.tierPct) && (
+                                      <span
+                                        className={cn(
+                                          "ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold",
+                                          (instrument.tierPct ?? 0) > 0
+                                            ? "bg-admin-error-bg text-admin-error"
+                                            : "bg-admin-success-bg text-admin-success"
+                                        )}
+                                      >
+                                        {tierLabel(instrument.tierPct)}
+                                        {instrument.targetPrice != null && ` → ${formatGbp(instrument.targetPrice)}`}
+                                      </span>
+                                    )}
+                                  </>
+                                )}
                               </p>
                               <div className="mt-1.5 flex items-center gap-2">
                                 {editing ? (
@@ -1528,6 +1594,8 @@ export default function EventDetailClient({
           />
         )}
       </RecordSheet>
+
+      <NormalUnitsCard view={normalUnits} />
 
       <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-3">

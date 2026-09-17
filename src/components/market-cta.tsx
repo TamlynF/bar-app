@@ -7,6 +7,7 @@ import { useMarketState } from "@/hooks/use-market-live";
 import { formatGbp } from "@/lib/price";
 import { cn } from "@/lib/utils";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
+import { displayPrice } from "@/app/(public)/market/market-ui";
 
 /* The best deal on the board right now: the drink furthest below its base
    price. Falls back to the cheapest drink when nothing has dropped yet. */
@@ -20,7 +21,7 @@ export function headlineDeal(instruments: MarketInstrumentPayload[] | undefined)
 }
 
 function shownPrice(i: MarketInstrumentPayload) {
-  return i.tillPrice ?? i.price;
+  return displayPrice(i) ?? i.price;
 }
 
 /* Live market button, shown in the hero only while the drinks market is

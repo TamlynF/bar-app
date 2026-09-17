@@ -22,7 +22,7 @@ type SubscriptionRow = {
   watched_instrument_ids: number[] | null;
 };
 
-const PUSH_KINDS = new Set<MarketEventKind>(["price_drop", "crash", "low_stock", "out_of_stock"]);
+const PUSH_KINDS = new Set<MarketEventKind>(["price_drop", "crash", "low_stock", "out_of_stock", "tier_down"]);
 const MAX_LINES = 3;
 
 function eventLine(event: MarketPushEvent): string {
@@ -40,6 +40,10 @@ function eventLine(event: MarketPushEvent): string {
       return `${name} sold out`;
     case "crash":
       return name ? `${name} crashing - buy the dip` : "Market crash - every drink at its floor price";
+    case "tier_down":
+      return `${name} just dropped to the deals tier${
+        event.payload.pct != null ? ` - heading ${event.payload.pct.toFixed(0)}%` : ""
+      }`;
     default:
       return name;
   }

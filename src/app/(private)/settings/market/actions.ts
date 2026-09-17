@@ -7,8 +7,16 @@ import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { squareClient } from "@/lib/square";
 import type { Square } from "square";
 import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
-import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig } from "@/lib/market/types";
+import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig, type PricingMode } from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
+import { sessionTicksFor } from "@/lib/market/normal-units";
+import { LIVE_MARKET_MENU_MESSAGE, liveMarketSessionId } from "@/lib/market/live-guard";
+import {
+  recalculateNormalUnits,
+  resolveNormalsForOpen,
+  type NormalUnitsEventRow,
+  type ResolvedNormals,
+} from "@/lib/market/normal-units-server";
 import {
   EMPTY_OVERRIDES,
   optionalNumber,
@@ -63,13 +71,62 @@ const configSchema = z.object({
   ceilPct: z.coerce.number().min(1).max(5),
   moveNotifyPct: z.coerce.number().min(0.01).max(0.5),
   lowStockThreshold: z.coerce.number().min(1).max(100),
+  leaderboardRows: z.coerce.number().int().min(0).max(15),
 });
+
+const tierSchema = z.object({
+  rerankEveryTicks: z.coerce.number().int().min(1).max(60),
+  glidePct: z.coerce.number().min(0.05).max(1),
+  warmupUnits: z.coerce.number().int().min(0).max(1000),
+  paceFloorUnits: z.coerce.number().min(1).max(500),
+  tierPcts: z.object({
+    down: z.array(z.coerce.number().min(0).max(0.9)).length(3),
+    up: z.array(z.coerce.number().min(0).max(0.9)).length(3),
+    bands: z.array(z.number()).length(3),
+  }),
+});
+
+type TierConfig = z.infer<typeof tierSchema> & { pricingMode: PricingMode };
 
 function readPushAlertsEnabled(formData: FormData): boolean {
   return formData.get("pushAlertsEnabled") === "on";
 }
 
-function readConfig(formData: FormData) {
+function pctField(formData: FormData, key: string, fallback: number): number {
+  const raw = formData.get(key)?.toString().trim();
+  if (raw === undefined || raw === "") return fallback;
+  return Number(raw) / 100;
+}
+
+/* Tier dials are only on the form when the tier mode is selected; a demand
+   event keeps the defaults so switching modes later starts from sane values. */
+function readTierConfig(formData: FormData, current: MarketConfig = DEFAULT_MARKET_CONFIG): TierConfig | null {
+  const pricingMode: PricingMode = formData.get("pricingMode") === "tiers" ? "tiers" : "demand";
+  if (pricingMode === "demand") {
+    return {
+      pricingMode,
+      rerankEveryTicks: current.rerankEveryTicks,
+      glidePct: current.glidePct,
+      warmupUnits: current.warmupUnits,
+      paceFloorUnits: current.paceFloorUnits,
+      tierPcts: current.tierPcts,
+    };
+  }
+  const parsed = tierSchema.safeParse({
+    rerankEveryTicks: formData.get("rerankEveryTicks"),
+    glidePct: formData.get("glidePct"),
+    warmupUnits: formData.get("warmupUnits"),
+    paceFloorUnits: formData.get("paceFloorUnits"),
+    tierPcts: {
+      down: [0, 1, 2].map((i) => pctField(formData, `tierDown${i}`, current.tierPcts.down[i] ?? 0)),
+      up: [0, 1, 2].map((i) => pctField(formData, `tierUp${i}`, current.tierPcts.up[i] ?? 0)),
+      bands: current.tierPcts.bands,
+    },
+  });
+  return parsed.success ? { pricingMode, ...parsed.data } : null;
+}
+
+function readConfig(formData: FormData, base: MarketConfig = DEFAULT_MARKET_CONFIG) {
   const parsed = configSchema.safeParse({
     tickIntervalSec: formData.get("tickIntervalSec"),
     noiseSigma: formData.get("noiseSigma"),
@@ -77,9 +134,12 @@ function readConfig(formData: FormData) {
     ceilPct: formData.get("ceilPct"),
     moveNotifyPct: formData.get("moveNotifyPct"),
     lowStockThreshold: formData.get("lowStockThreshold"),
+    leaderboardRows: formData.get("leaderboardRows") ?? 0,
   });
   if (!parsed.success) return null;
-  return { ...DEFAULT_MARKET_CONFIG, ...parsed.data, pushAlertsEnabled: readPushAlertsEnabled(formData) };
+  const tier = readTierConfig(formData, base);
+  if (!tier) return null;
+  return { ...base, ...parsed.data, ...tier, pushAlertsEnabled: readPushAlertsEnabled(formData) };
 }
 
 type PriceRow = {
@@ -146,6 +206,7 @@ async function openSession(
     menuItemPriceIds: number[];
     overridesByPrice: Map<number, DrinkOverrides>;
     stockMarketEventId: number;
+    normals?: ResolvedNormals;
   }
 ) {
   const { data: existing } = await supabase
@@ -199,6 +260,8 @@ async function openSession(
       crash_price: overrides.crashPrice,
       low_stock_at: overrides.lowStockAt,
       alert_threshold: overrides.alertThreshold,
+      normal_units_per_night: options.normals?.get(serve.id)?.value ?? null,
+      normal_units_source: options.normals?.get(serve.id)?.source ?? null,
     };
   });
 
@@ -241,6 +304,24 @@ const eventSchema = configSchema.extend({
   close_time: z.string().regex(CLOCK, "Closing time is required."),
 });
 
+function readWeekdays(formData: FormData): number[] {
+  return [...new Set(formData.getAll("weekdays").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+}
+
+function readOptionalWeekday(formData: FormData, key: string): number | null {
+  const raw = formData.get(key)?.toString() ?? "";
+  if (raw === "") return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 && n <= 6 ? n : null;
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+function readOptionalDate(formData: FormData, key: string): string | null {
+  const raw = formData.get(key)?.toString().trim() ?? "";
+  return YMD.test(raw) ? raw : null;
+}
+
 function readMenuItemPriceIds(formData: FormData): number[] {
   try {
     const raw = JSON.parse(formData.get("menu_item_price_ids")?.toString() || "[]");
@@ -265,6 +346,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     ceilPct: formData.get("ceilPct"),
     moveNotifyPct: formData.get("moveNotifyPct"),
     lowStockThreshold: formData.get("lowStockThreshold"),
+    leaderboardRows: formData.get("leaderboardRows") ?? 0,
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -274,6 +356,9 @@ export async function saveStockMarketEventAction(formData: FormData) {
       : (issue?.message ?? "Check the event details.");
     return { error: message };
   }
+
+  const tier = readTierConfig(formData);
+  if (!tier) return { error: "Check the tier settings - every number needs a sensible value." };
 
   const menuItemPriceIds = readMenuItemPriceIds(formData);
   if (menuItemPriceIds.length === 0) return { error: "Pick at least one drink for this event." };
@@ -292,7 +377,19 @@ export async function saveStockMarketEventAction(formData: FormData) {
     ceil_pct: values.ceilPct,
     move_notify_pct: values.moveNotifyPct,
     low_stock_threshold: values.lowStockThreshold,
+    leaderboard_rows: values.leaderboardRows,
     push_alerts_enabled: readPushAlertsEnabled(formData),
+    pricing_mode: tier.pricingMode,
+    rerank_every_ticks: tier.rerankEveryTicks,
+    glide_pct: tier.glidePct,
+    warmup_units: tier.warmupUnits,
+    tier_pcts: tier.tierPcts,
+    pace_floor_units: tier.paceFloorUnits,
+    weekdays: readWeekdays(formData),
+    bank_holiday_profile: readOptionalWeekday(formData, "bank_holiday_profile"),
+    history_from: readOptionalDate(formData, "history_from"),
+    history_to: readOptionalDate(formData, "history_to"),
+    exclude_market_nights: formData.get("exclude_market_nights") !== "off",
   };
 
   let eventId: number;
@@ -379,12 +476,25 @@ export async function deactivateStockMarketEventAction(id: number) {
   return { success: true };
 }
 
+function normalUnitsEventRow(row: StockMarketEventRow): NormalUnitsEventRow {
+  return {
+    id: row.id,
+    open_time: row.open_time,
+    close_time: row.close_time,
+    weekdays: row.weekdays ?? [],
+    bank_holiday_profile: row.bank_holiday_profile ?? null,
+    history_from: row.history_from ?? null,
+    history_to: row.history_to ?? null,
+    exclude_market_nights: row.exclude_market_nights ?? true,
+  };
+}
+
 export async function openStockMarketEventAction(id: number) {
   const supabase = await createClient();
   const { data: event, error } = await supabase
     .from("stock_market_events")
     .select(
-      "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)"
+      "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night)"
     )
     .eq("id", id)
     .eq("is_active", true)
@@ -393,17 +503,31 @@ export async function openStockMarketEventAction(id: number) {
   if (!event) return { error: "That event is no longer available." };
 
   const row = event as StockMarketEventRow & {
-    stock_market_event_items: ({ menu_item_price_id: number } & DrinkOverrideRow)[] | null;
+    stock_market_event_items:
+      | ({ menu_item_price_id: number; normal_units_per_night?: number | string | null } & DrinkOverrideRow)[]
+      | null;
   };
   const items = row.stock_market_event_items ?? [];
   const menuItemPriceIds = items.map((item) => item.menu_item_price_id);
   if (menuItemPriceIds.length === 0) return { error: "This event has no drinks - edit it and pick some." };
 
+  const config: MarketConfig = {
+    ...eventConfig(row),
+    sessionTicksHint: sessionTicksFor(row.open_time, row.close_time, Number(row.tick_interval_sec)),
+  };
+  const normals = await resolveNormalsForOpen(
+    supabase,
+    normalUnitsEventRow(row),
+    items.map((item) => ({ menuItemPriceId: item.menu_item_price_id, override: optionalNumber(item.normal_units_per_night) })),
+    config
+  );
+
   const result = await openSession(supabase, {
-    config: eventConfig(row),
+    config,
     menuItemPriceIds,
     overridesByPrice: new Map(items.map((item) => [item.menu_item_price_id, overridesFromRow(item)])),
     stockMarketEventId: row.id,
+    normals,
   });
   if ("error" in result) return result;
   revalidateMarket();
@@ -763,7 +887,12 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
 
 export async function updateConfigAction(formData: FormData) {
   const supabase = await createClient();
-  const config = readConfig(formData);
+  const { data: live } = await supabase
+    .from("market_sessions")
+    .select("config")
+    .eq("status", "live")
+    .maybeSingle();
+  const config = readConfig(formData, resolveMarketConfig(live?.config));
   if (!config) return { error: "Check the market settings - every number needs a sensible value." };
 
   const { error } = await supabase
@@ -855,6 +984,29 @@ export async function setSquareSyncEnabledAction(enabled: boolean) {
     .update({ square_sync_enabled: enabled })
     .eq("status", "live");
   if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true };
+}
+
+export async function rerankNowAction() {
+  const supabase = await createClient();
+  const { data: session } = await supabase
+    .from("market_sessions")
+    .select("id, tick_no, config, warmed_up_tick")
+    .eq("status", "live")
+    .maybeSingle();
+  if (!session) return { error: "No live market to re-rank." };
+  const config = resolveMarketConfig(session.config);
+  if (config.pricingMode !== "tiers") return { error: "This market is running the demand engine - there are no tiers to re-rank." };
+  /* Marking warm-up as "this coming tick" makes shouldRerank fire on it, and
+     lifts the warm-up gate early if staff want tiers on before the threshold. */
+  const { error } = await supabase
+    .from("market_sessions")
+    .update({ warmed_up_tick: session.tick_no + 1 })
+    .eq("id", session.id);
+  if (error) return { error: error.message };
+  const forced = await forceTickNow(session.id);
+  if ("error" in forced) return forced;
   revalidateMarket();
   return { success: true };
 }
@@ -1060,6 +1212,7 @@ async function fetchExistingCatalog(): Promise<ExistingCatalog> {
 
 export async function pushMenuToSquareAction() {
   const supabase = await createClient();
+  if ((await liveMarketSessionId(supabase)) != null) return { error: LIVE_MARKET_MENU_MESSAGE };
 
   const { data: items, error: itemsError } = await supabase
     .from("menu_items")
@@ -1134,6 +1287,51 @@ export type DrinkPriceDraft = {
   menuItemPriceId: number;
   overrides: Record<keyof DrinkOverrides, string | number | null>;
 };
+
+export async function recalculateNormalUnitsAction(eventId: number) {
+  const supabase = await createClient();
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  const { data: event, error } = await supabase
+    .from("stock_market_events")
+    .select("*")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!event) return { error: "That event is no longer available." };
+  const row = event as StockMarketEventRow;
+  if ((row.weekdays ?? []).length === 0) {
+    return { error: "Pick which day(s) of the week this event runs on first." };
+  }
+  try {
+    const result = await recalculateNormalUnits(supabase, normalUnitsEventRow(row));
+    revalidateMarket();
+    const nights = Object.values(result.sampledNights).reduce((sum, list) => sum + list.length, 0);
+    return {
+      success: true,
+      serves: new Set(result.rows.map((r) => r.menuItemPriceId)).size,
+      nights,
+      unmappedServes: result.unmappedServes,
+    };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not read sales history from Square." };
+  }
+}
+
+export async function saveEventNormalUnitsAction(eventId: number, menuItemPriceId: number, value: number | null) {
+  const supabase = await createClient();
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  if (value !== null && (!Number.isFinite(value) || value <= 0)) {
+    return { error: "Normal units must be a positive number, or blank to use Square history." };
+  }
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .update({ normal_units_per_night: value })
+    .eq("event_id", eventId)
+    .eq("menu_item_price_id", menuItemPriceId);
+  if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true };
+}
 
 export async function saveEventDrinkPricesAction(eventId: number, rows: DrinkPriceDraft[]) {
   const supabase = await createClient();

@@ -6,7 +6,7 @@ import {
   summariseEvent,
   type StockMarketEventRow,
 } from "../stock-market-events";
-import { DEFAULT_MARKET_CONFIG } from "../types";
+import { DEFAULT_MARKET_CONFIG, resolveMarketConfig } from "../types";
 
 const row: StockMarketEventRow = {
   id: 7,
@@ -37,6 +37,12 @@ describe("eventConfig", () => {
     expect(config.lowStockThreshold).toBe(3);
     expect(config.crashFactor).toBe(DEFAULT_MARKET_CONFIG.crashFactor);
     expect(config.decayK).toBe(DEFAULT_MARKET_CONFIG.decayK);
+  });
+
+  it("reads the leaderboard row count, 0 meaning fill the screen", () => {
+    expect(eventConfig(row).leaderboardRows).toBe(0);
+    expect(eventConfig({ ...row, leaderboard_rows: 8 }).leaderboardRows).toBe(8);
+    expect(resolveMarketConfig({ leaderboardRows: 0 }).leaderboardRows).toBe(0);
   });
 
   it("defaults phone alerts on for rows written before the column existed", () => {
@@ -78,5 +84,32 @@ describe("summariseEvent", () => {
     expect(summary.menuItemPriceIds).toEqual([3, 4]);
     expect(summary.lastRunAt).toBe("2026-09-03T20:00:00Z");
     expect(summary.config.tickIntervalSec).toBe(45);
+  });
+});
+
+describe("eventConfig tier fields", () => {
+  it("maps the tier columns and falls back to defaults when they are absent", () => {
+    const tiers = eventConfig({
+      ...row,
+      pricing_mode: "tiers",
+      rerank_every_ticks: "4",
+      glide_pct: "0.5",
+      warmup_units: 0,
+      tier_pcts: { down: [0.3, 0.2, 0.1], up: [0.2, 0.15, 0.1], bands: [5, 10, 15] },
+      pace_floor_units: "6",
+      session_ticks_hint: "90",
+    });
+    expect(tiers.pricingMode).toBe("tiers");
+    expect(tiers.rerankEveryTicks).toBe(4);
+    expect(tiers.glidePct).toBe(0.5);
+    expect(tiers.warmupUnits).toBe(0);
+    expect(tiers.tierPcts.up).toEqual([0.2, 0.15, 0.1]);
+    expect(tiers.paceFloorUnits).toBe(6);
+    expect(tiers.sessionTicksHint).toBe(90);
+
+    const legacy = eventConfig(row);
+    expect(legacy.pricingMode).toBe("demand");
+    expect(legacy.tierPcts).toEqual(DEFAULT_MARKET_CONFIG.tierPcts);
+    expect(legacy.rerankEveryTicks).toBe(DEFAULT_MARKET_CONFIG.rerankEveryTicks);
   });
 });

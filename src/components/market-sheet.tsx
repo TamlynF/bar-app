@@ -8,11 +8,12 @@ import { Sparkline } from "@/components/sparkline";
 import { formatGbp } from "@/lib/price";
 import { cn } from "@/lib/utils";
 import type { MarketInstrumentPayload, MarketStatePayload } from "@/lib/market/tick";
+import { displayPrice } from "@/app/(public)/market/market-ui";
 
 const MAX_MOVERS = 6;
 
 function shown(i: MarketInstrumentPayload) {
-  return i.tillPrice ?? i.price;
+  return displayPrice(i) ?? i.price;
 }
 
 /* Bottom sheet with the market at a glance: the headline deal with its

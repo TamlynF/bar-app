@@ -42,6 +42,15 @@ export function serveLabel(name: string, serve: string | null | undefined): stri
   return trimmed && trimmed.toLowerCase() !== "each" ? `${name} · ${trimmed}` : name;
 }
 
+/* Serves the market never trades: halves would double up every draught
+   line, and wine moves by the glass, so bottles and small glasses stay off
+   the board. Matching is on the serve name, case-insensitive. */
+const UNTRADEABLE_SERVES = new Set(["half pint", "half", "bottle", "small"]);
+
+export function isTradeableServe(serve: string | null | undefined): boolean {
+  return !UNTRADEABLE_SERVES.has((serve ?? "").trim().toLowerCase());
+}
+
 export function sortServes<T extends { display_order: number; id: number }>(prices: T[]): T[] {
   return [...prices].sort((a, b) => a.display_order - b.display_order || a.id - b.id);
 }
@@ -55,7 +64,7 @@ export function serveOptionsFromCategories(categories: ServeCategoryRow[]): Serv
       .sort((a, b) => a.name.localeCompare(b.name))
       .flatMap((item) =>
         sortServes(item.menu_item_prices)
-          .filter((price) => Number(price.amount) > 0)
+          .filter((price) => Number(price.amount) > 0 && isTradeableServe(price.serve))
           .map((price) => ({
             id: price.id,
             menuItemId: item.id,

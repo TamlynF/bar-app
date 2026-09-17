@@ -55,6 +55,7 @@ import { formatGbp } from "@/lib/price";
 import { DEFAULT_MARKET_CONFIG, type MarketConfig, type StockState } from "@/lib/market/types";
 import type { CatalogVariation } from "@/lib/market/mapping";
 import { formatTimeWindow, type StockMarketEventSummary } from "@/lib/market/stock-market-events";
+import { WEEKDAY_NAMES } from "@/lib/market/normal-units";
 import { groupServesForPicker, serveLabel, type ServeOption } from "@/lib/market/event-serves";
 import {
   addStockAction,
@@ -78,7 +79,16 @@ import {
   type SimMode,
 } from "./actions";
 import { squareSandboxDashboardUrl } from "@/lib/market/simulate";
-import { CONFIG_FIELDS, ConfigHelp, PUSH_ALERTS_FIELD, configSummary } from "./config-fields";
+import {
+  CONFIG_FIELDS,
+  ConfigHelp,
+  PRICING_MODES,
+  PUSH_ALERTS_FIELD,
+  TIER_BANDS,
+  TIER_FIELDS,
+  TIER_PCT_FIELDS,
+  configSummary,
+} from "./config-fields";
 
 export type SessionSummary = {
   id: number;
@@ -173,10 +183,131 @@ const FIELD_INPUT =
 const CONFIG_VALUE =
   "w-20 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
+function WeekdayPicker({ selected }: { selected: number[] }) {
+  const [days, setDays] = useState<number[]>(selected);
+  function toggle(day: number) {
+    setDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()));
+  }
+  return (
+    <span className="flex flex-1 flex-wrap justify-end gap-1.5">
+      {days.map((day) => (
+        <input key={day} type="hidden" name="weekdays" value={day} />
+      ))}
+      {WEEKDAY_NAMES.map((name, day) => {
+        const on = days.includes(day);
+        return (
+          <button
+            key={name}
+            type="button"
+            aria-pressed={on}
+            aria-label={name}
+            onClick={() => toggle(day)}
+            className={cn(
+              "h-9 min-w-11 rounded-full border px-3 text-[12px] font-semibold transition-colors sm:h-8",
+              on
+                ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                : "border-admin-line text-admin-muted hover:bg-admin-surface"
+            )}
+          >
+            {name.slice(0, 3)}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+function historySummary(event: StockMarketEventSummary | null): string {
+  const from = event?.historyFrom ?? null;
+  const to = event?.historyTo ?? null;
+  const range = from || to ? `${from ?? "start"} to ${to ?? "today"}` : "last 12 weeks";
+  const skip = (event?.excludeMarketNights ?? true) ? "market nights skipped" : "market nights included";
+  return `${range} · ${skip}`;
+}
+
+function TierPctInputs({ field, values }: { field: { key: string; label: string; help: string }; values: number[] }) {
+  return (
+    <span className="flex flex-1 items-center justify-end gap-1.5">
+      {TIER_BANDS.map((band, index) => (
+        <label key={band} className="flex items-center gap-1 text-[11px] font-semibold text-admin-muted">
+          <span className="sr-only">{`${field.label} ranks ${band}`}</span>
+          <span aria-hidden="true">{band}</span>
+          <input
+            type="number"
+            name={`${field.key}${index}`}
+            aria-label={`${field.label} ranks ${band}`}
+            defaultValue={Math.round((values[index] ?? 0) * 100)}
+            step="1"
+            min="0"
+            max="90"
+            required
+            className={cn(FIELD_INPUT, "w-12 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
+          />
+        </label>
+      ))}
+    </span>
+  );
+}
+
 function ConfigFormRows({ config }: { config: MarketConfig }) {
+  const [mode, setMode] = useState<MarketConfig["pricingMode"]>(config.pricingMode);
+  const numberFields = CONFIG_FIELDS.filter((field) => mode === "demand" || field.key !== "noiseSigma");
   return (
     <TooltipProvider>
-      {CONFIG_FIELDS.map((field) => (
+      <FormRow label="Pricing" align="start" dense>
+        <input type="hidden" name="pricingMode" value={mode} />
+        <span className="flex flex-1 flex-col items-end gap-1.5">
+          <span className="inline-flex rounded-lg border border-admin-line p-0.5" role="radiogroup" aria-label="Pricing mode">
+            {PRICING_MODES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={mode === option.value}
+                onClick={() => setMode(option.value)}
+                className={cn(
+                  "h-9 rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-8",
+                  mode === option.value ? "bg-admin-primary-soft text-admin-primary" : "text-admin-muted hover:bg-admin-surface"
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </span>
+          <span className="text-[11px] text-admin-muted">{PRICING_MODES.find((o) => o.value === mode)?.hint}</span>
+        </span>
+      </FormRow>
+      {mode === "tiers" && (
+        <>
+          {TIER_FIELDS.map((field) => (
+            <FormRow key={field.key} label={field.label} dense>
+              <ConfigHelp field={field} />
+              <span className="flex flex-1 justify-end">
+                <input
+                  type="number"
+                  name={field.key}
+                  aria-label={field.label}
+                  defaultValue={config[field.key]}
+                  step={field.step}
+                  min="0"
+                  required
+                  className={cn(FIELD_INPUT, CONFIG_VALUE)}
+                />
+              </span>
+            </FormRow>
+          ))}
+          <FormRow label={TIER_PCT_FIELDS.up.label} dense>
+            <ConfigHelp field={{ ...TIER_PCT_FIELDS.up, hint: "Ranks 1–5, 6–10, 11–15 from the top" }} />
+            <TierPctInputs field={TIER_PCT_FIELDS.up} values={config.tierPcts.up} />
+          </FormRow>
+          <FormRow label={TIER_PCT_FIELDS.down.label} dense>
+            <ConfigHelp field={{ ...TIER_PCT_FIELDS.down, hint: "Ranks 1–5, 6–10, 11–15 from the bottom" }} />
+            <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
+          </FormRow>
+        </>
+      )}
+      {mode === "tiers" && <input type="hidden" name="noiseSigma" value={config.noiseSigma} />}
+      {numberFields.map((field) => (
         <FormRow key={field.key} label={field.label} dense>
           <ConfigHelp field={field} />
           <span className="flex flex-1 justify-end">
@@ -370,6 +501,80 @@ function EventForm({
             />
           </span>
         </FormRow>
+        <FormRow label="Runs on" align="start" dense>
+          <WeekdayPicker selected={event?.weekdays ?? []} />
+        </FormRow>
+        <FormRow label="Bank holiday eve" dense>
+          <select
+            name="bank_holiday_profile"
+            aria-label="Weekday profile to use on the eve of a bank holiday"
+            defaultValue={event?.bankHolidayProfile ?? "6"}
+            className={cn(FIELD_INPUT, "w-40 flex-none appearance-none")}
+          >
+            <option value="">Same as the actual day</option>
+            {WEEKDAY_NAMES.map((name, index) => (
+              <option key={name} value={index}>
+                Trades like a {name}
+              </option>
+            ))}
+          </select>
+        </FormRow>
+      </DetailCard>
+
+      <DetailCard>
+        <details className="group/history">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-semibold tracking-wide text-admin-muted">
+                Sales history used for &ldquo;normal&rdquo;
+              </span>
+              <span className="mt-0.5 block truncate text-[12px] text-admin-ink group-open/history:hidden">
+                {historySummary(event)}
+              </span>
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200 group-open/history:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="divide-y divide-admin-line/50 border-t border-admin-line">
+            <FormRow label="From" dense>
+              <input
+                type="date"
+                name="history_from"
+                aria-label="Earliest date of sales history to use"
+                defaultValue={event?.historyFrom ?? ""}
+                className={cn(FIELD_INPUT, "w-40 flex-none")}
+              />
+            </FormRow>
+            <FormRow label="To" dense>
+              <input
+                type="date"
+                name="history_to"
+                aria-label="Latest date of sales history to use"
+                defaultValue={event?.historyTo ?? ""}
+                className={cn(FIELD_INPUT, "w-40 flex-none")}
+              />
+            </FormRow>
+            <FormRow label="Skip market nights" dense>
+              <span className="flex flex-1 items-center justify-end">
+                <input type="hidden" name="exclude_market_nights" value="off" />
+                <input
+                  type="checkbox"
+                  name="exclude_market_nights"
+                  value="on"
+                  aria-label="Leave previous market nights out of the sales history"
+                  defaultChecked={event?.excludeMarketNights ?? true}
+                  className="h-4 w-4 cursor-pointer accent-admin-primary"
+                />
+              </span>
+            </FormRow>
+            <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+              Blank dates mean the last 12 weeks. Each drink&rsquo;s &ldquo;normal&rdquo; is the average of its last six nights on the
+              chosen weekday, counted over the event&rsquo;s hours from Square orders. Bank holidays and their eves are left out.
+            </p>
+          </div>
+        </details>
       </DetailCard>
 
       {/* The seven tuning numbers are rarely touched, so they start folded
@@ -466,6 +671,7 @@ function settingTiles(config: MarketConfig): { label: string; value: string }[] 
     { label: "Price range", value: `${config.floorPct}× to ${config.ceilPct}× base` },
     { label: "Alert on a move of", value: `${Math.round(config.moveNotifyPct * 100)}%` },
     { label: "Low stock at", value: `${config.lowStockThreshold} left` },
+    { label: "Leaderboard shows", value: config.leaderboardRows > 0 ? `top ${config.leaderboardRows}` : "as many as fit" },
     { label: "Phone alerts", value: config.pushAlertsEnabled ? "On" : "Off" },
   ];
 }

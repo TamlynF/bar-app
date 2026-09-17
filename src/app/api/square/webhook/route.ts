@@ -7,6 +7,8 @@ import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-email
 import { renderTemplate } from "@/lib/email/resolve";
 import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-confirmation";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -56,6 +58,15 @@ export async function POST(req: NextRequest) {
     event = JSON.parse(body);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (event.type === CATALOG_VERSION_EVENT) {
+    try {
+      await confirmCatalogWrite(createAdminClient());
+    } catch (err) {
+      console.error("[market] catalog confirmation failed:", err);
+    }
+    return NextResponse.json({ received: true });
   }
 
   if (!PAYMENT_EVENT_TYPES.has(event.type)) {

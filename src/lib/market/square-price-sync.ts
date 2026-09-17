@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Square } from "square";
 import { squareClient } from "@/lib/square";
@@ -130,15 +129,36 @@ function isVersionMismatch(err: unknown): boolean {
   return Boolean((err as SquareError)?.errors?.some((x) => x.code === "VERSION_MISMATCH"));
 }
 
+/* Square sends Retry-After in seconds on a 429; the SDK surfaces headers in
+   a couple of shapes depending on version, so look in both and cap the wait
+   so a tick never blocks for long. */
+const MAX_RETRY_AFTER_MS = 5000;
+
+export function retryAfterMs(err: unknown, fallbackMs = 2000): number {
+  const e = err as { rawResponse?: { headers?: Record<string, string> }; headers?: Record<string, string> };
+  const header = e?.rawResponse?.headers?.["retry-after"] ?? e?.headers?.["retry-after"];
+  const seconds = Number(header);
+  const ms = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : fallbackMs;
+  return Math.min(ms, MAX_RETRY_AFTER_MS);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type UpsertOutcome = {
   written: Variation[];
   before: Map<string, Variation>;
 };
 
 /* One request, batched in tens. On VERSION_MISMATCH (someone edited an item in
-   Dashboard between our fetch and our write) re-fetch and retry exactly once. */
+   Dashboard between our fetch and our write) re-fetch and retry exactly once.
+   The idempotency key is deterministic per (caller key, attempt) so a request
+   that times out and is replayed by the SDK cannot apply twice, while a
+   re-fetched retry - which carries different object versions - gets its own. */
 async function upsertPrices(
   targets: { variationId: string; pounds: number }[],
+  idempotencyBase: string,
   attempt = 1
 ): Promise<UpsertOutcome> {
   const fresh = await fetchVariations(targets.map((t) => t.variationId));
@@ -152,12 +172,12 @@ async function upsertPrices(
 
   try {
     const res = await squareClient.catalog.batchUpsert({
-      idempotencyKey: randomUUID(),
+      idempotencyKey: `${idempotencyBase}-a${attempt}`.slice(0, 128),
       batches: chunk(objects, BATCH_SIZE).map((batch) => ({ objects: batch })),
     });
     return { written: (res.objects ?? []).filter(isVariation), before: fresh };
   } catch (err) {
-    if (isVersionMismatch(err) && attempt === 1) return upsertPrices(targets, 2);
+    if (isVersionMismatch(err) && attempt === 1) return upsertPrices(targets, idempotencyBase, 2);
     throw err;
   }
 }
@@ -207,9 +227,11 @@ async function linkedInstruments(
    Never call from anything that fires per sale. */
 export async function syncMarketPricesToSquare(
   supabase: SupabaseClient,
-  sessionId: number
+  sessionId: number,
+  tickNo?: number
 ): Promise<SquareSyncResult> {
   const result = emptyResult();
+  const idempotencyBase = `market-${sessionId}-t${tickNo ?? Date.now()}`;
 
   const { data: session } = await supabase
     .from("market_sessions")
@@ -232,18 +254,25 @@ export async function syncMarketPricesToSquare(
 
   const byVariation = new Map(dirty.map((row) => [row.square_variation_id as string, row]));
 
+  const targets = dirty.map((row) => ({
+    variationId: row.square_variation_id as string,
+    pounds: Number(row.current_price),
+  }));
   let outcome: UpsertOutcome;
   try {
-    outcome = await upsertPrices(
-      dirty.map((row) => ({
-        variationId: row.square_variation_id as string,
-        pounds: Number(row.current_price),
-      }))
-    );
+    try {
+      outcome = await upsertPrices(targets, idempotencyBase);
+    } catch (err) {
+      /* One in-tick retry after Square's Retry-After: a transient collision
+         then costs seconds, not a whole tick of stale till prices. */
+      if (!isRateLimited(err)) throw err;
+      await sleep(retryAfterMs(err));
+      outcome = await upsertPrices(targets, `${idempotencyBase}-r`);
+    }
   } catch (err) {
     if (isRateLimited(err)) {
-      /* Another catalog write (menu edit, menu push) is in flight. Rows stay
-         dirty and the next tick picks them up. */
+      /* Still busy - another catalog write (menu edit, menu push) is in
+         flight. Rows stay dirty and the next tick picks them up. */
       result.retryLater = true;
       return result;
     }
@@ -260,6 +289,12 @@ export async function syncMarketPricesToSquare(
   }
 
   await logPush(supabase, sessionId, "tick", byVariation, outcome);
+  if (outcome.written.length > 0) {
+    await supabase
+      .from("market_sessions")
+      .update({ square_last_write_at: new Date().toISOString() })
+      .eq("id", sessionId);
+  }
 
   /* Record what Square now holds: the board's headline number, the settings
      page's "board / till" pair, and next tick's dirty check. */
@@ -320,10 +355,11 @@ export async function restoreSquarePrices(
     pounds: Number(row.square_original_price),
   }));
   const byVariation = new Map(rows.map((row) => [row.square_variation_id as string, row]));
+  const idempotencyBase = `market-restore-${sessionId}-${Date.now()}`;
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
-      const outcome = await upsertPrices(targets);
+      const outcome = await upsertPrices(targets, `${idempotencyBase}-${attempt}`);
       await logPush(supabase, sessionId, "restore", byVariation, outcome);
       result.written = outcome.written.length;
       await supabase

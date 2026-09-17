@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Don Fenticas – Drinks Exchange board (two-column mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #1a2008;
+    --line: #3a4520;
+    --gold: #FDCC4B;
+    --cream: #f3f0dc;
+    --muted: #a9ae8d;
+    --up: #8CFF6A;
+    --down: #FF4D6D;
+    --display: "Bebas Neue", Impact, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--cream); }
+  body {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+  }
+  .board {
+    display: grid;
+    height: 100dvh;
+    grid-template-rows: auto 1fr auto;
+    gap: 1.2vw;
+    padding: 1.6vw 2vw 0;
+  }
+
+  /* ─── Header (unchanged from current board) ─── */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    align-items: end;
+    gap: 2vw;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 0.8vw;
+  }
+  .brand { font-family: var(--display); font-size: 5vw; line-height: 0.9; letter-spacing: 0.02em; color: var(--gold); }
+  .strap { font-size: 1.5vw; letter-spacing: 0.18em; color: var(--cream); }
+  .stat { text-align: right; }
+  .stat .lbl { font-size: 0.9vw; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+  .stat .val { font-family: var(--display); font-size: 3.4vw; line-height: 1; }
+  .stat .val.open { color: var(--up); }
+  .stat .val.gold { color: var(--gold); }
+  .qr { display: flex; align-items: center; gap: 0.9vw; align-self: center; border-left: 1px solid var(--line); padding-left: 1.8vw; }
+  .qr .code { width: 6.2vw; height: 6.2vw; border-radius: 0.4vw; background: #fff; padding: 0.3vw; }
+  .qr .code svg { width: 100%; height: 100%; }
+  .qr .txt { max-width: 12vw; font-size: 0.8vw; line-height: 1.4; letter-spacing: 0.1em; text-transform: uppercase; }
+  .qr .txt strong { color: var(--cream); font-weight: 600; }
+  .qr .txt span { color: var(--muted); }
+
+  /* ─── NEW: two-column deals layout ─── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 3vw;
+    align-content: start;
+    overflow: hidden;
+  }
+  .col-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1vw;
+    padding: 0.5vw 0.9vw;
+    border-radius: 0.4vw;
+    font-family: var(--display);
+    font-size: 2vw;
+    letter-spacing: 0.14em;
+    line-height: 1;
+  }
+  .col-head small { font-family: var(--mono); font-size: 0.85vw; letter-spacing: 0.14em; text-transform: uppercase; }
+  .col-head.deals { background: rgba(140,255,106,0.10); color: var(--up); box-shadow: inset 0 0 0 1px rgba(140,255,106,0.35); }
+  .col-head.deals small { color: var(--up); opacity: 0.85; }
+  .col-head.pricey { background: rgba(255,77,109,0.10); color: var(--down); box-shadow: inset 0 0 0 1px rgba(255,77,109,0.35); }
+  .col-head.pricey small { color: var(--down); opacity: 0.85; }
+  .col-head .arrow { font-size: 1.6vw; margin-right: 0.4vw; }
+
+  /* category heading spans both columns so the two sides line up */
+  .cat {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 0.9vw;
+    margin-bottom: 0.3vw;
+    font-family: var(--display);
+    font-size: 1.7vw;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+  }
+  .cat .hot { font-family: var(--mono); font-size: 0.85vw; letter-spacing: 0.1em; color: var(--muted); }
+
+  .cols { display: grid; grid-template-columns: 2.4vw 1.2fr 6.5vw 9vw 6vw; align-items: center; gap: 1vw; }
+  .th { padding: 0.5vw 0 0.15vw; font-size: 0.75vw; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase; }
+  .th .r { text-align: right; }
+
+  .row { border-top: 1px solid var(--line); padding: 0.55vw 0; }
+  .rank {
+    display: grid; place-items: center;
+    width: 2.4vw; height: 2.4vw; border-radius: 0.3vw;
+    font-family: var(--display); font-size: 1.6vw; line-height: 1;
+    background: rgba(255,255,255,0.05); color: var(--muted);
+  }
+  .deals .rank.top { background: var(--up); color: var(--bg); }
+  .pricey .rank.top { background: var(--down); color: #fff; }
+  .name { min-width: 0; }
+  .name p { font-size: 1.5vw; font-weight: 500; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name small { display: block; font-size: 0.8vw; line-height: 1.2; min-height: 1em; color: var(--muted); }
+  .name small .tag { margin-left: 0; }
+  .tag {
+    display: inline-block; margin-left: 0.5vw; vertical-align: baseline;
+    padding: 0.05vw 0.35vw; border-radius: 0.25vw;
+    font-size: 0.7vw; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .deals .tag { background: var(--up); color: var(--bg); }
+  .pricey .tag { background: var(--down); color: #fff; }
+  .open { font-size: 1.35vw; line-height: 1; text-align: right; color: var(--muted); }
+  .now { font-family: var(--display); font-size: 3vw; line-height: 1; text-align: right; }
+  /* customer-friendly colours: a price DROP is good news (green), a RISE is red */
+  .now.up { color: var(--down); } .now.down { color: var(--up); } .now.flat { color: var(--cream); }
+  .pill {
+    justify-self: end; border-radius: 0.3vw; padding: 0.25vw 0.5vw;
+    font-size: 1.05vw; font-weight: 600; text-align: right;
+  }
+  .pill.up { background: rgba(255,77,109,0.12); color: var(--down); }
+  .pill.down { background: rgba(140,255,106,0.10); color: var(--up); }
+  .pill.flat { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+  /* ─── Ticker (unchanged) ─── */
+  footer { overflow: hidden; border-top: 2px solid var(--gold); padding: 0.6vw 0; white-space: nowrap; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+  .track { display: flex; width: max-content; animation: marquee 40s linear infinite; }
+  .track > div { flex-shrink: 0; white-space: pre; font-size: 1.3vw; letter-spacing: 0.06em; }
+  .track .sep { margin: 0 0.6vw; color: var(--muted); }
+  .track b { color: var(--gold); font-weight: 600; }
+
+  .toggle {
+    position: fixed; right: 1vw; bottom: 1vw; z-index: 20; opacity: 0.25;
+    background: var(--gold); color: var(--bg); border: 0; border-radius: 0.3vw;
+    padding: 0.5vw 0.9vw; font: 600 0.85vw var(--mono); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  }
+  .toggle:hover { opacity: 1; }
+  .mock-note {
+    position: fixed; left: 1vw; top: 0.3vw; z-index: 20; opacity: 0.6;
+    font-size: 0.7vw; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="board">
+  <header>
+    <div>
+      <p class="brand">Don Fenticas</p>
+      <p class="strap">DRINK EXCHANGE · HINCKLEY</p>
+    </div>
+    <div class="stat"><p class="lbl">Market</p><p class="val open">OPEN</p></div>
+    <div class="stat"><p class="lbl">Next update</p><p class="val gold" id="countdown">4:58</p></div>
+    <div class="qr">
+      <div class="code" aria-hidden="true">
+        <svg viewBox="0 0 21 21" shape-rendering="crispEdges" fill="#000">
+          <rect x="0" y="0" width="7" height="7"/><rect x="1" y="1" width="5" height="5" fill="#fff"/><rect x="2" y="2" width="3" height="3"/>
+          <rect x="14" y="0" width="7" height="7"/><rect x="15" y="1" width="5" height="5" fill="#fff"/><rect x="16" y="2" width="3" height="3"/>
+          <rect x="0" y="14" width="7" height="7"/><rect x="1" y="15" width="5" height="5" fill="#fff"/><rect x="2" y="16" width="3" height="3"/>
+          <rect x="8" y="1" width="1" height="1"/><rect x="10" y="0" width="1" height="2"/><rect x="12" y="1" width="1" height="1"/>
+          <rect x="8" y="3" width="2" height="1"/><rect x="11" y="3" width="2" height="1"/><rect x="9" y="5" width="1" height="2"/><rect x="12" y="5" width="1" height="1"/>
+          <rect x="1" y="8" width="1" height="1"/><rect x="3" y="8" width="2" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="8" y="8" width="1" height="1"/>
+          <rect x="10" y="8" width="2" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="15" y="8" width="2" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/>
+          <rect x="0" y="10" width="2" height="1"/><rect x="4" y="10" width="1" height="1"/><rect x="7" y="10" width="2" height="1"/><rect x="11" y="10" width="1" height="1"/><rect x="14" y="10" width="2" height="1"/><rect x="17" y="10" width="1" height="1"/><rect x="19" y="10" width="2" height="1"/>
+          <rect x="2" y="12" width="1" height="1"/><rect x="5" y="12" width="2" height="1"/><rect x="9" y="12" width="1" height="1"/><rect x="12" y="12" width="2" height="1"/><rect x="16" y="12" width="1" height="1"/><rect x="18" y="12" width="1" height="1"/>
+          <rect x="8" y="14" width="1" height="1"/><rect x="10" y="14" width="1" height="1"/><rect x="13" y="14" width="1" height="1"/><rect x="15" y="14" width="2" height="1"/><rect x="19" y="14" width="1" height="1"/>
+          <rect x="9" y="16" width="2" height="1"/><rect x="12" y="16" width="1" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="17" y="16" width="2" height="1"/>
+          <rect x="8" y="18" width="1" height="1"/><rect x="11" y="18" width="2" height="1"/><rect x="15" y="18" width="1" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/>
+          <rect x="9" y="20" width="1" height="1"/><rect x="12" y="20" width="1" height="1"/><rect x="14" y="20" width="2" height="1"/><rect x="17" y="20" width="1" height="1"/><rect x="19" y="20" width="1" height="1"/>
+        </svg>
+      </div>
+      <div class="txt">
+        <strong>Scan for the market on your phone</strong>
+        <span>Get alerts on the drinks you watch</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <footer>
+    <div class="track">
+      <div id="tick-a"></div>
+      <div id="tick-b" aria-hidden="true"></div>
+    </div>
+  </footer>
+</div>
+
+<button class="toggle" type="button">Table view</button>
+<p class="mock-note">Mockup · sample data · top 5 per column</p>
+
+<script>
+  // ── Sample data (mirrors the current board + extra categories so both columns show a spread) ──
+  const CATS = ["Draught", "Bottled Selection", "Alcopops", "White Wine", "Classic Cocktails"];
+  const DRINKS = [
+    { cat: "Draught", name: "Damm Lemon",              serve: "pint",  open: 4.75, now: 4.35, demand: 6 },
+    { cat: "Draught", name: "DF Session IPA",          serve: "pint",  open: 4.95, now: 4.75, demand: 2 },
+    { cat: "Draught", name: "DF Session Lager",        serve: "pint",  open: 4.95, now: 4.95, demand: 4 },
+    { cat: "Draught", name: "Guinness",                serve: "pint",  open: 4.95, now: 5.30, demand: 14 },
+    { cat: "Draught", name: "Hawkstone Premium Lager", serve: "pint",  open: 5.50, now: 5.60, demand: 8 },
+
+    { cat: "Bottled Selection", name: "Desperados 330ml",           serve: "each", open: 4.50, now: 4.25, demand: 1 },
+    { cat: "Bottled Selection", name: "Peroni 330ml",               serve: "each", open: 4.00, now: 4.00, demand: 5 },
+    { cat: "Bottled Selection", name: "Sol 330ml",                  serve: "each", open: 4.20, now: 4.10, demand: 2 },
+    { cat: "Bottled Selection", name: "Hawkstone Dark Fruit 500ml", serve: "each", open: 6.20, now: 6.50, demand: 9 },
+
+    { cat: "Alcopops", name: "Smirnoff Ice 275ml", serve: "each", open: 4.20, now: 3.95, demand: 3 },
+    { cat: "Alcopops", name: "WKD Blue 275ml",     serve: "each", open: 4.20, now: 4.40, demand: 7 },
+
+    { cat: "White Wine", name: "Pinot Grigio", serve: "175ml", open: 6.40, now: 6.40, demand: 4 },
+    { cat: "White Wine", name: "Oyster Bay",   serve: "175ml", open: 7.20, now: 7.55, demand: 10 },
+
+    { cat: "Classic Cocktails", name: "Amaretto Sour",    serve: "each", open: 8.95, now: 9.30, demand: 10 },
+    { cat: "Classic Cocktails", name: "Espresso Martini", serve: "each", open: 9.50, now: 9.95, demand: 16 },
+    { cat: "Classic Cocktails", name: "Mojito",           serve: "each", open: 8.95, now: 8.60, demand: 3 },
+  ];
+  const TOP_N = 5;   // top 5 across the whole menu, per column
+
+  const gbp = n => "£" + n.toFixed(2);
+  const pct = d => (d >= 0 ? "+" : "-") + Math.abs(d).toFixed(1) + "%";
+  const change = d => ((d.now - d.open) / d.open) * 100;
+  const trend = d => { const c = change(d); return c > 0.5 ? "up" : c < -0.5 ? "down" : "flat"; };
+
+  function row(d, rank, side) {
+    const t = trend(d);
+    const c = change(d);
+    const top = rank === 1;
+    const tag = top ? `<span class="tag">${side === "deals" ? "Best deal" : "Top shelf"}</span>` : "";
+    const serve = `<small>${d.serve !== "each" ? d.serve + (top ? " · " : "") : ""}${tag}</small>`;
+    const pill = t === "up" ? `▲ ${pct(c)}` : t === "down" ? `▼ ${pct(c)}` : "- 0.0%";
+    return `<div class="cols row">
+      <span class="rank ${top ? "top" : ""}">${rank}</span>
+      <div class="name"><p>${d.name}</p>${serve}</div>
+      <span class="open">${gbp(d.open)}</span>
+      <span class="now ${t}">${gbp(d.now)}</span>
+      <span class="pill ${t}">${pill}</span>
+    </div>`;
+  }
+
+  const TH = `<div class="cols th"><span></span><span></span><span class="r">Open</span><span class="r">Now</span><span class="r">Change</span></div>`;
+
+  // Take the top N across the whole menu, then group them by category (menu order).
+  // A category only appears in a column if one of its drinks made the top N.
+  function column(list, cls, head) {
+    const ranked = list.map((d, i) => ({ d, rank: i + 1 }));
+    let html = `<section class="${cls}">${head}${TH}`;
+    for (const cat of CATS) {
+      const inCat = ranked.filter(r => r.d.cat === cat);
+      if (!inCat.length) continue;
+      html += `<h2 class="cat">${cat}</h2>`;
+      html += inCat.map(r => row(r.d, r.rank, cls)).join("");
+    }
+    return html + `</section>`;
+  }
+
+  const cheapest = [...DRINKS].sort((a, b) => a.now - b.now || a.name.localeCompare(b.name)).slice(0, TOP_N);
+  const priciest = [...DRINKS].sort((a, b) => b.now - a.now || a.name.localeCompare(b.name)).slice(0, TOP_N);
+
+  document.getElementById("main").innerHTML =
+    column(cheapest, "deals", `<div class="col-head deals"><span><span class="arrow">▼</span>Best deals</span><small>5 lowest prices right now</small></div>`) +
+    column(priciest, "pricey", `<div class="col-head pricey"><span><span class="arrow">▲</span>Top shelf</span><small>5 highest prices right now</small></div>`);
+
+  // Ticker
+  const topMover = DRINKS.reduce((a, b) => (change(b) > change(a) ? b : a));
+  const bargain = DRINKS.reduce((a, b) => (change(b) < change(a) ? b : a));
+  const segs = [
+    `<b>DFX</b>`, `prices move with what you buy · slow sellers get cheaper`,
+    `<b>TOP</b> ${topMover.name} <span style="color:var(--down)">▲</span>`,
+    `<b>BARGAIN</b> ${bargain.name} <span style="color:var(--up)">▼</span> ${gbp(bargain.now)}`,
+    `Amaretto Sour surging to £9.40 (+5.0%)`, `Desperados 330ml down to £4.25 (-5.6%)`,
+    `karaoke thursdays`, `live music saturdays`,
+  ].map(s => `<span>${s}<span class="sep">·</span></span>`).join("");
+  document.getElementById("tick-a").innerHTML = segs;
+  document.getElementById("tick-b").innerHTML = segs;
+
+  // Countdown just for the demo
+  let secs = 298;
+  setInterval(() => {
+    secs = secs > 0 ? secs - 1 : 299;
+    document.getElementById("countdown").textContent = Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0");
+  }, 1000);
+</script>
+</body>
+</html>

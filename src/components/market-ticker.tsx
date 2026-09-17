@@ -6,6 +6,7 @@ import { MarketSheet } from "@/components/market-sheet";
 import { RollingPrice } from "@/components/rolling-price";
 import { cn } from "@/lib/utils";
 import type { MarketInstrumentPayload, MarketStatePayload } from "@/lib/market/tick";
+import { displayPrice } from "@/app/(public)/market/market-ui";
 
 export function headlineDeal(instruments: MarketInstrumentPayload[] | undefined) {
   if (!instruments?.length) return null;
@@ -33,7 +34,7 @@ export function MarketTicker({
   if (state.status !== "live") return null;
 
   const deal = headlineDeal(state.instruments);
-  const price = deal ? (deal.tillPrice ?? deal.price) : null;
+  const price = deal ? (displayPrice(deal) ?? deal.price) : null;
   const crash = Boolean(state.crashActive);
   const label = deal ? `Drinks market open: ${deal.name} now £${price?.toFixed(2)}` : "Drinks market open";
 

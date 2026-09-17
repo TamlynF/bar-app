@@ -5,14 +5,16 @@ import {
   summariseEvent,
   type StockMarketEventRow,
 } from "@/lib/market/stock-market-events";
-import type { StockState } from "@/lib/market/types";
+import { resolveMarketConfig, type StockState } from "@/lib/market/types";
 import { serveOptionsFromCategories, type ServeCategoryRow } from "@/lib/market/event-serves";
 import {
   EMPTY_OVERRIDES,
+  optionalNumber,
   overridesFromRow,
   type DrinkOverrideRow,
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
+import type { NormalUnitsView } from "./normal-units-card";
 import EventDetailClient, {
   type AvailableDrink,
   type EventDrink,
@@ -23,11 +25,13 @@ import EventDetailClient, {
 export const dynamic = "force-dynamic";
 
 type EventRow = StockMarketEventRow & {
-  stock_market_event_items: ({ menu_item_price_id: number } & DrinkOverrideRow)[] | null;
+  stock_market_event_items:
+    | ({ menu_item_price_id: number; normal_units_per_night?: number | string | null } & DrinkOverrideRow)[]
+    | null;
 };
 
 const EVENT_SELECT =
-  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold)";
+  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night)";
 
 type CategoryJoin = {
   id: number;
@@ -63,6 +67,12 @@ type InstrumentRow = {
   stock_state: StockState;
   stock_override: StockState | null;
   crash_until_tick: number | null;
+  pace: number | string | null;
+  rank_pos: number | null;
+  tier_pct: number | string | null;
+  target_price: number | string | null;
+  normal_units_per_night: number | string | null;
+  normal_units_source: string | null;
 };
 
 const SERVE_SELECT =
@@ -116,7 +126,7 @@ export default async function StockMarketEventPage({
       .order("started_at", { ascending: false }),
     supabase
       .from("market_sessions")
-      .select("id, stock_market_event_id, tick_no")
+      .select("id, stock_market_event_id, tick_no, config, warmed_up_tick, units_sold_total")
       .eq("status", "live")
       .maybeSingle(),
   ]);
@@ -126,7 +136,7 @@ export default async function StockMarketEventPage({
     ? await supabase
         .from("market_instruments")
         .select(
-          "id, menu_item_price_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick",
+          "id, menu_item_price_id, opening_price, current_price, demand_units, stock_state, stock_override, crash_until_tick, pace, rank_pos, tier_pct, target_price, normal_units_per_night, normal_units_source",
         )
         .eq("session_id", liveRow!.id)
     : { data: [] as InstrumentRow[] };
@@ -143,6 +153,12 @@ export default async function StockMarketEventPage({
         crashing:
           instrument.crash_until_tick != null &&
           (liveRow?.tick_no ?? 0) <= instrument.crash_until_tick,
+        pace: optionalNumber(instrument.pace),
+        rankPos: instrument.rank_pos,
+        tierPct: optionalNumber(instrument.tier_pct),
+        targetPrice: optionalNumber(instrument.target_price),
+        normalUnitsPerNight: optionalNumber(instrument.normal_units_per_night),
+        normalUnitsSource: instrument.normal_units_source,
       },
     ]),
   );
@@ -211,6 +227,45 @@ export default async function StockMarketEventPage({
   const lastRunAt = sessions[0]?.startedAt ?? null;
   const event = summariseEvent(row, menuItemPriceIds, lastRunAt);
 
+  const { data: normalRows } = menuItemPriceIds.length
+    ? await supabase
+        .from("market_normal_units")
+        .select("menu_item_price_id, weekday, units_avg, nights_sampled, computed_at")
+        .in("menu_item_price_id", menuItemPriceIds)
+    : { data: [] as never[] };
+  const normalsByPrice = new Map<number, { weekday: number; unitsAvg: number; nightsSampled: number }[]>();
+  let computedAt: string | null = null;
+  for (const n of (normalRows ?? []) as {
+    menu_item_price_id: number;
+    weekday: number;
+    units_avg: number | string;
+    nights_sampled: number;
+    computed_at: string;
+  }[]) {
+    const list = normalsByPrice.get(n.menu_item_price_id) ?? [];
+    list.push({ weekday: n.weekday, unitsAvg: Number(n.units_avg), nightsSampled: n.nights_sampled });
+    normalsByPrice.set(n.menu_item_price_id, list);
+    if (!computedAt || n.computed_at > computedAt) computedAt = n.computed_at;
+  }
+  const overrideByPrice = new Map(
+    (row.stock_market_event_items ?? []).map((item) => [item.menu_item_price_id, optionalNumber(item.normal_units_per_night)])
+  );
+  const normalUnits: NormalUnitsView = {
+    eventId: event.id,
+    weekdays: event.weekdays,
+    computedAt,
+    rows: drinks
+      .filter((drink) => drink.basePrice != null)
+      .map((drink) => ({
+        menuItemPriceId: drink.id,
+        name: drink.name,
+        serve: drink.serve,
+        linked: drink.linked,
+        override: overrideByPrice.get(drink.id) ?? null,
+        byWeekday: normalsByPrice.get(drink.id) ?? [],
+      })),
+  };
+
   return (
     <>
       <AdminPageTitle title={event.name} />
@@ -221,6 +276,17 @@ export default async function StockMarketEventPage({
         sessions={sessions}
         isLive={isLive}
         anyLive={Boolean(liveRow)}
+        normalUnits={normalUnits}
+        liveTiers={
+          isLive && liveRow
+            ? {
+                pricingMode: resolveMarketConfig(liveRow.config).pricingMode,
+                warmedUp: liveRow.warmed_up_tick != null,
+                unitsSoldTotal: Number(liveRow.units_sold_total ?? 0),
+                warmupUnits: resolveMarketConfig(liveRow.config).warmupUnits,
+              }
+            : null
+        }
       />
     </>
   );

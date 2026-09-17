@@ -71,6 +71,14 @@ function eventCopyText(kind: string, from: number | null, to: number | null, pct
       return "Back on the bar";
     case "crash":
       return "Crash triggered";
+    case "tier_up":
+      return `Moved up a tier${pctText(pct)}`;
+    case "tier_down":
+      return `Moved down a tier${pctText(pct)}`;
+    case "rerank":
+      return "Board re-ranked";
+    case "warmup_done":
+      return "Warm-up complete";
     default:
       return kind.replace(/_/g, " ");
   }

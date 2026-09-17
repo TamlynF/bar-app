@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { squareClient } from "@/lib/square";
 import { instrumentLimits, runTick } from "./engine";
+import { runTierTick, type TierInstrumentTickResult } from "./tier-engine";
+import { publicTillPrice } from "./square-confirmation";
 import { optionalNumber } from "./drink-overrides";
 import { tickRng } from "./rng";
 import { syncMarketPricesToSquare } from "./square-price-sync";
@@ -8,7 +10,9 @@ import {
   resolveMarketConfig,
   type InstrumentState,
   type MarketConfig,
+  type InstrumentTickResult,
   type MarketEventKind,
+  type PricingMode,
   type StockState,
 } from "./types";
 import { sendMarketPushAlerts } from "./push-alerts";
@@ -24,6 +28,11 @@ export type MarketSessionRow = {
   crash_until_tick: number | null;
   started_at: string;
   stock_market_event_id?: number | null;
+  units_sold_total?: number | null;
+  warmed_up_tick?: number | null;
+  last_rerank_tick?: number | null;
+  square_last_write_at?: string | null;
+  square_catalog_confirmed_at?: string | null;
 };
 
 export type MarketInstrumentRow = {
@@ -51,6 +60,14 @@ export type MarketInstrumentRow = {
   square_original_price: number | string | null;
   square_synced_price: number | string | null;
   square_sync_error: string | null;
+  square_confirmed_price?: number | string | null;
+  normal_units_per_night?: number | string | null;
+  normal_units_source?: string | null;
+  pace?: number | string | null;
+  last_sale_tick?: number | null;
+  rank_pos?: number | null;
+  tier_pct?: number | string | null;
+  target_price?: number | string | null;
 };
 
 export function instrumentCrashActive(row: MarketInstrumentRow, tickNo: number): boolean {
@@ -78,6 +95,15 @@ export type MarketInstrumentPayload = {
      this as the headline and `price` as the pending move when they differ. */
   tillPrice: number | null;
   tillSyncError: string | null;
+  /* True when the drink is mapped to a Square variation, i.e. tillPrice is
+     the price the bar actually charges once the first sync lands. */
+  linkedToTill: boolean;
+  /* Tier engine only; null in demand mode. */
+  tierPct: number | null;
+  targetPrice: number | null;
+  pace: number | null;
+  rankPos: number | null;
+  normalUnitsPerNight: number | null;
 };
 
 export type MarketEventPayload = {
@@ -100,6 +126,12 @@ export type MarketStatePayload = {
   crashActive?: boolean;
   crashRemainingSec?: number;
   pushAlertsEnabled?: boolean;
+  pricingMode?: PricingMode;
+  warmedUp?: boolean;
+  unitsSoldTotal?: number;
+  warmupUnits?: number;
+  nextRerankInSec?: number | null;
+  leaderboardRows?: number;
   instruments?: MarketInstrumentPayload[];
   events?: MarketEventPayload[];
 };
@@ -154,7 +186,17 @@ function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
     crashPrice: optionalNumber(row.crash_price),
     lowStockAt: optionalNumber(row.low_stock_at),
     alertThreshold: optionalNumber(row.alert_threshold),
+    normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
+    lastSaleTick: row.last_sale_tick ?? null,
+    tierPct: optionalNumber(row.tier_pct) ?? 0,
   };
+}
+
+function secondsUntilNextRerank(session: MarketSessionRow, config: MarketConfig, now: Date): number | null {
+  if (config.pricingMode !== "tiers" || session.warmed_up_tick == null) return null;
+  const every = Math.max(1, Math.round(config.rerankEveryTicks));
+  const ticksLeft = every - (session.tick_no % every);
+  return (ticksLeft - 1) * config.tickIntervalSec + secondsUntilNextTick(session, config, now);
 }
 
 type OrderLineItem = { catalogObjectId?: string | null; quantity?: string | null };
@@ -334,19 +376,44 @@ export async function maybeRunMarketTick(
       ...toInstrumentState(row),
       crashActive: instrumentCrashActive(row, tickNo),
     }));
-    const results = runTick(states, {
+    const tickInputs = {
       config,
       crashActive,
       newUnitsByInstrument,
       stockQtyByVariation,
       rng: tickRng(session.id, tickNo),
-    });
+    };
+    let results: (InstrumentTickResult | TierInstrumentTickResult)[];
+    let sessionUpdate: Record<string, unknown> = {};
+    const sessionEvents: { kind: MarketEventKind; payload: Record<string, unknown> }[] = [];
+    if (config.pricingMode === "tiers") {
+      const outcome = runTierTick(states, {
+        ...tickInputs,
+        session: {
+          tickNo,
+          unitsSoldTotal: session.units_sold_total ?? 0,
+          warmedUpTick: session.warmed_up_tick ?? null,
+          lastRerankTick: session.last_rerank_tick ?? null,
+        },
+      });
+      results = outcome.results;
+      sessionUpdate = {
+        units_sold_total: outcome.session.unitsSoldTotal,
+        warmed_up_tick: outcome.session.warmedUpTick,
+        last_rerank_tick: outcome.session.lastRerankTick,
+      };
+      if (outcome.warmedUpThisTick) sessionEvents.push({ kind: "warmup_done", payload: {} });
+      if (outcome.reranked) sessionEvents.push({ kind: "rerank", payload: {} });
+    } else {
+      results = runTick(states, tickInputs);
+    }
 
     const byId = new Map(instruments.map((i) => [i.id, i] as const));
-    for (const result of results) {
+    const instrumentUpdates = results.map((result) => {
       const variationId = byId.get(result.id)?.square_variation_id;
       const stockQty = variationId ? stockQtyByVariation.get(variationId) : undefined;
-      const { error: updateError } = await supabase
+      const tier = "tierPct" in result ? result : null;
+      return supabase
         .from("market_instruments")
         .update({
           current_price: result.price,
@@ -355,9 +422,27 @@ export async function maybeRunMarketTick(
           last_notified_price: result.lastNotifiedPrice,
           updated_at: now.toISOString(),
           ...(stockQty === undefined ? {} : { stock_qty: stockQty }),
+          ...(tier
+            ? {
+                pace: tier.pace,
+                last_sale_tick: tier.lastSaleTick,
+                rank_pos: tier.rankPos,
+                tier_pct: tier.tierPct,
+                target_price: Math.round(tier.targetPrice * 100) / 100,
+              }
+            : {}),
         })
         .eq("id", result.id);
+    });
+    for (const { error: updateError } of await Promise.all(instrumentUpdates)) {
       if (updateError) throw updateError;
+    }
+    if (Object.keys(sessionUpdate).length > 0) {
+      const { error: sessionError } = await supabase
+        .from("market_sessions")
+        .update(sessionUpdate)
+        .eq("id", session.id);
+      if (sessionError) throw sessionError;
     }
 
     const { error: tickError } = await supabase.from("market_ticks").upsert(
@@ -372,21 +457,29 @@ export async function maybeRunMarketTick(
     );
     if (tickError) throw tickError;
 
-    const events = results.flatMap((result) =>
-      result.events.map((event) => {
-        const row = byId.get(event.instrumentId);
-        return {
-          session_id: session.id,
-          instrument_id: event.instrumentId,
-          kind: event.kind,
-          payload: {
-            name: row?.display_name ?? null,
-            serve: row?.serve ?? null,
-            ...event.payload,
-          },
-        };
-      })
-    );
+    const events = [
+      ...sessionEvents.map((event) => ({
+        session_id: session.id,
+        instrument_id: null as number | null,
+        kind: event.kind,
+        payload: event.payload,
+      })),
+      ...results.flatMap((result) =>
+        result.events.map((event) => {
+          const row = byId.get(event.instrumentId);
+          return {
+            session_id: session.id,
+            instrument_id: event.instrumentId as number | null,
+            kind: event.kind,
+            payload: {
+              name: row?.display_name ?? null,
+              serve: row?.serve ?? null,
+              ...event.payload,
+            } as Record<string, unknown>,
+          };
+        })
+      ),
+    ];
     if (events.length > 0) {
       const { error: eventError } = await supabase.from("market_events").insert(events);
       if (eventError) throw eventError;
@@ -422,7 +515,7 @@ export async function maybeRunMarketTick(
        committed, and is try/caught on its own so a Square outage can never
        undo a tick that has already happened. */
     try {
-      const sync = await syncMarketPricesToSquare(supabase, session.id);
+      const sync = await syncMarketPricesToSquare(supabase, session.id, tickNo);
       if (sync.retryLater) console.warn("[market] Square busy (429) - prices retry next tick");
       if (sync.errors.length > 0) {
         console.error("[market] Square price sync errors:", sync.errors);
@@ -504,6 +597,12 @@ export async function readMarketState(
     crashActive,
     ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
     pushAlertsEnabled: config.pushAlertsEnabled,
+    pricingMode: config.pricingMode,
+    warmedUp: config.pricingMode === "tiers" ? session.warmed_up_tick != null : true,
+    unitsSoldTotal: session.units_sold_total ?? 0,
+    warmupUnits: config.warmupUnits,
+    nextRerankInSec: secondsUntilNextRerank(session, config, now),
+    leaderboardRows: config.leaderboardRows,
     instruments: instruments.map((row) => {
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
@@ -528,8 +627,14 @@ export async function readMarketState(
         demandUnits: Number(row.demand_units),
         floor: Math.round(limits.floor * 100) / 100,
         ceil: Math.round(limits.ceil * 100) / 100,
-        tillPrice: row.square_synced_price == null ? null : Number(row.square_synced_price),
+        tillPrice: publicTillPrice(session, row),
         tillSyncError: row.square_sync_error ?? null,
+        linkedToTill: Boolean(row.square_variation_id),
+        tierPct: config.pricingMode === "tiers" ? (optionalNumber(row.tier_pct) ?? 0) : null,
+        targetPrice: config.pricingMode === "tiers" ? optionalNumber(row.target_price) : null,
+        pace: config.pricingMode === "tiers" ? (optionalNumber(row.pace) ?? 0) : null,
+        rankPos: config.pricingMode === "tiers" ? (row.rank_pos ?? null) : null,
+        normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
       };
     }),
     events: (eventRows ?? [])

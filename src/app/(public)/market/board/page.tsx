@@ -22,9 +22,10 @@ export const metadata = {
 };
 
 function resolveView(view: string | string[] | undefined): BoardView {
+  if (view === "categories") return "categories";
   if (view === "table") return "table";
   if (view === "movers") return "movers";
-  return "categories";
+  return "leaderboard";
 }
 
 export default async function MarketBoardPage({
