@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { syncSquareSales } from "@/lib/square-sync";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
