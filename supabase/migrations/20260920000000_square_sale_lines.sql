@@ -23,6 +23,14 @@ create index if not exists square_sale_lines_trading_night_idx
 
 grant all on public.square_sale_lines to anon, authenticated, service_role;
 
+-- Prod switches RLS on for new tables; staff read the lines with their own
+-- session when working out normals, so they need the same access as the
+-- other market tables. The nightly sync writes as the service role.
+alter table public.square_sale_lines enable row level security;
+drop policy if exists "Allow authenticated full" on public.square_sale_lines;
+create policy "Allow authenticated full" on public.square_sale_lines
+  for all to authenticated using (true) with check (true);
+
 -- Backfill from the raw payloads already synced. Later syncs replace an
 -- order's lines wholesale, so the index fallback for a missing uid is only
 -- ever a stopgap for old rows.

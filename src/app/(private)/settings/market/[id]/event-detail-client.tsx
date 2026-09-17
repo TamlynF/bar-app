@@ -575,7 +575,13 @@ export default function EventDetailClient({
         result.unmappedServes > 0
           ? ` ${result.unmappedServes} serve(s) are not linked to Square and were skipped.`
           : "";
-      toast.success(`Worked out normal sales for ${result.serves} serve(s) over ${result.nights} night(s).${unmapped}`);
+      if (result.serves === 0) {
+        toast.warning(
+          `No Square sales found for this event's drinks on the ${result.nights} night(s) sampled. Sync sales from Square, or check the Square links.${unmapped}`
+        );
+      } else {
+        toast.success(`Worked out normal sales for ${result.serves} serve(s) over ${result.nights} night(s).${unmapped}`);
+      }
       router.refresh();
     });
   }
