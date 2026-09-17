@@ -2,6 +2,9 @@ import { randomUUID } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Square } from "square";
 import { squareClient } from "@/lib/square";
+import type { SeedMode } from "./types";
+
+export type { SeedMode };
 
 /* Demo path for staff: the live market's drinks are seeded into the Square
    SANDBOX catalog (session-scoped - menu_item_prices is never touched), and a
@@ -50,8 +53,6 @@ type SeedRow = {
   sandbox_item_id: string | null;
   menu_variation_id: string | null;
 };
-
-export type SeedMode = "temp" | "reuse";
 
 export type SeedResult = {
   seeded: number;

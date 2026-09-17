@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Beaker,
+  BookOpen,
   CandlestickChart,
   Check,
   ChevronDown,
@@ -77,10 +78,10 @@ import {
   setStockOverrideAction,
   simulateBusyRoundAction,
   simulateSaleAction,
-  type RoundTenderMode,
-  type SeedMode,
   type SimMode,
 } from "./actions";
+import type { RoundTenderMode } from "@/lib/market/square-sandbox";
+import type { SeedMode } from "@/lib/market/types";
 import { squareSandboxDashboardUrl, squareTransactionUrl } from "@/lib/market/simulate";
 import type { MarketStatePayload } from "@/lib/market/tick";
 import {
@@ -318,6 +319,13 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
             <ConfigHelp field={{ ...TIER_PCT_FIELDS.down, hint: "Ranks 1–5, 6–10, 11–15 from the bottom" }} />
             <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
           </FormRow>
+          <Link
+            href="/settings/market/how-it-works"
+            className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-primary hover:underline"
+          >
+            <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+            How these dials set a price
+          </Link>
         </>
       )}
       {mode === "tiers" && <input type="hidden" name="noiseSigma" value={config.noiseSigma} />}
@@ -1679,6 +1687,14 @@ export default function MarketClient({
                 </span>
               )}
             </button>
+            <Link
+              href="/settings/market/how-it-works"
+              className="flex min-h-11 shrink-0 items-center gap-1 text-[12px] font-semibold text-admin-primary hover:underline"
+            >
+              <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">How pricing works</span>
+              <span className="sm:hidden">How it works</span>
+            </Link>
             {liveEventName && liveEventId != null && (
               <Link
                 href={`/settings/market/${liveEventId}`}

@@ -498,6 +498,18 @@ export default function PrivateLayoutClient({
             if (segment === "market") {
                 const marketHref = "/settings/market"
                 const leaf = normalizedPath.split("/")[3]
+                if (leaf === "how-it-works") {
+                    return {
+                        title: "Market",
+                        subtitle: "How pricing works",
+                        backHref: marketHref,
+                        trail: [
+                            { label: "Settings", href: "/settings" },
+                            { label: "Market", href: marketHref },
+                            { label: "How pricing works" },
+                        ],
+                    }
+                }
                 if (leaf === "history") {
                     return {
                         title: "Market",

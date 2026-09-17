@@ -1439,7 +1439,6 @@ async function liveSimSession(supabase: ServerClient): Promise<SimSession | { er
 }
 
 export type SimMode = "queue" | "square";
-export type { SeedMode, RoundTenderMode };
 
 type SimInstrumentRow = {
   id: number;

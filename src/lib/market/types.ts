@@ -171,3 +171,5 @@ export type InstrumentTickResult = {
   lastNotifiedPrice: number;
   events: EngineEvent[];
 };
+
+export type SeedMode = "temp" | "reuse";

@@ -23,8 +23,11 @@ export type InstrumentLimits = {
   moveNotifyPct: number;
 };
 
+export type PricedInstrument = Pick<InstrumentState, "basePrice"> &
+  Partial<Pick<InstrumentState, "minPrice" | "maxPrice" | "crashPrice" | "lowStockAt" | "alertThreshold">>;
+
 export function instrumentLimits(
-  instrument: InstrumentState,
+  instrument: PricedInstrument,
   config: MarketConfig
 ): InstrumentLimits {
   const { basePrice } = instrument;
