@@ -177,6 +177,11 @@ export default async function MarketSettingsPage({
       rankPos: (row.rank_pos as number | null) ?? null,
       tierPct: optionalNumber(row.tier_pct),
       targetPrice: optionalNumber(row.target_price),
+      unitsSold: optionalNumber(row.units_sold) ?? 0,
+      highPrice: optionalNumber(row.high_price),
+      lowPrice: optionalNumber(row.low_price),
+      tierChanges: (row.tier_changes as number | null) ?? 0,
+      priceChanges: (row.price_changes as number | null) ?? 0,
       squareItemId: null,
     }));
 

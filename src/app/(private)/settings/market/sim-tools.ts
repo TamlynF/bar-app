@@ -45,6 +45,7 @@ export function useSimTools({
   const [seedStock, setSeedStock] = useState(40);
   const [seedMode, setSeedMode] = useState<SeedMode>("reuse");
   const [stockToAdd, setStockToAdd] = useState(12);
+  const [unitsPerSale, setUnitsPerSale] = useState(5);
 
   /* Queued units land on the next tick; "Tick now" runs the engine at once so
      the effect is visible without waiting out the interval. */
@@ -229,6 +230,8 @@ export function useSimTools({
     setSeedMode,
     stockToAdd,
     setStockToAdd,
+    unitsPerSale,
+    setUnitsPerSale,
     simPendingTotal,
     sandboxAvailable,
     sandboxSeeded,

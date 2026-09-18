@@ -39,6 +39,8 @@ export type TierTickInputs = TickInputs & { session: TierSessionState };
 export type TierInstrumentTickResult = InstrumentTickResult & {
   pace: number;
   lastSaleTick: number | null;
+  minsSinceSale: number;
+  rankValue: number;
   rankPos: number;
   tierPct: number;
   targetPrice: number;
@@ -129,14 +131,15 @@ export function runTierTick(instruments: InstrumentState[], inputs: TierTickInpu
     const heat = round3(instrument.demandUnits * config.decayK + units);
     const lastSaleTick = units > 0 ? tickNo : (instrument.lastSaleTick ?? null);
     const pace = paceOf(heat, instrument.normalUnitsPerNight, config);
-    const value = rankValue(pace, minutesSinceSale(lastSaleTick, tickNo), instrument.basePrice);
-    return { instrument, units, heat, lastSaleTick, pace, value };
+    const mins = minutesSinceSale(lastSaleTick, tickNo);
+    const value = rankValue(pace, mins, instrument.basePrice);
+    return { instrument, units, heat, lastSaleTick, pace, mins, value };
   });
 
   const ranks = rankInstruments(prepared.map((p) => ({ id: p.instrument.id, value: p.value })));
   const total = prepared.length;
 
-  const results = prepared.map(({ instrument, heat, lastSaleTick, pace }) => {
+  const results = prepared.map(({ instrument, units, heat, lastSaleTick, pace, mins, value }) => {
     const events: EngineEvent[] = [];
     const rankPos = ranks.get(instrument.id) ?? total;
 
@@ -174,12 +177,15 @@ export function runTierTick(instruments: InstrumentState[], inputs: TierTickInpu
     return {
       id: instrument.id,
       price,
+      units,
       demandUnits: heat,
       stockState,
       lastNotifiedPrice: alert.lastNotifiedPrice,
       events,
       pace,
       lastSaleTick,
+      minsSinceSale: mins,
+      rankValue: value,
       rankPos,
       tierPct,
       targetPrice,

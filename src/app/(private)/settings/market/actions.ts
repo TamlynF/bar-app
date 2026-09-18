@@ -11,6 +11,7 @@ import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
 import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig, type PricingMode } from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import { sessionTicksFor } from "@/lib/market/normal-units";
+import { shouldRerank } from "@/lib/market/tier-engine";
 import { LIVE_MARKET_MENU_MESSAGE, liveMarketSessionId } from "@/lib/market/live-guard";
 import {
   recalculateNormalUnits,
@@ -1833,4 +1834,75 @@ export async function addStockAction(instrumentId: number, quantity: number) {
 
   revalidateMarket();
   return { success: true, name: instrument.display_name as string, quantity };
+}
+
+export type TickBreakdownRow = {
+  tickNo: number;
+  units: number | null;
+  demandUnits: number | null;
+  pace: number | null;
+  minsSinceSale: number | null;
+  rankValue: number | null;
+  rankPos: number | null;
+  tierPct: number | null;
+  targetPrice: number | null;
+  price: number;
+  tillPrice: number | null;
+  reranked: boolean;
+};
+
+const optional = (value: number | string | null) => (value == null ? null : Number(value));
+
+/* Every tick this session for one drink, with the engine's working, for the
+   trading floor's breakdown sheet. */
+export async function instrumentTickBreakdownAction(
+  instrumentId: number
+): Promise<{ rows: TickBreakdownRow[] } | { error: string }> {
+  const supabase = await createClient();
+  const { data: instrument } = await supabase
+    .from("market_instruments")
+    .select("id, session_id")
+    .eq("id", instrumentId)
+    .maybeSingle();
+  if (!instrument) return { error: "That drink is not on a market." };
+
+  const tickQuery = (columns: string) =>
+    supabase
+      .from("market_ticks")
+      .select(columns)
+      .eq("instrument_id", instrumentId)
+      .order("tick_no", { ascending: true })
+      .limit(1000);
+  const [{ data: session }, full] = await Promise.all([
+    supabase
+      .from("market_sessions")
+      .select("config, warmed_up_tick")
+      .eq("id", instrument.session_id)
+      .maybeSingle(),
+    tickQuery(
+      "tick_no, units, demand_units, pace, mins_since_sale, rank_value, rank_pos, tier_pct, target_price, price, till_price"
+    ),
+  ]);
+  /* Before the breakdown migration has run only price and demand exist. */
+  const result = full.error ? await tickQuery("tick_no, demand_units, price") : full;
+  if (result.error) return { error: result.error.message };
+  const ticks = (result.data ?? []) as unknown as Record<string, number | string | null>[];
+
+  const config = resolveMarketConfig(session?.config ?? null);
+  const warmedUpTick = (session?.warmed_up_tick as number | null | undefined) ?? null;
+  const rows: TickBreakdownRow[] = (ticks ?? []).map((row) => ({
+    tickNo: row.tick_no as number,
+    units: optional(row.units),
+    demandUnits: optional(row.demand_units),
+    pace: optional(row.pace),
+    minsSinceSale: optional(row.mins_since_sale),
+    rankValue: optional(row.rank_value),
+    rankPos: optional(row.rank_pos),
+    tierPct: optional(row.tier_pct),
+    targetPrice: optional(row.target_price),
+    price: Number(row.price),
+    tillPrice: optional(row.till_price ?? null),
+    reranked: shouldRerank(row.tick_no as number, warmedUpTick, config.rerankEveryTicks),
+  }));
+  return { rows };
 }

@@ -190,6 +190,7 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
    7xl page frame. Both the private shell and the settings frame read this, so a
    wide route has to be released by one list rather than two. */
 export const WIDE_PATHS: string[] = [
+  "/settings/market",
   "/event-bookings/music-bookings",
   "/event-bookings/private-bookings",
   "/marketing/trends",

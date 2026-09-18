@@ -166,6 +166,7 @@ export type TickInputs = {
 export type InstrumentTickResult = {
   id: number;
   price: number;
+  units: number;
   demandUnits: number;
   stockState: StockState;
   lastNotifiedPrice: number;

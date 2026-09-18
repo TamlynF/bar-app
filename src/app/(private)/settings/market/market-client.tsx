@@ -189,7 +189,7 @@ export default function MarketClient({
   );
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 py-3 sm:px-4 sm:py-0 md:px-6 xl:max-w-6xl 2xl:max-w-[100rem]">
+    <div className="mx-auto w-full max-w-7xl space-y-4 py-3 sm:py-0 2xl:max-w-[110rem]">
       {ConfirmDialogUI}
 
       {tillRestore && (

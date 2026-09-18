@@ -56,6 +56,11 @@ const SIM_FIELD_HELP = {
     hint: "How many separate sales one Busy round rings up",
     help: "A busy round fakes a rush. This is how many individual sales it makes - each one picks a drink at random from the board, weighted towards the favourite, and sells one or two of it. More sales means a bigger jolt to the prices on the next tick.",
   },
+  unitsPerSale: {
+    label: "Units per sell",
+    hint: "How many the Sell button on a drink row sells",
+    help: "The Sell button on each drink row sells this many of that drink in one go, queued for the next tick or rung through the Square sandbox depending on the mode above. Enough to move a price without a whole busy round.",
+  },
   stockToAdd: {
     label: "Stock per add",
     hint: "Units the Stock button adds to a drink in Square",
@@ -70,6 +75,8 @@ const SIM_FIELD_HELP = {
 
 const SIM_INPUT =
   "h-11 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary sm:h-9 sm:text-sm";
+const SIM_SELECT =
+  "h-11 cursor-pointer rounded-lg border border-admin-line bg-admin-card px-3 text-base font-medium text-admin-ink outline-none focus:border-admin-primary sm:h-9 sm:text-sm";
 
 /* Test tool: fakes till sales so the market can be exercised without
    customers. Collapsed by default so a busy Saturday's control panel is not
@@ -186,9 +193,9 @@ export function SimPanel({
 
             {viaSquare && (
               <div className="rounded-lg border border-admin-info/40 bg-admin-info-bg px-3 py-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                  <p className="flex min-w-0 items-center gap-0.5 text-[12px] font-semibold text-admin-ink">
-                    {sandboxSeeded ? "Sandbox catalog seeded" : "Set the sandbox stock (optional)"}
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="flex min-w-0 items-center gap-0.5 pr-1 text-[12px] font-semibold text-admin-ink">
+                    {sandboxSeeded ? "Sandbox catalog seeded" : "Sandbox stock"}
                     <ConfigHelp
                       field={{
                         label: tools.seedMode === "reuse" ? "Stock mapped items" : "Seed temporary items",
@@ -203,77 +210,54 @@ export function SimPanel({
                       }}
                     />
                   </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div
-                      role="radiogroup"
-                      aria-label="How the sandbox catalog is seeded"
-                      className="flex rounded-lg border border-admin-line bg-admin-card p-0.5"
-                    >
-                      {(
-                        [
-                          { value: "reuse", label: "Use mapped items" },
-                          { value: "temp", label: "Temp items" },
-                        ] as { value: SeedMode; label: string }[]
-                      ).map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          role="radio"
-                          aria-checked={tools.seedMode === option.value}
-                          onClick={() => tools.setSeedMode(option.value)}
-                          className={cn(
-                            "flex h-11 items-center rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-9",
-                            tools.seedMode === option.value
-                              ? "bg-admin-primary text-white"
-                              : "text-admin-muted hover:bg-admin-surface"
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="flex items-center gap-1.5 text-[11px] font-semibold text-admin-muted">
-                      Stock each
-                      <input
-                        type="number"
-                        min={0}
-                        max={999}
-                        value={tools.seedStock}
-                        onChange={(event) => tools.setSeedStock(Number(event.target.value))}
-                        className={cn(SIM_INPUT, "w-16 px-2")}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={tools.handleSeedSandbox}
-                      disabled={isPending}
-                      className={cn(sandboxSeeded ? NEUTRAL_BUTTON : PRIMARY_BUTTON, "whitespace-nowrap")}
-                    >
-                      <Upload className="h-4 w-4" aria-hidden="true" />
-                      {tools.seedMode === "reuse" ? "Stock items" : sandboxSeeded ? "Re-seed" : "Seed sandbox"}
-                    </button>
-                    {/* Sits on the seed row wherever there is width for it
-                        and wraps underneath when there is not. */}
-                    <div className="flex items-center gap-1 rounded-lg border border-admin-info/30 bg-admin-card px-1">
-                      {(
-                        [
-                          { key: "orders", label: "Orders" },
-                          { key: "items", label: "Items & prices" },
-                        ] as const
-                      ).map((link) => (
-                        <a
-                          key={link.key}
-                          href={squareSandboxDashboardUrl(link.key)}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={`Open the sandbox ${link.label.toLowerCase()} in the Square dashboard`}
-                          className="flex h-11 items-center gap-1 rounded-md px-2 text-[11px] font-semibold whitespace-nowrap text-admin-info transition-colors hover:bg-admin-info-bg sm:h-8"
-                        >
-                          {link.label}
-                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                        </a>
-                      ))}
-                    </div>
+                  <select
+                    aria-label="Which sandbox items to stock"
+                    value={tools.seedMode}
+                    onChange={(event) => tools.setSeedMode(event.target.value as SeedMode)}
+                    className={cn(SIM_SELECT, "w-44")}
+                  >
+                    <option value="reuse">Use mapped items</option>
+                    <option value="temp">Temporary items</option>
+                  </select>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-admin-muted">
+                    Stock each
+                    <input
+                      type="number"
+                      min={0}
+                      max={999}
+                      value={tools.seedStock}
+                      onChange={(event) => tools.setSeedStock(Number(event.target.value))}
+                      className={cn(SIM_INPUT, "w-18 px-2")}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={tools.handleSeedSandbox}
+                    disabled={isPending}
+                    className={cn(sandboxSeeded ? NEUTRAL_BUTTON : PRIMARY_BUTTON, "whitespace-nowrap")}
+                  >
+                    <Upload className="h-4 w-4" aria-hidden="true" />
+                    {tools.seedMode === "reuse" ? "Stock items" : sandboxSeeded ? "Re-seed" : "Seed sandbox"}
+                  </button>
+                  <div className="ml-auto flex items-center gap-0.5">
+                    {(
+                      [
+                        { key: "orders", label: "Orders" },
+                        { key: "items", label: "Items & prices" },
+                      ] as const
+                    ).map((link) => (
+                      <a
+                        key={link.key}
+                        href={squareSandboxDashboardUrl(link.key)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Open the sandbox ${link.label.toLowerCase()} in the Square dashboard`}
+                        className="flex h-11 items-center gap-1 rounded-md px-2 text-[11px] font-semibold whitespace-nowrap text-admin-info transition-colors hover:bg-admin-card sm:h-8"
+                      >
+                        {link.label}
+                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                      </a>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -293,6 +277,54 @@ export function SimPanel({
                   className={cn(SIM_INPUT, "w-24")}
                 />
               </label>
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11px] font-semibold text-admin-muted sm:max-w-xs">
+                Favourite (sells 3× as often)
+                <select
+                  value={tools.favouriteId ?? ""}
+                  onChange={(event) =>
+                    tools.setFavouriteId(event.target.value === "" ? null : Number(event.target.value))
+                  }
+                  className={SIM_SELECT}
+                >
+                  <option value="">No favourite</option>
+                  {instruments.map((instrument) => (
+                    <option key={instrument.id} value={instrument.id}>
+                      {instrument.name} ({instrument.serve})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {viaSquare && (
+                <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                  <span className="flex items-center gap-0.5">
+                    Round tender
+                    <ConfigHelp field={SIM_FIELD_HELP.roundTender} />
+                  </span>
+                  <select
+                    value={tools.roundTender}
+                    onChange={(event) => tools.setRoundTender(event.target.value as RoundTenderMode)}
+                    className={cn(SIM_SELECT, "w-28")}
+                  >
+                    <option value="mix">Mixed</option>
+                    <option value="card">Card</option>
+                    <option value="cash">Cash</option>
+                  </select>
+                </label>
+              )}
+              <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
+                <span className="flex items-center gap-0.5">
+                  Units per sell
+                  <ConfigHelp field={SIM_FIELD_HELP.unitsPerSale} />
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={tools.unitsPerSale}
+                  onChange={(event) => tools.setUnitsPerSale(Number(event.target.value))}
+                  className={cn(SIM_INPUT, "w-24")}
+                />
+              </label>
               <label className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
                 <span className="flex items-center gap-0.5">
                   Stock per add
@@ -307,62 +339,7 @@ export function SimPanel({
                   className={cn(SIM_INPUT, "w-24")}
                 />
               </label>
-              <label className="flex min-w-0 flex-1 flex-col gap-1 text-[11px] font-semibold text-admin-muted sm:max-w-xs">
-                Favourite (sells 3× as often)
-                <select
-                  value={tools.favouriteId ?? ""}
-                  onChange={(event) =>
-                    tools.setFavouriteId(event.target.value === "" ? null : Number(event.target.value))
-                  }
-                  className="h-11 rounded-lg border border-admin-line bg-admin-card px-3 text-base font-medium text-admin-ink outline-none focus:border-admin-primary sm:h-9 sm:text-sm"
-                >
-                  <option value="">No favourite</option>
-                  {instruments.map((instrument) => (
-                    <option key={instrument.id} value={instrument.id}>
-                      {instrument.name} ({instrument.serve})
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
-            {viaSquare && (
-              <div className="flex flex-col gap-1 text-[11px] font-semibold text-admin-muted">
-                <span className="flex items-center gap-0.5">
-                  Round tender
-                  <ConfigHelp field={SIM_FIELD_HELP.roundTender} />
-                </span>
-                <div
-                  role="radiogroup"
-                  aria-label="How busy-round sales are paid in Square"
-                  className="flex rounded-lg border border-admin-line bg-admin-card p-0.5"
-                >
-                  {(
-                    [
-                      { value: "mix", label: "Mixed" },
-                      { value: "card", label: "Card" },
-                      { value: "cash", label: "Cash" },
-                    ] as { value: RoundTenderMode; label: string }[]
-                  ).map((option) => {
-                    const active = tools.roundTender === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => tools.setRoundTender(option.value)}
-                        className={cn(
-                          "flex h-10 items-center rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-8",
-                          active ? "bg-admin-primary text-white" : "text-admin-muted hover:bg-admin-surface"
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"

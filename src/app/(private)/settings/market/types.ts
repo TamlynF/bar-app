@@ -44,6 +44,13 @@ export type InstrumentSummary = {
   rankPos: number | null;
   tierPct: number | null;
   targetPrice: number | null;
+  /* Session running totals kept by the tick; zero or null before the stats
+     migration has run on the database. */
+  unitsSold: number;
+  highPrice: number | null;
+  lowPrice: number | null;
+  tierChanges: number;
+  priceChanges: number;
   /* Resolved from the cached catalog map at render; null when the mapping is
      newer than the cache, which makes the link resolve on click instead. */
   squareItemId: string | null;

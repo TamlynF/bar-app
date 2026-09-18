@@ -205,6 +205,8 @@ export default function LeaderboardExplainer({
       )
     : priceWalk(5, 5, 5 * (1 + (topBand?.up ?? 0.3)), config, 5);
 
+  const setTarget = 8 * (1 + (topBand?.up ?? 0.3));
+  const setWalk = priceWalk(8, 6, setTarget, config, 2);
   const busy = rankExample("Cocktail", 1, 12, 7.5, config);
   const quiet = rankExample("Pint of lager", 1, 60, 4.75, config);
   const rare = rankExample("Bottle of wine", 1, 1, 24, config);
@@ -595,6 +597,106 @@ export default function LeaderboardExplainer({
           )}
         </Section>
       )}
+
+      <Section
+        title="Pace and tier in short"
+        lead="Pace is how a drink earns its place in the table. Tier is what that place pays out."
+      >
+        <Sum
+          lines={[
+            {
+              label: "Demand",
+              value: `sales add one each, and the score keeps ${Math.round(config.decayK * 100)}% of itself every tick`,
+            },
+            {
+              label: "Normal per tick",
+              value: `normal per night ÷ ${config.sessionTicksHint} ticks, treating anything under ${config.paceFloorUnits} a night as ${config.paceFloorUnits}`,
+            },
+            { label: "Pace", value: "demand ÷ normal per tick, so 1.00× is an ordinary night for that drink" },
+            {
+              label: "Rank",
+              value: `every ${config.rerankEveryTicks} ticks, all drinks sorted on pace, fastest first`,
+            },
+            {
+              label: "Tier",
+              value: `${bands.map((band) => `top ${band.band} ${pct(band.up)}`).join(", ")}; ${bands
+                .map((band) => `bottom ${band.band} ${pct(-band.down)}`)
+                .join(", ")}; the middle stays at base`,
+            },
+            { label: "Target", value: "base price with the tier applied" },
+            {
+              label: "Now",
+              value: `closes ${Math.round(config.glidePct * 100)}% of the gap to Target each tick, never jumps`,
+            },
+            { label: "Warm-up", value: `every tier is 0 until ${config.warmupUnits} drinks have sold` },
+          ]}
+        />
+        <p className="text-[13px] leading-relaxed text-admin-muted">
+          One sale makes a cocktail that normally does 3 a night look busy, well above 1×, while the
+          same sale barely moves a pint that does 60. The cocktail ranks higher on identical sales,
+          which is the point: the board rewards drinks that are hotter than their own usual, not the
+          biggest sellers. A drink ranked in the top band with a base price of £8.00 gets{" "}
+          {pct(topBand?.up ?? 0.3)}, a target of{" "}
+          {formatGbp(8 * (1 + (topBand?.up ?? 0.3)))}, and its board price walks there over a few
+          ticks. Between re-ranks pace keeps moving but rank and tier hold still, so the leaderboard
+          plays out in rounds.
+        </p>
+      </Section>
+
+      <Section
+        title="Setting a price by hand"
+        lead="The £ button on the trading floor puts your price on the board this moment. It changes where the price is standing, not where it is heading."
+      >
+        <Sum
+          lines={[
+            {
+              label: "Kept within",
+              value: `${config.floorPct}× and ${config.ceilPct}× the base price, or the drink's own limits`,
+            },
+            { label: "Rounded to", value: `the nearest ${Math.round(config.roundStep * 100)}p` },
+            { label: "Reaches the till", value: "at the next tick, with every other price" },
+            { label: "Rank, tier, Target", value: "unchanged, since those come from sales" },
+            {
+              label: "Then",
+              value: `each tick closes ${Math.round(config.glidePct * 100)}% of the gap back to Target`,
+            },
+            { label: "Alerts", value: "a big enough drop pings guests watching the drink, like an earned one" },
+          ]}
+        />
+        <p className="text-[13px] leading-relaxed text-admin-muted">
+          A cocktail heading for {formatGbp(setTarget)} that you set to {formatGbp(setWalk[0].price)}{" "}
+          moves to {formatGbp(setWalk[1].price)} on the next tick, then {formatGbp(setWalk[2].price)},
+          and is back near its target within a handful of ticks. Use it to clear a bottle, fix a
+          mis-keyed price or run a ten-minute shout. For a price that stays put, lower the base
+          price, edit the drink&apos;s floor and ceiling, or mark it sold out to freeze it.
+        </p>
+      </Section>
+
+      <Section
+        title="Stock and the override"
+        lead="Stock never moves a drink up or down the table. It decides whether the price is allowed to move at all, and whether the drink can be shown as a deal."
+      >
+        <p className="text-[13px] leading-relaxed text-admin-muted">
+          Each tick every drink is marked in stock, running low or sold out. On Auto that comes
+          from Square&apos;s count. The stock override on the trading floor replaces Square&apos;s
+          count with your own word, for a bottle that ran dry before the till noticed, a delivery
+          nobody keyed in, or a drink that isn&apos;t linked to Square at all.
+        </p>
+        <Sum
+          lines={[
+            { label: "Sold out", value: "price frozen that tick, hidden from the deals" },
+            { label: "Running low", value: "badge and alert only, price and rank carry on" },
+            { label: "In stock", value: "lifts a sold out freeze, nothing else" },
+            { label: "Rank and tier", value: "never change with stock" },
+          ]}
+        />
+        <p className="text-[13px] leading-relaxed text-admin-muted">
+          Set a cocktail to sold out at £11.60 and it stays £11.60 whatever its tier says, keeps
+          its rank, and leaves the home page ticker and the deal cards until stock comes back.
+          An override holds until you put it back to Auto, so a sold out set at nine and forgotten
+          keeps the drink frozen all night, even after a restock reaches Square.
+        </p>
+      </Section>
 
       <Section
         title="The dials behind all of this"

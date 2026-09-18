@@ -120,6 +120,7 @@ export function tickInstrument(
   return {
     id: instrument.id,
     price,
+    units: newUnits,
     demandUnits,
     stockState,
     lastNotifiedPrice: alert.lastNotifiedPrice,

@@ -68,6 +68,11 @@ export type MarketInstrumentRow = {
   rank_pos?: number | null;
   tier_pct?: number | string | null;
   target_price?: number | string | null;
+  units_sold?: number | string | null;
+  high_price?: number | string | null;
+  low_price?: number | string | null;
+  tier_changes?: number | null;
+  price_changes?: number | null;
 };
 
 export function instrumentCrashActive(row: MarketInstrumentRow, tickNo: number): boolean {
@@ -411,32 +416,43 @@ export async function maybeRunMarketTick(
     }
 
     const byId = new Map(instruments.map((i) => [i.id, i] as const));
-    const instrumentUpdates = results.map((result) => {
-      const variationId = byId.get(result.id)?.square_variation_id;
+    const instrumentPatch = (result: (typeof results)[number], withStats: boolean) => {
+      const row = byId.get(result.id);
+      const variationId = row?.square_variation_id;
       const stockQty = variationId ? stockQtyByVariation.get(variationId) : undefined;
       const tier = "tierPct" in result ? result : null;
-      return supabase
-        .from("market_instruments")
-        .update({
-          current_price: result.price,
-          demand_units: result.demandUnits,
-          stock_state: result.stockState,
-          last_notified_price: result.lastNotifiedPrice,
-          updated_at: now.toISOString(),
-          ...(stockQty === undefined ? {} : { stock_qty: stockQty }),
-          ...(tier
-            ? {
-                pace: tier.pace,
-                last_sale_tick: tier.lastSaleTick,
-                rank_pos: tier.rankPos,
-                tier_pct: tier.tierPct,
-                target_price: Math.round(tier.targetPrice * 100) / 100,
-              }
-            : {}),
-        })
-        .eq("id", result.id);
-    });
-    for (const { error: updateError } of await Promise.all(instrumentUpdates)) {
+      return {
+        current_price: result.price,
+        demand_units: result.demandUnits,
+        stock_state: result.stockState,
+        last_notified_price: result.lastNotifiedPrice,
+        updated_at: now.toISOString(),
+        ...(stockQty === undefined ? {} : { stock_qty: stockQty }),
+        ...(tier
+          ? {
+              pace: tier.pace,
+              last_sale_tick: tier.lastSaleTick,
+              rank_pos: tier.rankPos,
+              tier_pct: tier.tierPct,
+              target_price: Math.round(tier.targetPrice * 100) / 100,
+            }
+          : {}),
+        ...(withStats && row ? sessionStats(row, result) : {}),
+      };
+    };
+    const runUpdates = (withStats: boolean) =>
+      Promise.all(
+        results.map((result) =>
+          supabase.from("market_instruments").update(instrumentPatch(result, withStats)).eq("id", result.id)
+        )
+      );
+    /* The running totals arrived in a later migration; until it has run on
+       this database the tick still updates the drink as before. */
+    let updateResults = await runUpdates(true);
+    if (updateResults.some(({ error: updateError }) => updateError && isMissingColumn(updateError))) {
+      updateResults = await runUpdates(false);
+    }
+    for (const { error: updateError } of updateResults) {
       if (updateError) throw updateError;
     }
     if (Object.keys(sessionUpdate).length > 0) {
@@ -447,17 +463,43 @@ export async function maybeRunMarketTick(
       if (sessionError) throw sessionError;
     }
 
-    const { error: tickError } = await supabase.from("market_ticks").upsert(
-      results.map((result) => ({
+    const tickRows = results.map((result) => {
+      const tier = "tierPct" in result ? result : null;
+      return {
         session_id: session.id,
         instrument_id: result.id,
         tick_no: tickNo,
         price: result.price,
+        units: result.units,
         demand_units: result.demandUnits,
-      })),
-      { onConflict: "instrument_id,tick_no", ignoreDuplicates: true }
-    );
-    if (tickError) throw tickError;
+        pace: tier?.pace ?? null,
+        mins_since_sale: tier?.minsSinceSale ?? null,
+        rank_value: tier ? Math.round(tier.rankValue * 1e7) / 1e7 : null,
+        rank_pos: tier?.rankPos ?? null,
+        tier_pct: tier?.tierPct ?? null,
+        target_price: tier ? Math.round(tier.targetPrice * 100) / 100 : null,
+      };
+    });
+    /* The breakdown columns arrived in a later migration; until it has run
+       on this database the tick still records price and demand as before. */
+    const { error: tickError } = await supabase
+      .from("market_ticks")
+      .upsert(tickRows, { onConflict: "instrument_id,tick_no", ignoreDuplicates: true });
+    if (tickError && isMissingColumn(tickError)) {
+      const { error: baseError } = await supabase.from("market_ticks").upsert(
+        tickRows.map(({ session_id, instrument_id, tick_no, price, demand_units }) => ({
+          session_id,
+          instrument_id,
+          tick_no,
+          price,
+          demand_units,
+        })),
+        { onConflict: "instrument_id,tick_no", ignoreDuplicates: true }
+      );
+      if (baseError) throw baseError;
+    } else if (tickError) {
+      throw tickError;
+    }
 
     const events = [
       ...sessionEvents.map((event) => ({
@@ -522,12 +564,65 @@ export async function maybeRunMarketTick(
       if (sync.errors.length > 0) {
         console.error("[market] Square price sync errors:", sync.errors);
       }
+      await recordTillPrices(supabase, session.id, tickNo, tickRows);
     } catch (err) {
       console.error("[market] Square price sync failed:", err);
     }
   } catch (err) {
     console.error("[market] tick failed:", err);
   }
+}
+
+/* Workbook tab 10's per-drink summary columns, kept as running totals. A
+   price change is any move of the board price; a tier change is the tier
+   awarded this tick differing from the one before. */
+function sessionStats(row: MarketInstrumentRow, result: InstrumentTickResult | TierInstrumentTickResult) {
+  const previousPrice = Number(row.current_price);
+  const previousTier = optionalNumber(row.tier_pct) ?? 0;
+  const tier = "tierPct" in result ? result.tierPct : previousTier;
+  const high = Math.max(optionalNumber(row.high_price) ?? Number(row.opening_price), previousPrice, result.price);
+  const low = Math.min(optionalNumber(row.low_price) ?? Number(row.opening_price), previousPrice, result.price);
+  return {
+    units_sold: (optionalNumber(row.units_sold) ?? 0) + result.units,
+    high_price: Math.round(high * 100) / 100,
+    low_price: Math.round(low * 100) / 100,
+    tier_changes: (row.tier_changes ?? 0) + (tier !== previousTier ? 1 : 0),
+    price_changes: (row.price_changes ?? 0) + (result.price !== previousPrice ? 1 : 0),
+  };
+}
+
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST204" || /column .* does not exist|Could not find the .* column/i.test(error.message ?? "");
+}
+
+/* After the write leg, note what the till is charging on each tick row so
+   the breakdown can show board price and till price side by side. */
+async function recordTillPrices(
+  supabase: SupabaseClient,
+  sessionId: number,
+  tickNo: number,
+  tickRows: { instrument_id: number; price: number; demand_units: number }[]
+) {
+  const { data } = await supabase
+    .from("market_instruments")
+    .select("id, square_synced_price")
+    .eq("session_id", sessionId)
+    .not("square_synced_price", "is", null);
+  if (!data || data.length === 0) return;
+  const synced = new Map(data.map((row) => [row.id as number, Number(row.square_synced_price)]));
+  const updates = tickRows
+    .filter((row) => synced.has(row.instrument_id))
+    .map((row) => ({
+      session_id: sessionId,
+      instrument_id: row.instrument_id,
+      tick_no: tickNo,
+      price: row.price,
+      demand_units: row.demand_units,
+      till_price: synced.get(row.instrument_id),
+    }));
+  if (updates.length === 0) return;
+  const { error } = await supabase.from("market_ticks").upsert(updates, { onConflict: "instrument_id,tick_no" });
+  if (error) console.error("[market] till price note failed:", error);
 }
 
 export async function readMarketState(
