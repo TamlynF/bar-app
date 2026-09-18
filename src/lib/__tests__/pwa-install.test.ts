@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyUserAgent, isIpadDevice } from "@/lib/pwa-install";
+import { classifyUserAgent, isAndroidDevice, isIpadDevice } from "@/lib/pwa-install";
 
 const IPHONE_SAFARI =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
@@ -15,6 +15,14 @@ const ANDROID_CHROME =
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36";
 const DESKTOP_MAC =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+
+describe("isAndroidDevice", () => {
+  it("spots Android Chrome and nothing else", () => {
+    expect(isAndroidDevice({ userAgent: ANDROID_CHROME, maxTouchPoints: 5 })).toBe(true);
+    expect(isAndroidDevice({ userAgent: IPHONE_SAFARI, maxTouchPoints: 5 })).toBe(false);
+    expect(isAndroidDevice({ userAgent: DESKTOP_MAC, maxTouchPoints: 0 })).toBe(false);
+  });
+});
 
 describe("classifyUserAgent", () => {
   it("treats real iPhone Safari as installable via Add to Home Screen", () => {

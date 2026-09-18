@@ -25,5 +25,13 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "id": "/",
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://bar-app-tau.vercel.app/manifest.json"
+    }
   ]
 }

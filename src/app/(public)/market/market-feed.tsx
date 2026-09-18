@@ -9,7 +9,8 @@ import { detectInstallPlatform } from "@/lib/pwa-install";
 import { useMarketState } from "./use-market-state";
 import { TierBadge, formatDisplayPrice, sortForPhone } from "./market-ui";
 import { removeMarketPushSubscription, saveMarketPushSubscription } from "./actions";
-import InstallCard from "./install-card";
+import { InstallDialog, useInstallTarget } from "./install-card";
+import { NotifyMethod } from "./notify-method";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
 
 /* iOS (and some Android browsers) refuse `new Notification()` from page
@@ -174,6 +175,8 @@ const WATCH_KEY = "df-market-watch";
 const WATCH_EVENT = "df-market-watch-change";
 const MUTE_KEY = "df-market-alerts-muted";
 const MUTE_EVENT = "df-market-alerts-muted-change";
+const WANT_KEY = "df-market-alerts-wanted";
+const WANT_EVENT = "df-market-alerts-wanted-change";
 
 function readMutedRaw(): string {
   try {
@@ -207,6 +210,39 @@ function useAlertsMuted(): [boolean, (muted: boolean) => void] {
     window.dispatchEvent(new Event(MUTE_EVENT));
   };
   return [raw === "1", setMuted];
+}
+
+function readWantedRaw(): string {
+  try {
+    return localStorage.getItem(WANT_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function subscribeWanted(onChange: () => void): () => void {
+  window.addEventListener(WANT_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(WANT_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/* Set the moment the guest taps "Notify me", whatever the browser then says:
+   it is what lets the install card appear only for someone who asked. */
+function useAlertsWanted(): [boolean, (wanted: boolean) => void] {
+  const raw = useSyncExternalStore(subscribeWanted, readWantedRaw, () => "");
+  const setWanted = (wanted: boolean) => {
+    try {
+      if (wanted) localStorage.setItem(WANT_KEY, "1");
+      else localStorage.removeItem(WANT_KEY);
+    } catch {
+      /* private mode - the event still updates this page load */
+    }
+    window.dispatchEvent(new Event(WANT_EVENT));
+  };
+  return [raw === "1", setWanted];
 }
 
 function readWatchedRaw(): string {
@@ -262,6 +298,9 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
   const [muted, setMuted] = useAlertsMuted();
+  const [wantsAlerts, setWantsAlerts] = useAlertsWanted();
+  const installTarget = useInstallTarget();
+  const [installOpen, setInstallOpen] = useState(false);
   const notifyEnabled = (alreadyGranted || justGranted) && !muted;
   const announcedRef = useRef(0);
   const [watched, toggleWatched] = useWatchedDrinks();
@@ -345,6 +384,14 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
     }
   }, [fresh, watchedNamesKey, notifyEnabled, alertsAllowed]);
 
+  function choosePush() {
+    if (installTarget.needsInstall) {
+      setInstallOpen(true);
+      return;
+    }
+    void enableNotifications();
+  }
+
   async function enableNotifications() {
     if (typeof Notification === "undefined") {
       toast.error("This browser doesn't support notifications.");
@@ -372,6 +419,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
 
   async function disableNotifications() {
     setMuted(true);
+    setWantsAlerts(false);
     if (pushSupported()) {
       try {
         const subscription = await currentPushSubscription();
@@ -475,14 +523,18 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
         </div>
       ) : (
         <>
-          <button
-            type="button"
-            onClick={enableNotifications}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 px-4 py-3 font-black text-xs tracking-widest text-[#FDCC4B] uppercase transition-colors hover:bg-[#FDCC4B]/20"
-          >
-            <BellOff className="h-4 w-4" aria-hidden="true" />{" "}
-            {freshInstall ? "Turn on lock-screen alerts" : "Notify me on price drops"}
-          </button>
+          {wantsAlerts ? (
+            <NotifyMethod onPush={choosePush} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWantsAlerts(true)}
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 px-4 py-3 font-black text-xs tracking-widest text-[#FDCC4B] uppercase transition-colors hover:bg-[#FDCC4B]/20"
+            >
+              <BellOff className="h-4 w-4" aria-hidden="true" />{" "}
+              {freshInstall ? "Turn on lock-screen alerts" : "Notify me on price drops"}
+            </button>
+          )}
           {(freshInstall || watchedCount > 0) && (
             <p className="-mt-5 text-center text-[11px] leading-relaxed text-stone-500">
               {freshInstall
@@ -492,7 +544,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
           )}
         </>
       )}
-      {!alertsOff && (pushState === "needs-install" || pushState === "page-only") && <InstallCard />}
+      <InstallDialog target={installTarget} open={installOpen} onOpenChange={setInstallOpen} />
 
       {tiersLive && state.warmedUp === false && (
         <div className="rounded-2xl border border-[#FDCC4B]/30 bg-[#FDCC4B]/5 px-4 py-3 text-center">

@@ -51,3 +51,12 @@ export function detectInstallPlatform(): InstallPlatform {
     if (isStandalone()) return "installed"
     return classifyUserAgent(navigator)
 }
+
+export function isAndroidDevice(nav: NavigatorLike): boolean {
+    return /Android/i.test(nav.userAgent) && !isIosDevice(nav)
+}
+
+export function isAndroid(): boolean {
+    if (typeof navigator === "undefined") return false
+    return isAndroidDevice(navigator)
+}
