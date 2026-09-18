@@ -283,6 +283,62 @@ export async function setEventActiveAction(id: number, isActive: boolean) {
   }
 }
 
+/* Drag and drop on the calendar: the day changes, the times do not. The
+   same clash rule as saving applies on the new day. */
+export async function moveEventDateAction(
+  id: number,
+  date: string,
+  times?: { start: string; end: string }
+) {
+  const supabase = await createClient();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Pick a valid day." };
+  if (times && !(/^\d{2}:\d{2}$/.test(times.start) && /^\d{2}:\d{2}$/.test(times.end))) {
+    return { error: "Pick a valid time." };
+  }
+  try {
+    const { data: event, error: loadError } = await supabase
+      .from("events")
+      .select("id, title, date, start_time, end_time, is_active")
+      .eq("id", id)
+      .single();
+    if (loadError) throw loadError;
+    const start = times?.start ?? (event.start_time as string | null);
+    const end = times?.end ?? (event.end_time as string | null);
+    if (event.date === date && !times) return { success: true };
+
+    if (start && end) {
+      const { data: sameDay } = await supabase
+        .from("events")
+        .select("id, title, start_time, end_time, date, is_active")
+        .eq("date", date);
+      const clashes = findActiveEventClashes(
+        { id, date, start, end },
+        (sameDay ?? []) as EventClashCandidate[]
+      );
+      if (clashes.length > 0) {
+        const c = clashes[0];
+        return { error: `Can't move to ${date}: clashes with ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).` };
+      }
+    }
+
+    const { error } = await supabase
+      .from("events")
+      .update({
+        date,
+        ...(times ? { start_time: times.start, end_time: times.end } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (error) throw error;
+    revalidatePath("/event-setups/events");
+    revalidatePublicEventPages();
+    return { success: true };
+  } catch (error) {
+    console.error("Error moving event:", error);
+    return { error: error instanceof Error ? error.message : "Failed to move the event." };
+  }
+}
+
 export async function deleteEventAction(id: number) {
   const supabase = await createClient();
   try {

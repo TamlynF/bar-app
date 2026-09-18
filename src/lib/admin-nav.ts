@@ -2,7 +2,6 @@ import {
   BookUser,
   Building2,
   Camera,
-  CandlestickChart,
   Component,
   Crown,
   Dices,
@@ -10,6 +9,7 @@ import {
   Guitar,
   History,
   Image as ImageIcon,
+  Link2,
   Mail,
   Medal,
   ShoppingBag,
@@ -40,7 +40,7 @@ export const QUIZ_HUB_HREF = "/event-setups/quiz";
 
 /* A single weekly read, not a section - /marketing redirects here. */
 export const MARKET_TRENDS_ITEM: AdminNavItem = {
-  label: "Market trends",
+  label: "Trends",
   href: "/marketing/trends",
   icon: TrendingUp,
   description: "Ideas, events and price-offs from venues near you",
@@ -48,6 +48,39 @@ export const MARKET_TRENDS_ITEM: AdminNavItem = {
 
 export function isMarketTrendsPath(path: string): boolean {
   return path === "/marketing" || path.startsWith("/marketing/");
+}
+
+/* The drinks market is run on the night like the quiz, so it has its own
+   section; its routes stay under /settings. */
+export const MARKET_HUB_HREF = "/settings/market";
+/* The phone's landing page for the section: a tile per market page. */
+export const STOCK_MARKET_HUB_HREF = "/stock-market";
+
+export const MARKET_NAV_ITEMS: AdminNavItem[] = [
+  {
+    label: "Market history",
+    href: "/settings/market/history",
+    icon: History,
+    description: "Price and stock changes from past market nights",
+  },
+  {
+    label: "Price rounds",
+    href: "/settings/price-rounds",
+    icon: Scale,
+    description: "What the price page compares",
+  },
+  {
+    label: "Square links",
+    href: "/settings/market/square-links",
+    icon: Link2,
+    description: "Which till item each serve sells through",
+  },
+];
+
+export function isMarketPath(path: string): boolean {
+  if (path === STOCK_MARKET_HUB_HREF) return true;
+  if (path === MARKET_HUB_HREF || path.startsWith(`${MARKET_HUB_HREF}/`)) return true;
+  return MARKET_NAV_ITEMS.some((item) => path === item.href || path.startsWith(`${item.href}/`));
 }
 
 export const QUIZ_NAV_ITEMS: AdminNavItem[] = [
@@ -141,24 +174,6 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
         description: "Categories and items",
       },
       {
-        label: "Price rounds",
-        href: "/settings/price-rounds",
-        icon: Scale,
-        description: "What the price page compares",
-      },
-      {
-        label: "Drinks market",
-        href: "/settings/market",
-        icon: CandlestickChart,
-        description: "Live price board for market nights",
-      },
-      {
-        label: "Market history",
-        href: "/settings/market/history",
-        icon: History,
-        description: "Price and stock changes from past market nights",
-      },
-      {
         label: "Specials",
         href: "/settings/specials",
         icon: Sparkles,
@@ -241,7 +256,7 @@ export function isSchedulePath(path: string): boolean {
 /* Event categories sits under /event-setups and Teams under /settings, so
    section ownership comes from the lists above rather than the URL prefix. */
 export function isSettingsPath(path: string): boolean {
-  if (isQuizPath(path)) return false;
+  if (isQuizPath(path) || isMarketPath(path)) return false;
   if (path === "/settings" || path.startsWith("/settings/")) return true;
   return SETTINGS_NAV_ITEMS.some((item) => path === item.href || path.startsWith(`${item.href}/`));
 }

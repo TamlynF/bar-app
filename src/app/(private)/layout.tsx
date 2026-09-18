@@ -31,6 +31,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         { data: { user } },
         { data: bookableEvents },
         pendingCounts,
+        { count: liveMarkets },
     ] = await Promise.all([
         supabase.auth.getUser(),
         supabase
@@ -42,6 +43,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             .order("date", { ascending: true })
             .limit(200),
         getPendingRequestCounts(supabase),
+        supabase.from("market_sessions").select("id", { count: "exact", head: true }).eq("status", "live"),
     ]);
 
     let employeeName = "";
@@ -79,6 +81,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             pendingBandCount={pendingCounts.band}
             pendingHireCount={pendingCounts.privateHire}
             pendingEnquiriesCount={pendingCounts.enquiries}
+            marketLive={(liveMarkets ?? 0) > 0}
         >
             {children}
         </PrivateLayoutClient>

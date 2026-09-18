@@ -9,6 +9,7 @@ import {
     ArrowLeft,
     LogOut,
     Brain,
+    CandlestickChart,
     ChevronDown,
     ChevronUp,
     ChevronRight,
@@ -38,11 +39,15 @@ import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
 import {
+    MARKET_HUB_HREF,
+    MARKET_NAV_ITEMS,
     MARKET_TRENDS_ITEM,
+    STOCK_MARKET_HUB_HREF,
     QUIZ_HUB_HREF,
     QUIZ_NAV_ITEMS,
     SCHEDULE_HREF,
     SETTINGS_NAV_GROUPS,
+    isMarketPath,
     isMarketTrendsPath,
     isQuizPath,
     isSchedulePath,
@@ -203,6 +208,7 @@ export default function PrivateLayoutClient({
     pendingBandCount = 0,
     pendingHireCount = 0,
     pendingEnquiriesCount = 0,
+    marketLive = false,
 }: {
     children: React.ReactNode
     employeeName: string
@@ -210,6 +216,7 @@ export default function PrivateLayoutClient({
     guestNav?: BookingNavItem[]
     pendingRequestsCount?: number
     pendingBandCount?: number
+    marketLive?: boolean
     pendingHireCount?: number
     pendingEnquiriesCount?: number
 }) {
@@ -229,7 +236,8 @@ export default function PrivateLayoutClient({
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
     const [quizOpen, setQuizOpen] = useState(() => !!pathname && isQuizPath(pathname))
-    const [settingsOpen, setSettingsOpen] = useState(() => !!pathname && pathname.startsWith("/settings") && !isQuizPath(pathname))
+    const [marketOpen, setMarketOpen] = useState(() => !!pathname && isMarketPath(pathname))
+    const [settingsOpen, setSettingsOpen] = useState(() => !!pathname && pathname.startsWith("/settings") && !isQuizPath(pathname) && !isMarketPath(pathname))
     /* Both groups start open, so nothing is hidden until you choose to hide it. */
     const [openSettingsGroups, setOpenSettingsGroups] = useState<Set<string>>(
         () => new Set(SETTINGS_NAV_GROUPS.map((group) => group.label))
@@ -262,8 +270,9 @@ export default function PrivateLayoutClient({
         { label: "Quiz", href: QUIZ_HUB_HREF, icon: Brain },
     ]
 
-    /* Trends and Settings live behind "More" so the five mobile targets stay legible. */
+    /* Market, Trends and Settings live behind "More" so the five mobile targets stay legible. */
     const moreNavItems = [
+        { label: "Stock market", href: STOCK_MARKET_HUB_HREF, icon: CandlestickChart, matches: isMarketPath, live: marketLive },
         { label: MARKET_TRENDS_ITEM.label, href: MARKET_TRENDS_ITEM.href, icon: MARKET_TRENDS_ITEM.icon, matches: isMarketTrendsPath },
         { label: "Settings", href: "/settings", icon: Settings, matches: isSettingsPath },
     ]
@@ -277,6 +286,7 @@ export default function PrivateLayoutClient({
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Requests", href: "/requests", icon: Inbox },
         { label: "Schedule", href: SCHEDULE_HREF, icon: CalendarCogIcon },
+        { label: "Stock market", href: MARKET_HUB_HREF, icon: CandlestickChart },
         { label: "Quiz", href: QUIZ_HUB_HREF, icon: Brain },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
@@ -298,6 +308,7 @@ export default function PrivateLayoutClient({
     ]
 
     const quizSubItems = QUIZ_NAV_ITEMS
+    const marketSubItems = MARKET_NAV_ITEMS
     /* Grouped the same way the settings hub is, so the sidebar and the page it
        opens read as one list rather than two orderings of it. */
     const settingsSubGroups = SETTINGS_NAV_GROUPS
@@ -307,6 +318,7 @@ export default function PrivateLayoutClient({
 
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null, description: "An overview of bookings, requests and venue performance." }
+        if (normalizedPath === STOCK_MARKET_HUB_HREF) return { title: "Stock market", subtitle: null, backHref: null, description: "Market nights, history and the price rounds guests compare." }
 
         if (normalizedPath === "/guests") return { title: "Guests", subtitle: null, backHref: null, description: "Bookings guests have made and requests waiting on you." }
 
@@ -500,48 +512,47 @@ export default function PrivateLayoutClient({
                 const leaf = normalizedPath.split("/")[3]
                 if (leaf === "how-it-works") {
                     return {
-                        title: "Market",
+                        title: "Stock market",
                         subtitle: "How pricing works",
                         backHref: marketHref,
                         trail: [
-                            { label: "Settings", href: "/settings" },
-                            { label: "Market", href: marketHref },
+                            { label: "Stock market", href: marketHref },
                             { label: "How pricing works" },
                         ],
                     }
                 }
                 if (leaf === "history") {
                     return {
-                        title: "Market",
+                        title: "Stock market",
                         subtitle: "History",
                         backHref: marketHref,
                         trail: [
-                            { label: "Settings", href: "/settings" },
-                            { label: "Market", href: marketHref },
+                            { label: "Stock market", href: marketHref },
                             { label: "History" },
                         ],
                     }
                 }
                 if (leaf === "square-links") {
                     return {
-                        title: "Market",
+                        title: "Stock market",
                         subtitle: "Square links",
                         backHref: marketHref,
                         trail: [
-                            { label: "Settings", href: "/settings" },
-                            { label: "Market", href: marketHref },
+                            { label: "Stock market", href: marketHref },
                             { label: "Square links" },
                         ],
                     }
                 }
+                if (!leaf) {
+                    return { title: "Stock market", subtitle: null, backHref: null, description: "Open, run and review the drinks stock market." }
+                }
                 if (leaf) {
                     return {
-                        title: "Market",
+                        title: "Stock market",
                         subtitle: `#${leaf}`,
                         backHref: marketHref,
                         trail: [
-                            { label: "Settings", href: "/settings" },
-                            { label: "Market", href: marketHref },
+                            { label: "Stock market", href: marketHref },
                             { label: `#${leaf}` },
                         ],
                     }
@@ -549,7 +560,7 @@ export default function PrivateLayoutClient({
             }
 
             const settingsMap: Record<string, string> = {
-                "market": "Market",
+                "market": "Stock market",
                 "company": "Company Information",
                 "venue": "Venue layout",
                 "tables": "Seating plan",
@@ -615,11 +626,14 @@ export default function PrivateLayoutClient({
                         const isEvents = item.label === "Bookings"
                         const isRequests = item.label === "Requests"
                         const isQuizNav = item.label === "Quiz"
+                        const isMarketNav = item.label === "Stock market"
 
                         const isActive = isRequests
                             ? onRequestPath
                             : isEvents
                             ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onRequestPath
+                            : isMarketNav
+                            ? isMarketPath(normalizedPathname)
                             : isQuizNav
                             ? onQuizPath
                             : item.label === "Schedule"
@@ -628,8 +642,8 @@ export default function PrivateLayoutClient({
                             ? isSettingsPath(normalizedPathname)
                             : normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
 
-                        const hasSubItems = isEvents || isRequests || isSettings || isQuizNav
-                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isQuizNav ? quizOpen : false
+                        const hasSubItems = isEvents || isRequests || isSettings || isQuizNav || isMarketNav
+                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isQuizNav ? quizOpen : isMarketNav ? marketOpen : false
                         const toggle = isEvents
                             ? () => setEventsOpen((p) => !p)
                             : isRequests
@@ -638,6 +652,8 @@ export default function PrivateLayoutClient({
                             ? () => setSettingsOpen((p) => !p)
                             : isQuizNav
                             ? () => setQuizOpen((p) => !p)
+                            : isMarketNav
+                            ? () => setMarketOpen((p) => !p)
                             : undefined
                         const openGroup = isEvents
                             ? () => setEventsOpen(true)
@@ -647,6 +663,8 @@ export default function PrivateLayoutClient({
                             ? () => setSettingsOpen(true)
                             : isQuizNav
                             ? () => setQuizOpen(true)
+                            : isMarketNav
+                            ? () => setMarketOpen(true)
                             : undefined
 
                         return (
@@ -669,6 +687,9 @@ export default function PrivateLayoutClient({
                                         {collapsed && isRequests && pendingRequestsCount > 0 && (
                                             <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
                                         )}
+                                        {collapsed && isMarketNav && marketLive && (
+                                            <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+                                        )}
 
                                         {!collapsed && (
                                             <>
@@ -676,6 +697,10 @@ export default function PrivateLayoutClient({
 
                                                 {isEvents && (
                                                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
+                                                )}
+
+                                                {isMarketNav && marketLive && (
+                                                    <span title="Market open" className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
                                                 )}
 
                                                 {isRequests && pendingRequestsCount > 0 && (
@@ -786,6 +811,31 @@ export default function PrivateLayoutClient({
                                     <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
                                         {quizSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
+                                            return (
+                                                <Link
+                                                    key={sub.href}
+                                                    href={sub.href}
+                                                    className={cn(
+                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[13px] font-medium transition-colors duration-200",
+                                                        isSubActive
+                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
+                                                    )}
+                                                >
+                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
+                                                    {sub.label}
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {isMarketNav && marketOpen && !collapsed && (
+                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
+                                        {[{ label: "Market nights", href: MARKET_HUB_HREF, icon: CandlestickChart }, ...marketSubItems].map((sub) => {
+                                            const isSubActive = sub.href === MARKET_HUB_HREF
+                                                ? normalizedPathname === MARKET_HUB_HREF || (normalizedPathname.startsWith(`${MARKET_HUB_HREF}/`) && !marketSubItems.some((s) => normalizedPathname.startsWith(s.href)))
+                                                : normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
                                             return (
                                                 <Link
                                                     key={sub.href}
@@ -1043,6 +1093,9 @@ export default function PrivateLayoutClient({
                                 onMoreRoute ? "bg-nav-selected text-nav-ink" : "text-nav-muted"
                             )}>
                                 <MoreHorizontal className="h-5.5 w-5.5" />
+                                {marketLive && (
+                                    <span title="Market open" className="absolute top-0 right-1.5 h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+                                )}
                             </span>
                             <span className={cn(
                                 "block w-full text-center text-[11px] leading-none font-semibold transition-colors",
@@ -1077,26 +1130,34 @@ export default function PrivateLayoutClient({
                             <SheetTitle className="min-w-0 flex-1 truncate px-1 text-base font-bold text-nav-ink">More</SheetTitle>
                         </div>
                         <SheetDescription className="sr-only">
-                            Trends, settings and your account.
+                            Stock market, trends, settings and your account.
                         </SheetDescription>
                         <div className="flex flex-col p-2">
                             {moreNavItems.map((item) => {
                                 const isActive = item.matches(normalizedPathname)
+                                const rowClass = cn(
+                                    "flex min-h-12 w-full items-center gap-3 rounded-xl border-l-2 px-3 text-sm font-semibold transition-colors",
+                                    isActive
+                                        ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                        : "border-transparent text-nav-ink hover:bg-nav-selected"
+                                )
+                                const liveTag = "live" in item && item.live && (
+                                    <span className="flex items-center gap-1.5 text-[11px] font-semibold text-green-400">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
+                                        Open
+                                    </span>
+                                )
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
                                         onClick={() => setMoreOpen(false)}
                                         aria-current={isActive ? "page" : undefined}
-                                        className={cn(
-                                            "flex min-h-12 items-center gap-3 rounded-xl border-l-2 px-3 text-sm font-semibold transition-colors",
-                                            isActive
-                                                ? "border-nav-indicator bg-nav-selected text-nav-ink"
-                                                : "border-transparent text-nav-ink hover:bg-nav-selected"
-                                        )}
+                                        className={rowClass}
                                     >
                                         <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-nav-ink" : "text-nav-muted")} />
-                                        {item.label}
+                                        <span className="flex-1">{item.label}</span>
+                                        {liveTag}
                                     </Link>
                                 )
                             })}

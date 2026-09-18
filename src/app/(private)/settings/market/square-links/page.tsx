@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { buildMappingRows, type MappingCategoryRow } from "@/lib/market/mapping-rows";
 import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
+import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import type { CatalogVariation } from "@/lib/market/mapping";
 import SquareLinksClient from "./square-links-client";
 
@@ -20,7 +21,7 @@ export default async function SquareLinksPage({
   const supabase = await createClient();
   const { event } = await searchParams;
 
-  const [{ data: categoryRows }, { data: eventRows }, catalog] = await Promise.all([
+  const [{ data: categoryRows }, { data: eventRows }, catalog, itemIdMap] = await Promise.all([
     supabase
       .from("menu_categories")
       .select(
@@ -42,6 +43,7 @@ export default async function SquareLinksPage({
         return null;
       }
     ),
+    squareItemIdsByVariation(),
   ]);
 
   const events = ((eventRows ?? []) as EventRow[]).map((row) => ({
@@ -59,6 +61,8 @@ export default async function SquareLinksPage({
       rows={rows}
       variations={catalog}
       focusEvent={focusEvent}
+      itemIds={Object.fromEntries(itemIdMap)}
+      environment={process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox"}
     />
   );
 }

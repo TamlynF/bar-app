@@ -43,7 +43,6 @@ import {
   Info,
   ExternalLink,
   CopyPlus,
-  CornerDownRight,
   HelpCircle,
   Undo2,
   MoreVertical,
@@ -68,7 +67,7 @@ import {
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
-import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction, patchEventAction, type EventIssuePatch } from "./actions";
+import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction, patchEventAction, moveEventDateAction, type EventIssuePatch } from "./actions";
 import { setEventWinner } from "../quiz-leaderboards/actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -89,7 +88,7 @@ const SHEET_CHECKBOX = "h-5 w-5 shrink-0 rounded border-admin-line accent-[#3445
 import { cn } from "@/lib/utils";
 import { FormToggle } from "@/components/admin";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
-import { ShareEventButton, useShareEvent } from "@/components/admin/share-event-button";
+import { useShareEvent } from "@/components/admin/share-event-button";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, badgeSelectedClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
@@ -469,6 +468,51 @@ export default function EventsClient({
     format(new Date(), "yyyy-MM-dd")
   );
   const [calendarView, setCalendarView] = useState<"month" | "week">("month");
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  /* Dropping a chip on another day keeps its times and moves the date. A
+     clash on the new day opens the event with the reason instead of moving. */
+  const dropEventOnDay = (eventId: number, date: string, times?: { start: string; end: string }) => {
+    setDragOverDate(null);
+    const event = initialEvents.find((e) => e.id === eventId);
+    if (!event) return;
+    const sameTimes = !times || (times.start === event.start_time?.slice(0, 5) && times.end === event.end_time?.slice(0, 5));
+    if (event.date === date && sameTimes) return;
+    const start = times?.start ?? event.start_time;
+    const end = times?.end ?? event.end_time;
+    if (start && end) {
+      const clashes = findActiveEventClashes({ id: event.id, date, start, end }, initialEvents);
+      if (clashes.length > 0) {
+        const c = clashes[0];
+        openView(event, `Can't move to ${formatDate(date)}${times ? ` at ${times.start}` : ""}: clashes with ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).`);
+        return;
+      }
+    }
+    const move = () =>
+      startTransition(async () => {
+        const result = await moveEventDateAction(event.id, date, sameTimes ? undefined : times);
+        if (result?.error) {
+          openView(event, result.error);
+          return;
+        }
+        toast.success(`${event.title || "Event"} moved to ${formatDate(date)}${sameTimes ? "" : ` ${times!.start} – ${times!.end}`}`);
+        router.refresh();
+      });
+    if (sameTimes) {
+      move();
+      return;
+    }
+    /* A drop into a time slot changes the hours as well as the day, so it
+       opens the event and asks before anything is written. */
+    openView(event);
+    void confirm({
+      title: "Change the times?",
+      description: `Move ${event.title || "this event"} to ${formatDate(date)}, ${times!.start} – ${times!.end}? It is currently ${event.start_time ? formatTime(event.start_time) : "unset"}${event.end_time ? ` – ${formatTime(event.end_time)}` : ""} on ${formatDate(event.date)}.`,
+      confirmLabel: "Change times",
+    }).then((ok) => {
+      if (ok) move();
+    });
+  };
   /* Phone only: the month grid is for finding a date, the week strip is for
      reading it. Tapping a day folds the grid so the day's events fit on screen. */
   const [phoneWeekOnly, setPhoneWeekOnly] = useState(false);
@@ -506,7 +550,6 @@ export default function EventsClient({
   const [formTagline, setFormTagline] = useState<string>("");
   const [formExternalLink, setFormExternalLink] = useState<string>("");
   const [copySourceId, setCopySourceId] = useState<number | null>(null);
-  const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [sysInfoSheetOpen, setSysInfoSheetOpen] = useState(false);
   const [formMoreOpen, setFormMoreOpen] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState<string>("");
@@ -756,10 +799,10 @@ export default function EventsClient({
      itself, which is long enough to be felt as a stalled tap. Marked
      non-urgent, React spreads that work over frames instead of one long
      block, so the rest of the page keeps responding while it lands. */
-  const openView = (event: EventRecord) => {
+  const openView = (event: EventRecord, error: string | null = null) => {
     window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
     deferRender(() => {
-      setFormError(null);
+      setFormError(error);
       setIsEditing(false);
       setIsAdding(false);
       setCopySourceId(null);
@@ -1219,6 +1262,11 @@ export default function EventsClient({
 
   const teamLabel = (bookingId: number) =>
     bookings.find((b) => b.id === bookingId)?.group_name?.trim() || `#${bookingId}`;
+  /* Row pills get the first ten characters; the full name stays on hover. */
+  const shortTeamLabel = (bookingId: number) => {
+    const name = teamLabel(bookingId);
+    return name.length > 10 ? `${name.slice(0, 10)}…` : name;
+  };
 
   /* One field, saved from the issues dialog. The two open copies of the event -
      the sheet and the dialog - are patched here so the issue list shrinks the
@@ -1292,12 +1340,14 @@ export default function EventsClient({
     const past = hasEnded(e);
     const inactive = e.is_active === false;
     const issues: string[] = [];
+    /* A removed event is not going to run, so nothing about it is worth
+       chasing, not even a missing winner. */
+    if (inactive) return issues;
 
-    /* An event that has been switched off is never going to run, and one
-       that has ended cannot be got ready any more, so nothing about preparing
-       it is worth chasing. What a quiz that did run should have recorded
-       still is. */
-    if (!inactive && !past) {
+    /* An event that has ended cannot be got ready any more, so nothing about
+       preparing it is worth chasing. What a quiz that did run should have
+       recorded still is. */
+    if (!past) {
       if (!e.title?.trim()) issues.push("No title has been set.");
       if (!e.date) issues.push("No date has been set.");
       if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
@@ -1517,6 +1567,108 @@ export default function EventsClient({
     return `${head} – ${dayNumOf(last)} ${monthAbbrOf(last)} ${last.slice(0, 4)}`;
   })();
   const periodLabel = isWeekView ? weekLabel : calMonthLabel;
+
+  /* Week view is a time grid. Each event is cut into pieces that fit in one
+     day: a 22:00-02:00 gig is a block to midnight on its own day and a block
+     from 00:00 in the next column. The hour scale only spends space on hours
+     with something in them - a long empty run in the afternoon collapses to
+     a thin gap - and every block is placed as a share of the column, so the
+     whole week fits the screen without scrolling. */
+  type WeekPiece = { event: EventRecord; start: number; end: number; carry: boolean };
+  const DAY_MIN = 24 * 60;
+  const dayBefore = (ymd: string) => {
+    const d = parseDate(ymd);
+    d.setDate(d.getDate() - 1);
+    return format(d, "yyyy-MM-dd");
+  };
+  const weekPieces = (() => {
+    const map = new Map<string, WeekPiece[]>(weekCells.map((d) => [d, []]));
+    const days = [dayBefore(weekCells[0]), ...weekCells];
+    days.forEach((date, i) => {
+      for (const event of eventsByDate.get(date) ?? []) {
+        const start = parseTimeToMinutes(event.start_time);
+        if (start == null) continue;
+        const rawEnd = parseTimeToMinutes(event.end_time) ?? start + 120;
+        const overnight = rawEnd <= start;
+        if (i > 0) map.get(date)!.push({ event, start, end: overnight ? DAY_MIN : rawEnd, carry: false });
+        if (overnight && rawEnd > 0 && i < days.length - 1) {
+          map.get(days[i + 1])!.push({ event, start: 0, end: rawEnd, carry: true });
+        }
+      }
+    });
+    return map;
+  })();
+  const weekScale = (() => {
+    const busy = new Set<number>();
+    for (const pieces of weekPieces.values()) {
+      for (const piece of pieces) {
+        for (let h = Math.floor(piece.start / 60); h < Math.ceil(piece.end / 60); h += 1) busy.add(h);
+      }
+    }
+    if (busy.size === 0) for (let h = 12; h < 24; h += 1) busy.add(h);
+    const hours = [...busy].sort((a, b) => a - b);
+    const slots: { hour: number; units: number; gap: boolean }[] = [];
+    let cursor = hours[0];
+    for (const h of hours) {
+      if (h - cursor >= 3) slots.push({ hour: cursor, units: 0.6, gap: true });
+      else for (let x = cursor; x < h; x += 1) slots.push({ hour: x, units: 1, gap: false });
+      slots.push({ hour: h, units: 1, gap: false });
+      cursor = h + 1;
+    }
+    const total = slots.reduce((sum, slot) => sum + slot.units, 0);
+    const endHour = hours[hours.length - 1] + 1;
+    /* Minutes into the day -> position on the scale, in slot units. */
+    const yOf = (minutes: number) => {
+      let y = 0;
+      for (const slot of slots) {
+        const from = slot.hour * 60;
+        const to = slot.gap ? nextHourAfter(slot.hour) * 60 : from + 60;
+        if (minutes < from) return y;
+        if (minutes < to) return slot.gap ? y : y + ((minutes - from) / 60) * slot.units;
+        y += slot.units;
+      }
+      return total;
+    };
+    function nextHourAfter(hour: number) {
+      const i = slots.findIndex((slot) => slot.hour === hour && slot.gap);
+      return slots[i + 1]?.hour ?? hour + 1;
+    }
+    /* Position (0..1 of the column) -> minutes into the day, on the quarter. */
+    const minutesAt = (share: number) => {
+      let y = 0;
+      const target = Math.max(0, Math.min(total, share * total));
+      for (const slot of slots) {
+        if (target < y + slot.units) {
+          if (slot.gap) return nextHourAfter(slot.hour) * 60;
+          const within = ((target - y) / slot.units) * 60;
+          return slot.hour * 60 + Math.round(within / 15) * 15;
+        }
+        y += slot.units;
+      }
+      return endHour * 60;
+    };
+    return { slots, total, endHour, yOf, minutesAt };
+  })();
+  const weekBlockFor = (piece: WeekPiece) => {
+    const top = (weekScale.yOf(piece.start) / weekScale.total) * 100;
+    const bottom = (weekScale.yOf(piece.end) / weekScale.total) * 100;
+    return { top, height: Math.max(4, bottom - top) };
+  };
+  const clockOf = (minutes: number) => {
+    const m = ((minutes % DAY_MIN) + DAY_MIN) % DAY_MIN;
+    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  };
+  /* Dropping into a column at a height moves the event to that time, keeping
+     its length. */
+  const timesAtDrop = (event: EventRecord, share: number) => {
+    const start = parseTimeToMinutes(event.start_time);
+    const rawEnd = parseTimeToMinutes(event.end_time);
+    if (start == null || rawEnd == null) return undefined;
+    const length = rawEnd <= start ? rawEnd + DAY_MIN - start : rawEnd - start;
+    const newStart = weekScale.minutesAt(share);
+    return { start: clockOf(newStart), end: clockOf(newStart + length) };
+  };
+
   const shiftMonth = (delta: number) => {
     const d = new Date(calendarMonth.year, calendarMonth.month + delta, 1);
     setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
@@ -1617,7 +1769,6 @@ export default function EventsClient({
     const badgeClass = badgeClassFromColor(colorKey);
     const host = employees.find((emp) => emp.id === event.host_employee_id);
     const isQuiz = sub?.behavior === "quiz";
-    const quizStat = isQuiz ? quizStatusFor(event.id) : null;
     const canPickWinner = isPlayedQuiz(event);
     const winnerBookingId = winnerByEvent[event.id] ?? null;
     const eventTeams = canPickWinner ? confirmedTeams(event.id) : [];
@@ -1626,20 +1777,7 @@ export default function EventsClient({
     const hasPricing = !!event.payment_amount && event.payment_amount > 0;
     const isTonight = event.date === todayStr && !inactive && !hasEnded(event);
 
-    const timeLabel = `${formatTime(event.start_time)}${event.end_time ? `–${formatTime(event.end_time)}` : ""}`;
     const showBooked = event.is_bookable || bStats.confirmedPeople > 0;
-    const bookedNode = venueCapacity ? (
-      <>
-        <span className="font-semibold text-admin-ink">{bStats.confirmedPeople}</span>
-        <span aria-hidden="true"> / </span>
-        <span>{venueCapacity}</span> booked
-      </>
-    ) : (
-      <>{bStats.confirmedPeople === 1 ? "1 booked" : `${bStats.confirmedPeople} booked`}</>
-    );
-    const bookedAria = venueCapacity
-      ? `${bStats.confirmedPeople} of ${venueCapacity} booked`
-      : `${bStats.confirmedPeople} booked`;
     const priceLabel = hasPricing ? `£${event.payment_amount!.toFixed(2)}` : null;
 
     /* Seated nights count tables (one confirmed booking per table); stand-up
@@ -1662,79 +1800,31 @@ export default function EventsClient({
     const PILL = "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold";
     const GREY = "bg-admin-surface text-admin-muted";
 
-    // Warnings and the sold-out flag ride together in one column; whether the
-    // event is on at all reads at the end of the row, next to its actions.
-    // Once the night has passed there is no point writing its questions, so
-    // only the winner is still worth chasing.
-    const rowFlags = (
-      <>
-        {!isPast && quizStat && !quizStat.allComplete && (
-          <span
-            title={quizStat.someExist ? "Quiz questions incomplete" : "No quiz questions yet"}
-            className={cn(
-              "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold",
-              quizStat.someExist ? "bg-admin-warning-bg text-admin-warning" : "bg-admin-error-bg text-admin-error"
-            )}
-          >
-            {quizStat.someExist ? <AlertTriangle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-            Quiz
-          </span>
-        )}
-        {needsWinner(event) && (
-          <span
-            title="No winning team recorded for this quiz"
-            className="inline-flex shrink-0 items-center gap-1 rounded bg-admin-warning-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-warning"
-          >
-            <Trophy className="h-3 w-3" />
-            Needs winner
-          </span>
-        )}
-        {canPickWinner && winnerBookingId && (
-          <span
-            title={`Winner: ${teamLabel(winnerBookingId)}`}
-            className="inline-flex max-w-24 shrink-0 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
-          >
-            <Trophy className="h-3 w-3 shrink-0" />
-            <span className="truncate">{teamLabel(winnerBookingId)}</span>
-          </span>
-        )}
-      </>
-    );
-
-    // Sold out is a problem whether or not the event is switched on, so it
-    // pulls the status pill red with it.
-    const activePill = (
+    /* One status per row from sm up: the row's grey wash already says a
+       night has passed, so it only needs a word when something is off. */
+    /* Below the large breakpoint the word wraps and looks untidy, so the
+       pill shrinks to its icon and keeps the word for screen readers. */
+    const winnerNode = canPickWinner && winnerBookingId && (
       <span
-        className={cn(
-          PILL,
-          isPast
-            ? GREY
-            : inactive || event.is_fully_booked
-              ? "bg-admin-error-bg text-admin-error"
-              : "bg-admin-success-bg text-admin-success"
-        )}
+        title={`Winner: ${teamLabel(winnerBookingId)}`}
+        className="inline-flex max-w-full min-w-0 items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap text-admin-success"
       >
-        {inactive ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" />}
-        {/* The tick or cross says it on its own where the card is one column
-            wide; the word stays for screen readers and returns from sm up. */}
-        <span className="max-sm:sr-only">{inactive ? "Inactive" : "Active"}</span>
+        <Trophy className="h-3.5 w-3.5 shrink-0" />
+        <span className="min-w-0 truncate max-xl:sr-only">{shortTeamLabel(winnerBookingId)}</span>
       </span>
     );
 
-    const fullPill = event.is_fully_booked && (
-      <span
-        title="This event is sold out"
-        className={cn(PILL, isPast ? GREY : "bg-admin-error-bg text-admin-error")}
-      >
-        Full
+    const statusNode = inactive ? (
+      <span title="Removed from the public site" className="inline-flex max-w-full items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap text-admin-muted">
+        <Ban className="h-3.5 w-3.5" />
+        <span className="max-xl:sr-only">Removed</span>
       </span>
-    );
-
-    const historicPill = isPast && (
-      <span title="This event has already taken place" className={cn(PILL, GREY)}>
-        Historic
+    ) : event.is_fully_booked ? (
+      <span title="This event is sold out" className={cn("inline-flex max-w-full items-center gap-1.5 text-[12px] font-semibold whitespace-nowrap", isPast ? "text-admin-muted" : "text-admin-error")}>
+        <span className="h-2 w-2 shrink-0 rounded-full bg-current" aria-hidden="true" />
+        <span className="max-xl:sr-only">Sold out</span>
       </span>
-    );
+    ) : null;
 
     const issues = eventIssues(event);
     const issueLabel = `${issues.length} issue${issues.length === 1 ? "" : "s"}`;
@@ -1751,7 +1841,7 @@ export default function EventsClient({
             className="inline-flex max-w-24 shrink-0 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
           >
             <Trophy className="h-3 w-3 shrink-0" />
-            <span className="truncate">{teamLabel(winnerBookingId)}</span>
+            <span className="truncate">{shortTeamLabel(winnerBookingId)}</span>
           </span>
         )}
         {inactive && (
@@ -1890,7 +1980,7 @@ export default function EventsClient({
           "pointer-fine:transition-shadow pointer-fine:hover:shadow-md",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-admin-line hover:border-admin-primary/40",
           inactive && "opacity-60",
-          !inactive && isPast && "max-sm:opacity-70 sm:border-admin-line sm:bg-admin-line",
+          !inactive && isPast && "opacity-70",
           focusedId === event.id && "border-admin-primary bg-admin-primary-soft/40 ring-2 ring-admin-primary/30"
         )}
       >
@@ -1964,70 +2054,171 @@ export default function EventsClient({
           )}
         </div>
 
-        {/* Anything above a phone gets one line: tag, title, status, host, time,
-            bookings, price, menu, chevron. Fixed tracks rather than
-            content-sized ones, so each column starts in the same place on every
-            row - only the title gives up width. */}
-        <div className="hidden min-h-12 grid-cols-[128px_minmax(0,1fr)_150px_96px_88px_96px_56px_196px_100px_72px] items-center gap-2.5 px-3 sm:grid">
+        {/* Anything above a phone gets one line, read left to right the way you
+            ask about a night: what it is, when, how full, what it costs, whether
+            it is on, and anything needing attention. Fixed tracks so every
+            column starts in the same place; only the title gives up width. */}
+        {/* Tablet: too narrow for columns, so the tag and time lead one
+            line, the title the next, and the rest of the facts share a third.
+            The date is on the rail, so the four things you need are always
+            there. */}
+        <div className="hidden min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 sm:grid lg:hidden">
           <div className="pointer-events-none min-w-0">
-            {sub && (
-              <span className={cn("inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>
-                {toTitleCase(sub.name)}
-              </span>
-            )}
-          </div>
-
-          <p className={cn("pointer-events-none min-w-0 truncate text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
-            {event.title || "Untitled Event"}
-          </p>
-
-          {/* A fixed track, not a content-sized one - an "auto" column takes its
-              width from that row's own pills, which is what left every warning
-              starting somewhere different. */}
-          <div className="pointer-events-none flex min-w-0 flex-wrap items-center gap-1.5">
-            {rowFlags}
-          </div>
-
-          <div className="pointer-events-none min-w-0 text-[12px] font-medium text-admin-muted">
-            {host && (
-              <p className="flex items-center gap-1.5">
-                <span className="inline-grid h-4.25 w-4.25 shrink-0 place-items-center rounded-full bg-(--spine) text-[12px] font-semibold text-white">
-                  {host.full_name[0]}
+            <p className="flex h-5 min-w-0 items-center gap-2">
+              {sub && (
+                <span className={cn("inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[11px] font-semibold tracking-wide uppercase", isPast ? GREY : badgeClass)}>
+                  {toTitleCase(sub.name)}
                 </span>
-                <span className="truncate">{shortHost(host.full_name)}</span>
-              </p>
-            )}
+              )}
+              <span className={cn("shrink-0 text-[13px] font-semibold tabular-nums", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+                {isPast && event.end_time ? `Ended ${formatTime(event.end_time)}` : event.start_time ? formatTime(event.start_time) : "No time"}
+                {!isPast && event.start_time && event.end_time && (
+                  <span className="font-medium text-admin-muted"> – {formatTime(event.end_time)}</span>
+                )}
+              </span>
+            </p>
+            <p className={cn("mt-1 line-clamp-2 h-10 text-[15px] leading-5 font-bold", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+              {event.title || "Untitled Event"}
+            </p>
+            <p className="mt-1 flex h-5 min-w-0 items-center gap-2 overflow-hidden text-[12px] font-medium whitespace-nowrap text-admin-muted">
+              {host && (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="inline-grid h-4 w-4 shrink-0 place-items-center rounded-full bg-(--spine) text-[10px] font-semibold text-white">
+                    {host.full_name[0]}
+                  </span>
+                  <span className="truncate">{shortHost(host.full_name)}</span>
+                </span>
+              )}
+              {seatsNode && (
+                <span className="inline-flex shrink-0 items-center gap-1 tabular-nums" aria-label={seatsAria}>
+                  <Users className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                  {seatsNode}
+                </span>
+              )}
+              <span className={cn("shrink-0 font-semibold tabular-nums", priceLabel ? "text-admin-ink" : "text-admin-muted/60")}>{priceLabel ?? "Free"}</span>
+            </p>
           </div>
-
-          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums">
-            {timeLabel}
-          </p>
-
-          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums" aria-label={showBooked ? bookedAria : undefined}>
-            {showBooked ? bookedNode : ""}
-          </p>
-
-          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums">
-            {priceLabel ?? ""}
-          </p>
-
-          <div className="pointer-events-none flex min-w-0 items-center gap-1.5">
-            {activePill}
-            {historicPill}
-            {fullPill}
-          </div>
-
-          <div className="relative z-2 flex min-w-0 items-center">
+          <div className="flex items-center gap-1.5">
+            <span className="pointer-events-none flex items-center gap-1.5">
+              {statusNode}
+              {winnerNode}
+            </span>
             {issues.length > 0 && (
               <button
                 type="button"
                 onClick={() => setIssuesEvent(event)}
                 title={`${issueLabel} on this event`}
                 aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
-                className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg px-2 text-admin-error transition-colors hover:bg-admin-error-bg"
+                className={cn(
+                  PILL,
+                  "relative z-2 transition-colors active:scale-[0.98]",
+                  nudges
+                    ? "bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
+                    : "bg-admin-error-bg text-admin-error hover:bg-admin-error/15"
+                )}
               >
-                <AlertTriangle className="h-5 w-5 shrink-0" />
-                <span className="truncate text-[12px] font-semibold whitespace-nowrap">{issueLabel}</span>
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span className="tabular-nums">{issues.length}</span>
+              </button>
+            )}
+            <span className="relative z-2 flex items-center gap-0.5">
+              {rowMenu}
+              <ChevronRight className="pointer-events-none h-4 w-4 shrink-0 text-admin-muted transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </div>
+
+        <div className="hidden min-h-14 grid-cols-[76px_100px_minmax(0,1fr)_128px_40px_56px] items-center gap-2.5 px-3 py-2.5 lg:grid xl:grid-cols-[88px_104px_minmax(0,1fr)_140px_64px_128px_64px] xl:gap-3">
+          <div className="pointer-events-none min-w-0">
+            {sub && (
+              <span className={cn("inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase", isPast ? GREY : badgeClass)}>
+                {toTitleCase(sub.name)}
+              </span>
+            )}
+          </div>
+
+          <div className={cn("pointer-events-none text-[13px] font-semibold tabular-nums", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+            {isPast && event.end_time ? (
+              `Ended ${formatTime(event.end_time)}`
+            ) : event.start_time ? (
+              <>
+                {formatTime(event.start_time)}
+                {event.end_time && <span className="font-medium text-admin-muted"> – {formatTime(event.end_time)}</span>}
+              </>
+            ) : (
+              <span className="font-medium text-admin-muted">No time</span>
+            )}
+          </div>
+
+          <div className="pointer-events-none min-w-0">
+            <p className={cn("line-clamp-2 h-10 text-[15px] leading-5 font-bold xl:line-clamp-1 xl:h-5", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>
+              {event.title || "Untitled Event"}
+            </p>
+            {/* Always rendered, host or not, so every row is the same height. */}
+            <p className="mt-0.5 flex h-5 min-w-0 items-center gap-2 overflow-hidden text-[12px] font-medium text-admin-muted">
+              {host && (
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="inline-grid h-4 w-4 shrink-0 place-items-center rounded-full bg-(--spine) text-[10px] font-semibold text-white">
+                    {host.full_name[0]}
+                  </span>
+                  <span className="truncate">{shortHost(host.full_name)}</span>
+                </span>
+              )}
+            </p>
+          </div>
+
+
+          <div className="pointer-events-none min-w-0 border-l border-admin-line/70 pl-3" aria-label={showBooked ? seatsAria : undefined}>
+            {seatsNode ? (
+              <>
+                <p className="flex items-baseline gap-1 truncate text-[12px] font-medium text-admin-muted tabular-nums">
+                  <Users className="h-3.5 w-3.5 shrink-0 self-center opacity-60" aria-hidden="true" />
+                  <span className={cn("text-[14px] font-bold", inactive || isPast ? "text-admin-muted" : "text-admin-ink")}>{seatsUsed}</span>
+                  <span>{seatsTotal ? `of ${seatsTotal} ${seatsUnit}` : seatsUnit}</span>
+                </p>
+                {seatsTotal != null && seatsTotal > 0 && (
+                  <div
+                    className="mt-1.5 hidden h-1.5 overflow-hidden rounded-full bg-admin-surface xl:block"
+                    style={{ "--fill": `${Math.min(100, (seatsUsed / seatsTotal) * 100)}%` } as React.CSSProperties}
+                    aria-hidden="true"
+                  >
+                    <div className={cn("h-full w-(--fill) rounded-full transition-[width]", event.is_fully_booked ? "bg-admin-error" : isPast ? "bg-admin-muted/40" : "bg-admin-primary")} />
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-[12px] font-medium text-admin-muted/60">No booking</p>
+            )}
+            {/* Below xl the price has no column of its own and sits under the bookings. */}
+            <p className={cn("mt-0.5 text-[12px] font-semibold tabular-nums xl:hidden", priceLabel ? "text-admin-ink" : "text-admin-muted/60")}>
+              {priceLabel ?? "Free"}
+            </p>
+          </div>
+
+          <p className={cn("pointer-events-none hidden text-right text-[13px] font-semibold tabular-nums xl:block", priceLabel ? "text-admin-ink" : "text-admin-muted/60")}>
+            {priceLabel ?? "Free"}
+          </p>
+
+          {/* Statuses stack so a sold-out quiz can also name its winner. */}
+          <div className="flex min-w-0 flex-col items-end justify-center gap-0.5 max-xl:flex-row max-xl:items-center max-xl:justify-end max-xl:gap-1.5">
+            <span className="pointer-events-none flex max-w-full min-w-0">{statusNode}</span>
+            <span className="pointer-events-none flex max-w-full min-w-0">{winnerNode}</span>
+            {issues.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIssuesEvent(event)}
+                title={`${issueLabel} on this event`}
+                aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
+                className={cn(
+                  PILL,
+                  "relative z-2 transition-colors active:scale-[0.98]",
+                  nudges
+                    ? "bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
+                    : "bg-admin-error-bg text-admin-error hover:bg-admin-error/15"
+                )}
+              >
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span className="tabular-nums">{issues.length}</span>
               </button>
             )}
           </div>
@@ -2050,9 +2241,15 @@ export default function EventsClient({
       <button
         type="button"
         onClick={() => openView(event)}
-        title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""}`}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", String(event.id));
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragEnd={() => setDragOverDate(null)}
+        title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""} · drag to another day`}
         className={cn(
-          "flex w-full min-w-0 items-center gap-1 overflow-hidden rounded border px-1 py-px text-left transition hover:brightness-95",
+          "flex w-full min-w-0 cursor-grab items-center gap-1 overflow-hidden rounded border px-1 py-px text-left transition hover:brightness-95 active:cursor-grabbing",
           badgeClass,
           inactive && "line-through opacity-50",
         )}
@@ -2071,9 +2268,6 @@ export default function EventsClient({
   const sheetSubtypeLabel = toTitleCase(
     (isEditing ? selectedSubtype : selected ? subtypeById.get(selected.event_subtypes_id) : undefined)?.name
   );
-  const sheetTitle = isAdding
-    ? copySourceId ? "Copy Event" : "New Event"
-    : `${isEditing ? "Edit" : "View"} ${sheetSubtypeLabel ? `${sheetSubtypeLabel} ` : ""}Event`;
   const selectedTypeForForm = typeById.get(Number(formTypeId));
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
@@ -2151,12 +2345,6 @@ export default function EventsClient({
     if (!isAdding || activeTouchedRef.current) return;
     setFormActive(!hasFieldErrors && formSlotEndsInFuture);
   }, [isAdding, hasFieldErrors, formSlotEndsInFuture]);
-
-  const viewSubtype = !showForm && selected ? subtypeById.get(selected.event_subtypes_id) : undefined;
-  const viewQuiz = !showForm && selected && viewSubtype?.behavior === "quiz"
-    ? quizStatusFor(selected.id)
-    : null;
-  const viewQuizPct = viewQuiz && viewQuiz.target > 0 ? Math.round((viewQuiz.total / viewQuiz.target) * 100) : 0;
 
   return (
     <div className={cn(
@@ -2284,8 +2472,13 @@ export default function EventsClient({
       )}
 
       {showFilters && (
-      <div className="order-4 w-full space-y-1.5 border-t border-[#D8D5C8] pt-2 pb-0.5 max-sm:hidden sm:space-y-2 sm:pt-3">
-        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="order-4 w-full space-y-2 border-t border-[#D8D5C8] pt-2 pb-0.5 max-sm:hidden sm:pt-3">
+        {/* Three labelled groups, so when the chips wrap it is still clear
+            which are event types, which are their subtypes and which are
+            the quick filters. */}
+        <div className="flex gap-3">
+          <span className={"w-16 shrink-0 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"}>Type</span>
+        <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setCatFilters(new Set())}
@@ -2320,12 +2513,14 @@ export default function EventsClient({
             );
           })}
         </div>
+        </div>
 
         {/* Subtypes only appear once a category is chosen - "All" keeps every
             subtype of that category, or pick the ones you want. */}
         {subChips.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pl-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-admin-muted/60" aria-hidden="true" />
+          <div className="flex gap-3 border-t border-dashed border-admin-line/70 pt-2">
+            <span className={"w-16 shrink-0 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"}>Subtype</span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
             <button
               type="button"
               onClick={() => setSubFilters(new Set())}
@@ -2360,9 +2555,12 @@ export default function EventsClient({
               );
             })}
           </div>
+          </div>
         )}
 
-        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-3 border-t border-dashed border-admin-line/70 pt-2">
+          <span className={"w-16 shrink-0 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"}>Show</span>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           {/* The calendar is laid out by date, so sorting has nothing to act on. */}
           {viewMode === "list" && (
             <>
@@ -2397,6 +2595,7 @@ export default function EventsClient({
               </button>
             );
           })}
+        </div>
         </div>
       </div>
       )}
@@ -2653,7 +2852,7 @@ export default function EventsClient({
 
       {viewMode === "calendar" ? (
         <div className="space-y-3 sm:flex sm:min-h-0 sm:flex-1 sm:flex-col sm:space-y-2">
-          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white px-3 py-2.5 shadow-sm">
+          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-admin-line bg-admin-surface px-3 py-2.5 shadow-sm">
             <button type="button" onClick={() => (isPhone ? shiftPhonePeriod(-1) : shiftPeriod(-1))} aria-label={isWeekView || (isPhone && phoneWeekOnly) ? "Previous week" : "Previous month"} title={isWeekView ? "Previous week" : "Previous month"} className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4] active:bg-[#EFE8D4] sm:h-9 sm:w-9">
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -2673,7 +2872,7 @@ export default function EventsClient({
                 Today
               </button>
             )}
-            <div className="inline-flex shrink-0 items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5 max-sm:hidden">
+            <div className="inline-flex shrink-0 items-center rounded-xl border border-admin-line bg-admin-card p-0.5 max-sm:hidden">
               {(["month", "week"] as const).map((v) => (
                 <button
                   key={v}
@@ -2686,7 +2885,7 @@ export default function EventsClient({
                     calendarView === v ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
                   )}
                 >
-                  {v}
+                  {v === "month" ? "Month" : "Week"}
                 </button>
               ))}
             </div>
@@ -2695,7 +2894,7 @@ export default function EventsClient({
             </button>
           </div>
 
-          <div {...swipeHandlers} className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
+          <div {...swipeHandlers} className="rounded-2xl border border-admin-line bg-admin-surface p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
             <div className="grid shrink-0 grid-cols-7 gap-1">
               {WEEKDAYS.map((w, i) => (
                 <div key={w} className={cn("py-1 text-center font-bold text-[12px] text-[#5E6654] sm:text-[12px]", (i === 0 || i === 6) && "max-sm:text-[#5E6654]/60")}>{w}</div>
@@ -2762,9 +2961,139 @@ export default function EventsClient({
               {phoneWeekOnly ? "Show month" : "Show week"}
             </button>
 
+            {isWeekView && (
+              <div className="mt-0.5 hidden min-h-0 flex-1 grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] gap-1 sm:grid">
+                {/* Time axis on the left. */}
+                <div className="flex min-h-0 flex-col" aria-hidden="true">
+                  <div className="h-7 shrink-0" />
+                  <div className="relative min-h-0 flex-1">
+                    {(() => {
+                      let y = 0;
+                      return weekScale.slots.map((slot) => {
+                        const top = (y / weekScale.total) * 100;
+                        y += slot.units;
+                        return (
+                          <span
+                            key={`${slot.hour}-${slot.gap}`}
+                            style={{ "--y": `${top}%` } as React.CSSProperties}
+                            className="absolute top-(--y) right-1 -translate-y-1/2 text-[11px] font-semibold text-admin-muted tabular-nums"
+                          >
+                            {slot.gap ? "⋯" : `${String(slot.hour % 24).padStart(2, "0")}:00`}
+                          </span>
+                        );
+                      });
+                    })()}
+                    <span className="absolute right-1 bottom-0 translate-y-1/2 text-[11px] font-semibold text-admin-muted tabular-nums">
+                      {String(weekScale.endHour % 24).padStart(2, "0")}:00
+                    </span>
+                  </div>
+                </div>
+                {weekCells.map((dateStr) => {
+                  const pieces = weekPieces.get(dateStr) ?? [];
+                  const dayEvents = eventsByDate.get(dateStr) ?? [];
+                  const isToday = dateStr === todayStr;
+                  const isWeekend = [0, 6].includes(parseDate(dateStr).getDay());
+                  const isDropTarget = dragOverDate === dateStr;
+                  return (
+                    <div
+                      key={dateStr}
+                      className={cn(
+                        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border transition-colors",
+                        isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white",
+                        isDropTarget && "border-[#34451F] bg-[#E5EBD8] ring-2 ring-[#34451F]/30"
+                      )}
+                    >
+                      <div className="flex h-7 shrink-0 items-center justify-between gap-1 border-b border-admin-line/60 px-1.5">
+                        <span className={cn("inline-grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 font-bold text-[13px] tabular-nums", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
+                        {dayEvents.length > 0 && <span className="font-bold text-[12px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
+                      </div>
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          if (dragOverDate !== dateStr) setDragOverDate(dateStr);
+                        }}
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOverDate((d) => (d === dateStr ? null : d));
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const id = Number(e.dataTransfer.getData("text/plain"));
+                          if (!Number.isFinite(id) || id <= 0) return;
+                          const event = initialEvents.find((x) => x.id === id);
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const share = rect.height > 0 ? (e.clientY - rect.top) / rect.height : 0;
+                          dropEventOnDay(id, dateStr, event ? timesAtDrop(event, share) : undefined);
+                        }}
+                        className="relative min-h-0 flex-1"
+                      >
+                        {(() => {
+                          let y = 0;
+                          return weekScale.slots.map((slot) => {
+                            const top = (y / weekScale.total) * 100;
+                            const height = (slot.units / weekScale.total) * 100;
+                            y += slot.units;
+                            return (
+                              <div
+                                key={`${slot.hour}-${slot.gap}`}
+                                style={{ "--y": `${top}%`, "--h": `${height}%` } as React.CSSProperties}
+                                className={cn(
+                                  "pointer-events-none absolute inset-x-0 top-(--y) h-(--h) border-t border-admin-line/50",
+                                  slot.gap && "border-dashed bg-[repeating-linear-gradient(135deg,transparent_0,transparent_6px,var(--color-admin-line)_6px,var(--color-admin-line)_7px)] opacity-60"
+                                )}
+                                aria-hidden="true"
+                              />
+                            );
+                          });
+                        })()}
+                        {pieces.map((piece) => {
+                          const { event } = piece;
+                          const block = weekBlockFor(piece);
+                          const sub = subtypeById.get(event.event_subtypes_id);
+                          const type = typeById.get(event.event_types_id);
+                          const badgeClass = badgeClassFromColor(sub?.color ?? type?.color ?? null);
+                          const inactive = event.is_active === false;
+                          return (
+                            <button
+                              key={`${event.id}-${piece.carry ? "carry" : "main"}`}
+                              type="button"
+                              onClick={() => openView(event)}
+                              draggable={!piece.carry}
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData("text/plain", String(event.id));
+                                e.dataTransfer.effectAllowed = "move";
+                              }}
+                              onDragEnd={() => setDragOverDate(null)}
+                              title={`${event.title || "Untitled Event"} · ${formatTime(event.start_time)}${event.end_time ? ` – ${formatTime(event.end_time)}` : ""}${piece.carry ? " (continues from the night before)" : " · drag to another day or time"}`}
+                              style={{ "--top": `${block.top}%`, "--h": `${block.height}%` } as React.CSSProperties}
+                              className={cn(
+                                "absolute inset-x-0.5 top-(--top) flex h-(--h) min-w-0 flex-col overflow-hidden rounded border px-1.5 py-0.5 text-left transition hover:brightness-95",
+                                piece.carry ? "cursor-pointer border-dashed" : "cursor-grab active:cursor-grabbing",
+                                badgeClass,
+                                inactive && "line-through opacity-50"
+                              )}
+                            >
+                              <span className="shrink-0 truncate text-[11px] leading-snug font-bold tabular-nums">
+                                {piece.carry ? `to ${formatTime(event.end_time)}` : formatTime(event.start_time)}
+                                {!piece.carry && event.end_time && <span className="font-medium opacity-80"> – {formatTime(event.end_time)}</span>}
+                              </span>
+                              <span className="line-clamp-2 text-[12px] leading-snug font-bold">{event.title || "Untitled"}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div
               style={{ "--cal-rows": gridRowCount, "--cal-row-min": isWeekView ? "0px" : "5rem" } as React.CSSProperties}
-              className="no-scrollbar mt-0.5 hidden min-h-0 flex-1 grid-cols-7 grid-rows-[repeat(var(--cal-rows),minmax(var(--cal-row-min),1fr))] gap-1 overflow-y-auto sm:grid"
+              className={cn(
+                "no-scrollbar mt-0.5 hidden min-h-0 flex-1 grid-cols-7 grid-rows-[repeat(var(--cal-rows),minmax(var(--cal-row-min),1fr))] gap-1 overflow-y-auto sm:grid",
+                isWeekView && "sm:hidden"
+              )}
             >
               {gridCells.map((dateStr, i) => {
                 if (!dateStr) return <div key={`blank-${i}`} className="rounded-lg bg-[#F4F1E8]/70" />;
@@ -2773,8 +3102,29 @@ export default function EventsClient({
                 const isWeekend = [0, 6].includes(parseDate(dateStr).getDay());
                 const shown = isWeekView ? dayEvents : dayEvents.slice(0, DAY_CHIP_LIMIT);
                 const extra = dayEvents.length - shown.length;
+                const isDropTarget = dragOverDate === dateStr;
                 return (
-                  <div key={dateStr} className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border p-1", isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white")}>
+                  <div
+                    key={dateStr}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragOverDate !== dateStr) setDragOverDate(dateStr);
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOverDate((d) => (d === dateStr ? null : d));
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const id = Number(e.dataTransfer.getData("text/plain"));
+                      if (Number.isFinite(id) && id > 0) dropEventOnDay(id, dateStr);
+                    }}
+                    className={cn(
+                      "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border p-1 transition-colors",
+                      isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white",
+                      isDropTarget && "border-[#34451F] bg-[#E5EBD8] ring-2 ring-[#34451F]/30"
+                    )}
+                  >
                     <div className="mb-0.5 flex shrink-0 items-center justify-between gap-1">
                       <span className={cn("inline-grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 font-bold text-[13px] tabular-nums", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
                       {dayEvents.length > 0 && <span className="font-bold text-[12px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
@@ -2860,14 +3210,14 @@ export default function EventsClient({
               .reduce((sum, g) => sum + g.events.length, 0);
             return (
             <Fragment key={group.date}>
-            {/* Phone: a month header whenever the month changes; tapping it
-                folds that month away so a long range stays short. */}
+            {/* A month header whenever the month changes; tapping it folds
+                that month away so a long range stays short. */}
             {newMonth && (
               <button
                 type="button"
                 onClick={() => toggleMonth(monthKey)}
                 aria-expanded={!monthCollapsed}
-                className={cn("flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-left transition-colors active:bg-admin-surface sm:hidden", index > 0 && "mt-2")}
+                className={cn("flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-left transition-colors hover:bg-admin-surface/60 active:bg-admin-surface", index > 0 && "mt-2 sm:mt-4")}
               >
                 <span className="text-[13px] font-bold text-admin-ink">
                   {day.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
@@ -2881,10 +3231,10 @@ export default function EventsClient({
                 />
               </button>
             )}
-            <section className={cn("space-y-1 max-sm:flex max-sm:gap-2.5 max-sm:space-y-0", monthCollapsed && "max-sm:hidden")}>
-              {/* Phone: the date is a tile on a rail down the left, so every
-                  card beside it is on that day and nothing else needs saying. */}
-              <div className="flex w-11 shrink-0 flex-col items-center sm:hidden" aria-hidden="true">
+            <section className={cn("flex gap-2.5 sm:gap-3", monthCollapsed && "hidden")}>
+              {/* The date is a tile on a rail down the left, so every card
+                  beside it is on that day and nothing else needs saying. */}
+              <div className="flex w-11 shrink-0 flex-col items-center" aria-hidden="true">
                 <span
                   className={cn(
                     "flex h-12 w-11 flex-col items-center justify-center rounded-xl border leading-none",
@@ -2902,28 +3252,11 @@ export default function EventsClient({
                 </span>
                 {!lastDay && <span className="mt-1 w-px flex-1 bg-admin-line" />}
               </div>
-              <div className="min-w-0 space-y-1 max-sm:flex-1 max-sm:space-y-1.5 max-sm:pb-2">
-              <div className="flex items-center gap-2 pt-2 pb-0.5 max-sm:hidden">
-                <h2
-                  className={cn(
-                    "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase",
-                    group.date === todayStr
-                      ? "border-[#FF6B35] bg-[#FF6B35] text-white"
-                      : isPastDay
-                        ? "border-admin-line bg-admin-surface text-admin-muted"
-                        : "border-admin-line bg-admin-card text-admin-primary"
-                  )}
-                >
-                  <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
-                  {fullDayLabel(group.date, todayStr)}
-                  <span className="opacity-70 tabular-nums sm:hidden">· {group.events.length}</span>
+              <div className="min-w-0 flex-1 space-y-1.5 pb-2 sm:space-y-2 sm:pb-3">
+                <h2 className="sr-only">
+                  {fullDayLabel(group.date, todayStr)} · {group.events.length} event{group.events.length === 1 ? "" : "s"}
                 </h2>
-                <span className="h-px flex-1 bg-admin-line" aria-hidden="true" />
-                <span className="shrink-0 rounded-full bg-admin-surface px-2 py-0.5 text-[11px] font-medium text-admin-muted tabular-nums max-sm:hidden">
-                  {group.events.length} event{group.events.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              {group.events.map((event) => renderEventRow(event))}
+                {group.events.map((event) => renderEventRow(event))}
               </div>
             </section>
             </Fragment>
@@ -2953,7 +3286,7 @@ export default function EventsClient({
           )}
         >
           <SheetDragHandle onClose={closeSheet} className="bg-white/80 backdrop-blur-md" />
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl max-sm:pt-1">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-1 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             {/* A phone parks the actions in the header's bottom-right corner -
                 level with the pills, growing up into the date line rather than
                 adding a row of their own. */}
@@ -2963,21 +3296,17 @@ export default function EventsClient({
                 onClick={closeSheet}
                 aria-label="Close"
                 title="Close"
-                className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink sm:hidden"
+                className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
               >
                 <X className="h-5 w-5 shrink-0" />
               </button>
               <div className="min-w-0 flex-1">
                 {!showForm && selected ? (
                   <>
-                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase max-sm:hidden">
-                      {sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "Event"}
-                      <span className="normal-case tabular-nums"> · #{selected.id}</span>
-                    </p>
-                    <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink max-sm:mt-2 max-sm:text-lg">
+                    <SheetTitle className="mt-2 truncate text-lg leading-tight font-bold tracking-tight text-admin-ink">
                       {selected.title || "Untitled Event"}
                     </SheetTitle>
-                    <p className="mt-1 flex items-center gap-2 text-[13px] leading-relaxed font-medium text-admin-muted sm:block sm:truncate sm:pr-0">
+                    <p className="mt-1 flex items-center gap-2 text-[13px] leading-relaxed font-medium text-admin-muted">
                       <span className="min-w-0 truncate">
                         {formatDate(selected.date)}
                         {(selected.start_time || selected.end_time) && (
@@ -2985,7 +3314,7 @@ export default function EventsClient({
                         )}
                       </span>
                       {!showForm && phoneHeaderPills && (
-                        <span className="ml-auto flex shrink-0 items-center gap-1.5 sm:hidden">{phoneHeaderPills}</span>
+                        <span className="ml-auto flex shrink-0 items-center gap-1.5">{phoneHeaderPills}</span>
                       )}
                     </p>
                   </>
@@ -2993,21 +3322,11 @@ export default function EventsClient({
                   <>
                     {/* A phone keeps the same shape as view mode: what you are
                         doing as the eyebrow, the event as the title. */}
-                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase sm:hidden">
+                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
                       {isAdding ? (copySourceId ? `Copying #${copySourceId}` : "Creating") : "Editing"}
                     </p>
-                    <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A] max-sm:mt-1 max-sm:tracking-tight">
-                      <span className="sm:hidden">
-                        {isAdding ? (sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "New event") : selected?.title || "Untitled Event"}
-                      </span>
-                      <span className="max-sm:hidden">
-                        {sheetTitle}
-                        {selected && (
-                          <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
-                            (#ID : {selected.id})
-                          </span>
-                        )}
-                      </span>
+                    <SheetTitle className="mt-1 truncate text-lg leading-tight font-bold tracking-tight text-admin-ink">
+                      {isAdding ? (sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "New event") : selected?.title || "Untitled Event"}
                     </SheetTitle>
                   </>
                 )}
@@ -3030,7 +3349,7 @@ export default function EventsClient({
                       type="button"
                       aria-label="More actions"
                       title="More actions"
-                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface sm:hidden"
+                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface"
                     >
                       <MoreVertical className="h-5 w-5" />
                     </button>
@@ -3062,179 +3381,8 @@ export default function EventsClient({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {selected && !isAdding && (
-                <div className="absolute right-4 bottom-3 z-10 flex shrink-0 items-center gap-2 max-sm:hidden sm:static sm:right-auto sm:bottom-auto">
-                  <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="Details"
-                        title="Creation and modification details"
-                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-2.5 text-admin-ink transition-colors hover:bg-admin-line sm:px-3"
-                      >
-                        <Info className="h-4.5 w-4.5 shrink-0" />
-                        <span className="hidden font-bold text-[13px] sm:inline">System</span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
-                      <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] text-[#34451F]">
-                        System Information
-                      </span>
-                      {renderSystemRows(selected)}
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* Poster + caption + /whats-on link to the phone's share sheet.
-                      Resolved the same way the details card does further down. */}
-                  <ShareEventButton
-                    event={{
-                      title: selected.title ?? subtypeById.get(selected.event_subtypes_id)?.name ?? "Event",
-                      date: selected.date,
-                      startTime: selected.start_time,
-                      endTime: selected.end_time,
-                      price: selected.payment_amount,
-                      searchPhrase: subtypeById.get(selected.event_subtypes_id)?.name ?? null,
-                      posterUrl: resolveEventImage({
-                        eventImageUrl: selected.image_url,
-                        actCoverUrl: actCoverByEvent[selected.id],
-                        subtypeDefaultUrl: subtypeById.get(selected.event_subtypes_id)?.default_image_url,
-                      }).url,
-                      publicUrl:
-                        typeof window !== "undefined"
-                          ? `${window.location.origin}/whats-on/${selected.id}`
-                          : `/whats-on/${selected.id}`,
-                    }}
-                  />
-
-                  {canCopy(selected) && (
-                    <button
-                      type="button"
-                      onClick={() => openCopy(selected)}
-                      aria-label="Copy this event"
-                      title="Copy this event"
-                      className="flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card text-admin-primary transition-colors hover:border-admin-primary hover:bg-admin-primary-soft focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none sm:w-auto sm:px-3"
-                    >
-                      <CopyPlus className="h-4 w-4 shrink-0" />
-                      <span className="hidden text-[13px] font-semibold sm:inline">Copy</span>
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
 
-            {selected && !isAdding && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 max-sm:hidden sm:pr-0">
-                {/* A phone names only the exceptions: removed from the site,
-                    or sold out. Live and open is the normal state. */}
-                {(() => {
-                  const inactive = selected.is_active === false;
-                  const full = !inactive && !!selected.is_bookable && !!selected.is_fully_booked;
-                  if (!inactive && !full) return null;
-                  return (
-                    <span className={cn(
-                      SHEET_PILL,
-                      "sm:hidden",
-                      inactive
-                        ? "border-admin-line bg-admin-surface text-admin-muted"
-                        : "border-admin-error/30 bg-admin-error-bg text-admin-error"
-                    )}>
-                      {inactive ? <Ban className="h-3.5 w-3.5 shrink-0" /> : null}
-                      {inactive ? "Removed" : "Sold out"}
-                    </span>
-                  );
-                })()}
-                <span className={cn(
-                  SHEET_PILL,
-                  "hidden sm:inline-flex",
-                  selected.is_active !== false
-                    ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
-                    : "border-admin-error/30 bg-admin-error-bg text-admin-error"
-                )}>
-                  {selected.is_active !== false
-                    ? <Check className="h-3.5 w-3.5 shrink-0" />
-                    : <X className="h-3.5 w-3.5 shrink-0" />}
-                  {selected.is_active !== false ? "Active" : "Inactive"}
-                </span>
-                {selected.is_bookable && (
-                  <span className={cn(
-                    SHEET_PILL,
-                    "hidden sm:inline-flex",
-                    selected.is_fully_booked
-                      ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
-                      : "border-admin-line bg-admin-surface text-admin-muted"
-                  )}>
-                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_fully_booked ? "bg-admin-success" : "bg-admin-muted/50")} />
-                    {selected.is_fully_booked ? "Sold out" : "Not sold out"}
-                  </span>
-                )}
-                {/* Rides the status row at every width - a chip like the quiz
-                    one, pushed hard right once there is room for it. */}
-                {!showForm && (() => {
-                  const issues = eventIssues(selected);
-                  if (issues.length === 0) return null;
-                  const nudges = issuesAreNudges(selected, issues);
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => setIssuesEvent(selected)}
-                      title={`View ${issues.length} issue${issues.length === 1 ? "" : "s"} on this event`}
-                      className={cn(
-                        SHEET_PILL,
-                        "transition-colors active:scale-[0.98] sm:ml-auto sm:pr-1.5",
-                        nudges
-                          ? "border-admin-warning/30 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
-                          : "border-admin-error/30 bg-admin-error-bg text-admin-error hover:bg-admin-error/15"
-                      )}
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      <span className="tabular-nums sm:hidden">{issues.length}</span>
-                      <span className="hidden sm:inline">
-                        {issues.length} {issues.length === 1 ? "Issue" : "Issues"}
-                      </span>
-                      <ChevronRight className="hidden h-3.5 w-3.5 shrink-0 opacity-70 sm:block" />
-                    </button>
-                  );
-                })()}
-              </div>
-            )}
-
-            {!showForm && selected && viewQuiz && viewQuiz.target > 0 && (
-              viewQuiz.allComplete ? (
-                <div role="status" className="mt-2 hidden items-center gap-2.5 rounded-2xl border border-green-300 bg-green-50 px-3.5 py-2.5 sm:flex">
-                  <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-600" />
-                  <p className="min-w-0 text-[13px] leading-snug font-semibold text-green-700">
-                    Quiz ready - all {viewQuiz.target} questions are written.
-                  </p>
-                </div>
-              ) : (
-                <div role="status" className="mt-2 hidden rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 sm:block">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:flex-nowrap">
-                    <div className="min-w-0 flex-1 basis-full sm:basis-auto">
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-bold text-amber-700">
-                        <AlertTriangle className="h-4 w-4 shrink-0" />
-                        <span>{viewQuiz.someExist ? "Quiz not finished" : "Quiz not started"}</span>
-                        <span className="font-semibold text-amber-700/80 tabular-nums">
-                          {viewQuiz.total} of {viewQuiz.target} questions
-                        </span>
-                      </p>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-amber-200/70">
-                        <div
-                          style={{ "--quiz-progress": `${viewQuizPct}%` } as React.CSSProperties}
-                          className="h-full w-(--quiz-progress) rounded-full bg-amber-500 transition-all"
-                        />
-                      </div>
-                    </div>
-                    <Link
-                      href={quizHrefFor(selected, "sheet")}
-                      className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] sm:h-10 sm:w-auto"
-                    >
-                      <Brain className="h-4 w-4 shrink-0" />
-                      {viewQuiz.someExist ? "Continue quiz" : "Start quiz"}
-                    </Link>
-                  </div>
-                </div>
-              )
-            )}
 
           </div>
 
@@ -3287,27 +3435,23 @@ export default function EventsClient({
                       {selected.is_bookable && (
                         <ViewSection
                           title="Bookings"
-                          className="order-2 sm:order-none"
+                          variant="card"
+                          className="order-2"
                           open={bookingsOpen}
                           onToggle={() => setBookingsOpen(o => !o)}
-                          headerRight={
-                            <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums max-sm:hidden">
-                              {bk.confirmedCount} {bk.confirmedCount === 1 ? "group" : "groups"}
-                            </span>
-                          }
                         >
                           {(() => {
                             const used = selected.seating_required ? bk.confirmedCount : bk.confirmedPeople;
                             const total = selected.seating_required ? tableCount : venueCapacity ?? 0;
                             return (
-                              <div className="border-b border-[#D8D5C8] px-4 pt-1 pb-3 sm:hidden">
+                              <div className="border-b border-[#D8D5C8] px-4 pt-1 pb-3">
                                 {selected.seating_required ? (
-                                  <p className="text-[13px] font-medium text-admin-muted">
+                                  <p className="text-right text-[13px] font-medium text-admin-muted">
                                     <span className="text-2xl font-bold text-admin-ink tabular-nums">{used}</span>
                                     {total > 0 ? ` of ${total} tables booked` : " tables booked"}
                                   </p>
                                 ) : (
-                                  <p className="text-[12px] font-medium text-admin-muted">
+                                  <p className="text-right text-[13px] font-medium text-admin-muted">
                                     {total > 0 ? `Room for ${total} guests` : "Guests"}
                                   </p>
                                 )}
@@ -3324,19 +3468,19 @@ export default function EventsClient({
                             );
                           })()}
                           {selected.seating_required && (
-                            <p className="px-4 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase sm:hidden">Guests</p>
+                            <p className="px-4 pt-2 text-[11px] font-semibold tracking-wide text-admin-muted uppercase">Guests</p>
                           )}
                           <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
-                            <div className="px-2 py-2 text-center sm:px-3">
-                              <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
+                            <div className="px-2 py-2 text-center">
+                              <p className="font-bold text-base leading-tight text-green-600 tabular-nums">{bk.confirmedPeople}</p>
                               <p className="font-bold text-[12px] text-[#5E6654]">Confirmed</p>
                             </div>
-                            <div className="px-2 py-2 text-center sm:px-3">
-                              <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
+                            <div className="px-2 py-2 text-center">
+                              <p className="font-bold text-base leading-tight text-amber-500 tabular-nums">{bk.waitlistedPeople}</p>
                               <p className="font-bold text-[12px] text-[#5E6654]">Waitlisted</p>
                             </div>
-                            <div className="px-2 py-2 text-center sm:px-3">
-                              <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
+                            <div className="px-2 py-2 text-center">
+                              <p className="font-bold text-base leading-tight text-red-500 tabular-nums">{bk.cancelledPeople}</p>
                               <p className="font-bold text-[12px] text-[#5E6654]">Cancelled</p>
                             </div>
                           </div>
@@ -3344,7 +3488,7 @@ export default function EventsClient({
                             <DetailCell label="Winning Team" value={winningTeamId ? `#${winningTeamId}: ${bookings.find((b) => b.id === winningTeamId)?.group_name?.trim() || "Unnamed"}` : "-"} />
                           )}
                           <div className={cn(
-                            "grid gap-2.5 p-3 sm:p-4",
+                            "grid gap-2.5 p-3",
                             selected.seating_required ? "grid-cols-2" : "grid-cols-1",
                             !isQuiz && !selected.seating_required && "max-sm:hidden",
                             !isQuiz && selected.seating_required && "max-sm:grid-cols-1"
@@ -3352,8 +3496,7 @@ export default function EventsClient({
                             <Link
                               href={viewAllHref}
                               className={cn(
-                                "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]",
-                                "max-sm:border-admin-primary/40 max-sm:bg-admin-primary-soft",
+                                "inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary/40 bg-admin-primary-soft px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]",
                                 !isQuiz && "max-sm:hidden"
                               )}
                             >
@@ -3378,44 +3521,20 @@ export default function EventsClient({
                         const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
                         const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                         const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
-                        const quizHref = quizHrefFor(selected, "sheet");
                         const readyRoundCount = categoryCounts.filter(cat => cat.count >= cat.question_count).length;
-                        const quizAction = quizIsComplete ? (
-                          <Link
-                            href={quizHref}
-                            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
-                          >
-                            <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            All rounds complete - review quiz
-                          </Link>
-                        ) : (
-                          <Link
-                            href={quizHref}
-                            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
-                          >
-                            <Brain className="h-4 w-4 shrink-0" />
-                            {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
-                          </Link>
-                        );
                         return (
                           <ViewSection
                             title="Quiz rounds"
-                            className="order-1 sm:order-none"
+                            variant="card"
+                            className="order-1"
                             open={quizOpen}
                             onToggle={() => setQuizOpen(o => !o)}
                             phoneProgress={{
                               pct: targetQuestionCount > 0 ? (savedQuestionCount / targetQuestionCount) * 100 : 0,
-                              label: `${readyRoundCount} of ${categoryCounts.length} rounds ready`,
+                              value: readyRoundCount,
+                              label: `of ${categoryCounts.length} rounds ready`,
                               complete: quizIsComplete,
                             }}
-                            headerRight={
-                              <span className={cn(
-                                "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums max-sm:hidden",
-                                quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
-                              )}>
-                                {savedQuestionCount} / {targetQuestionCount}
-                              </span>
-                            }
                           >
                             {categoryCounts.map(cat => {
                               const remaining = cat.question_count - cat.count;
@@ -3426,33 +3545,27 @@ export default function EventsClient({
                                     <span
                                       aria-hidden="true"
                                       className={cn(
-                                        "h-2 w-2 shrink-0 rounded-full sm:hidden",
+                                        "h-2 w-2 shrink-0 rounded-full",
                                         done ? "bg-admin-success" : cat.count > 0 ? "bg-admin-warning" : "bg-admin-line"
                                       )}
                                     />
                                     <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
                                   </span>
-                                  <span className="shrink-0 text-[13px] font-semibold text-admin-muted tabular-nums sm:hidden">
+                                  <span className="shrink-0 text-[13px] font-semibold text-admin-muted tabular-nums">
                                     <span className="sr-only">{done ? "Ready, " : cat.count > 0 ? `${remaining} more needed, ` : "Not started, "}</span>
                                     {cat.count} / {cat.question_count}
-                                  </span>
-                                  <span className={cn(
-                                    "hidden min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums sm:inline-flex",
-                                    done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
-                                  )}>
-                                    {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
                                   </span>
                                 </div>
                               );
                             })}
-                            <div className="hidden p-3 sm:block sm:p-4">{quizAction}</div>
+                            {phonePrimary && <div className="p-3">{phonePrimary}</div>}
                           </ViewSection>
                         );
                       })()}
                     </div>
 
                     <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-5 md:order-1">
-                      <ViewSection title="Event details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)} phoneStatic>
+                      <ViewSection title="Event details" variant="card" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)} phoneStatic>
                         {poster.url && (
                           <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                             <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
@@ -3517,7 +3630,7 @@ export default function EventsClient({
                         {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
                       </ViewSection>
 
-                      <ViewSection title="Public booking settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
+                      <ViewSection title="Public booking settings" variant="card" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
                         <DetailCell
                           label="Public Booking"
                           value={selected.is_bookable
@@ -3781,11 +3894,12 @@ export default function EventsClient({
 
                 </FormSection>
 
+                <div className="space-y-4 sm:space-y-5">
                 <button
                   type="button"
                   onClick={() => setFormMoreOpen((o) => !o)}
                   aria-expanded={formMoreOpen}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-admin-line bg-admin-card px-4 text-left shadow-sm transition-colors active:bg-admin-surface sm:hidden"
+                  className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-admin-line bg-admin-card px-4 text-left shadow-sm transition-colors active:bg-admin-surface"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14px] font-bold text-admin-ink">More settings</span>
@@ -3793,8 +3907,7 @@ export default function EventsClient({
                   </span>
                   <ChevronDown className={cn("h-4 w-4 shrink-0 text-admin-muted transition-transform", formMoreOpen && "rotate-180")} aria-hidden="true" />
                 </button>
-                <div className={cn("contents", !formMoreOpen && "max-sm:hidden")}>
-                <div className="space-y-4 sm:space-y-5">
+                <div className={cn("space-y-4 sm:space-y-5", !formMoreOpen && "hidden")}>
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
                   {/* Seating comes from the sub-type, and an event with a
                       missing detail cannot go live, so neither switch is worth
@@ -3852,11 +3965,12 @@ export default function EventsClient({
                   )}
                 </FormSection>
                 </div>
+                </div>
 
-                {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white lg:col-span-2">
-                    <div className="flex min-h-14 w-full items-center gap-3 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-3 sm:px-5">
-                      <span className="font-bold text-[12px] text-[#34451F]">Booking Card</span>
+                {formMoreOpen && formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
+                  <div className="overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm lg:col-span-2">
+                    <div className="flex min-h-12 w-full items-center gap-3 border-b border-[#D8D5C8] bg-white px-4 py-2 sm:px-5">
+                      <span className="font-bold text-[14px] text-admin-ink">Booking Card</span>
                     </div>
                     <div className="border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
                       <p className="text-[12px] leading-relaxed text-[#5E6654]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
@@ -3874,8 +3988,6 @@ export default function EventsClient({
                     <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />
                   </div>
                 )}
-
-                </div>
 
                 {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
               </form>
@@ -4157,22 +4269,40 @@ function FormRow({ label, required, error, warning, children }: { label: string;
 const SHEET_PRIMARY_LINK =
   "flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-semibold transition-colors";
 
-type PhoneProgress = { pct: number; label: string; complete: boolean };
+type PhoneProgress = { pct: number; value: number; label: string; complete: boolean };
 
 /* Desktop keeps the banded, collapsible card. A phone gets a flat white card
    with a plain bold title; phoneStatic drops the fold for short sections and
    phoneProgress swaps a count pill for a bar under the title. */
-function ViewSection({ title, open, onToggle, headerRight, className, children, phoneStatic, phoneProgress }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode; phoneStatic?: boolean; phoneProgress?: PhoneProgress }) {
+function ViewSection({ title, open, onToggle, headerRight, className, children, phoneStatic, phoneProgress, variant }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode; phoneStatic?: boolean; phoneProgress?: PhoneProgress; variant?: "card" }) {
+  const card = variant === "card";
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white max-sm:rounded-2xl max-sm:border max-sm:border-admin-line max-sm:shadow-sm", className)}>
-      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 transition-colors max-sm:min-h-12 max-sm:bg-white has-[button:active]:max-sm:bg-admin-surface sm:px-5", open && "border-b border-[#D8D5C8]", phoneStatic && "max-sm:border-b")}>
+    <div
+      className={cn(
+        "overflow-hidden bg-white",
+        card
+          ? "rounded-2xl border border-admin-line shadow-sm"
+          : "rounded-3xl border-2 border-[#D8D5C8] max-sm:rounded-2xl max-sm:border max-sm:border-admin-line max-sm:shadow-sm",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "flex w-full items-center gap-3 px-4 py-2 transition-colors sm:px-5",
+          card
+            ? "min-h-12 bg-white has-[button:active]:bg-admin-surface"
+            : "min-h-11 bg-[#D8D5C8] max-sm:min-h-12 max-sm:bg-white has-[button:active]:max-sm:bg-admin-surface",
+          open && "border-b border-[#D8D5C8]",
+          phoneStatic && "max-sm:border-b"
+        )}
+      >
         <button
           type="button"
           onClick={onToggle}
           disabled={phoneStatic}
           className={cn("flex flex-1 items-center text-left transition-all hover:brightness-95", phoneStatic && "max-sm:pointer-events-none")}
         >
-          <span className="font-bold text-[12px] text-[#34451F] max-sm:text-[14px] max-sm:text-admin-ink">{title}</span>
+          <span className={cn("font-bold", card ? "text-[14px] text-admin-ink" : "text-[12px] text-[#34451F] max-sm:text-[14px] max-sm:text-admin-ink")}>{title}</span>
         </button>
         {headerRight}
         <button
@@ -4185,7 +4315,10 @@ function ViewSection({ title, open, onToggle, headerRight, className, children, 
         </button>
       </div>
       {phoneProgress && (
-        <div className="px-4 pb-2.5 sm:hidden">
+        <div className={cn("px-4 pb-2.5", !card && "sm:hidden")}>
+          <p className="mb-1 text-right text-[13px] font-medium text-admin-muted">
+            <span className="text-2xl font-bold text-admin-ink tabular-nums">{phoneProgress.value}</span> {phoneProgress.label}
+          </p>
           <div
             className="h-1.5 overflow-hidden rounded-full bg-admin-surface"
             style={{ "--fill": `${Math.min(100, Math.max(0, phoneProgress.pct))}%` } as React.CSSProperties}
@@ -4193,7 +4326,6 @@ function ViewSection({ title, open, onToggle, headerRight, className, children, 
           >
             <div className={cn("h-full w-(--fill) rounded-full", phoneProgress.complete ? "bg-admin-success" : "bg-admin-warning")} />
           </div>
-          <p className="mt-1 text-[12px] font-medium text-admin-muted">{phoneProgress.label}</p>
         </div>
       )}
       <div className={cn(!open && "hidden", !open && phoneStatic && "max-sm:block")}>{children}</div>
@@ -4277,14 +4409,14 @@ function ErrorBox({ message }: { message: string }) {
 
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white max-sm:rounded-2xl max-sm:border max-sm:border-admin-line max-sm:shadow-sm", className)}>
-      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 transition-colors max-sm:min-h-12 max-sm:bg-white has-[button:active]:max-sm:bg-admin-surface sm:px-5", open && "border-b border-[#D8D5C8]")}>
+    <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
+      <div className={cn("flex min-h-12 w-full items-center gap-3 bg-white px-4 py-2 transition-colors has-[button:active]:bg-admin-surface sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-bold text-[12px] text-[#34451F] max-sm:text-[14px] max-sm:text-admin-ink">{title}</span>
+          <span className="font-bold text-[14px] text-admin-ink">{title}</span>
         </button>
         <button
           type="button"

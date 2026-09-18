@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CircleAlert, Loader2, RefreshCw, SearchX, Upload, Wand2 } from "lucide-react";
+import { ArrowLeft, CircleAlert, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, SearchX, Upload, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { FilterChip, ListSearchInput, RecordList, StatusPill } from "@/components/admin";
 import { formatGbp } from "@/lib/price";
+import { squareItemUrl } from "@/lib/market/simulate";
 import type { CatalogVariation } from "@/lib/market/mapping";
 import type { MappingRow } from "@/lib/market/mapping-rows";
 import { autoMatchMappingsAction, loadCatalogVariationsAction, pushMenuToSquareAction, saveMappingAction } from "../actions";
@@ -70,18 +71,101 @@ function VariationSelect({
 /* Every priced serve on the menu against the Square catalog. A one-off job
    when the menu changes, not something done per market night, which is why
    it has a page of its own rather than a panel on the hub. */
+/* Linked reads as a real link into the Square dashboard when the catalog
+   pass knew the item, and the eye shows the raw variation id for anyone
+   checking against Square by hand. */
+function LinkStatus({
+  row,
+  itemId,
+  environment,
+  revealed,
+  onToggle,
+}: {
+  row: MappingRow;
+  itemId: string | undefined;
+  environment: "sandbox" | "production";
+  revealed: boolean;
+  onToggle: () => void;
+}) {
+  if (!row.squareVariationId) {
+    return (
+      <StatusPill tone="neutral" showLabelOnMobile>
+        Not linked
+      </StatusPill>
+    );
+  }
+  const pill = (
+    <StatusPill tone="success" icon={itemId ? <ExternalLink className="h-3 w-3" /> : undefined} showLabelOnMobile>
+      Linked
+    </StatusPill>
+  );
+  return (
+    <span className="inline-flex items-center gap-1">
+      {itemId ? (
+        <a
+          href={squareItemUrl(environment, itemId)}
+          target="_blank"
+          rel="noreferrer"
+          title={`Open ${row.itemName} in the Square dashboard`}
+          className="rounded-full transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
+        >
+          {pill}
+        </a>
+      ) : (
+        pill
+      )}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={revealed}
+        aria-label={revealed ? "Hide the Square variation id" : "Show the Square variation id"}
+        title={revealed ? "Hide variation id" : "Show variation id"}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+      >
+        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+      {revealed && (
+        <code className="max-w-40 truncate rounded bg-admin-surface px-1.5 py-0.5 font-mono text-[11px] text-admin-ink" title={row.squareVariationId}>
+          {row.squareVariationId}
+        </code>
+      )}
+    </span>
+  );
+}
+
 export default function SquareLinksClient({
   rows,
   variations: initialVariations,
   focusEvent,
+  itemIds,
+  environment,
 }: {
   rows: MappingRow[];
   variations: CatalogVariation[] | null;
   focusEvent: { id: number; name: string } | null;
+  itemIds: Record<string, string>;
+  environment: "sandbox" | "production";
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
+  const [revealedIds, setRevealedIds] = useState<Set<number>>(() => new Set());
+  const toggleRevealed = (id: number) =>
+    setRevealedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const linkStatus = (row: MappingRow) => (
+    <LinkStatus
+      row={row}
+      itemId={row.squareVariationId ? itemIds[row.squareVariationId] : undefined}
+      environment={environment}
+      revealed={revealedIds.has(row.menuItemPriceId)}
+      onToggle={() => toggleRevealed(row.menuItemPriceId)}
+    />
+  );
   const [variations, setVariations] = useState<CatalogVariation[] | null>(initialVariations);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [query, setQuery] = useState("");
@@ -329,9 +413,7 @@ export default function SquareLinksClient({
                               {row.onEvents.length > 0 && ` · ${eventsLabel(row)}`}
                             </p>
                           </div>
-                          <StatusPill tone={row.squareVariationId ? "success" : "neutral"} showLabelOnMobile>
-                            {row.squareVariationId ? "Linked" : "Not linked"}
-                          </StatusPill>
+                          {linkStatus(row)}
                         </div>
                         <VariationSelect
                           row={row}
@@ -367,6 +449,7 @@ export default function SquareLinksClient({
                       isPending={isPending}
                       eventsLabel={eventsLabel}
                       onChange={(row, id) => run(() => saveMappingAction(row.menuItemPriceId, id), "Link saved.")}
+                      status={linkStatus}
                     />
                   ))}
                 </tbody>
@@ -385,12 +468,14 @@ function GroupRows({
   isPending,
   eventsLabel,
   onChange,
+  status,
 }: {
   group: { name: string; rows: MappingRow[] };
   variations: CatalogVariation[] | null;
   isPending: boolean;
   eventsLabel: (row: MappingRow) => string;
   onChange: (row: MappingRow, variationId: string | null) => void;
+  status: (row: MappingRow) => React.ReactNode;
 }) {
   return (
     <>
@@ -414,11 +499,7 @@ function GroupRows({
               className="max-w-64"
             />
           </td>
-          <td className="py-1.5 pr-4 sm:pr-5">
-            <StatusPill tone={row.squareVariationId ? "success" : "neutral"} showLabelOnMobile>
-              {row.squareVariationId ? "Linked" : "Not linked"}
-            </StatusPill>
-          </td>
+          <td className="py-1.5 pr-4 sm:pr-5">{status(row)}</td>
         </tr>
       ))}
     </>

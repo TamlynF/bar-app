@@ -41,6 +41,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/event-bookings") ||
     pathname.startsWith("/event-setups") ||
+    pathname.startsWith("/stock-market") ||
     pathname.startsWith("/settings");
 
   if (isPrivateRoute && !user) {
@@ -58,5 +59,6 @@ export const config = {
     "/event-bookings/:path*",
     "/event-setups/:path*",
     "/settings/:path*",
+    "/stock-market/:path*",
   ],
 };
