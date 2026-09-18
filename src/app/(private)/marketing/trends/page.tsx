@@ -7,7 +7,8 @@ import {
 } from "../lib/settings";
 import { readMenuItems, readPriceBenchmarks } from "../lib/menu-data";
 import { buildComparison } from "../lib/compare";
-import type { CompetitorPrice, MarketingTrend } from "../lib/types";
+import { pricesForPinned } from "../lib/rivals";
+import type { CompetitorPrice, MarketingCompetitor, MarketingTrend } from "../lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,15 @@ export default async function MarketingTrendsPage() {
     .select("*")
     .eq("area", area)
     .order("item_type", { ascending: true });
+  const { data: rivals } = await supabase
+    .from("marketing_competitors")
+    .select("id, name, is_pinned")
+    .eq("area", area);
 
-  const competitorPrices = (prices as CompetitorPrice[] | null) ?? [];
+  const competitorPrices = pricesForPinned(
+    (prices as CompetitorPrice[] | null) ?? [],
+    (rivals as Pick<MarketingCompetitor, "id" | "name" | "is_pinned">[] | null) ?? [],
+  );
   const comparison = buildComparison(competitorPrices, menuItems, benchmarks);
 
   return (

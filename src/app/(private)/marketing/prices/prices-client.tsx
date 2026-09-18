@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatGbp } from "@/lib/price";
@@ -197,7 +198,7 @@ export default function PricesClient({
 
   const scoreLine =
     scored.length === 0
-      ? "No local prices yet - give the button below a smash and we'll go looking."
+      ? "No local prices yet — capture a rival menu under Settings → Rivals."
       : yourScore === scored.length
         ? `You're the cheaper round on all ${scored.length}. Clean sweep. 🎉`
         : yourScore === 0
@@ -250,10 +251,15 @@ export default function PricesClient({
     startRefresh(async () => {
       const result = await refreshPriceInsightsAction();
       if ("error" in result) toast.error(result.error);
-      else
+      else {
+        const extra =
+          result.skippedNoMenu > 0
+            ? ` ${result.skippedNoMenu} still need a menu URL or board photo.`
+            : "";
         toast.success(
-          `Updated ${result.priceCount} price${result.priceCount === 1 ? "" : "s"} · ${result.ideaCount} new idea${result.ideaCount === 1 ? "" : "s"}.`,
+          `Updated ${result.priceCount} price${result.priceCount === 1 ? "" : "s"} · ${result.ideaCount} new idea${result.ideaCount === 1 ? "" : "s"}.${extra}`,
         );
+      }
     });
   };
 
@@ -322,7 +328,7 @@ export default function PricesClient({
             </button>
           </div>
           <p className="text-[11px] text-[#5E6654]/70">
-            Changed the area? Rerun the price-off afterwards to pull prices for the new patch.
+            Changed the area? Find nearby pubs under Settings → Rivals, then rerun the price-off.
           </p>
         </form>
       ) : (
@@ -568,7 +574,11 @@ export default function PricesClient({
           </p>
           <p className="mt-2 font-bold text-sm text-[#20231A]">No local prices yet</p>
           <p className="mt-1 text-[12px] text-[#5E6654]">
-            {`Rerun the price-off below and we'll go and find what ${area} is charging.`}
+            {`No captured menus yet for ${area}. `}
+            <Link href="/settings/rivals" className="font-semibold text-[#34451F] underline-offset-2 hover:underline">
+              Add rivals
+            </Link>
+            {" "}and upload a board or menu URL.
           </p>
         </section>
       ) : (
@@ -816,8 +826,8 @@ export default function PricesClient({
       )}
 
       <p className="text-center text-[11px] text-[#5E6654]/60">
-        Friendly competition only - prices are AI-estimated from the web. Empty cells mean no price found for that
-        venue yet.
+        Friendly competition only — prices come from each rival&apos;s published menu or a board photo. Empty cells
+        mean that drink has not been captured yet.
       </p>
 
       {priceTrends.length > 0 && (

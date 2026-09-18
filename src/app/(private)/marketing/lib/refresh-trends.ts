@@ -4,6 +4,7 @@ import { aiSearch } from "@/lib/ai/client";
 import { formatGbp } from "@/lib/price";
 import { buildAdvertisingTrendsPrompt, buildEventIdeasPrompt, buildPriceTrendsPrompt } from "./prompts";
 import { buildComparison } from "./compare";
+import { pricesForPinned, type RivalPin } from "./rivals";
 import { readMenuItems, readPriceBenchmarks } from "./menu-data";
 import { trendSignature } from "./signature";
 import {
@@ -38,9 +39,13 @@ async function buildPriceContext(
 
   const { data: comp } = await supabase
     .from("competitor_prices")
-    .select("id, venue_name, item_name, item_type, price_text, price_amount, area, source_url, source_name, fetched_at")
+    .select("id, competitor_id, venue_name, item_name, item_type, price_text, price_amount, area, source_url, source_name, fetched_at")
     .eq("area", area);
-  const competitorPrices = (comp ?? []) as CompetitorPrice[];
+  const { data: rivals } = await supabase
+    .from("marketing_competitors")
+    .select("id, name, is_pinned")
+    .eq("area", area);
+  const competitorPrices = pricesForPinned((comp ?? []) as CompetitorPrice[], (rivals ?? []) as RivalPin[]);
   if (!competitorPrices.length && !menuItems.length) return "";
 
   const gapLines = buildComparison(competitorPrices, menuItems, benchmarks)

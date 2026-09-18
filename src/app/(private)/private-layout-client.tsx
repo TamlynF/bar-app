@@ -507,6 +507,14 @@ export default function PrivateLayoutClient({
                 return { title: "Quiz", subtitle: "Teams", backHref: QUIZ_HUB_HREF }
             }
 
+            if (segment === "price-rounds") {
+                return { title: "Stock market", subtitle: "Price rounds", backHref: MARKET_HUB_HREF }
+            }
+
+            if (segment === "rivals") {
+                return { title: "Stock market", subtitle: "Rivals", backHref: MARKET_HUB_HREF }
+            }
+
             if (segment === "market") {
                 const marketHref = "/settings/market"
                 const leaf = normalizedPath.split("/")[3]

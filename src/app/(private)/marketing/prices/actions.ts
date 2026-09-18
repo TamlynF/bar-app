@@ -2,10 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { parseJsonLoose } from "@/lib/gemini";
-import { aiSearch } from "@/lib/ai/client";
-import { parseGbp } from "@/lib/price";
-import { buildPricesPrompt } from "../lib/prompts";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { refreshTrendsAction } from "../trends/actions";
 import {
   ensureMarketingSettings,
@@ -13,70 +10,65 @@ import {
   resolveComparisonArea,
   deriveAreaFromAddress,
 } from "../lib/settings";
-import { readMenuItems } from "../lib/menu-data";
-import type { AiCompetitorPrice, CompetitorItemType } from "../lib/types";
+import { captureRivalFromUrl } from "../lib/persist-capture";
+import { rivalStartUrls } from "../lib/rivals";
+import type { MarketingCompetitor } from "../lib/types";
 
-async function currentEmployeeId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<number | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
-  const { data: emp } = await supabase
-    .from("employees")
-    .select("id")
-    .eq("email", user.email)
-    .maybeSingle();
-  return emp?.id ?? null;
-}
-
-const ITEM_TYPES: CompetitorItemType[] = ["drink", "snack", "food"];
-function normalizeItemType(raw?: string): CompetitorItemType | null {
-  const v = (raw ?? "").toLowerCase().trim();
-  return ITEM_TYPES.includes(v as CompetitorItemType) ? (v as CompetitorItemType) : null;
-}
+const MAX_CAPTURE_PER_REFRESH = 8;
 
 export async function refreshPricesAction(): Promise<
-  { success: true; count: number } | { error: string }
+  | {
+      success: true;
+      count: number;
+      capturedVenues: number;
+      skippedNoMenu: number;
+      failed: number;
+    }
+  | { error: string }
 > {
   const supabase = await createClient();
-  const [address, employeeId, menuItems] = await Promise.all([
+  const [address, employeeId] = await Promise.all([
     readCompanyAddress(supabase),
-    currentEmployeeId(supabase),
-    readMenuItems(supabase),
+    getCurrentEmployeeId(supabase),
   ]);
   const settings = await ensureMarketingSettings(supabase, deriveAreaFromAddress(address));
   const area = resolveComparisonArea(settings, address);
 
-  const res = await aiSearch("market_prices", {
-    prompt: buildPricesPrompt(area, settings?.comparison_radius ?? null, menuItems),
-  });
-  if ("error" in res) return { error: res.error };
+  const { data: rivalsRaw } = await supabase
+    .from("marketing_competitors")
+    .select("*")
+    .eq("area", area)
+    .eq("is_pinned", true);
 
-  const parsed = parseJsonLoose<AiCompetitorPrice[]>(res.text) ?? [];
-  const rows = parsed
-    .filter((p) => p?.venue_name && p?.item_name)
-    .map((p) => ({
-      venue_name: p.venue_name.trim(),
-      item_name: p.item_name.trim(),
-      item_type: normalizeItemType(p.item_type),
-      price_text: p.price_text?.trim() || null,
-      price_amount: parseGbp(p.price_text),
-      area,
-      source_url: p.source_url?.trim() || null,
-      source_name: p.source_name?.trim() || null,
-    }));
-
-  if (rows.length === 0) {
-    return { error: "The AI didn't return any usable prices. Try refreshing again." };
+  const rivals = (rivalsRaw as MarketingCompetitor[] | null) ?? [];
+  if (!rivals.length) {
+    return { error: "Pin some rivals under Settings → Rivals first, then run this again." };
   }
 
-  await supabase.from("competitor_prices").delete().eq("area", area);
-  const { error } = await supabase.from("competitor_prices").insert(rows);
-  if (error) {
-    console.error("Error saving competitor prices:", error);
-    return { error: error.message };
+  const withUrl = rivals.filter((r) => rivalStartUrls(r).length);
+  if (!withUrl.length) {
+    return { error: "Pinned rivals need a website, menu URL, or board photo under Settings → Rivals." };
+  }
+  const skippedNoMenu = rivals.length - withUrl.length;
+  const toRun = withUrl.slice(0, MAX_CAPTURE_PER_REFRESH);
+
+  let count = 0;
+  let capturedVenues = 0;
+  let failed = 0;
+
+  for (const rival of toRun) {
+    const result = await captureRivalFromUrl(supabase, rival);
+    if ("error" in result) {
+      console.error(`Capture failed for ${rival.name}:`, result.error);
+      failed += 1;
+    } else {
+      count += result.count;
+      capturedVenues += 1;
+    }
+  }
+
+  if (capturedVenues === 0 && toRun.length > 0) {
+    return { error: "Could not read a menu for any pinned rival. Add a menu URL or a board photo under Settings → Rivals." };
   }
 
   if (settings?.id) {
@@ -87,25 +79,26 @@ export async function refreshPricesAction(): Promise<
   }
 
   revalidatePath("/marketing/prices");
-  revalidatePath("/marketing/trends"); // Prices tab is also embedded on the Trends page.
-  return { success: true, count: rows.length };
+  revalidatePath("/marketing/trends");
+  revalidatePath("/settings/rivals");
+  return { success: true, count, capturedVenues, skippedNoMenu: skippedNoMenu + (withUrl.length - toRun.length), failed };
 }
 
 export async function refreshPriceInsightsAction(): Promise<
-  { success: true; priceCount: number; ideaCount: number } | { error: string }
+  { success: true; priceCount: number; ideaCount: number; skippedNoMenu: number; failed: number } | { error: string }
 > {
   const [prices, ideas] = await Promise.all([
     refreshPricesAction(),
     refreshTrendsAction("price"),
   ]);
 
-  if ("error" in prices && "error" in ideas) {
-    return { error: prices.error };
-  }
+  if ("error" in prices) return { error: prices.error };
   return {
     success: true,
     priceCount: "error" in prices ? 0 : prices.count,
     ideaCount: "error" in ideas ? 0 : ideas.added,
+    skippedNoMenu: "error" in prices ? 0 : prices.skippedNoMenu,
+    failed: "error" in prices ? 0 : prices.failed,
   };
 }
 
@@ -113,7 +106,7 @@ export async function updateComparisonAreaAction(
   formData: FormData,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = await createClient();
-  const employeeId = await currentEmployeeId(supabase);
+  const employeeId = await getCurrentEmployeeId(supabase);
   const area = formData.get("comparison_area")?.toString().trim() || null;
   const radius = formData.get("comparison_radius")?.toString().trim() || null;
 
@@ -130,6 +123,7 @@ export async function updateComparisonAreaAction(
     return { error: error.message };
   }
   revalidatePath("/marketing/prices");
-  revalidatePath("/marketing/trends"); // Prices tab is also embedded on the Trends page.
+  revalidatePath("/marketing/trends");
+  revalidatePath("/settings/rivals");
   return { success: true };
 }

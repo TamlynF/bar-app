@@ -27,8 +27,28 @@ export type MarketingTrend = {
   updated_by?: number | null;
 };
 
+export type CaptureSource = "website" | "menu_url" | "upload";
+
+export type MarketingCompetitor = {
+  id: string;
+  place_id: string | null;
+  name: string;
+  website: string | null;
+  menu_url: string | null;
+  menu_urls: string[];
+  address: string | null;
+  area: string | null;
+  is_pinned: boolean;
+  last_captured_at: string | null;
+  last_capture_source: CaptureSource | null;
+  fetched_at: string;
+  created_at?: string;
+  updated_at?: string | null;
+};
+
 export type CompetitorPrice = {
   id: string;
+  competitor_id?: string | null;
   venue_name: string;
   item_name: string;
   item_type: CompetitorItemType | null;

@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Scale,
   Sparkles,
+  Store,
   TrendingUp,
   UserCog2,
   UtensilsCrossed,
@@ -68,6 +69,12 @@ export const MARKET_NAV_ITEMS: AdminNavItem[] = [
     href: "/settings/price-rounds",
     icon: Scale,
     description: "What the price page compares",
+  },
+  {
+    label: "Rivals",
+    href: "/settings/rivals",
+    icon: Store,
+    description: "Nearby pubs the price-off compares against",
   },
   {
     label: "Square links",
@@ -218,6 +225,7 @@ export const WIDE_PATHS: string[] = [
   "/settings/gallery",
   "/settings/specials",
   "/settings/price-rounds",
+  "/settings/rivals",
   "/settings/market/history",
   "/event-setups/quiz-categories",
   "/event-setups/quiz-leaderboards",

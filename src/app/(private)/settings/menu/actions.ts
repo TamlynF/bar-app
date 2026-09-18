@@ -23,6 +23,7 @@ import {
 } from "@/lib/menu-price";
 import { parseJsonLoose } from "@/lib/gemini";
 import { aiReadFile } from "@/lib/ai/client";
+import { MENU_EXTRACT_PROMPT, MENU_EXTRACT_SCHEMA } from "@/lib/menu-extract";
 import {
   cleanParsedMenu,
   diffMenu,
@@ -409,57 +410,6 @@ const MENU_UPLOAD_BUCKET = "menu-uploads";
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 
-const EXTRACTION_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    categories: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          name: { type: "STRING" },
-          note: { type: "STRING" },
-          items: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                name: { type: "STRING" },
-                price_text: { type: "STRING" },
-                serves: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      serve: { type: "STRING", enum: [...SERVES] },
-                      amount: { type: "NUMBER" },
-                    },
-                    required: ["serve", "amount"],
-                  },
-                },
-              },
-              required: ["name", "price_text", "serves"],
-            },
-          },
-        },
-        required: ["name", "items"],
-      },
-    },
-  },
-  required: ["categories"],
-};
-
-const EXTRACTION_PROMPT = `You are reading a pub drinks and snacks menu.
-
-Transcribe every category heading and every item under it. Rules:
-- Copy names and prices exactly as printed. Never invent an item or a price.
-- If a price cannot be read with confidence, omit that item entirely.
-- "serves" is the measure each price is for. Use only these values: ${SERVES.join(", ")}.
-- A line like "£4.95 / £2.95 half" is two serves: pint 4.95 and half pint 2.95.
-- An item sold one way only uses "each" unless the menu names the measure.
-- "price_text" is the printed price line as a customer reads it.
-- "note" is any small print under the category heading, such as a mixer surcharge.
-- Ignore headers, footers, addresses, opening hours and marketing copy.`;
 
 async function loadCurrentMenu(supabase: ServerClient): Promise<CurrentCategory[]> {
   const { data, error } = await supabase
@@ -491,8 +441,8 @@ export async function parseMenuUploadAction(formData: FormData): Promise<ParseMe
     const bytes = Buffer.from(await file.arrayBuffer());
     const result = await aiReadFile("menu_import", {
       file: { base64: bytes.toString("base64"), mimeType: file.type },
-      prompt: EXTRACTION_PROMPT,
-      responseSchema: EXTRACTION_SCHEMA,
+      prompt: MENU_EXTRACT_PROMPT,
+      responseSchema: MENU_EXTRACT_SCHEMA,
     });
     if ("error" in result) return { error: result.error };
 
