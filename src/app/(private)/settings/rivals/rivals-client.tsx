@@ -134,13 +134,9 @@ export default function RivalsClient({
     e.preventDefault();
     sheet.submit(async (formData) => {
       const result = await saveRivalAction(formData);
-      if (result && "error" in result && result.error) return result;
-      if (result && "captureError" in result && result.captureError) {
-        toast.error(result.captureError);
-      } else if (result && "captured" in result && result.captured) {
-        toast.success(`Read ${result.captured} drink prices.`);
-      }
-      return result;
+      if ("error" in result) return { error: result.error };
+      if (result.captureError) toast.error(result.captureError);
+      else if (result.captured) toast.success(`Read ${result.captured} drink prices.`);
     })(new FormData(e.currentTarget));
   };
 
@@ -149,7 +145,10 @@ export default function RivalsClient({
     sheet.confirmDelete({
       title: "Remove rival",
       description: `"${selected.name}" will leave the comparison and its captured prices will be deleted.`,
-      action: () => deleteRivalAction(selected.id),
+      action: async () => {
+        const result = await deleteRivalAction(selected.id);
+        if ("error" in result) return { error: result.error };
+      },
     });
   };
 
