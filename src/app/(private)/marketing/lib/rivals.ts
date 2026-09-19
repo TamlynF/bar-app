@@ -187,7 +187,11 @@ export function pricesForPinned(
 export function itemTypeFromCategory(category: string): CompetitorItemType {
   const n = category.toLowerCase();
   if (/(snack|crisp|nut|scratching|popcorn|pretzel)/.test(n)) return "snack";
-  if (/(food|burger|pizza|nacho|meal|kitchen|main|sharing|starter|dessert|breakfast|roast|kids?)/.test(n)) {
+  if (
+    /\b(food|burgers?|pizzas?|nachos?|meals?|kitchen|mains|sharing|starters?|desserts?|breakfasts?|roasts?|kids?)\b/.test(
+      n,
+    )
+  ) {
     return "food";
   }
   return "drink";

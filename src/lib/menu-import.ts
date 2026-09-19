@@ -1,4 +1,4 @@
-import { formatPriceText, normalizeServe, type MenuItemPrice } from "@/lib/menu-price";
+import { formatPriceText, normalizeServe, parsePriceText, type MenuItemPrice } from "@/lib/menu-price";
 
 export type ParsedItem = {
   name: string;
@@ -102,14 +102,12 @@ export function cleanParsedMenu(raw: unknown): ParsedMenu {
             : "";
           if (!itemName) return [];
 
-          const serves = cleanServes((item as { serves?: unknown })?.serves);
-          // Without a serve there is nothing to price against, and saving one
-          // is refused anyway - so it never becomes a proposed change.
-          if (!serves.length) return [];
-
           const given = typeof (item as { price_text?: unknown })?.price_text === "string"
             ? (item as { price_text: string }).price_text.trim()
             : "";
+          const fromModel = cleanServes((item as { serves?: unknown })?.serves);
+          const serves = fromModel.length ? fromModel : parsePriceText(given);
+          if (!serves.length) return [];
 
           return [{
             name: itemName,

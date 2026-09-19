@@ -25,17 +25,15 @@ export async function replaceRivalPrices(
   menu: ParsedMenu,
   meta: { sourceUrl: string | null; sourceName: string; source: CaptureSource; menuUrls?: string[] },
 ): Promise<{ count: number } | { error: string }> {
-  const rows = rowsFromParsedMenu(
-    menu,
-    {
-      competitorId: rival.id,
-      venueName: rival.name,
-      area: rival.area ?? "",
-      sourceUrl: meta.sourceUrl,
-      sourceName: meta.sourceName,
-    },
-    true,
-  );
+  const metaRows = {
+    competitorId: rival.id,
+    venueName: rival.name,
+    area: rival.area ?? "",
+    sourceUrl: meta.sourceUrl,
+    sourceName: meta.sourceName,
+  };
+  const drinkRows = rowsFromParsedMenu(menu, metaRows, true);
+  const rows = drinkRows.length ? drinkRows : rowsFromParsedMenu(menu, metaRows, false);
   if (!rows.length) {
     return { error: "No drink prices on that page. Open the site, paste a drinks menu URL, or upload a board photo." };
   }
@@ -62,6 +60,18 @@ export async function replaceRivalPrices(
   return { count: rows.length };
 }
 
+async function menusFromHtmlPages(
+  pages: { url: string; text: string }[],
+): Promise<ParsedMenu[]> {
+  const blob = pages
+    .map((page) => `SOURCE: ${page.url}\n${page.text}`)
+    .join("\n\n")
+    .slice(0, 80_000);
+  if (blob.length < 40) return [];
+  const extracted = await extractMenuFromText(blob, true);
+  return "error" in extracted ? [] : [extracted.menu];
+}
+
 export async function captureRivalFromUrl(
   supabase: AnyClient,
   rival: MarketingCompetitor,
@@ -81,12 +91,17 @@ export async function captureRivalFromUrl(
       if (!("error" in extracted)) menus.push(extracted.menu);
     }
     const drinkPages = found.pages.filter((p) => /menu|drink|tenkites|hansom-cab/i.test(p.url));
-    for (const page of drinkPages.length ? drinkPages : found.pages) {
-      const extracted = await extractMenuFromText(page.text, true);
-      if (!("error" in extracted)) menus.push(extracted.menu);
-    }
+    let htmlMenus = await menusFromHtmlPages(drinkPages.length ? drinkPages : found.pages);
+    if (!htmlMenus.length && drinkPages.length) htmlMenus = await menusFromHtmlPages(found.pages);
+    menus.push(...htmlMenus);
 
     const merged = mergeParsedMenus(menus);
+    console.info("[rivals] capture", rival.name, {
+      starts,
+      files: found.files.map((file) => file.url),
+      pages: found.pages.map((page) => page.url),
+      categories: merged.categories.map((category) => `${category.name}:${category.items.length}`),
+    });
     const discovered = uniqueUrls([
       ...found.files.map((file) => file.url),
       ...found.pageUrls.filter((url) => /menu|drink|\.pdf|tenkites/i.test(url)),
@@ -114,7 +129,11 @@ export async function captureRivalFromUrl(
       source,
       menuUrls,
     });
-    if ("error" in saved) return saved;
+    if ("error" in saved) {
+      console.info("[rivals] capture prices skipped", rival.name, saved.error);
+      return saved;
+    }
+    console.info("[rivals] capture prices saved", rival.name, saved.count);
     return { count: saved.count, menuUrls };
   } catch (err) {
     return { error: fetchFailureMessage(err) };

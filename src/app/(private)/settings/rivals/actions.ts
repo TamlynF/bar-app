@@ -243,8 +243,8 @@ export async function captureRivalUrlAction(
   if (!rival) return { error: "That rival could not be found." };
   try {
     const result = await captureRivalFromUrl(supabase, rival);
-    if ("error" in result) return result;
     revalidate();
+    if ("error" in result) return result;
     return { success: true, count: result.count };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Could not read that menu." };

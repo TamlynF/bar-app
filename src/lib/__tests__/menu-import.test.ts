@@ -60,6 +60,18 @@ describe("cleanParsedMenu", () => {
     expect(cleaned.categories[0].items).toEqual([]);
   });
 
+  it("fills serves from a printed price_text when the model omitted them", () => {
+    const cleaned = cleanParsedMenu({
+      categories: [
+        { name: "Draught", items: [{ name: "Carling", price_text: "£4.20 pint / £2.40 half", serves: [] }] },
+      ],
+    });
+    expect(cleaned.categories[0].items[0].serves).toEqual([
+      { serve: "pint", amount: 4.2 },
+      { serve: "half pint", amount: 2.4 },
+    ]);
+  });
+
   it("resolves serve aliases and drops non-positive amounts", () => {
     const cleaned = cleanParsedMenu({
       categories: [

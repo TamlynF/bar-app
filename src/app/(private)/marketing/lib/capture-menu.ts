@@ -26,7 +26,15 @@ export function menuLinksFromHtml(html: string, pageUrl: string): string[] {
 }
 
 function htmlToText(html: string): string {
-  return html
+  const jsonBits: string[] = [];
+  const jsonRe =
+    /<script[^>]*type=["']application\/(?:ld\+json|json)["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let jsonMatch: RegExpExecArray | null;
+  while ((jsonMatch = jsonRe.exec(html))) {
+    const body = jsonMatch[1]?.trim() ?? "";
+    if (/price|menuItem|offers|drinks?/i.test(body)) jsonBits.push(body.slice(0, 20_000));
+  }
+  const text = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
@@ -36,6 +44,7 @@ function htmlToText(html: string): string {
     .replace(/&#163;/g, "£")
     .replace(/\s+/g, " ")
     .trim();
+  return [text, ...jsonBits].filter(Boolean).join("\n");
 }
 
 function drinksFocusedText(html: string): string {

@@ -189,7 +189,10 @@ describe("itemTypeFromCategory", () => {
   it("classifies snacks and food away from drinks", () => {
     expect(itemTypeFromCategory("Crisps")).toBe("snack");
     expect(itemTypeFromCategory("Burgers")).toBe("food");
+    expect(itemTypeFromCategory("Mains")).toBe("food");
     expect(itemTypeFromCategory("Draught")).toBe("drink");
+    expect(itemTypeFromCategory("Main drinks")).toBe("drink");
+    expect(itemTypeFromCategory("Cocktails")).toBe("drink");
   });
 });
 
