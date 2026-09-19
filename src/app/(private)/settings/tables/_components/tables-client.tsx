@@ -56,7 +56,10 @@ export default function TablesClient({
 }: {
   initialTables: Table[];
 }) {
-  const sheet = useRecordSheet<Table>();
+  const sheet = useRecordSheet<Table>({
+    records: initialTables,
+    getId: (record) => record.id,
+  });
   const { selected, mode } = sheet;
   const [shape, setShape] = useState<"round" | "rect">("round");
   const [chairMode, setChairMode] = useState<"auto" | "sides" | "bench">("auto");
@@ -136,6 +139,7 @@ export default function TablesClient({
     open={sheet.open}
     onClose={sheet.close}
     mode={mode}
+    navigate={sheet.navigateAcross(filtered)}
     title={title}
     recordId={selected?.id}
     formId="table-form"

@@ -454,6 +454,7 @@ export default function GalleryClient({
         open={sheet.open}
         onClose={closeSheet}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         recordId={selected?.id}
         formId="gallery-form"

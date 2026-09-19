@@ -283,6 +283,22 @@ Tracking: page title `tracking-tight`; card title `tracking-tight` or default; b
 - Sheets: bottom sheet on mobile (`h-[85vh]`), centered on desktop (`sm:rounded-[2rem] sm:bottom-6 sm:w-[560px]`)
 - Sticky sheet headers and footers with `bg-white/80 backdrop-blur-md`
 
+**Stepping between records.** A sheet opened from a list carries prev/next arrows, so you can read down the list without closing and reopening. `RecordSheet` handles this; a page turns it on by passing `navigate={sheet.navigateAcross(rows)}`, where `rows` is the list **as that page shows it** - filtered and sorted. Pass the visible list, not the source array, or the arrows jump to records that aren't on screen.
+
+Where the arrows go depends on the room either side of the sheet:
+
+| Surface | Placement |
+|---|---|
+| Centered sheet, `sm` and up | Circular buttons hanging off the sheet's left and right edges, vertically centred (`EDGE_BUTTON`). They are children of the sheet, so a click on one isn't read as a click on the overlay |
+| Phone (below `sm`) | In the footer, either side of the action: `[‹] [ Edit ] [›]` (`FOOTER_BUTTON`, 48px). A full-bleed sheet has no outside, and five controls in the header squeezes the title to nothing at 320px. A read-only sheet grows a footer just to hold them |
+| Split panel (`xl` and up) | In the header, beside the menu - a docked panel has no outside either |
+
+Rules:
+- The sheet's `sm:max-w-[calc(100vw-9rem)]` reserves the room the edge buttons need. Don't widen it back, or they fall off the screen between 640px and 830px.
+- Horizontal swipe on the sheet body does the same thing on touch. It stands down for a mostly-vertical drag (that's a scroll) and for anything with its own sideways scroll or a text input.
+- At either end of the list the arrow stays put and goes disabled - don't hide it, the gap moves everything else.
+- Both routes go through the sheet's dirty check: stepping away mid-edit asks **"Discard changes?" → "Discard and continue"** before moving.
+
 ### Action buttons (admin)
 
 One accent carries weight: **solid olive means "this writes a record"**. Everything else steps back. Compose layout/sizing (`h-12 rounded-xl …`, or a small `h-7` header variant) around these.

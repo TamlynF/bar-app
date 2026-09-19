@@ -447,6 +447,7 @@ export default function SpecialsClient({
         open={sheet.open}
         onClose={closeSheet}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         recordId={selected?.id}
         formId="special-form"

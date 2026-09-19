@@ -212,6 +212,7 @@ export default function MarketClient({
 
       <EventRecordSheet
         sheet={sheet}
+        order={otherEvents}
         drinks={drinks}
         employees={employees}
         liveEventId={liveEventId}

@@ -276,6 +276,32 @@ export default function MenuClient({
   const isEditing =
     sheet?.type === "edit-category" || sheet?.type === "edit-item";
 
+  /* Only menu items step. A category is a container for items rather than a
+     record you read through, so its sheet gets no arrows. The row follows the
+     page: every item on show, in the order the groups list them, which means
+     stepping carries on into the next category rather than stopping short. */
+  const visibleItems = shownGroups.flatMap(({ cat, items }) =>
+    items.map((item) => ({ categoryId: cat.id, itemId: item.id })),
+  );
+
+  const itemNavigate = (() => {
+    const openItemId = isItemSheet && sheet ? sheet.itemId : null;
+    if (openItemId == null) return undefined;
+    const at = visibleItems.findIndex((entry) => entry.itemId === openItemId);
+    if (at === -1) return undefined;
+    const open = (index: number) => () =>
+      setSheet({
+        type: "view-item",
+        categoryId: visibleItems[index].categoryId,
+        itemId: visibleItems[index].itemId,
+      });
+    return {
+      onPrev: at > 0 ? open(at - 1) : undefined,
+      onNext: at < visibleItems.length - 1 ? open(at + 1) : undefined,
+      position: { index: at + 1, total: visibleItems.length },
+    };
+  })();
+
   const entityLabel = isItemSheet ? "menu item" : "category";
   const orderRows = isItemSheet ? itemRowsFor(sheetCategory) : categoryRows;
   const activeCount = orderRows.filter((row) => row.is_active).length;
@@ -733,6 +759,7 @@ export default function MenuClient({
         open={!!sheet}
         onClose={closeSheet}
         mode={sheetMode}
+        navigate={itemNavigate}
         title={sheetTitle}
         recordId={headerRecord?.id}
         formId={sheet?.type === "edit-serves" ? "serves-form" : "menu-form"}

@@ -532,6 +532,7 @@ export default function RivalsClient({
         open={sheet.open}
         onClose={sheet.close}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         recordId={selected?.id}
         formId="rival-form"

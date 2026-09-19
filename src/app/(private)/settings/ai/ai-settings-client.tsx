@@ -444,6 +444,7 @@ export default function AiSettingsClient({
         open={sheet.open}
         onClose={sheet.close}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         formId="ai-area-form"
         isPending={sheet.isPending}

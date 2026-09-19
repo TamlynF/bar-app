@@ -586,6 +586,7 @@ export default function MusicActsClient({
         open={sheet.open}
         onClose={closeSheet}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         recordId={selected ? selected.id.slice(0, 8) : undefined}
         formId="music-act-form"

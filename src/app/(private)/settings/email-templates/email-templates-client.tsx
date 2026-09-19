@@ -89,6 +89,13 @@ export default function EmailTemplatesClient({
     );
   }, [resolved, query]);
 
+  // The rows are drawn a group at a time, so stepping through them has to
+  // follow that order rather than the order they were filtered in.
+  const inGroupOrder = useMemo(
+    () => EMAIL_SCENARIO_GROUPS.flatMap((group) => shown.filter((r) => r.scenario.group === group)),
+    [shown],
+  );
+
   const selected = sheet.selected;
 
   const openEdit = useCallback(() => {
@@ -224,6 +231,7 @@ export default function EmailTemplatesClient({
         open={sheet.open}
         onClose={closeSheet}
         mode={sheet.mode}
+        navigate={sheet.navigateAcross(inGroupOrder)}
         title={selected?.scenario.label ?? "Email template"}
         formId={FORM_ID}
         isPending={sheet.isPending}

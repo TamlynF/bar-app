@@ -360,6 +360,7 @@ export default function MerchandiseClient({
         open={sheet.open}
         onClose={closeSheet}
         mode={mode}
+        navigate={sheet.navigateAcross(shown)}
         title={title}
         recordId={selected?.id}
         formId="merchandise-form"

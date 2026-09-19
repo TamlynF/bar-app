@@ -464,6 +464,7 @@ type EventSheet = ReturnType<typeof useRecordSheet<StockMarketEventSummary>>;
    event's own page, which the footer leads to. */
 export function EventRecordSheet({
   sheet,
+  order,
   drinks,
   employees,
   liveEventId,
@@ -473,6 +474,8 @@ export function EventRecordSheet({
   onDeactivate,
 }: {
   sheet: EventSheet;
+  // The events as the list beside the sheet shows them, for the step arrows.
+  order: StockMarketEventSummary[];
   drinks: ServeOption[];
   employees: EmployeeOption[];
   liveEventId: number | null;
@@ -503,6 +506,7 @@ export function EventRecordSheet({
       open={sheet.open}
       onClose={onClose}
       mode={mode}
+      navigate={sheet.navigateAcross(order)}
       title={title}
       recordId={selected?.id}
       formId="stock-market-event-form"

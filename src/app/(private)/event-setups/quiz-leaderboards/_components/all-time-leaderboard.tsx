@@ -153,6 +153,7 @@ export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[]
         open={sheet.open}
         onClose={sheet.close}
         mode={sheet.mode}
+        navigate={sheet.navigateAcross(shown)}
         title={selected?.team_name ?? "Team"}
         formId="all-time-team"
         isPending={sheet.isPending}

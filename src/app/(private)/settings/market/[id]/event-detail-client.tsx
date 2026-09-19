@@ -1012,6 +1012,7 @@ export default function EventDetailClient({
         open={drinkSheet.open}
         onClose={drinkSheet.close}
         mode={drinkMode}
+        navigate={drinkSheet.navigateAcross(shownDrinks)}
         title={drinkTitle}
         recordId={selectedDrink?.id}
         formId="event-drink-form"

@@ -292,6 +292,7 @@ export default function TeamsClient({
         open={sheet.open}
         onClose={sheet.close}
         mode={sheet.mode}
+        navigate={sheet.navigateAcross(shown)}
         title={selected?.team_name ?? "Team"}
         formId="team-form"
         isPending={sheet.isPending}
