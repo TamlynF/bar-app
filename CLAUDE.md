@@ -25,7 +25,8 @@ npm run db:stop      # Stop local Supabase
 - **Unit tests** (Vitest) live beside the code in `src/lib/__tests__/*.test.ts` - pure functions only; don't unit-test Server Components.
 - **E2E tests** (Playwright) live in `e2e/` and run against a **local** Supabase stack (`supabase/` migrations + seed), never production. Every spec runs on both a mobile and a desktop viewport.
 - Always run `npm test` before committing; run the E2E suite when touching booking/event flows.
-- The schema migration in `supabase/migrations/` is a local **test** schema (RLS off) introspected from prod - don't treat it as the production source of truth.
+- The local stack runs with **RLS off**, so it can't be used to test policies - verify those against a real Supabase project.
+- `supabase/migrations/` **is** the migration source of truth. It was reconciled with prod (`pubapp`, ref `vhbbbxljtemawsimqhfw`) on 2026-09-19; both sides carry the same 83 versions, which is what the "Supabase Preview" GitHub check verifies on every push. Schema changes must go through a new migration file - applying them straight through the Supabase dashboard or the MCP `apply_migration` puts a version in prod with no local file, the two histories drift, and that check starts failing again. Keep version prefixes unique (`ls supabase/migrations | sed 's/_.*//' | sort | uniq -d` must be empty) or `supabase db reset` stalls on the collision.
 
 ## Git workflow
 
