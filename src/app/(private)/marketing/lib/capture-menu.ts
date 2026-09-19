@@ -63,6 +63,10 @@ export type DiscoveredDrinks = {
   pageUrls: string[];
   pages: { url: string; text: string }[];
   files: { url: string; bytes: Buffer; mimeType: string }[];
+  // Every address that was tried and could not be read, with the reason, so a
+  // rival that ends up with nothing can say which doors were shut rather than
+  // just that they all were.
+  failures: { url: string; error: string }[];
 };
 
 type FetchedPage =
@@ -191,6 +195,7 @@ export async function discoverDrinkMenus(
   const pageUrls: string[] = [];
   const pages: { url: string; text: string }[] = [];
   const files: { url: string; bytes: Buffer; mimeType: string }[] = [];
+  const failures: { url: string; error: string }[] = [];
   const fileSeen = new Set<string>();
   let askedAi = false;
 
@@ -199,7 +204,10 @@ export async function discoverDrinkMenus(
     if (!next || visited.has(next)) continue;
     visited.add(next);
     const page = await fetchPage(next);
-    if ("error" in page) continue;
+    if ("error" in page) {
+      failures.push({ url: next, error: page.error });
+      continue;
+    }
     if (page.kind === "file") {
       if (!fileSeen.has(page.url) && files.length < MAX_PDFS) {
         fileSeen.add(page.url);
@@ -229,7 +237,11 @@ export async function discoverDrinkMenus(
     for (const pdf of pickDrinkPdfs(anchors, MAX_PDFS, startUrl || page.url)) {
       if (fileSeen.has(pdf) || files.length >= MAX_PDFS) continue;
       const fetched = await fetchPage(pdf);
-      if ("error" in fetched || fetched.kind !== "file") continue;
+      if ("error" in fetched) {
+        failures.push({ url: pdf, error: fetched.error });
+        continue;
+      }
+      if (fetched.kind !== "file") continue;
       fileSeen.add(fetched.url);
       files.push({ url: fetched.url, bytes: fetched.bytes, mimeType: fetched.mimeType });
       pageUrls.push(fetched.url);
@@ -246,7 +258,7 @@ export async function discoverDrinkMenus(
     }
   }
 
-  return { pageUrls: uniqueUrls(pageUrls), pages, files };
+  return { pageUrls: uniqueUrls(pageUrls), pages, files, failures };
 }
 
 export async function fetchPublicMenu(url: string): Promise<FetchedMenu> {

@@ -12,7 +12,7 @@ import { geocodeAddress, searchNearbyPubs } from "@/app/(private)/marketing/lib/
 import { parseRadiusMeters, planDiscover, rivalsNeedingCapture, nextCaptureBatch, rivalStartUrls } from "@/app/(private)/marketing/lib/rivals";
 import { captureRivalFromUpload, captureRivalFromUrl } from "@/app/(private)/marketing/lib/persist-capture";
 import { MENU_UPLOAD_MAX_BYTES, MENU_UPLOAD_TYPES } from "@/app/(private)/marketing/lib/capture-menu";
-import type { MarketingCompetitor } from "@/app/(private)/marketing/lib/types";
+import type { MarketingCompetitor, RivalRunLog } from "@/app/(private)/marketing/lib/types";
 
 function revalidate() {
   revalidatePath("/settings/rivals");
@@ -129,7 +129,7 @@ export async function discoverRivalsAction(): Promise<
 
   const { data } = await supabase
     .from("marketing_competitors")
-    .select("id, name, last_captured_at, website, menu_urls")
+    .select("id, name, is_pinned, last_captured_at, last_capture_attempted_at, website, menu_urls")
     .eq("area", area);
   const waiting = (data as MarketingCompetitor[] | null) ?? [];
   const needsCapture = rivalsNeedingCapture(waiting).map((id) => {
@@ -237,19 +237,31 @@ export async function deleteRivalAction(id: string): Promise<{ success: true } |
   return { success: true };
 }
 
+export async function saveRivalRunLogAction(log: RivalRunLog): Promise<{ error?: string }> {
+  const { supabase, settings } = await loadContext();
+  if (!settings?.id) return { error: "Marketing settings are missing." };
+  const { error } = await supabase
+    .from("marketing_settings")
+    .update({ last_rival_run: log, updated_at: new Date().toISOString() })
+    .eq("id", settings.id);
+  if (error) return { error: error.message };
+  revalidatePath("/settings/rivals");
+  return {};
+}
+
 export async function captureRivalUrlAction(
   id: string,
-): Promise<{ success: true; count: number } | { error: string }> {
+): Promise<{ success: true; count: number; notes: string[] } | { error: string; notes: string[] }> {
   const { supabase } = await loadContext();
   const rival = await loadRival(supabase, id);
-  if (!rival) return { error: "That rival could not be found." };
+  if (!rival) return { error: "That rival could not be found.", notes: [] };
   try {
     const result = await captureRivalFromUrl(supabase, rival);
     revalidate();
     if ("error" in result) return result;
-    return { success: true, count: result.count };
+    return { success: true, count: result.count, notes: result.notes };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Could not read that menu." };
+    return { error: err instanceof Error ? err.message : "Could not read that menu.", notes: [] };
   }
 }
 
@@ -266,9 +278,9 @@ export async function listRivalCaptureQueueAction(): Promise<
   const rivals = (data as MarketingCompetitor[] | null) ?? [];
   if (!rivals.length) return { error: "Find nearby pubs first." };
 
-  const withUrl = rivals.filter((rival) => rivalStartUrls(rival).length);
+  const withUrl = rivals.filter((rival) => rival.is_pinned && rivalStartUrls(rival).length);
   if (!withUrl.length) {
-    return { error: "None of these rivals have a website or drinks menu URL yet." };
+    return { error: "None of the pinned rivals have a website or drinks menu URL yet." };
   }
   const pendingCount = withUrl.filter((rival) => !rival.last_captured_at).length;
   const queue = nextCaptureBatch(withUrl);

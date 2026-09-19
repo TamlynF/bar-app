@@ -3,6 +3,7 @@ import { cleanParsedMenu } from "@/lib/menu-import";
 import {
   rivalMenuStatus,
   rivalStartUrls,
+  rivalCaptureStarts,
   captureSourceForUrl,
   isDrinkingHangout,
   isOwnVenue,
@@ -230,6 +231,29 @@ describe("menu URL helpers", () => {
     expect(rivalsNeedingCapture(waiting)).toEqual(["a"]);
     expect(nextCaptureBatch(waiting, 1).map((row) => row.id)).toEqual(["a"]);
     expect(RIVAL_CAPTURE_BATCH).toBeGreaterThan(0);
+  });
+
+  it("leaves rivals taken off the price-off out of the capture queue", () => {
+    const waiting = [
+      { id: "off", is_pinned: false, last_captured_at: null, website: "https://off.example", menu_urls: [] },
+      { id: "on", is_pinned: true, last_captured_at: null, website: "https://on.example", menu_urls: [] },
+    ];
+    expect(rivalsNeedingCapture(waiting)).toEqual(["on"]);
+    expect(nextCaptureBatch(waiting).map((row) => row.id)).toEqual(["on"]);
+  });
+
+  it("never starts a capture from a saved junk menu URL", () => {
+    expect(
+      rivalCaptureStarts({
+        website: "https://thelounges.co.uk/tarro/",
+        menu_urls: [
+          "https://menus.tenkites.com/404.html",
+          "https://www.instagram.com/accounts/login/?next=%2Fbar%2Fmenu",
+          "https://sketchleygrangehotel.co.uk/wp-content/uploads/accessibility-guide.pdf",
+          "https://thelounges.co.uk/tarro/menus",
+        ],
+      }),
+    ).toEqual(["https://thelounges.co.uk/tarro/menus", "https://thelounges.co.uk/tarro/"]);
   });
 
   it("labels menu URLs versus a board photo", () => {

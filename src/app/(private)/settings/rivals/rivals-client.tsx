@@ -1,10 +1,25 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
-import { Check, ChevronRight, Copy, Loader2, MapPin, Plus, SearchX, Store, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Copy,
+  Info,
+  Loader2,
+  MapPin,
+  Plus,
+  SearchX,
+  Store,
+  X,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import type { MarketingCompetitor } from "@/app/(private)/marketing/lib/types";
+import { cn } from "@/lib/utils";
+import type { MarketingCompetitor, RivalRunLog, RivalRunStep } from "@/app/(private)/marketing/lib/types";
 import { rivalMenuUrls, rivalMenuStatus, rivalStartUrls, RIVAL_CAPTURE_BATCH } from "@/app/(private)/marketing/lib/rivals";
 import { stripTrackingParams } from "@/app/(private)/marketing/lib/http-url";
 import {
@@ -26,7 +41,15 @@ import {
   deleteRivalAction,
   discoverRivalsAction,
   saveRivalAction,
+  saveRivalRunLogAction,
 } from "./actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
@@ -88,6 +111,110 @@ function mapsSearchUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
+function runStep(level: RivalRunStep["level"], title: string, detail?: string): RivalRunStep {
+  return { at: new Date().toISOString(), level, title, detail };
+}
+
+function runHeadline(log: RivalRunLog | null): { tone: "success" | "error" | "neutral"; text: string } {
+  if (!log) return { tone: "neutral", text: "Find nearby has not been logged yet" };
+  const when = formatWhen(log.finishedAt);
+  const verb = log.kind === "menus" ? "Find drinks menus" : "Find nearby pubs";
+  if (log.ok) return { tone: "success", text: `${verb} succeeded · ${when}` };
+  return { tone: "error", text: `${verb} had errors · ${when}` };
+}
+
+const RUN_TONE = {
+  success: "text-admin-success hover:bg-admin-success-bg",
+  error: "text-admin-error hover:bg-admin-error-bg",
+  neutral: "text-admin-muted",
+} as const;
+
+function RunStatusLink({
+  log,
+  fallbackAt,
+  onOpen,
+}: {
+  log: RivalRunLog | null;
+  fallbackAt: string | null;
+  onOpen: () => void;
+}) {
+  const headline = runHeadline(log);
+  const Icon = headline.tone === "success" ? CheckCircle2 : headline.tone === "error" ? AlertTriangle : Info;
+  const text =
+    !log && fallbackAt
+      ? `Find nearby pubs last ran ${formatWhen(fallbackAt)} · before run logging started`
+      : headline.text;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      disabled={!log}
+      className={cn(
+        "inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl px-2 text-left text-[13px] font-semibold transition-colors disabled:cursor-default",
+        RUN_TONE[headline.tone],
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 truncate">{text}</span>
+      {log && <span className="shrink-0 underline underline-offset-2">View log</span>}
+    </button>
+  );
+}
+
+const STEP_ICON = {
+  ok: { Icon: CheckCircle2, className: "text-admin-success" },
+  error: { Icon: XCircle, className: "text-admin-error" },
+  info: { Icon: Info, className: "text-admin-muted" },
+} as const;
+
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+function RunLogDialog({
+  log,
+  open,
+  onOpenChange,
+}: {
+  log: RivalRunLog | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!log) return null;
+  const verb = log.kind === "menus" ? "Find drinks menus" : "Find nearby pubs";
+  const errors = log.steps.filter((step) => step.level === "error").length;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex max-h-[85vh] max-w-[min(42rem,calc(100%-2rem))] flex-col gap-0 overflow-hidden rounded-3xl border-2 border-admin-line bg-admin-surface p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-admin-line px-5 pt-5 pb-4 text-left">
+          <DialogTitle className="text-base font-bold tracking-tight text-admin-ink">{verb} · run log</DialogTitle>
+          <DialogDescription className="text-[13px] text-admin-muted">
+            {log.summary} · started {formatWhen(log.startedAt)}, finished {formatTime(log.finishedAt)}
+            {errors ? ` · ${errors} ${errors === 1 ? "error" : "errors"}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <ol className="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-4">
+          {log.steps.map((step, index) => {
+            const { Icon, className } = STEP_ICON[step.level];
+            return (
+              <li key={`${step.at}-${index}`} className="rounded-2xl border border-admin-line bg-admin-card px-4 py-3">
+                <div className="flex items-start gap-2">
+                  <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", className)} />
+                  <p className="min-w-0 flex-1 text-[13px] font-semibold text-admin-ink">{step.title}</p>
+                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-admin-muted">{formatTime(step.at)}</span>
+                </div>
+                {step.detail && (
+                  <p className="mt-2 pl-6 text-[12px] leading-snug wrap-break-word whitespace-pre-wrap text-admin-muted">{step.detail}</p>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function sourceLabel(rival: MarketingCompetitor): string {
   if (!rival.last_captured_at) return "None yet — set when drink prices are saved";
   if (rival.last_capture_source === "upload") return "Board photo";
@@ -139,11 +266,13 @@ export default function RivalsClient({
   radius,
   initialRivals,
   priceCounts,
+  lastRivalRun,
 }: {
   area: string;
   radius: string | null;
   initialRivals: MarketingCompetitor[];
   priceCounts: Record<string, number>;
+  lastRivalRun: RivalRunLog | null;
 }) {
   const sheet = useRecordSheet<MarketingCompetitor>({
     records: initialRivals,
@@ -153,6 +282,8 @@ export default function RivalsClient({
   const [query, setQuery] = useState("");
   const [isPinned, setIsPinned] = useState(true);
   const [job, setJob] = useState<JobProgressState | null>(null);
+  const [lastRun, setLastRun] = useState<RivalRunLog | null>(lastRivalRun);
+  const [logOpen, setLogOpen] = useState(false);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -224,116 +355,159 @@ export default function RivalsClient({
     });
   };
 
+  /* The log is shown straight away and then written to the settings row, so a
+     run survives a reload and the next person to open the page sees how the
+     last one went. */
+  const finishRun = async (log: RivalRunLog) => {
+    setLastRun(log);
+    const saved = await saveRivalRunLogAction(log);
+    if (saved.error) toast.error(`The run log could not be saved: ${saved.error}`);
+  };
+
+  const captureBatch = async (targets: { id: string; name: string }[], steps: RivalRunStep[]) => {
+    let captured = 0;
+    let failed = 0;
+    let prices = 0;
+    for (let i = 0; i < targets.length; i += 1) {
+      const target = targets[i];
+      setJob({
+        label: `Reading drinks menu · ${target.name}`,
+        current: i + 1,
+        total: targets.length,
+      });
+      const cap = await captureRivalUrlAction(target.id);
+      const detail = cap.notes.join("\n") || undefined;
+      if ("error" in cap) {
+        failed += 1;
+        steps.push(runStep("error", `${target.name}: ${cap.error}`, detail));
+      } else {
+        captured += 1;
+        prices += cap.count;
+        steps.push(
+          runStep("ok", `${target.name}: read ${cap.count} drink ${cap.count === 1 ? "price" : "prices"}`, detail),
+        );
+      }
+    }
+    return { captured, failed, prices };
+  };
+
+  const noPricesMessage = (count: number) =>
+    `None of those ${count} sites list drink prices we could read. Open the run log to see what was tried, then paste a drinks menu URL or upload a board photo.`;
+
   const handleDiscover = async () => {
     if (job) return;
+    const startedAt = new Date().toISOString();
+    const steps: RivalRunStep[] = [runStep("info", `Asked Google Places for pubs near ${area}${radius ? ` within ${radius}` : ""}`)];
+    const finish = (ok: boolean, summary: string) =>
+      finishRun({ startedAt, finishedAt: new Date().toISOString(), kind: "discover", ok, summary, steps });
     setJob({ label: "Looking up nearby pubs" });
-      try {
-        const result = await discoverRivalsAction();
-        if ("error" in result) {
-          toast.error(result.error);
-          return;
-        }
-        if (result.added === 0 && result.updated === 0 && result.needsCapture.length === 0) {
-          if (result.skippedIndustry) {
-            toast(`Skipped ${result.skippedIndustry} nearby places that are not bars or pubs.`);
-            return;
-          }
-          toast("No pubs found in that radius. Try a wider area on the price-off.");
-          return;
-        }
-
-        const foundBits = [
-          result.added || result.updated
-            ? `Found ${result.added} new ${result.added === 1 ? "pub" : "pubs"}${
-                result.updated ? `, updated ${result.updated}` : ""
-              }`
-            : null,
-          result.skippedIndustry
-            ? `Skipped ${result.skippedIndustry} that are not bars or pubs`
-            : null,
-        ].filter(Boolean);
-        if (foundBits.length) toast.success(`${foundBits.join(". ")}.`);
-
-        const targets = result.needsCapture.slice(0, RIVAL_CAPTURE_BATCH);
-        if (!targets.length) {
-          toast("None of those pubs have a website to read yet. Add a menu URL or upload a board photo.");
-          return;
-        }
-
-        let captured = 0;
-        let failed = 0;
-        let prices = 0;
-        for (let i = 0; i < targets.length; i += 1) {
-          const target = targets[i];
-          setJob({
-            label: `Reading drinks menu · ${target.name}`,
-            current: i + 1,
-            total: targets.length,
-          });
-          const cap = await captureRivalUrlAction(target.id);
-          if ("error" in cap) failed += 1;
-          else {
-            captured += 1;
-            prices += cap.count;
-          }
-        }
-        const remaining = result.needsCapture.length - targets.length;
-        if (captured === 0) {
-          toast.error(
-            `Could not read drink prices from those sites.${
-              remaining ? " Click Find drinks menus to try the next pubs, or upload a board photo." : ""
-            }`,
-          );
-          return;
-        }
-        toast.success(
-          `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
-            failed ? `. ${failed} had no drinks menu online` : ""
-          }${remaining ? `. ${remaining} still to go — click Find drinks menus.` : "."}`,
-        );
-      } finally {
-        setJob(null);
+    try {
+      const result = await discoverRivalsAction();
+      if ("error" in result) {
+        steps.push(runStep("error", result.error));
+        toast.error(result.error);
+        await finish(false, result.error);
+        return;
       }
+      steps.push(
+        runStep(
+          "ok",
+          `Found ${result.added} new, updated ${result.updated}, unpinned ${result.unpinned}`,
+          [
+            result.skippedOwn ? `Skipped ${result.skippedOwn} that looked like our own venue` : null,
+            result.skippedIndustry ? `Skipped ${result.skippedIndustry} that are not bars or pubs` : null,
+          ]
+            .filter(Boolean)
+            .join("\n") || undefined,
+        ),
+      );
+      if (result.added === 0 && result.updated === 0 && result.needsCapture.length === 0) {
+        const summary = result.skippedIndustry
+          ? `Skipped ${result.skippedIndustry} nearby places that are not bars or pubs.`
+          : "No pubs found in that radius. Try a wider area on the price-off.";
+        steps.push(runStep("info", summary));
+        toast(summary);
+        await finish(true, summary);
+        return;
+      }
+
+      const foundBits = [
+        result.added || result.updated
+          ? `Found ${result.added} new ${result.added === 1 ? "pub" : "pubs"}${
+              result.updated ? `, updated ${result.updated}` : ""
+            }`
+          : null,
+        result.skippedIndustry ? `Skipped ${result.skippedIndustry} that are not bars or pubs` : null,
+      ].filter(Boolean);
+      if (foundBits.length) toast.success(`${foundBits.join(". ")}.`);
+
+      const targets = result.needsCapture.slice(0, RIVAL_CAPTURE_BATCH);
+      if (!targets.length) {
+        const summary = "None of those pubs have a website to read yet. Add a menu URL or upload a board photo.";
+        steps.push(runStep("info", summary));
+        toast(summary);
+        await finish(true, `${foundBits.join(". ") || "Nothing new"}. Nothing to read yet.`);
+        return;
+      }
+
+      steps.push(runStep("info", `Reading drinks menus for ${targets.length} of ${result.needsCapture.length} waiting rivals`));
+      const { captured, failed, prices } = await captureBatch(targets, steps);
+      const remaining = result.needsCapture.length - targets.length;
+      if (captured === 0) {
+        steps.push(runStep("error", `No drink prices read from any of the ${targets.length} sites tried`));
+        toast.error(noPricesMessage(targets.length));
+        await finish(false, `Found ${result.added} new. No drink prices read from ${targets.length} sites.`);
+        return;
+      }
+      const summary = `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
+        failed ? `. ${failed} had no drinks menu online` : ""
+      }${remaining ? `. ${remaining} still to go — click Find drinks menus.` : "."}`;
+      steps.push(runStep(failed ? "info" : "ok", summary));
+      toast.success(summary);
+      await finish(true, summary);
+    } finally {
+      setJob(null);
+    }
   };
 
   const handleCaptureAll = async () => {
     if (job) return;
+    const startedAt = new Date().toISOString();
+    const steps: RivalRunStep[] = [];
+    const finish = (ok: boolean, summary: string) =>
+      finishRun({ startedAt, finishedAt: new Date().toISOString(), kind: "menus", ok, summary, steps });
     setJob({ label: "Finding drinks menus" });
-      try {
-        const queued = await listRivalCaptureQueueAction();
-        if ("error" in queued) {
-          toast.error(queued.error);
-          return;
-        }
-        let captured = 0;
-        let failed = 0;
-        let prices = 0;
-        for (let i = 0; i < queued.rivals.length; i += 1) {
-          const target = queued.rivals[i];
-          setJob({
-            label: `Reading drinks menu · ${target.name}`,
-            current: i + 1,
-            total: queued.rivals.length,
-          });
-          const cap = await captureRivalUrlAction(target.id);
-          if ("error" in cap) failed += 1;
-          else {
-            captured += 1;
-            prices += cap.count;
-          }
-        }
-        if (captured === 0) {
-          toast.error("Could not read drink prices from those sites. Try a drinks menu URL, or upload a board photo.");
-          return;
-        }
-        toast.success(
-          `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
-            failed ? `. ${failed} had no drinks menu online` : ""
-          }${queued.leftover ? `. ${queued.leftover} still to go — click Find drinks menus again.` : "."}`,
-        );
-      } finally {
-        setJob(null);
+    try {
+      const queued = await listRivalCaptureQueueAction();
+      if ("error" in queued) {
+        steps.push(runStep("error", queued.error));
+        toast.error(queued.error);
+        await finish(false, queued.error);
+        return;
       }
+      steps.push(
+        runStep(
+          "info",
+          `Queued ${queued.rivals.length} rivals with a website or menu URL`,
+          queued.rivals.map((rival) => rival.name).join(", "),
+        ),
+      );
+      const { captured, failed, prices } = await captureBatch(queued.rivals, steps);
+      if (captured === 0) {
+        steps.push(runStep("error", `No drink prices read from any of the ${queued.rivals.length} sites tried`));
+        toast.error(noPricesMessage(queued.rivals.length));
+        await finish(false, `No drink prices read from ${queued.rivals.length} sites.`);
+        return;
+      }
+      const summary = `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
+        failed ? `. ${failed} had no drinks menu online` : ""
+      }${queued.leftover ? `. ${queued.leftover} still to go — click Find drinks menus again.` : "."}`;
+      steps.push(runStep(failed ? "info" : "ok", summary));
+      toast.success(summary);
+      await finish(true, summary);
+    } finally {
+      setJob(null);
+    }
   };
 
   const handleCaptureUrl = async () => {
@@ -411,11 +585,11 @@ export default function RivalsClient({
       ) : (
         <RecordList
           variant="panel"
+          layout="stacked"
           title="Rivals"
           count={shown.length}
-          subtitle={`${pinnedCount} on the price-off near ${area}${
-            lastFoundAt ? ` · Find nearby last ran ${formatWhen(lastFoundAt)}` : ""
-          }`}
+          subtitle={`${pinnedCount} on the price-off near ${area}${radius ? ` (${radius})` : ""}`}
+          banner={<RunStatusLink log={lastRun} fallbackAt={lastFoundAt} onOpen={() => setLogOpen(true)} />}
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               <button
@@ -527,6 +701,8 @@ export default function RivalsClient({
           )}
         </RecordList>
       )}
+
+      <RunLogDialog log={lastRun} open={logOpen} onOpenChange={setLogOpen} />
 
       <RecordSheet
         open={sheet.open}
@@ -665,6 +841,22 @@ export default function RivalsClient({
               <DetailCell label="Last found" value={formatWhen(selected.fetched_at)} />
               <DetailCell label="Last captured" value={formatWhen(selected.last_captured_at)} />
               <DetailCell label="Source" value={sourceLabel(selected)} />
+              {selected.last_capture_error && (
+                <DetailCell
+                  label="Last attempt"
+                  multiline
+                  value={
+                    <span className="block text-left">
+                      <span className="block text-[12px] font-semibold text-admin-muted">
+                        {formatWhen(selected.last_capture_attempted_at ?? null)}
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-snug font-medium wrap-break-word whitespace-pre-wrap text-admin-error">
+                        {selected.last_capture_error}
+                      </span>
+                    </span>
+                  }
+                />
+              )}
               <DetailCell
                 label="Prices"
                 value={

@@ -8,11 +8,13 @@ import { Plus, ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from "l
 
 export function RecordList({
   variant = "panel",
+  layout = "inline",
   title,
   count,
   countLabel,
   badge,
   subtitle,
+  banner,
   actions,
   onAdd,
   addLabel = "Create",
@@ -25,6 +27,7 @@ export function RecordList({
   children,
 }: {
   variant?: "panel" | "cards";
+  layout?: "inline" | "stacked";
   title?: string;
   count?: number;
   countLabel?: React.ReactNode;
@@ -32,6 +35,7 @@ export function RecordList({
   badge?: React.ReactNode;
   // A second line under the title - a note about the group, not a record.
   subtitle?: React.ReactNode;
+  banner?: React.ReactNode;
   // Group-level controls, left of the add button. They stop their own clicks so
   // the title beside them still collapses the group.
   actions?: React.ReactNode;
@@ -147,17 +151,69 @@ export function RecordList({
         detail && "xl:flex xl:h-full xl:min-h-0 xl:flex-col",
       )}
     >
-      {/* A toolbar fills the gap the title leaves on a wide table. It drops to
-          its own line on phones, where there is no gap to fill. */}
+      {layout === "stacked" ? (
+        <div className="space-y-3 bg-admin-surface px-4 py-3 sm:px-5 xl:shrink-0">
+          <div className="flex items-start gap-2">
+            <button
+              type="button"
+              onClick={() => collapsible && setCollapsed((c) => !c)}
+              className="min-w-0 flex-1 text-left"
+            >
+              <span className="block text-[11px] font-semibold tracking-wide text-admin-primary">
+                {title}{" "}
+                {count != null && <span className="text-admin-muted">({count})</span>}
+              </span>
+              {subtitle && (
+                <span className="mt-1 block text-[13px] font-medium leading-snug text-admin-muted">
+                  {subtitle}
+                </span>
+              )}
+            </button>
+            {badge}
+            {collapsible && (
+              <button
+                type="button"
+                onClick={() => collapsible && setCollapsed((c) => !c)}
+                className="mt-0.5 shrink-0"
+                title="Toggle group"
+              >
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-admin-muted transition-transform duration-200",
+                    !collapsed && "rotate-180",
+                  )}
+                />
+              </button>
+            )}
+          </div>
+          {banner}
+          {(toolbar || actions || onAdd) && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {toolbar && <div className="min-w-0 flex-1">{toolbar}</div>}
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                {actions}
+                {onAdd && (
+                  <button
+                    type="button"
+                    onClick={onAdd}
+                    title={title ? `Add ${title}` : addLabel}
+                    className="inline-flex h-11 items-center rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9"
+                  >
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
+                    {addLabel}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-2 bg-admin-surface px-4 py-3 sm:flex-nowrap sm:px-5 xl:shrink-0">
         <button
           type="button"
           onClick={() => collapsible && setCollapsed((c) => !c)}
           className={cn(
             "order-1 min-w-0 text-left",
-            /* A zero flex basis would let the search box share the title's
-               line and squash the title to nothing; claiming half the line
-               forces the search onto its own row on phones. */
             toolbar ? "flex-1 max-sm:min-w-[50%] sm:flex-none" : "flex-1",
           )}
         >
@@ -171,9 +227,6 @@ export function RecordList({
             </span>
           )}
         </button>
-        {/* On a phone the search box takes its own line and the Filters
-            toggle sits at the right end of that line, beside the thing it
-            filters, rather than up with the add button. */}
         {toolbar && (
           <div
             className={cn(
@@ -208,8 +261,6 @@ export function RecordList({
             )}
           </button>
         )}
-        {/* Hard right with the row's controls, not beside the title - the group
-            reads status-last the same way each of its rows does. */}
         {badge && <div className="order-2 mr-1 shrink-0 sm:order-3">{badge}</div>}
         {actions && (
           <div className="order-2 flex shrink-0 items-center gap-0.5 sm:order-3">{actions}</div>
@@ -243,6 +294,7 @@ export function RecordList({
           </button>
         )}
       </div>
+      )}
 
       {filters && showFilters && (
         <div className="border-t border-admin-line bg-admin-surface px-4 py-2.5 sm:px-5 xl:shrink-0">

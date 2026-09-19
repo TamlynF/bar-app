@@ -1,6 +1,7 @@
 import { formatGbp } from "@/lib/price";
 import { normaliseName, type ParsedMenu } from "@/lib/menu-import";
 import type { CompetitorItemType, CompetitorPrice } from "./types";
+import { uniqueUrls } from "./discover-drinks";
 import { stripTrackingParams } from "./http-url";
 
 export const DEFAULT_RADIUS_METERS = Math.round(1.5 * 1609.34);
@@ -224,24 +225,76 @@ export function rivalStartUrls(rival: {
   return site ? [stripTrackingParams(site)] : [];
 }
 
+export function isWeakMenuUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return host === "facebook.com" || host === "m.facebook.com" || host === "instagram.com";
+  } catch {
+    return false;
+  }
+}
+
+/* Addresses the crawl turns up that are never a menu: a host's 404 page, a
+   login wall, or a document that merely lives beside the menus. Saving one
+   as a menu URL sends every later run straight back to the same dead end. */
+const JUNK_MENU_PATH = /\/404(\.html?)?$|\/(accounts\/)?login|accessib|allergen|terms|privacy|policy/i;
+
+export function isJunkMenuUrl(url: string): boolean {
+  if (isWeakMenuUrl(url)) return true;
+  try {
+    const parsed = new URL(url);
+    return JUNK_MENU_PATH.test(parsed.pathname) || /[?&]next=/.test(parsed.search);
+  } catch {
+    return true;
+  }
+}
+
+export function rivalCaptureStarts(rival: {
+  menu_urls?: string[] | null;
+  website?: string | null;
+}): string[] {
+  const menus = rivalMenuUrls(rival).filter((url) => !isJunkMenuUrl(url));
+  const site = rival.website?.trim() ? stripTrackingParams(rival.website.trim()) : "";
+  const extras = site && !isWeakMenuUrl(site) ? [site] : [];
+  const starts = uniqueUrls([...menus, ...extras]);
+  return starts.length ? starts : rivalStartUrls(rival);
+}
+
 export const RIVAL_CAPTURE_BATCH = 6;
 
 type CaptureRival = {
   id: string;
+  is_pinned?: boolean;
   last_captured_at?: string | null;
+  last_capture_attempted_at?: string | null;
   menu_urls?: string[] | null;
   website?: string | null;
 };
 
+/* A rival taken off the price-off is not worth a capture slot: the batch is
+   small and its prices would not be shown anyway. */
+function onPriceOff(rival: CaptureRival): boolean {
+  return rival.is_pinned !== false;
+}
+
+function byCaptureAttempt<T extends CaptureRival>(left: T, right: T): number {
+  const leftAt = left.last_capture_attempted_at ?? "";
+  const rightAt = right.last_capture_attempted_at ?? "";
+  if (!leftAt && rightAt) return -1;
+  if (leftAt && !rightAt) return 1;
+  return leftAt.localeCompare(rightAt);
+}
+
 export function rivalsNeedingCapture(rivals: CaptureRival[]): string[] {
   return rivals
-    .filter((rival) => !rival.last_captured_at && rivalStartUrls(rival).length > 0)
+    .filter((rival) => onPriceOff(rival) && !rival.last_captured_at && rivalStartUrls(rival).length > 0)
+    .sort(byCaptureAttempt)
     .map((rival) => rival.id);
 }
 
 export function nextCaptureBatch<T extends CaptureRival>(rivals: T[], limit = RIVAL_CAPTURE_BATCH): T[] {
-  const withUrl = rivals.filter((rival) => rivalStartUrls(rival).length);
-  const pending = withUrl.filter((rival) => !rival.last_captured_at);
+  const withUrl = rivals.filter((rival) => onPriceOff(rival) && rivalStartUrls(rival).length);
+  const pending = withUrl.filter((rival) => !rival.last_captured_at).sort(byCaptureAttempt);
   return (pending.length ? pending : withUrl).slice(0, limit);
 }
 

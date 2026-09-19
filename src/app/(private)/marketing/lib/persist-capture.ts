@@ -2,9 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CaptureSource, MarketingCompetitor } from "./types";
 import {
   captureSourceForUrl,
+  isJunkMenuUrl,
   mergeParsedMenus,
+  rivalCaptureStarts,
   rivalMenuUrls,
-  rivalStartUrls,
   rowsFromParsedMenu,
 } from "./rivals";
 import type { ParsedMenu } from "@/lib/menu-import";
@@ -50,6 +51,8 @@ export async function replaceRivalPrices(
     .update({
       last_captured_at: new Date().toISOString(),
       last_capture_source: meta.source,
+      last_capture_error: null,
+      last_capture_attempted_at: new Date().toISOString(),
       menu_urls: menuUrls,
       updated_at: new Date().toISOString(),
     })
@@ -61,25 +64,58 @@ export async function replaceRivalPrices(
 
 async function menusFromHtmlPages(
   pages: { url: string; text: string }[],
-): Promise<ParsedMenu[]> {
+): Promise<{ menus: ParsedMenu[]; note: string | null }> {
   const blob = pages
     .map((page) => `SOURCE: ${page.url}\n${page.text}`)
     .join("\n\n")
     .slice(0, 80_000);
-  if (blob.length < 40) return [];
+  if (blob.length < 40) return { menus: [], note: "Pages had too little text to read." };
   const extracted = await extractMenuFromText(blob, true);
-  return "error" in extracted ? [] : [extracted.menu];
+  if ("error" in extracted) return { menus: [], note: extracted.error };
+  return { menus: [extracted.menu], note: null };
+}
+
+async function markCaptureAttempt(
+  supabase: AnyClient,
+  rivalId: string,
+  extra: { last_capture_error?: string | null; menu_urls?: string[] },
+) {
+  await supabase
+    .from("marketing_competitors")
+    .update({
+      last_capture_attempted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ...extra,
+    })
+    .eq("id", rivalId);
 }
 
 export async function captureRivalFromUrl(
   supabase: AnyClient,
   rival: MarketingCompetitor,
-): Promise<{ count: number; menuUrls: string[] } | { error: string }> {
-  const starts = rivalStartUrls(rival);
-  if (!starts.length) return { error: "Add a website or drinks menu URL first." };
+): Promise<{ count: number; menuUrls: string[]; notes: string[] } | { error: string; notes: string[] }> {
+  const notes: string[] = [];
+  const starts = rivalCaptureStarts(rival);
+  if (!starts.length) {
+    const error = "Add a website or drinks menu URL first.";
+    notes.push(error);
+    await markCaptureAttempt(supabase, rival.id, { last_capture_error: error });
+    return { error, notes };
+  }
+
+  notes.push(`Called ${starts.join(" → ")}`);
 
   try {
     const found = await discoverDrinkMenus(starts, rival.name);
+    notes.push(
+      found.files.length || found.pages.length
+        ? `Opened ${found.pages.length} page${found.pages.length === 1 ? "" : "s"} and ${found.files.length} file${found.files.length === 1 ? "" : "s"}`
+        : "No readable pages or files from those URLs",
+    );
+    if (found.pageUrls.length) notes.push(`Pages: ${found.pageUrls.slice(0, 8).join(", ")}`);
+    if (found.files.length) notes.push(`Files: ${found.files.map((file) => file.url).join(", ")}`);
+    for (const failure of found.failures.slice(0, 8)) notes.push(`${failure.url}: ${failure.error}`);
+
     const menus: ParsedMenu[] = [];
     for (const file of found.files) {
       const extracted = await extractMenuFromFile({
@@ -87,12 +123,14 @@ export async function captureRivalFromUrl(
         mimeType: file.mimeType,
         drinksOnly: true,
       });
-      if (!("error" in extracted)) menus.push(extracted.menu);
+      if ("error" in extracted) notes.push(`${file.url}: ${extracted.error}`);
+      else menus.push(extracted.menu);
     }
     const drinkPages = found.pages.filter((p) => /menu|drink|tenkites|hansom-cab/i.test(p.url));
-    let htmlMenus = await menusFromHtmlPages(drinkPages.length ? drinkPages : found.pages);
-    if (!htmlMenus.length && drinkPages.length) htmlMenus = await menusFromHtmlPages(found.pages);
-    menus.push(...htmlMenus);
+    let html = await menusFromHtmlPages(drinkPages.length ? drinkPages : found.pages);
+    if (!html.menus.length && drinkPages.length) html = await menusFromHtmlPages(found.pages);
+    if (html.note) notes.push(html.note);
+    menus.push(...html.menus);
 
     const merged = mergeParsedMenus(menus);
     console.info("[rivals] capture", rival.name, {
@@ -104,10 +142,10 @@ export async function captureRivalFromUrl(
     const discovered = uniqueUrls([
       ...found.files.map((file) => file.url),
       ...found.pageUrls.filter((url) => /menu|drink|\.pdf|tenkites/i.test(url)),
-    ]);
+    ]).filter((url) => !isJunkMenuUrl(url));
     const menuUrls = uniqueUrls(
       discovered.length ? discovered : [...rivalMenuUrls(rival), ...found.pageUrls],
-    );
+    ).filter((url) => !isJunkMenuUrl(url));
 
     if (menuUrls.length) {
       await supabase
@@ -128,13 +166,22 @@ export async function captureRivalFromUrl(
       menuUrls,
     });
     if ("error" in saved) {
+      notes.push(saved.error);
       console.info("[rivals] capture prices skipped", rival.name, saved.error);
-      return saved;
+      await markCaptureAttempt(supabase, rival.id, {
+        last_capture_error: notes.join("\n"),
+        menu_urls: menuUrls.length ? menuUrls : undefined,
+      });
+      return { error: saved.error, notes };
     }
     console.info("[rivals] capture prices saved", rival.name, saved.count);
-    return { count: saved.count, menuUrls };
+    notes.push(`Saved ${saved.count} drink prices`);
+    return { count: saved.count, menuUrls, notes };
   } catch (err) {
-    return { error: fetchFailureMessage(err) };
+    const error = fetchFailureMessage(err);
+    notes.push(error);
+    await markCaptureAttempt(supabase, rival.id, { last_capture_error: notes.join("\n") });
+    return { error, notes };
   }
 }
 

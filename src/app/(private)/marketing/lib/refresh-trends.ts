@@ -73,6 +73,17 @@ async function buildPriceContext(
   return parts.join("\n\n");
 }
 
+/* The prompt asks for a bare array, but a grounded answer sometimes arrives
+   wrapped in an object; the list inside is still the list. */
+function trendsFrom(parsed: unknown): AiTrend[] {
+  if (Array.isArray(parsed)) return parsed as AiTrend[];
+  if (parsed && typeof parsed === "object") {
+    const inner = Object.values(parsed as Record<string, unknown>).find(Array.isArray);
+    if (inner) return inner as AiTrend[];
+  }
+  return [];
+}
+
 function toRows(kind: TrendKind, area: string, aiTrends: AiTrend[], employeeId: number | null) {
   return aiTrends
     .filter((t) => t?.title)
@@ -140,7 +151,7 @@ export async function refreshTrends(
 
   const rows = jobs.flatMap((job, i) => {
     const res = results[i];
-    return "text" in res ? toRows(job.kind, area, parseJsonLoose<AiTrend[]>(res.text) ?? [], employeeId) : [];
+    return "text" in res ? toRows(job.kind, area, trendsFrom(parseJsonLoose<unknown>(res.text)), employeeId) : [];
   });
 
   if (rows.length === 0) {

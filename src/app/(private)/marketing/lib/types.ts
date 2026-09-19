@@ -40,6 +40,8 @@ export type MarketingCompetitor = {
   is_pinned: boolean;
   last_captured_at: string | null;
   last_capture_source: CaptureSource | null;
+  last_capture_error?: string | null;
+  last_capture_attempted_at?: string | null;
   fetched_at: string;
   created_at?: string;
   updated_at?: string | null;
@@ -59,12 +61,29 @@ export type CompetitorPrice = {
   fetched_at: string;
 };
 
+export type RivalRunStep = {
+  at: string;
+  level: "info" | "ok" | "error";
+  title: string;
+  detail?: string;
+};
+
+export type RivalRunLog = {
+  startedAt: string;
+  finishedAt: string;
+  kind: "discover" | "menus";
+  ok: boolean;
+  summary: string;
+  steps: RivalRunStep[];
+};
+
 export type MarketingSettings = {
   id: string;
   comparison_area: string | null;
   comparison_radius: string | null;
   last_trends_refresh_at: string | null;
   last_prices_refresh_at: string | null;
+  last_rival_run?: RivalRunLog | null;
   updated_at: string;
   updated_by?: number | null;
 };

@@ -47,6 +47,7 @@ export default async function RivalsSettingsPage() {
       radius={settings?.comparison_radius ?? null}
       initialRivals={rivals}
       priceCounts={priceCounts}
+      lastRivalRun={settings?.last_rival_run ?? null}
     />
   );
 }
