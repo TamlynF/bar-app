@@ -9,7 +9,7 @@ import {
   resolveComparisonArea,
 } from "@/app/(private)/marketing/lib/settings";
 import { geocodeAddress, searchNearbyPubs } from "@/app/(private)/marketing/lib/places";
-import { parseRadiusMeters, planDiscover, rivalStartUrls } from "@/app/(private)/marketing/lib/rivals";
+import { parseRadiusMeters, planDiscover, rivalsNeedingCapture, nextCaptureBatch, rivalStartUrls } from "@/app/(private)/marketing/lib/rivals";
 import { captureRivalFromUpload, captureRivalFromUrl } from "@/app/(private)/marketing/lib/persist-capture";
 import { MENU_UPLOAD_MAX_BYTES, MENU_UPLOAD_TYPES } from "@/app/(private)/marketing/lib/capture-menu";
 import type { MarketingCompetitor } from "@/app/(private)/marketing/lib/types";
@@ -51,7 +51,7 @@ export async function discoverRivalsAction(): Promise<
       skippedOwn: number;
       skippedIndustry: number;
       unpinned: number;
-      menusCaptured: number;
+      needsCapture: { id: string; name: string }[];
     }
   | { error: string }
 > {
@@ -86,10 +86,9 @@ export async function discoverRivalsAction(): Promise<
 
   const plan = planDiscover(hits, existing ?? [], await ownNames(supabase));
   const now = new Date().toISOString();
-  const toCapture: MarketingCompetitor[] = [];
 
   if (plan.inserts.length) {
-    const { data: inserted, error } = await supabase
+    const { error } = await supabase
       .from("marketing_competitors")
       .insert(
         plan.inserts.map((hit) => ({
@@ -102,13 +101,12 @@ export async function discoverRivalsAction(): Promise<
           fetched_at: now,
         })),
       )
-      .select("*");
+      .select("id");
     if (error) return { error: error.message };
-    toCapture.push(...((inserted as MarketingCompetitor[] | null) ?? []));
   }
 
   for (const upd of plan.updates) {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("marketing_competitors")
       .update({
         name: upd.name,
@@ -117,11 +115,8 @@ export async function discoverRivalsAction(): Promise<
         fetched_at: now,
         updated_at: now,
       })
-      .eq("id", upd.id)
-      .select("*")
-      .maybeSingle();
+      .eq("id", upd.id);
     if (error) return { error: error.message };
-    if (data) toCapture.push(data as MarketingCompetitor);
   }
 
   for (const unpin of plan.unpins) {
@@ -132,12 +127,20 @@ export async function discoverRivalsAction(): Promise<
     if (error) return { error: error.message };
   }
 
-  let menusCaptured = 0;
-  for (const rival of toCapture) {
-    if (!rivalStartUrls(rival).length) continue;
-    const result = await captureRivalFromUrl(supabase, rival);
-    if (!("error" in result)) menusCaptured += 1;
-  }
+  const { data } = await supabase
+    .from("marketing_competitors")
+    .select("id, name, last_captured_at, website, menu_urls")
+    .eq("area", area);
+  const waiting = (data as MarketingCompetitor[] | null) ?? [];
+  const needsCapture = rivalsNeedingCapture(waiting).map((id) => {
+    const rival = waiting.find((row) => row.id === id);
+    return { id, name: rival?.name ?? "Rival" };
+  });
+  console.info("[rivals] discover", {
+    added: plan.inserts.length,
+    updated: plan.updates.length,
+    needsCapture: needsCapture.length,
+  });
 
   revalidate();
   return {
@@ -147,7 +150,7 @@ export async function discoverRivalsAction(): Promise<
     skippedOwn: plan.skippedOwn.length,
     skippedIndustry: plan.skippedIndustry.length,
     unpinned: plan.unpins.length,
-    menusCaptured,
+    needsCapture,
   };
 }
 
@@ -174,7 +177,6 @@ export async function saveRivalAction(
     name,
     website,
     menu_urls: menuUrls,
-    menu_url: menuUrls[0] ?? null,
     is_pinned: isPinned,
     updated_at: new Date().toISOString(),
   };
@@ -251,8 +253,8 @@ export async function captureRivalUrlAction(
   }
 }
 
-export async function captureAllRivalMenusAction(): Promise<
-  | { success: true; captured: number; failed: number; skipped: number; prices: number }
+export async function listRivalCaptureQueueAction(): Promise<
+  | { rivals: { id: string; name: string }[]; leftover: number }
   | { error: string }
 > {
   const { supabase, area } = await loadContext();
@@ -264,39 +266,16 @@ export async function captureAllRivalMenusAction(): Promise<
   const rivals = (data as MarketingCompetitor[] | null) ?? [];
   if (!rivals.length) return { error: "Find nearby pubs first." };
 
-  let captured = 0;
-  let failed = 0;
-  let skipped = 0;
-  let prices = 0;
-
-  for (const rival of rivals) {
-    if (!rivalStartUrls(rival).length) {
-      skipped += 1;
-      continue;
-    }
-    try {
-      const result = await captureRivalFromUrl(supabase, rival);
-      if ("error" in result) {
-        failed += 1;
-      } else {
-        captured += 1;
-        prices += result.count;
-      }
-    } catch {
-      failed += 1;
-    }
+  const withUrl = rivals.filter((rival) => rivalStartUrls(rival).length);
+  if (!withUrl.length) {
+    return { error: "None of these rivals have a website or drinks menu URL yet." };
   }
-
-  revalidate();
-  if (captured === 0) {
-    return {
-      error:
-        skipped === rivals.length
-          ? "None of these rivals have a website or drinks menu URL yet."
-          : `Could not read drink prices from any site (${failed} failed). Try Find drinks menus, or upload a board photo.`,
-    };
-  }
-  return { success: true, captured, failed, skipped, prices };
+  const pendingCount = withUrl.filter((rival) => !rival.last_captured_at).length;
+  const queue = nextCaptureBatch(withUrl);
+  return {
+    rivals: queue.map((rival) => ({ id: rival.id, name: rival.name })),
+    leftover: Math.max(0, pendingCount - queue.filter((rival) => !rival.last_captured_at).length),
+  };
 }
 
 export async function captureRivalUploadAction(

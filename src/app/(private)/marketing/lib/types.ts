@@ -34,7 +34,6 @@ export type MarketingCompetitor = {
   place_id: string | null;
   name: string;
   website: string | null;
-  menu_url: string | null;
   menu_urls: string[];
   address: string | null;
   area: string | null;

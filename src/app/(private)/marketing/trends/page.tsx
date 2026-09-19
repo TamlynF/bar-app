@@ -12,7 +12,12 @@ import type { CompetitorPrice, MarketingCompetitor, MarketingTrend } from "../li
 
 export const dynamic = "force-dynamic";
 
-export default async function MarketingTrendsPage() {
+export default async function MarketingTrendsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; rival?: string; venue?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
 
   const [{ data: trends }, menuItems, benchmarks, settings, address] = await Promise.all([
@@ -47,6 +52,9 @@ export default async function MarketingTrendsPage() {
   return (
     <TrendsClient
       initialTrends={(trends as MarketingTrend[] | null) ?? []}
+      initialTab={params.tab === "prices" ? "prices" : "ads"}
+      initialRivalId={params.rival?.trim() || null}
+      initialRivalName={params.venue?.trim() || null}
       area={area}
       lastRefresh={settings?.last_trends_refresh_at ?? null}
       pricesRadius={settings?.comparison_radius ?? null}

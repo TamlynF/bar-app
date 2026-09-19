@@ -199,22 +199,50 @@ export function itemTypeFromCategory(category: string): CompetitorItemType {
 
 export function rivalMenuUrls(rival: {
   menu_urls?: string[] | null;
-  menu_url?: string | null;
 }): string[] {
-  const listed = (rival.menu_urls ?? []).map((u) => stripTrackingParams(u.trim())).filter(Boolean);
-  if (listed.length) return listed;
-  return rival.menu_url?.trim() ? [stripTrackingParams(rival.menu_url.trim())] : [];
+  return (rival.menu_urls ?? []).map((u) => stripTrackingParams(u.trim())).filter(Boolean);
+}
+
+export function rivalMenuStatus(rival: {
+  menu_urls?: string[] | null;
+  last_capture_source?: string | null;
+}): { kind: "urls" | "upload" | "none"; label: string } {
+  if (rival.last_capture_source === "upload") return { kind: "upload", label: "Board photo" };
+  const urls = rivalMenuUrls(rival);
+  if (urls.length === 1) return { kind: "urls", label: "Menu URL" };
+  if (urls.length > 1) return { kind: "urls", label: `${urls.length} menu URLs` };
+  return { kind: "none", label: "No menu" };
 }
 
 export function rivalStartUrls(rival: {
   menu_urls?: string[] | null;
-  menu_url?: string | null;
   website?: string | null;
 }): string[] {
   const menus = rivalMenuUrls(rival);
   if (menus.length) return menus;
   const site = rival.website?.trim();
   return site ? [stripTrackingParams(site)] : [];
+}
+
+export const RIVAL_CAPTURE_BATCH = 6;
+
+type CaptureRival = {
+  id: string;
+  last_captured_at?: string | null;
+  menu_urls?: string[] | null;
+  website?: string | null;
+};
+
+export function rivalsNeedingCapture(rivals: CaptureRival[]): string[] {
+  return rivals
+    .filter((rival) => !rival.last_captured_at && rivalStartUrls(rival).length > 0)
+    .map((rival) => rival.id);
+}
+
+export function nextCaptureBatch<T extends CaptureRival>(rivals: T[], limit = RIVAL_CAPTURE_BATCH): T[] {
+  const withUrl = rivals.filter((rival) => rivalStartUrls(rival).length);
+  const pending = withUrl.filter((rival) => !rival.last_captured_at);
+  return (pending.length ? pending : withUrl).slice(0, limit);
 }
 
 function itemNameForServe(name: string, serve: string, serveCount: number): string {

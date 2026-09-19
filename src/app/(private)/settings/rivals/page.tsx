@@ -25,14 +25,28 @@ export default async function RivalsSettingsPage() {
 
   if (error) console.error("Error fetching rivals:", error);
 
+  const rivals = ((data as MarketingCompetitor[] | null) ?? []).map((rival) => ({
+    ...rival,
+    menu_urls: rival.menu_urls ?? [],
+  }));
+
+  const { data: priceRows } = await supabase
+    .from("competitor_prices")
+    .select("competitor_id, venue_name")
+    .eq("area", area);
+
+  const priceCounts: Record<string, number> = {};
+  for (const row of priceRows ?? []) {
+    const key = row.competitor_id || `name:${row.venue_name}`;
+    priceCounts[key] = (priceCounts[key] ?? 0) + 1;
+  }
+
   return (
     <RivalsClient
       area={area}
       radius={settings?.comparison_radius ?? null}
-      initialRivals={((data as MarketingCompetitor[] | null) ?? []).map((rival) => ({
-        ...rival,
-        menu_urls: rival.menu_urls ?? [],
-      }))}
+      initialRivals={rivals}
+      priceCounts={priceCounts}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { cleanParsedMenu } from "@/lib/menu-import";
 import {
+  rivalMenuStatus,
   rivalStartUrls,
   captureSourceForUrl,
   isDrinkingHangout,
@@ -11,6 +12,9 @@ import {
   planDiscover,
   pricesForPinned,
   rowsFromParsedMenu,
+  rivalsNeedingCapture,
+  nextCaptureBatch,
+  RIVAL_CAPTURE_BATCH,
   DEFAULT_RADIUS_METERS,
 } from "../rivals";
 import { fetchFailureMessage, isSafeHttpUrl, menuLinksFromHtml, stripTrackingParams } from "../capture-menu";
@@ -215,6 +219,33 @@ describe("menu URL helpers", () => {
         menu_urls: [],
       }),
     ).toEqual(["https://www.hungryhorse.co.uk/pubs/leicestershire/hansom-cab"]);
+  });
+
+  it("queues uncaptured rivals that have a website", () => {
+    const waiting = [
+      { id: "a", last_captured_at: null, website: "https://a.example", menu_urls: [] },
+      { id: "b", last_captured_at: "2026-09-18T00:00:00Z", website: "https://b.example", menu_urls: [] },
+      { id: "c", last_captured_at: null, website: null, menu_urls: [] },
+    ];
+    expect(rivalsNeedingCapture(waiting)).toEqual(["a"]);
+    expect(nextCaptureBatch(waiting, 1).map((row) => row.id)).toEqual(["a"]);
+    expect(RIVAL_CAPTURE_BATCH).toBeGreaterThan(0);
+  });
+
+  it("labels menu URLs versus a board photo", () => {
+    expect(rivalMenuStatus({ menu_urls: [], last_capture_source: null }).label).toBe("No menu");
+    expect(rivalMenuStatus({ menu_urls: ["https://a.example/menu"], last_capture_source: "website" }).label).toBe(
+      "Menu URL",
+    );
+    expect(
+      rivalMenuStatus({
+        menu_urls: ["https://a.example/menu", "https://a.example/drinks.pdf"],
+        last_capture_source: "menu_url",
+      }).label,
+    ).toBe("2 menu URLs");
+    expect(rivalMenuStatus({ menu_urls: ["https://a.example/menu"], last_capture_source: "upload" }).label).toBe(
+      "Board photo",
+    );
   });
 });
 

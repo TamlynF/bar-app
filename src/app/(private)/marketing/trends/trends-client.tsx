@@ -37,6 +37,9 @@ function formatWhen(iso: string | null): string {
 
 export default function TrendsClient({
   initialTrends,
+  initialTab = "ads",
+  initialRivalId = null,
+  initialRivalName = null,
   area,
   lastRefresh,
   pricesRadius,
@@ -47,6 +50,9 @@ export default function TrendsClient({
   benchmarks,
 }: {
   initialTrends: MarketingTrend[];
+  initialTab?: TrendTab;
+  initialRivalId?: string | null;
+  initialRivalName?: string | null;
   area: string;
   lastRefresh: string | null;
   pricesRadius: string | null;
@@ -56,7 +62,7 @@ export default function TrendsClient({
   menuItems: MenuItemLite[];
   benchmarks: PriceBenchmark[];
 }) {
-  const [trendTab, setTrendTab] = useState<TrendTab>("ads");
+  const [trendTab, setTrendTab] = useState<TrendTab>(initialTab);
   const [showSaved, setShowSaved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
@@ -253,6 +259,8 @@ export default function TrendsClient({
           priceTrends={priceTrends}
           onSetTrendState={setState}
           pendingTrendId={pendingId}
+          initialRivalId={initialRivalId}
+          initialRivalName={initialRivalName}
         />
       ) : (
         <>

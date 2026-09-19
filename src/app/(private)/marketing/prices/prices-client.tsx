@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatGbp } from "@/lib/price";
@@ -109,6 +110,8 @@ export default function PricesClient({
   priceTrends,
   onSetTrendState,
   pendingTrendId,
+  initialRivalId = null,
+  initialRivalName = null,
 }: {
   area: string;
   radius: string | null;
@@ -120,11 +123,16 @@ export default function PricesClient({
   priceTrends: MarketingTrend[];
   onSetTrendState: (id: string, state: TrendState) => void;
   pendingTrendId: string | null;
+  initialRivalId?: string | null;
+  initialRivalName?: string | null;
 }) {
+  const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
   const [isSaving, startSave] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
-  const [showRaw, setShowRaw] = useState(false);
+  const [showRaw, setShowRaw] = useState(!!initialRivalId);
+  const [venueFilter, setVenueFilter] = useState<string | null>(initialRivalId);
+  const [venueName, setVenueName] = useState<string | null>(initialRivalName);
   const [view, setView] = useState<PriceView>("summary");
   const [compareMode, setCompareMode] = useState<CompareMode>("rounds");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -137,6 +145,21 @@ export default function PricesClient({
     () => rankedVenues(competitorPrices, benchmarks),
     [competitorPrices, benchmarks],
   );
+  const listedPrices = useMemo(() => {
+    if (!venueFilter && !venueName) return competitorPrices;
+    return competitorPrices.filter((price) => {
+      if (venueFilter && price.competitor_id === venueFilter) return true;
+      if (venueName && price.venue_name.trim().toLowerCase() === venueName.trim().toLowerCase()) return true;
+      return false;
+    });
+  }, [competitorPrices, venueFilter, venueName]);
+  const venueFilterActive = !!(venueFilter || venueName);
+
+  const clearVenueFilter = () => {
+    setVenueFilter(null);
+    setVenueName(null);
+    router.replace("/marketing/trends?tab=prices", { scroll: false });
+  };
   const shownVenues = useMemo(() => {
     if (pickedVenues == null) return allVenues.slice(0, MAX_VENUES);
     const kept = pickedVenues.filter((v) => allVenues.includes(v));
@@ -774,14 +797,14 @@ export default function PricesClient({
           {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden="true">⚡</span>}
           {isRefreshing ? "Running the price-off…" : "Rerun the price-off"}
         </button>
-        {competitorPrices.length > 0 && (
+        {listedPrices.length > 0 && (
           <button
             type="button"
             onClick={() => setShowRaw((s) => !s)}
             aria-expanded={showRaw}
             className="flex h-12 items-center justify-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-4.5 font-semibold text-[13px] text-[#5E6654] transition-colors hover:bg-[#F4F1E8]"
           >
-            See all {competitorPrices.length} sourced prices
+            See all {listedPrices.length} sourced prices
             <ChevronDown className={cn("h-4 w-4 transition-transform", showRaw && "rotate-180")} />
           </button>
         )}
@@ -794,9 +817,27 @@ export default function PricesClient({
         </div>
       )}
 
-      {showRaw && competitorPrices.length > 0 && (
-        <section className="divide-y divide-[#D8D5C8]/60 overflow-hidden rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA]">
-          {competitorPrices.map((p) => (
+      {showRaw && listedPrices.length > 0 && (
+        <section
+          id="sourced-prices"
+          className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA]"
+        >
+          {venueFilterActive ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D8D5C8] px-4 py-3 sm:px-5">
+              <p className="text-[13px] font-semibold text-[#20231A]">
+                Prices for {venueName ?? "this venue"}
+              </p>
+              <button
+                type="button"
+                onClick={clearVenueFilter}
+                className="inline-flex h-11 items-center rounded-xl border border-[#D8D5C8] px-3 text-[13px] font-semibold text-[#5E6654] hover:bg-[#F4F1E8]"
+              >
+                Show all venues
+              </button>
+            </div>
+          ) : null}
+          <div className="divide-y divide-[#D8D5C8]/60">
+          {listedPrices.map((p) => (
             <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-[#20231A]">{p.item_name}</p>
@@ -822,6 +863,27 @@ export default function PricesClient({
               )}
             </div>
           ))}
+          </div>
+        </section>
+      )}
+
+      {showRaw && venueFilterActive && listedPrices.length === 0 && (
+        <section
+          id="sourced-prices"
+          className="rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA] px-4 py-5 sm:px-5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[13px] font-semibold text-[#20231A]">
+              No drink prices saved for {venueName ?? "this venue"} yet.
+            </p>
+            <button
+              type="button"
+              onClick={clearVenueFilter}
+              className="inline-flex h-11 items-center rounded-xl border border-[#D8D5C8] px-3 text-[13px] font-semibold text-[#5E6654] hover:bg-[#F4F1E8]"
+            >
+              Show all venues
+            </button>
+          </div>
         </section>
       )}
 

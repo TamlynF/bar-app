@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition, type MouseEvent } from "react";
-import { Check, Copy, Loader2, MapPin, Plus, SearchX, Store, X } from "lucide-react";
+import { useMemo, useState, type CSSProperties, type MouseEvent } from "react";
+import { Check, ChevronRight, Copy, Loader2, MapPin, Plus, SearchX, Store, X } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import type { MarketingCompetitor } from "@/app/(private)/marketing/lib/types";
-import { rivalMenuUrls, rivalStartUrls } from "@/app/(private)/marketing/lib/rivals";
+import { rivalMenuUrls, rivalMenuStatus, rivalStartUrls, RIVAL_CAPTURE_BATCH } from "@/app/(private)/marketing/lib/rivals";
 import { stripTrackingParams } from "@/app/(private)/marketing/lib/http-url";
 import {
   useRecordSheet,
@@ -19,7 +20,7 @@ import {
   FormRow,
 } from "@/components/admin";
 import {
-  captureAllRivalMenusAction,
+  listRivalCaptureQueueAction,
   captureRivalUploadAction,
   captureRivalUrlAction,
   deleteRivalAction,
@@ -30,26 +31,80 @@ import {
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 
-function formatCaptured(iso: string | null): string {
+type JobProgressState = {
+  label: string;
+  current?: number;
+  total?: number;
+};
+
+function JobProgress({ job }: { job: JobProgressState }) {
+  const determinate = job.current != null && job.total != null && job.total > 0;
+  const pct = determinate ? Math.min(100, Math.round((job.current! / job.total!) * 100)) : null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="rounded-2xl border border-admin-line bg-admin-primary-soft px-4 py-3"
+    >
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#34451F]" />
+        <p className="min-w-0 flex-1 text-[13px] font-semibold text-admin-ink">{job.label}</p>
+        {determinate ? (
+          <p className="shrink-0 text-[12px] font-semibold text-admin-muted">
+            {job.current} of {job.total}
+          </p>
+        ) : null}
+      </div>
+      <div
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-admin-card"
+        aria-hidden={pct == null}
+      >
+        {pct != null ? (
+          <div
+            className="h-full rounded-full bg-[#34451F] transition-[width] duration-300 w-[var(--job-pct)]"
+            style={{ "--job-pct": `${pct}%` } as CSSProperties}
+          />
+        ) : (
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-[#34451F]" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function formatWhen(iso: string | null): string {
   if (!iso) return "Never";
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function mapsSearchUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
 function sourceLabel(rival: MarketingCompetitor): string {
+  if (!rival.last_captured_at) return "None yet — set when drink prices are saved";
   if (rival.last_capture_source === "upload") return "Board photo";
   if (rival.last_capture_source === "menu_url") return "Menu URL";
   if (rival.last_capture_source === "website") return "Website";
-  return "—";
+  return "None yet — set when drink prices are saved";
 }
 
 function UrlValue({ href, label }: { href: string | null; label: string }) {
   if (!href) return "—";
+  const clean = stripTrackingParams(href);
 
   const copy = async (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(href);
+      await navigator.clipboard.writeText(clean);
       toast.success("Copied");
     } catch {
       toast.error("Could not copy that link.");
@@ -57,15 +112,15 @@ function UrlValue({ href, label }: { href: string | null; label: string }) {
   };
 
   return (
-    <span className="flex min-w-0 items-center justify-end gap-1">
+    <span className="flex w-full min-w-0 items-start justify-end gap-1">
       <a
-        href={href}
+        href={clean}
         target="_blank"
         rel="noopener noreferrer"
-        title={href}
-        className="min-w-0 truncate text-[#34451F] underline-offset-2 hover:underline"
+        title={clean}
+        className="min-w-0 flex-1 break-all text-left text-[13px] font-semibold leading-snug text-[#34451F] underline-offset-2 hover:underline"
       >
-        {href}
+        {clean}
       </a>
       <button
         type="button"
@@ -83,10 +138,12 @@ export default function RivalsClient({
   area,
   radius,
   initialRivals,
+  priceCounts,
 }: {
   area: string;
   radius: string | null;
   initialRivals: MarketingCompetitor[];
+  priceCounts: Record<string, number>;
 }) {
   const sheet = useRecordSheet<MarketingCompetitor>({
     records: initialRivals,
@@ -95,21 +152,26 @@ export default function RivalsClient({
   const { selected, mode } = sheet;
   const [query, setQuery] = useState("");
   const [isPinned, setIsPinned] = useState(true);
-  const [isDiscovering, startDiscover] = useTransition();
-  const [isCapturing, startCapture] = useTransition();
-  const [isCapturingAll, startCaptureAll] = useTransition();
+  const [job, setJob] = useState<JobProgressState | null>(null);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return initialRivals;
     return initialRivals.filter((rival) =>
-      [rival.name, rival.address, rival.website, rival.menu_url, ...(rival.menu_urls ?? [])]
+      [rival.name, rival.address, rival.website, ...(rival.menu_urls ?? [])]
         .filter(Boolean)
         .some((field) => field!.toLowerCase().includes(needle)),
     );
   }, [initialRivals, query]);
 
   const pinnedCount = initialRivals.filter((r) => r.is_pinned).length;
+  const lastFoundAt = useMemo(() => {
+    const times = initialRivals.map((rival) => rival.fetched_at).filter(Boolean).sort();
+    return times[times.length - 1] ?? null;
+  }, [initialRivals]);
+  const selectedPriceCount = selected
+    ? (priceCounts[selected.id] ?? priceCounts[`name:${selected.name}`] ?? 0)
+    : 0;
 
   const loadForm = (record: MarketingCompetitor | null) => {
     setIsPinned(record?.is_pinned ?? true);
@@ -133,10 +195,15 @@ export default function RivalsClient({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     sheet.submit(async (formData) => {
-      const result = await saveRivalAction(formData);
-      if ("error" in result) return { error: result.error };
-      if (result.captureError) toast.error(result.captureError);
-      else if (result.captured) toast.success(`Read ${result.captured} drink prices.`);
+      setJob({ label: "Saving rival" });
+      try {
+        const result = await saveRivalAction(formData);
+        if ("error" in result) return { error: result.error };
+        if (result.captureError) toast.error(result.captureError);
+        else if (result.captured) toast.success(`Read ${result.captured} drink prices.`);
+      } finally {
+        setJob(null);
+      }
     })(new FormData(e.currentTarget));
   };
 
@@ -146,76 +213,155 @@ export default function RivalsClient({
       title: "Remove rival",
       description: `"${selected.name}" will leave the comparison and its captured prices will be deleted.`,
       action: async () => {
-        const result = await deleteRivalAction(selected.id);
-        if ("error" in result) return { error: result.error };
+        setJob({ label: "Removing rival" });
+        try {
+          const result = await deleteRivalAction(selected.id);
+          if ("error" in result) return { error: result.error };
+        } finally {
+          setJob(null);
+        }
       },
     });
   };
 
-  const handleDiscover = () => {
-    startDiscover(async () => {
-      const result = await discoverRivalsAction();
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      if (result.added === 0 && result.updated === 0) {
-        if (result.skippedIndustry) {
-          toast(`Skipped ${result.skippedIndustry} nearby places that are not bars or pubs.`);
+  const handleDiscover = async () => {
+    if (job) return;
+    setJob({ label: "Looking up nearby pubs" });
+      try {
+        const result = await discoverRivalsAction();
+        if ("error" in result) {
+          toast.error(result.error);
           return;
         }
-        toast("No pubs found in that radius. Try a wider area on the price-off.");
-        return;
-      }
-      toast.success(
-        `Found ${result.added} new ${result.added === 1 ? "pub" : "pubs"}${
-          result.updated ? `, updated ${result.updated}` : ""
-        }${
+        if (result.added === 0 && result.updated === 0 && result.needsCapture.length === 0) {
+          if (result.skippedIndustry) {
+            toast(`Skipped ${result.skippedIndustry} nearby places that are not bars or pubs.`);
+            return;
+          }
+          toast("No pubs found in that radius. Try a wider area on the price-off.");
+          return;
+        }
+
+        const foundBits = [
+          result.added || result.updated
+            ? `Found ${result.added} new ${result.added === 1 ? "pub" : "pubs"}${
+                result.updated ? `, updated ${result.updated}` : ""
+              }`
+            : null,
           result.skippedIndustry
-            ? `. Skipped ${result.skippedIndustry} that are not bars or pubs`
-            : ""
-        }${
-          result.menusCaptured
-            ? `. Read drinks menus for ${result.menusCaptured}.`
-            : "."
-        }`,
-      );
-    });
-  };
+            ? `Skipped ${result.skippedIndustry} that are not bars or pubs`
+            : null,
+        ].filter(Boolean);
+        if (foundBits.length) toast.success(`${foundBits.join(". ")}.`);
 
-  const handleCaptureAll = () => {
-    startCaptureAll(async () => {
-      const result = await captureAllRivalMenusAction();
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
+        const targets = result.needsCapture.slice(0, RIVAL_CAPTURE_BATCH);
+        if (!targets.length) {
+          toast("None of those pubs have a website to read yet. Add a menu URL or upload a board photo.");
+          return;
+        }
+
+        let captured = 0;
+        let failed = 0;
+        let prices = 0;
+        for (let i = 0; i < targets.length; i += 1) {
+          const target = targets[i];
+          setJob({
+            label: `Reading drinks menu · ${target.name}`,
+            current: i + 1,
+            total: targets.length,
+          });
+          const cap = await captureRivalUrlAction(target.id);
+          if ("error" in cap) failed += 1;
+          else {
+            captured += 1;
+            prices += cap.count;
+          }
+        }
+        const remaining = result.needsCapture.length - targets.length;
+        if (captured === 0) {
+          toast.error(
+            `Could not read drink prices from those sites.${
+              remaining ? " Click Find drinks menus to try the next pubs, or upload a board photo." : ""
+            }`,
+          );
+          return;
+        }
+        toast.success(
+          `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
+            failed ? `. ${failed} had no drinks menu online` : ""
+          }${remaining ? `. ${remaining} still to go — click Find drinks menus.` : "."}`,
+        );
+      } finally {
+        setJob(null);
       }
-      toast.success(
-        `Read ${result.prices} drink prices from ${result.captured} ${result.captured === 1 ? "rival" : "rivals"}${
-          result.failed ? `. ${result.failed} had no drinks menu online.` : "."
-        }`,
-      );
-    });
   };
 
-  const handleCaptureUrl = () => {
-    if (!selected) return;
-    startCapture(async () => {
-      const result = await captureRivalUrlAction(selected.id);
-      if ("error" in result) toast.error(result.error);
-      else toast.success(`Read ${result.count} drink prices from ${selected.name}.`);
-    });
+  const handleCaptureAll = async () => {
+    if (job) return;
+    setJob({ label: "Finding drinks menus" });
+      try {
+        const queued = await listRivalCaptureQueueAction();
+        if ("error" in queued) {
+          toast.error(queued.error);
+          return;
+        }
+        let captured = 0;
+        let failed = 0;
+        let prices = 0;
+        for (let i = 0; i < queued.rivals.length; i += 1) {
+          const target = queued.rivals[i];
+          setJob({
+            label: `Reading drinks menu · ${target.name}`,
+            current: i + 1,
+            total: queued.rivals.length,
+          });
+          const cap = await captureRivalUrlAction(target.id);
+          if ("error" in cap) failed += 1;
+          else {
+            captured += 1;
+            prices += cap.count;
+          }
+        }
+        if (captured === 0) {
+          toast.error("Could not read drink prices from those sites. Try a drinks menu URL, or upload a board photo.");
+          return;
+        }
+        toast.success(
+          `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
+            failed ? `. ${failed} had no drinks menu online` : ""
+          }${queued.leftover ? `. ${queued.leftover} still to go — click Find drinks menus again.` : "."}`,
+        );
+      } finally {
+        setJob(null);
+      }
+  };
+
+  const handleCaptureUrl = async () => {
+    if (!selected || job) return;
+    setJob({ label: `Reading drinks menu · ${selected.name}` });
+      try {
+        const result = await captureRivalUrlAction(selected.id);
+        if ("error" in result) toast.error(result.error);
+        else toast.success(`Read ${result.count} drink prices from ${selected.name}.`);
+      } finally {
+        setJob(null);
+      }
   };
 
   const handleUpload = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selected) return;
+    if (!selected || job) return;
     const formData = new FormData(e.currentTarget);
-    startCapture(async () => {
-      const result = await captureRivalUploadAction(formData);
-      if ("error" in result) toast.error(result.error);
-      else toast.success(`Read ${result.count} prices from the board photo.`);
-    });
+    void (async () => {
+      setJob({ label: "Reading board photo" });
+      try {
+        const result = await captureRivalUploadAction(formData);
+        if ("error" in result) toast.error(result.error);
+        else toast.success(`Read ${result.count} prices from the board photo.`);
+      } finally {
+        setJob(null);
+      }
+    })();
   };
 
   const showForm = mode === "add" || mode === "edit";
@@ -223,7 +369,7 @@ export default function RivalsClient({
   const title = mode === "add" ? "New rival" : mode === "edit" ? "Edit rival" : "Rival";
   const hasAnyMenuUrl = initialRivals.some((r) => rivalStartUrls(r).length);
   const hasMenuUrl = selected ? rivalStartUrls(selected).length > 0 : false;
-  const busy = isDiscovering || isCapturing || isCapturingAll;
+  const busy = !!job || sheet.isPending;
 
   const discoverButton = (
     <button
@@ -235,13 +381,14 @@ export default function RivalsClient({
       disabled={busy}
       className="inline-flex h-11 items-center rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white hover:bg-admin-primary-hover disabled:opacity-60 sm:h-9"
     >
-      {isDiscovering ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <MapPin className="mr-1.5 h-3.5 w-3.5" />}
+      {job ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <MapPin className="mr-1.5 h-3.5 w-3.5" />}
       Find nearby pubs
     </button>
   );
 
   return (
     <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+      {job ? <JobProgress job={job} /> : null}
       {initialRivals.length === 0 ? (
         <EmptyState
           icon={Store}
@@ -266,7 +413,9 @@ export default function RivalsClient({
           variant="panel"
           title="Rivals"
           count={shown.length}
-          subtitle={`${pinnedCount} compared near ${area}`}
+          subtitle={`${pinnedCount} on the price-off near ${area}${
+            lastFoundAt ? ` · Find nearby last ran ${formatWhen(lastFoundAt)}` : ""
+          }`}
           actions={
             <div className="flex flex-wrap items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
               <button
@@ -283,7 +432,7 @@ export default function RivalsClient({
                 disabled={busy || !hasAnyMenuUrl}
                 className="inline-flex h-11 items-center rounded-xl border border-[#34451F] px-3 text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8] disabled:opacity-60 sm:h-9"
               >
-                {isCapturingAll ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                {job ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                 Find drinks menus
               </button>
               {discoverButton}
@@ -307,7 +456,10 @@ export default function RivalsClient({
               </p>
             </div>
           ) : (
-            shown.map((rival) => (
+            shown.map((rival) => {
+              const menu = rivalMenuStatus(rival);
+              const prices = priceCounts[rival.id] ?? priceCounts[`name:${rival.name}`] ?? 0;
+              return (
               <ListRow
                 key={rival.id}
                 onClick={() => sheet.openView(rival)}
@@ -323,13 +475,16 @@ export default function RivalsClient({
                     }
                     className="sm:w-28 sm:justify-center"
                   >
-                    {rival.is_pinned ? "Compared" : "Off"}
+                    {rival.is_pinned ? "Pinned" : "Off"}
                   </StatusPill>
                 }
               >
-                <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)] sm:items-center sm:gap-3">
+                <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1.15fr)_minmax(0,0.95fr)_minmax(0,0.7fr)_minmax(0,0.5fr)] sm:items-center sm:gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-admin-ink">{rival.name}</p>
+                    <p className="mt-0.5 truncate text-[12px] text-admin-muted sm:hidden">
+                      {menu.label} · {prices} {prices === 1 ? "price" : "prices"}
+                    </p>
                     {rival.website ? (
                       <a
                         href={stripTrackingParams(rival.website)}
@@ -360,13 +515,15 @@ export default function RivalsClient({
                     {rival.address ?? "—"}
                   </p>
                   <p className="hidden truncate text-[12px] text-admin-muted sm:block">
-                    {rival.last_captured_at
-                      ? formatCaptured(rival.last_captured_at)
-                      : "No menu yet"}
+                    {menu.label}
+                  </p>
+                  <p className="hidden truncate text-[12px] font-semibold tabular-nums text-admin-ink sm:block">
+                    {prices}
                   </p>
                 </div>
               </ListRow>
-            ))
+              );
+            })
           )}
         </RecordList>
       )}
@@ -378,7 +535,7 @@ export default function RivalsClient({
         title={title}
         recordId={selected?.id}
         formId="rival-form"
-        isPending={sheet.isPending || isCapturing || isCapturingAll}
+        isPending={sheet.isPending || busy}
         onEdit={selected ? startEdit : undefined}
         onDelete={selected ? handleDelete : undefined}
         onCancel={cancel}
@@ -396,11 +553,12 @@ export default function RivalsClient({
               }
               showLabelOnMobile
             >
-              {selected.is_pinned ? "Compared" : "Off"}
+              {selected.is_pinned ? "Pinned" : "Off"}
             </StatusPill>
           )
         }
       >
+        {job ? <div className="mb-3"><JobProgress job={job} /></div> : null}
         {showForm ? (
           <form id="rival-form" onSubmit={handleSubmit} className="space-y-3">
             {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
@@ -434,7 +592,7 @@ export default function RivalsClient({
                 />
               </FormRow>
               {formDefault && (
-                <FormRow label="Compared">
+                <FormRow label="Pinned">
                   <label className="flex flex-1 cursor-pointer items-center justify-end gap-2">
                     <span className="text-[12px] font-semibold text-admin-muted">
                       {isPinned ? "On the price-off" : "Hidden"}
@@ -458,14 +616,42 @@ export default function RivalsClient({
           <div className="space-y-3">
             <DetailCard>
               <DetailCell label="Name" value={selected.name} />
-              <DetailCell label="Address" value={selected.address ?? "—"} />
-              <DetailCell label="Website" value={<UrlValue href={selected.website} label="website" />} />
+              <DetailCell
+                label="Address"
+                multiline
+                value={
+                  selected.address ? (
+                    <span className="flex w-full min-w-0 items-start justify-end gap-1">
+                      <span className="min-w-0 flex-1 break-words text-left text-sm font-semibold leading-snug text-admin-ink">
+                        {selected.address}
+                      </span>
+                      <a
+                        href={mapsSearchUrl(selected.address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open address in Google Maps"
+                        title="Open in Google Maps"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#34451F] hover:bg-admin-surface"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </a>
+                    </span>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
+              <DetailCell
+                label="Website"
+                multiline
+                value={<UrlValue href={selected.website} label="website" />}
+              />
               <DetailCell
                 label="Menu URLs"
                 multiline
                 value={
                   rivalMenuUrls(selected).length ? (
-                    <span className="flex flex-col items-end gap-1">
+                    <span className="flex w-full flex-col gap-2">
                       {rivalMenuUrls(selected).map((href) => (
                         <UrlValue key={href} href={href} label="menu URL" />
                       ))}
@@ -475,8 +661,25 @@ export default function RivalsClient({
                   )
                 }
               />
-              <DetailCell label="Last captured" value={formatCaptured(selected.last_captured_at)} />
+              <DetailCell label="Last found" value={formatWhen(selected.fetched_at)} />
+              <DetailCell label="Last captured" value={formatWhen(selected.last_captured_at)} />
               <DetailCell label="Source" value={sourceLabel(selected)} />
+              <DetailCell
+                label="Prices"
+                value={
+                  selectedPriceCount > 0 ? (
+                    <Link
+                      href={`/marketing/trends?tab=prices&rival=${encodeURIComponent(selected.id)}&venue=${encodeURIComponent(selected.name)}#sourced-prices`}
+                      className="inline-flex min-h-11 items-center justify-end gap-1 text-[13px] font-semibold text-[#34451F] underline-offset-2 hover:underline"
+                    >
+                      {selectedPriceCount} drink {selectedPriceCount === 1 ? "price" : "prices"}
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    "None saved"
+                  )
+                }
+              />
             </DetailCard>
 
             <form onSubmit={handleUpload} className="space-y-2 rounded-3xl border-2 border-admin-line bg-admin-card p-4">
@@ -502,7 +705,7 @@ export default function RivalsClient({
                   disabled={busy}
                   className="inline-flex h-11 items-center rounded-xl border border-[#34451F] px-4 text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8] disabled:opacity-60"
                 >
-                  {isCapturing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  {job ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                   Upload board
                 </button>
                 <button
@@ -511,7 +714,7 @@ export default function RivalsClient({
                   disabled={busy || !hasMenuUrl}
                   className="inline-flex h-11 items-center rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white hover:bg-[#283719] disabled:opacity-60"
                 >
-                  {isCapturing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+                  {job ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                   Find drinks menus
                 </button>
               </div>

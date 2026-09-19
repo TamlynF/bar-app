@@ -51,7 +51,6 @@ export async function replaceRivalPrices(
       last_captured_at: new Date().toISOString(),
       last_capture_source: meta.source,
       menu_urls: menuUrls,
-      menu_url: menuUrls[0] ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", rival.id);
@@ -115,7 +114,6 @@ export async function captureRivalFromUrl(
         .from("marketing_competitors")
         .update({
           menu_urls: menuUrls,
-          menu_url: menuUrls[0] ?? null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", rival.id);
