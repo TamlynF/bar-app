@@ -84,7 +84,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   onClick={() => setOpen(s)}
                   aria-label={`${s.title} - details`}
                   className={cn(
-                    "ad-card-lift group relative block aspect-[4/3] w-full overflow-hidden rounded-xl border-2 bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left",
+                    "ad-card-lift group relative block aspect-4/3 w-full overflow-hidden rounded-xl border-2 bg-[radial-gradient(80%_70%_at_50%_30%,#6b3a12,#2a130c_70%,#170c08)] text-left",
                     tonight ? "border-gold shadow-[0_0_0_1px_rgba(0,0,0,0.6),0_0_18px_-4px_rgba(253,204,75,0.6)]" : "border-ink/35"
                   )}
                 >

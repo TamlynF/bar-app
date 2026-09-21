@@ -99,7 +99,7 @@ function NameCell({
         {flip ? <FlipPrice value={instrument.name} /> : instrument.name}
       </p>
       {instrument.stock === "out" ? (
-        <p className={`text-[0.8vw] tracking-[0.1em] ${UP_TEXT} uppercase`}>sold out</p>
+        <p className={`text-[0.8vw] tracking-widest ${UP_TEXT} uppercase`}>sold out</p>
       ) : (
         showServe && instrument.serve !== "each" && <p className="text-[0.8vw] text-[#a9ae8d]">{instrument.serve}</p>
       )}
@@ -156,7 +156,7 @@ function ChangePill({
   if (atFloor) return <span className={`${base} bg-[#FDCC4B] text-[#1a2008]`}>FLOOR</span>;
   if (trend === "up") {
     return (
-      <FlipPrice value={`▲ ${formatChangePct(changePct)}`} className={`${base} bg-[#FF4D6D]/[.12] ${UP_TEXT}`} />
+      <FlipPrice value={`▲ ${formatChangePct(changePct)}`} className={`${base} bg-[#FF4D6D]/12 ${UP_TEXT}`} />
     );
   }
   if (trend === "down") {
@@ -240,7 +240,7 @@ function CategoriesView({
             >
               <span>{section.name}</span>
               {hot && (
-                <span className="font-board-mono text-[0.85vw] tracking-[0.1em] text-[#a9ae8d]">
+                <span className="font-board-mono text-[0.85vw] tracking-widest text-[#a9ae8d]">
                   hot: {hot}
                 </span>
               )}
@@ -475,7 +475,7 @@ function LeaderboardColumn({
             crash ? "border-white bg-white/10" : accentBand
           }`}
         >
-          <p className={`shrink-0 font-board-display text-[2.1vw] leading-none tracking-[0.1em] ${crash ? "text-white" : accent}`}>
+          <p className={`shrink-0 font-board-display text-[2.1vw] leading-none tracking-widest ${crash ? "text-white" : accent}`}>
             {arrow} {title}
           </p>
           <p className="flex min-w-0 items-center gap-[0.6vw] text-[0.95vw] leading-tight text-[#f3f0dc]">
@@ -808,7 +808,7 @@ export default function MarketBoard({
               unoptimized
               className="h-[6.2vw] w-[6.2vw] rounded-[0.4vw] bg-white p-[0.3vw]"
             />
-            <div className="max-w-[12vw] text-[0.8vw] leading-[1.4] tracking-[0.1em] uppercase">
+            <div className="max-w-[12vw] text-[0.8vw] leading-[1.4] tracking-widest uppercase">
               <p className="font-semibold text-[#f3f0dc]">Scan for the market on your phone</p>
               <p className="text-[#a9ae8d]">Get alerts on the drinks you watch</p>
             </div>

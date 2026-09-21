@@ -55,7 +55,7 @@ export function HomeGallery({ items }: { items: HomeGalleryItem[] }) {
             >
               <Link
                 href="/gallery"
-                className="group relative block aspect-[4/3] overflow-hidden rounded-2xl border border-hairline bg-canvas-2"
+                className="group relative block aspect-4/3 overflow-hidden rounded-2xl border border-hairline bg-canvas-2"
               >
                 {item.media_type === "video" ? (
                   <video

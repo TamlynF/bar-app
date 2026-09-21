@@ -96,7 +96,7 @@ export function MarketSection() {
         <ul className="divide-y divide-white/8 rounded-3xl border border-white/10 bg-canvas-2/70">
           {movers.map((i) => (
             <li key={i.id} className="flex items-center gap-3 px-4 py-3">
-              <Sparkline points={i.spark} width={56} height={22} stroke={trend(i.changePct)} className="h-[22px] w-14 shrink-0" />
+              <Sparkline points={i.spark} width={56} height={22} stroke={trend(i.changePct)} className="h-5.5 w-14 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-black text-sm tracking-tight text-ink uppercase">{i.name}</p>
                 <p className="truncate text-[11px] text-ink-2">{i.category ?? i.serve}</p>
