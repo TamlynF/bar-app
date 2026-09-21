@@ -57,7 +57,7 @@ export function HomeMarketTicker() {
         {crash ? "Market crash." : "Drinks market open."} {summary}
       </p>
       <div className="flex h-11 items-stretch">
-        <span className="ad-led-text flex shrink-0 flex-col items-center justify-center gap-1 border-r border-gold/20 px-2 font-black text-[8px] tracking-[0.2em] uppercase">
+        <span className="ad-led-text flex shrink-0 flex-col items-center justify-center gap-1 border-r border-gold/20 px-2 text-pill font-bold tracking-wide uppercase">
           <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
           {crash ? "Crash" : "Live"}
         </span>
@@ -92,7 +92,7 @@ export function HomeMarketTicker() {
           onClick={() => setExpanded((o) => !o)}
           aria-expanded={expanded}
           aria-label={expanded ? "Collapse live market" : "Expand live market"}
-          className="ad-led-text flex min-w-11 shrink-0 flex-col items-center justify-center gap-0.5 border-l border-gold/20 px-2 font-black text-[8px] tracking-[0.16em] uppercase transition-colors active:bg-white/6"
+          className="ad-led-text flex min-w-11 shrink-0 flex-col items-center justify-center gap-0.5 border-l border-gold/20 px-2 text-pill font-bold tracking-wide uppercase transition-colors active:bg-white/6"
         >
           {expanded ? "Close" : "Expand"}
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-180")} aria-hidden="true" />

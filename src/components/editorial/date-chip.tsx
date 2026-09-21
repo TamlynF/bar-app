@@ -33,7 +33,7 @@ export function DateChip({
   return (
     <div className={cn("rounded-xl px-2.5 py-1.5 text-center", styles.shell, className)}>
       <span
-        className={cn("block font-black text-[9px] tracking-widest uppercase", styles.label)}
+        className={cn("block text-pill font-bold tracking-wide uppercase", styles.label)}
       >
         {format(date, "EEE")}
       </span>
@@ -41,7 +41,7 @@ export function DateChip({
         {format(date, "d")}
       </span>
       <span
-        className={cn("mt-0.5 block font-black text-[9px] tracking-widest uppercase", styles.label)}
+        className={cn("mt-0.5 block text-pill font-bold tracking-wide uppercase", styles.label)}
       >
         {format(date, "MMM")}
       </span>

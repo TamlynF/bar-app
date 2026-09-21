@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronDown, CalendarX2, SlidersHorizontal } from "lucide-react";
-import { FilterTabs, type FilterTab } from "@/components/editorial/filter-tabs";
+import { FilterTabs, filterChipClass, type FilterTab } from "@/components/editorial/filter-tabs";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
 import { cn } from "@/lib/utils";
 import type { SerializedEvent } from "@/lib/events-display";
@@ -26,13 +26,7 @@ function SoldOutToggle({
       aria-checked={active}
       aria-label="Show sold out shows"
       onClick={onToggle}
-      className={cn(
-        "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors sm:h-9",
-        active
-          ? "border-gold/40 bg-gold/15 text-gold"
-          : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink",
-        className
-      )}
+      className={filterChipClass(active ? "active" : "idle", className)}
     >
       <span
         className={cn("h-2 w-2 shrink-0 rounded-full", active ? "bg-gold" : "bg-stone-600")}
@@ -160,12 +154,8 @@ export function WhatsOnGrid({
               onClick={() => setFiltersOpen((v) => !v)}
               aria-expanded={filtersOpen}
               aria-controls="whatson-filters"
-              className={cn(
-                "inline-flex h-12 shrink-0 items-center gap-2 rounded-full border px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors",
-                filtersOpen || filtersActive
-                  ? "border-gold/40 bg-gold/15 text-gold"
-                  : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink"
-              )}
+              aria-label="Filters"
+              className={filterChipClass(filtersOpen || filtersActive ? "active" : "idle", "h-12 sm:h-12")}
             >
               <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="hidden sm:inline">Filters</span>
@@ -215,7 +205,7 @@ export function WhatsOnGrid({
       </div>
 
       {shown.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((ev) => (
             <EventGridCard key={ev.id} event={ev} />
           ))}
@@ -223,7 +213,7 @@ export function WhatsOnGrid({
       ) : (
         <div className="rounded-2xl border border-hairline bg-white/3 py-12 text-center">
           <CalendarX2 className="mx-auto mb-2 h-7 w-7 text-ink-2/50" aria-hidden="true" />
-          <p className="font-black text-sm tracking-tight text-ink-2 uppercase">
+          <p className="font-black text-base tracking-tight text-ink-2 uppercase">
             Nothing coming up here
           </p>
           <p className="mt-1 text-xs text-ink-2/70">Try another filter or search</p>
@@ -235,7 +225,7 @@ export function WhatsOnGrid({
           <button
             type="button"
             onClick={() => setVisible((v) => v + PAGE_SIZE)}
-            className="inline-flex h-12 items-center gap-2 rounded-full border border-hairline bg-white/4 px-8 font-black text-[11px] tracking-[0.2em] text-ink uppercase transition-all hover:border-gold/30 hover:bg-white/7"
+            className="inline-flex h-12 items-center gap-2 rounded-full border border-hairline bg-white/4 px-8 text-btn font-semibold text-ink transition-all hover:border-gold/30 hover:bg-white/7"
           >
             Show more ({remaining})
             <ChevronDown className="h-4 w-4" aria-hidden="true" />

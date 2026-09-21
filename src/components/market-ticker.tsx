@@ -55,18 +55,18 @@ export function MarketTicker({
           )}
         >
           <span className="ad-shimmer pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
-          <span className="relative inline-flex shrink-0 items-center gap-1.5 font-black text-[9px] tracking-[0.22em] uppercase">
+          <span className="relative inline-flex shrink-0 items-center gap-1.5 text-pill font-bold tracking-wide uppercase">
             <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
             <span className={crash ? "text-white" : "text-gold"}>{crash ? "Crash on" : "Market open"}</span>
           </span>
           <span className="relative h-3 w-px shrink-0 bg-current opacity-25" aria-hidden="true" />
-          <span className="relative flex min-w-0 flex-1 items-center gap-1.5 font-black text-[12px] tracking-tight uppercase">
+          <span className="relative flex min-w-0 flex-1 items-center gap-1.5 font-black text-meta tracking-tight uppercase">
             {deal ? (
               <>
                 <span className="truncate">{deal.name}</span>
                 <RollingPrice value={price} className={cn("shrink-0", crash ? "text-white" : "text-gold")} />
                 {deal.changePct < 0 && (
-                  <span className="shrink-0 text-[10px] text-neon tabular-nums">
+                  <span className="shrink-0 text-pill text-neon tabular-nums">
                     ↓{Math.abs(Math.round(deal.changePct))}%
                   </span>
                 )}

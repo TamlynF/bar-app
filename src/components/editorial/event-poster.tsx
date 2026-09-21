@@ -8,6 +8,7 @@ import {
   Star,
   Ticket,
 } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatGBP, type SerializedEvent } from "@/lib/events-display";
 
@@ -103,7 +104,7 @@ export function PosterChip({ event }: { event: SerializedEvent }) {
   if (!event.subType) return null;
   return (
     <span
-      className="absolute top-0 left-0 rounded-tl-3xl rounded-br-xl bg-(--ev-c) px-3.5 py-2 font-black text-xs tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40"
+      className="absolute top-0 left-0 rounded-tl-3xl rounded-br-xl bg-(--ev-c) px-3.5 py-2 text-pill font-bold tracking-wide text-canvas uppercase shadow-lg shadow-black/40"
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
       {event.subType}
@@ -126,7 +127,7 @@ export function PriceChip({
   return (
     <span
       className={cn(
-        "rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase",
+        "rounded-full px-2.5 py-1 text-pill font-bold tracking-wide uppercase",
         paid
           ? "bg-gold text-on-gold shadow-lg shadow-black/40"
           : "border border-gold/40 bg-canvas/80 text-gold backdrop-blur-sm",
@@ -141,7 +142,7 @@ export function PriceChip({
 export function PosterHoverHint() {
   return (
     <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-canvas/85 px-4 py-2 font-black text-[11px] tracking-widest text-ink uppercase shadow-lg shadow-black/40 backdrop-blur-sm">
+      <span className={cn(buttonVariants({ variant: "goldOutline", size: "sm" }), "rounded-full shadow-lg shadow-black/40 backdrop-blur-sm")}>
         View details
         <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
       </span>

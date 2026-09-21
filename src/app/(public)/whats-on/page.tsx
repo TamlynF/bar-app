@@ -112,10 +112,10 @@ export default async function WhatsOnPage() {
         {events.length === 0 && (
           <div className="rounded-2xl border border-hairline bg-white/3 py-16 text-center">
             <Calendar className="mx-auto mb-3 h-8 w-8 text-ink-2/50" aria-hidden="true" />
-            <p className="font-black text-sm tracking-tight text-ink-2 uppercase">
+            <p className="font-black text-base tracking-tight text-ink-2 uppercase">
               No Events Scheduled Yet
             </p>
-            <p className="mt-1 text-xs text-ink-2/70">Check back soon</p>
+            <p className="mt-1 text-meta text-ink-2/70">Check back soon</p>
           </div>
         )}
 
@@ -125,8 +125,8 @@ export default async function WhatsOnPage() {
             <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
-            &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
+          <p className="mt-2 text-xs text-stone-500">
+            &copy; {new Date().getFullYear()} &middot; Licensed venue &middot; Drink responsibly
           </p>
         </footer>
       </div>

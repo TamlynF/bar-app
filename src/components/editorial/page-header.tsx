@@ -19,7 +19,7 @@ export function PageHeader({
     <div className="mb-8 sm:mb-14">
       <span
         className={cn(
-          "mb-3 flex items-center gap-2 font-black text-[10px] tracking-[0.3em] uppercase sm:text-xs",
+          "mb-3 flex items-center gap-2 text-eyebrow font-semibold",
           tone === "live" ? "text-[#FF6B35]" : "text-[#FDCC4B]"
         )}
       >

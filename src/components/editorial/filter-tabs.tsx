@@ -1,5 +1,20 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
+/* One pill for every filter control on the public site: the category tabs,
+   the sold-out switch and the filters toggle. `solid` is the selected tab;
+   `active` is a toggled-on switch. */
+export function filterChipClass(state: "idle" | "active" | "solid", className?: string) {
+  return cn(
+    "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-btn font-semibold whitespace-nowrap transition-colors sm:h-9",
+    state === "solid" && "border-gold bg-gold text-on-gold",
+    state === "active" && "border-gold/40 bg-gold/15 text-gold",
+    state === "idle" && "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink",
+    className
+  );
+}
+
 
 export type FilterTab = {
   key: string;
@@ -30,12 +45,7 @@ export function FilterTabs({
               type="button"
               onClick={() => onChange(tab.key)}
               aria-pressed={isActive}
-              className={
-                "inline-flex h-11 flex-none items-center gap-1.5 rounded-full px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors sm:h-9 " +
-                (isActive
-                  ? "bg-gold text-on-gold"
-                  : "border border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink")
-              }
+              className={filterChipClass(isActive ? "solid" : "idle", "flex-none")}
             >
               {tab.color && (
                 <span

@@ -49,12 +49,12 @@ export function EventGridCard({
       </EventPoster>
 
       <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 sm:px-5">
-        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+        <h2 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
           {event.title}
-        </h3>
+        </h2>
 
         {timeLabel && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-400 tabular-nums">
+          <span className="inline-flex items-center gap-1.5 text-meta font-semibold text-stone-400 tabular-nums">
             <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {timeLabel}
           </span>
@@ -63,7 +63,7 @@ export function EventGridCard({
 
       <div className="relative z-20 mt-auto px-4 pb-4 sm:px-5 sm:pb-5">
         {isPast ? (
-          <span className="pointer-events-none flex h-12 w-full items-center justify-center rounded-xl border border-hairline bg-white/5 font-black text-xs tracking-widest text-ink-2 uppercase">
+          <span className="pointer-events-none flex h-12 w-full items-center justify-center rounded-xl border border-hairline bg-white/5 text-btn font-semibold text-ink-2">
             Event ended
           </span>
         ) : (

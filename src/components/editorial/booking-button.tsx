@@ -65,7 +65,7 @@ export function BookingButton({ event }: { event: SerializedEvent }) {
     <span
       className={cn(
         base,
-        "pointer-events-none cursor-default gap-2 border border-dashed border-gold/30 bg-gold/5 text-[11px] tracking-widest text-gold/80"
+        "pointer-events-none cursor-default gap-2 border border-dashed border-gold/30 bg-gold/5 text-btn tracking-widest text-gold/80"
       )}
     >
       Just walk in
