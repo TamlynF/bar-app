@@ -18,6 +18,7 @@ export function MobileBottomBar({ currentPath, marketLive }: { currentPath?: str
 
   useEffect(() => {
     let lastY = window.scrollY;
+    let travelled = 0;
     let ticking = false;
     const onScroll = () => {
       if (ticking) return;
@@ -25,9 +26,10 @@ export function MobileBottomBar({ currentPath, marketLive }: { currentPath?: str
       window.requestAnimationFrame(() => {
         const y = window.scrollY;
         const delta = y - lastY;
+        travelled = Math.sign(delta) === Math.sign(travelled) ? travelled + delta : delta;
         if (y < SHOW_NEAR_TOP_PX) setHidden(false);
-        else if (delta > HIDE_AFTER_PX) setHidden(true);
-        else if (delta < -HIDE_AFTER_PX) setHidden(false);
+        else if (travelled > HIDE_AFTER_PX) setHidden(true);
+        else if (travelled < -HIDE_AFTER_PX) setHidden(false);
         lastY = y;
         ticking = false;
       });
@@ -59,7 +61,7 @@ export function MobileBottomBar({ currentPath, marketLive }: { currentPath?: str
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-11 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 font-black text-[9px] tracking-[0.12em] whitespace-nowrap uppercase transition-colors",
+              "relative flex min-h-11 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-semibold whitespace-nowrap transition-colors",
               active ? "text-gold" : live ? "text-ink" : "text-ink-2 active:text-ink"
             )}
           >

@@ -58,7 +58,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
       <div className="relative md:flex md:items-center md:gap-7">
         <div className="flex items-end justify-between gap-3 md:w-60 md:shrink-0 md:flex-col md:items-start md:justify-center md:gap-2">
           <div>
-            <span className="mb-1.5 flex items-center gap-2 font-black text-[9px] tracking-[0.24em] text-gold uppercase md:hidden">
+            <span className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-gold md:hidden">
               <Waveform bars={5} className="h-2.5 text-gold" />
               Food &amp; drink
             </span>
@@ -70,7 +70,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
             </p>
           </div>
           {ordered.length > 1 && (
-            <span className="shrink-0 pb-0.5 font-black text-[11px] tracking-[0.14em] text-ink/70 uppercase md:mt-2 md:text-[10px] md:tracking-[0.16em]">
+            <span className="shrink-0 pb-0.5 text-[11px] font-semibold text-ink/70 md:mt-2">
               {countLabel}
             </span>
           )}
@@ -100,14 +100,14 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   )}
                   <span
                     className={cn(
-                      "absolute top-2 left-2 animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2 py-0.5 font-black text-[10px] tracking-[0.14em] uppercase",
+                      "absolute top-2 left-2 animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase",
                       tonight ? "bg-gold text-on-gold" : "bg-black/70 text-ink"
                     )}
                   >
                     {whenLabel(s, today)}
                   </span>
                   {badge && (
-                    <span className="absolute top-2 right-2 rounded-md bg-[#7a1f1f] px-1.5 py-0.5 font-black text-[9px] tracking-[0.12em] text-ink uppercase ring-1 ring-ink/30">
+                    <span className="absolute top-2 right-2 rounded-md bg-[#7a1f1f] px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-ink uppercase ring-1 ring-ink/30">
                       {badge}
                     </span>
                   )}
@@ -145,10 +145,10 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col md:py-1">
                     <span className="flex items-center gap-2">
-                      <span className={cn("rounded-full px-1.5 py-0.5 font-black text-[8px] tracking-[0.16em] uppercase md:px-2 md:text-[9px]", tonight ? "bg-gold text-on-gold" : "bg-canvas/70 text-ink")}>
+                      <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase md:px-2 md:text-[10px]", tonight ? "bg-gold text-on-gold" : "bg-canvas/70 text-ink")}>
                         {whenLabel(s, today)}
                       </span>
-                      {badge && <span className="font-black text-[8px] tracking-[0.16em] text-ink/70 uppercase md:text-[9px]">{badge}</span>}
+                      {badge && <span className="text-[10px] font-semibold text-ink/70 md:text-[11px]">{badge}</span>}
                     </span>
                     <span className="mt-1 truncate font-black text-sm leading-tight tracking-tight text-gold uppercase md:mt-1.5 md:text-[22px]">{s.title}</span>
                     {s.description && (
@@ -158,7 +158,7 @@ export function SpecialsBand({ specials, today }: { specials: SpecialRow[]; toda
                         className="rich-content--md mt-0.5 line-clamp-1 text-[11px] text-ink/70 md:mt-1 md:line-clamp-2 md:text-xs md:text-ink/75"
                       />
                     )}
-                    <span className="mt-2.5 hidden h-9 items-center justify-center self-start rounded-lg border border-gold px-3.5 font-black text-[10px] tracking-[0.14em] text-gold uppercase md:inline-flex">
+                    <span className="mt-2.5 hidden h-9 items-center justify-center self-start rounded-lg border border-gold px-3.5 text-[11px] font-semibold text-gold md:inline-flex">
                       See special
                     </span>
                   </span>

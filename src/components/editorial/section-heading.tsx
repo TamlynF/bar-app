@@ -22,7 +22,7 @@ export function SectionHeading({
       className="mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
     >
       <div className="min-w-0 max-w-full">
-        <span className="mb-2 block font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase sm:text-xs">
+        <span className="mb-2 block text-[11px] font-semibold text-[#FDCC4B] sm:text-xs">
           {eyebrow}
         </span>
         <h2 className="font-black text-[clamp(1.5rem,4.5vw,2.25rem)] leading-[0.95] tracking-tighter text-ink uppercase">
@@ -33,7 +33,7 @@ export function SectionHeading({
         <Link
           href={action.href}
           className={cn(
-            "group inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:border-gold/60 hover:text-gold sm:text-[11px]",
+            "group inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-4 text-[12px] font-semibold text-ink transition-colors hover:border-gold/60 hover:text-gold sm:text-[13px]",
             !actionOnMobile && "hidden sm:inline-flex"
           )}
         >

@@ -137,9 +137,10 @@ Type on dark:
 
 ### Typography on the public site
 
-- Display headings (page H1s): `font-black uppercase tracking-tighter` - they should feel like signage.
-- Eyebrows/section labels: `text-[10px] font-black uppercase tracking-[0.2em]` to `tracking-widest`.
-- Body: `text-sm font-medium` for descriptions, `text-xs` for metadata.
+- Two voices only. **Archivo Black is the poster voice**: page H1s, section H2s, event / special / product titles and big numerals, set `font-black uppercase tracking-tighter` so they feel like signage. **Archivo is the interface voice**: everything that explains, labels or navigates.
+- Eyebrows, section labels, nav links, counts, footer row titles and CTAs: `text-[11px]` to `text-[13px] font-semibold` in sentence case, no letter-spacing. They support the poster type; they don't compete with it. The old `text-[10px] font-black uppercase tracking-[0.2em]` eyebrow is retired.
+- Uppercase survives only where the word is a stamp: date abbreviations (`THU`, `SEP`), stickers and status pills (`Theme`, `£5`, `Sold out`, `Live`). Set those `text-[10px] font-bold tracking-wide uppercase` - never `font-black`, never tracking wider than `tracking-wide`.
+- Body: `text-sm font-medium` for descriptions, `text-xs` for metadata. Nothing that carries meaning goes below 10px.
 - Numerals always `tabular-nums` when in lists/tables.
 - Never centre long body copy. Centre headlines and short taglines only.
 

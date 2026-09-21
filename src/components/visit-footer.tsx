@@ -65,8 +65,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <Clock className="h-4.5 w-4.5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-black text-xs tracking-wide text-ink uppercase">Opening hours</span>
-              <span className="mt-0.5 block truncate text-[10px] text-ink-2 tabular-nums group-open:hidden">
+              <span className="block text-[13px] font-semibold text-ink">Opening hours</span>
+              <span className="mt-0.5 block truncate text-xs text-ink-2 tabular-nums group-open:hidden">
                 {hours[0] ?? "Hours on the contact page"}
               </span>
             </span>
@@ -85,8 +85,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <MapPin className="h-4.5 w-4.5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-black text-xs tracking-wide text-ink uppercase">Find us &amp; directions</span>
-              <span className="mt-0.5 block truncate text-[10px] text-ink-2 group-open:hidden">
+              <span className="block text-[13px] font-semibold text-ink">Find us &amp; directions</span>
+              <span className="mt-0.5 block text-xs leading-snug text-ink-2 group-open:hidden">
                 {info?.address ?? "See you at the bar."}
               </span>
             </span>
@@ -95,7 +95,7 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
           <div className="flex flex-col gap-2 px-3.5 pb-3.5">
             {info?.address && <p className="m-0 text-[12px] leading-snug text-ink">{info.address}</p>}
             {mapsHref && (
-              <a href={mapsHref} target="_blank" rel="noopener noreferrer" className={linkRow}>
+              <a href={mapsHref} target="_blank" rel="noopener noreferrer" aria-label="Open in maps" className={linkRow}>
                 <span className="inline-flex items-center gap-2">
                   <Send className="h-4 w-4 text-gold" aria-hidden="true" />
                   Open in maps
@@ -103,7 +103,7 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
                 <ChevronRight className="h-4 w-4 text-ink-2" aria-hidden="true" />
               </a>
             )}
-            <Link href="/contact" className={linkRow}>
+            <Link href="/contact" aria-label="Contact and venue info" className={linkRow}>
               Contact &amp; venue info
               <ChevronRight className="h-4 w-4 text-ink-2" aria-hidden="true" />
             </Link>
@@ -116,8 +116,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <SiInstagram className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-black text-xs tracking-wide text-ink uppercase">Follow us</span>
-              {igHandle && <span className="mt-0.5 block truncate text-[10px] text-ink-2">{igHandle} · nights, gigs and specials</span>}
+              <span className="block text-[13px] font-semibold text-ink">Follow us</span>
+              {igHandle && <span className="mt-0.5 block truncate text-xs text-ink-2">{igHandle} · nights, gigs and specials</span>}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-ink-2" aria-hidden="true" />
           </a>
@@ -132,8 +132,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
                 <Icon className="h-4.5 w-4.5 md:h-5.5 md:w-5.5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-black text-xs tracking-wide text-ink uppercase md:text-[13px]">{title}</span>
-                <span className="mt-0.5 block text-[10px] leading-snug text-ink-2 tabular-nums md:mt-1 md:text-[11px] md:leading-relaxed">
+                <span className="block text-[13px] font-semibold text-ink">{title}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-ink-2 tabular-nums md:mt-1 md:leading-relaxed">
                   {lines.map((l, j) => (
                     <span key={j} className={j > 0 ? "md:block" : undefined}>
                       {j > 0 && <span className="md:hidden"> · </span>}
@@ -187,7 +187,7 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
             </a>
           )}
         </div>
-        <p className="m-0 text-center text-[9px] tracking-widest text-stone-600 uppercase">
+        <p className="m-0 text-center text-[11px] text-stone-500">
           &copy; {new Date().getFullYear()}{" "}
           <CompanyWordmark className="inline-block h-2.5 align-[-0.15em] opacity-80" />{" "}
           &middot; Licensed venue &middot; Drink responsibly

@@ -59,7 +59,7 @@ export function FloorStrip({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow Don Fenticas on Instagram"
-                className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full pr-4 pl-3 font-black text-[10px] tracking-[0.18em] uppercase shadow-lg shadow-black/40 transition-transform hover:scale-105 active:scale-95 md:mt-3 md:self-start ${SOCIAL_BRANDS.instagram.solid}`}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full pr-4 pl-3 text-[11px] font-semibold shadow-lg shadow-black/40 transition-transform hover:scale-105 active:scale-95 md:mt-3 md:self-start ${SOCIAL_BRANDS.instagram.solid}`}
               >
                 <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Follow
@@ -67,7 +67,7 @@ export function FloorStrip({
             ) : (
               <a
                 href={igHref}
-                className="group inline-flex min-h-11 items-center gap-1.5 font-black text-[9px] tracking-[0.16em] text-gold uppercase md:mt-3 md:min-h-0 md:text-[10px] md:text-ink"
+                className="group inline-flex min-h-11 items-center gap-1.5 text-[11px] font-semibold text-gold md:mt-3 md:min-h-0 md:text-ink"
               >
                 View gallery
                 <ArrowRight
@@ -117,8 +117,8 @@ export function FloorStrip({
           )}
           <ul
             className={cn(
-              "m-0 mt-3 list-none grid-cols-4 gap-1.5 p-0 md:mt-0 md:grid md:flex-1 md:gap-2.5",
-              tiles.length >= 2 ? "hidden" : "grid",
+              "m-0 mt-3 list-none gap-1.5 p-0 md:mt-0 md:grid md:flex-1 md:gap-2.5",
+              tiles.length >= 2 ? "hidden grid-cols-4" : "grid grid-cols-1",
             )}
           >
             {tiles.map((post) => {
@@ -126,7 +126,10 @@ export function FloorStrip({
               return (
                 <li
                   key={post.id}
-                  className="relative aspect-square overflow-hidden rounded-[10px] border border-ink/15 bg-canvas-2 md:aspect-auto md:h-32 md:rounded-xl"
+                  className={cn(
+                    "relative overflow-hidden border border-ink/15 bg-canvas-2 md:aspect-auto md:rounded-xl",
+                    tiles.length === 1 ? "aspect-video rounded-xl md:h-44" : "aspect-square rounded-[10px] md:h-32",
+                  )}
                 >
                   <a
                     href={href}
@@ -149,9 +152,14 @@ export function FloorStrip({
                         src={post.media_url}
                         alt=""
                         fill
-                        sizes="(max-width: 768px) 25vw, 160px"
+                        sizes={tiles.length === 1 ? "(max-width: 768px) 100vw, 720px" : "(max-width: 768px) 25vw, 160px"}
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
+                    )}
+                    {tiles.length === 1 && (
+                      <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-3.5 pt-8 pb-3 text-[13px] font-bold text-ink">
+                        {post.title}
+                      </span>
                     )}
                   </a>
                 </li>
@@ -183,8 +191,14 @@ export function FloorStrip({
                 at the bar.
               </p>
             </div>
-            <span className="shrink-0 font-black text-[9px] tracking-[0.16em] text-ink-2 uppercase md:mt-3">
+            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-ink-2 md:mt-3">
               {merchandise.length} {merchandise.length === 1 ? "item" : "items"}
+              {merch.length > 2 && (
+                <span className="inline-flex items-center gap-0.5 text-gold md:hidden">
+                  <span className="text-ink-2" aria-hidden="true">·</span> Swipe
+                  <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                </span>
+              )}
             </span>
           </div>
           <MerchRail merchandise={merch} />

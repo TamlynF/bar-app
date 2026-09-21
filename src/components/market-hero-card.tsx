@@ -32,7 +32,7 @@ export function MarketHeroCard({ className }: { className?: string }) {
       <div className={cn("h-1", crash ? "ad-market-cta-crash" : "ad-market-cta")} aria-hidden="true" />
       <div className="px-4.5 pt-4 pb-4.5">
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 font-black text-[10px] tracking-[0.24em] text-gold uppercase">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-gold">
             <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
             {crash ? "Crash on" : "Drinks market open"}
           </span>
@@ -43,7 +43,7 @@ export function MarketHeroCard({ className }: { className?: string }) {
           <>
             <div className="mt-3 flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-black text-[9px] tracking-[0.2em] text-ink-2 uppercase">
+                <p className="text-[11px] font-semibold text-ink-2">
                   {crash ? "Everything's down" : "Best deal right now"}
                 </p>
                 <p className="mt-1 truncate font-black text-[22px] leading-none tracking-tighter text-ink uppercase">
@@ -72,7 +72,7 @@ export function MarketHeroCard({ className }: { className?: string }) {
         <Link
           href="/market"
           className={cn(
-            "group mt-3 flex h-11 items-center justify-center gap-2 rounded-xl font-black text-xs tracking-[0.12em] text-on-gold uppercase shadow-[0_14px_32px_-12px_rgba(255,107,53,0.6)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]",
+            "group mt-3 flex h-11 items-center justify-center gap-2 rounded-xl text-[13px] font-semibold text-on-gold shadow-[0_14px_32px_-12px_rgba(255,107,53,0.6)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]",
             crash ? "ad-market-cta-crash" : "ad-market-cta"
           )}
         >

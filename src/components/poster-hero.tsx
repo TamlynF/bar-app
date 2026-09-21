@@ -61,7 +61,7 @@ export function PosterHero({
         <Image
           key={event.id}
           src={event.imageUrl}
-          alt=""
+          alt={`${event.title} poster`}
           fill
           priority
           sizes="100vw"
@@ -91,7 +91,7 @@ export function PosterHero({
           className="inline-flex min-h-9 items-center gap-2 rounded-full border border-gold/50 bg-canvas/70 py-1.5 pr-3 pl-2.5 backdrop-blur-md sm:gap-2.5 sm:py-2 sm:pr-3.5 sm:pl-3"
         >
           {isTonight && <span className="ad-live-dot h-2 w-2 rounded-full bg-neon sm:h-2.5 sm:w-2.5" aria-hidden="true" />}
-          <span className={cn("font-black text-[10px] tracking-[0.22em] uppercase sm:text-xs", isTonight ? "text-ink" : "text-gold")}>
+          <span className={cn("text-[11px] font-semibold sm:text-xs", isTonight ? "text-ink" : "text-gold")}>
             {isTonight ? "Live tonight" : "Next up"}
           </span>
           {whenTail && (
@@ -111,22 +111,22 @@ export function PosterHero({
 
       {/* Phone date stamp, like the corner of a gig poster */}
       <div className="absolute top-3 right-3 flex rotate-3 flex-col items-center rounded-[10px] border border-gold/40 bg-canvas/80 px-2.5 py-1.5 leading-none text-ink shadow-lg shadow-black/50 backdrop-blur-md md:hidden">
-        <span className="font-black text-[9px] tracking-[0.2em] text-gold uppercase">{isTonight ? "Tonight" : format(dateObj, "EEE")}</span>
+        <span className="text-[10px] font-semibold tracking-wide text-gold uppercase">{isTonight ? "Tonight" : format(dateObj, "EEE")}</span>
         <span className="mt-1 font-black text-[22px] tracking-tighter tabular-nums">{format(dateObj, "d")}</span>
-        <span className="mt-0.5 font-black text-[9px] tracking-[0.2em] uppercase">{format(dateObj, "MMM")}</span>
+        <span className="mt-0.5 text-[10px] font-semibold tracking-wide uppercase">{format(dateObj, "MMM")}</span>
       </div>
 
       {/* Poster copy */}
       <div className="absolute right-3 bottom-4 left-3 flex flex-col gap-2.5 sm:right-6 sm:left-6 md:right-auto md:bottom-16 md:w-[60%] md:gap-5 lg:left-10">
         <div className="flex items-center gap-2 sm:gap-2.5">
           {event.subType && (
-            <span className="-rotate-2 rounded-md bg-(--ev-c) px-2 py-1 font-black text-[10px] tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
+            <span className="-rotate-2 rounded-md bg-(--ev-c) px-2 py-1 text-[10px] font-bold tracking-wide text-canvas uppercase shadow-lg shadow-black/40 sm:px-2.5 sm:text-[11px]">
               {event.subType}
             </span>
           )}
           <span
             className={cn(
-              "animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase shadow-lg shadow-black/40 sm:px-3 sm:text-[11px]",
+              "animate-[ad-fade-in_1s_ease-in_both] rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wide uppercase shadow-lg shadow-black/40 sm:px-3 sm:text-[11px]",
               paid ? "bg-gold text-on-gold" : "border border-gold/60 bg-canvas/85 text-gold backdrop-blur-sm"
             )}
           >
@@ -175,7 +175,7 @@ export function PosterHero({
       {acts > 1 && (
         <div className="absolute right-6 bottom-16 hidden w-85 overflow-hidden rounded-2xl border border-ink/18 bg-canvas/80 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.8)] backdrop-blur-xl md:block lg:right-10">
           <div className="flex items-center justify-between border-b border-ink/10 px-4.5 pt-3.5 pb-2.5">
-            <span className="font-black text-[10px] tracking-[0.24em] text-gold uppercase">
+            <span className="text-[11px] font-semibold text-gold">
               {isTonight ? "Tonight's bill" : `${format(dateObj, "EEEE")}'s bill`}
             </span>
             <span className="text-[11px] text-ink-2">{acts} acts · one entry</span>
@@ -194,7 +194,7 @@ export function PosterHero({
                       on ? "border-gold bg-gold/8" : "border-transparent hover:bg-white/5"
                     )}
                   >
-                    <span className={cn("w-13 shrink-0 font-black text-sm tabular-nums", on ? "text-ink" : "text-ink-2")}>
+                    <span className={cn("w-13 shrink-0 text-sm font-semibold tabular-nums", on ? "text-ink" : "text-ink-2")}>
                       {e.startTimeLabel?.replace(/[ap]m$/, "") ?? "-"}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -204,7 +204,7 @@ export function PosterHero({
                       </span>
                     </span>
                     {on ? (
-                      <span className="rounded-full bg-gold px-2 py-1 font-black text-[8px] tracking-[0.18em] text-on-gold uppercase">Showing</span>
+                      <span className="rounded-full bg-gold px-2 py-1 text-[9px] font-bold tracking-wide text-on-gold uppercase">Showing</span>
                     ) : (
                       <span className="text-ink-2" aria-hidden="true">›</span>
                     )}

@@ -76,7 +76,7 @@ export function NowPlaying({ event, isTonight }: { event: SerializedEvent | null
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 font-black text-[9px] tracking-[0.22em] text-gold uppercase">
+        <span className="flex items-center gap-2 text-[11px] font-semibold text-gold">
           <Waveform bars={5} active={live} className="h-2.5 text-gold" />
           {status}
         </span>

@@ -184,6 +184,31 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 ---
 
+## Design references (skills in `.claude/skills/`)
+
+Design skills are installed project-side. Load them with the Skill tool at the right moment; they supply taste and checklists, they do not override this file or `STYLE_GUIDE.md`.
+
+**Before building or reshaping anything under `src/app/(public)/`:**
+- `frontend-design` - aesthetic direction. The public surface is a gritty bar / pub / live-music venue: poster typography, real photography, texture and depth, asymmetric composition. Use it to avoid templated layouts (centred hero + three feature cards, evenly spaced grids, generic gradients).
+- `tailwindcss-mobile-first` - phone layout. Design at 375px first, fluid type/spacing with `clamp()`, container queries for reusable sections, safe-area insets on anything fixed, 44px touch targets.
+- `ui-ux-pro-max` - when you need a palette, font pairing or UX rule looked up rather than invented. Query it with the venue/rock/indie brief, then map results onto the existing olive/gold palette.
+
+**Before finishing any UI change (public or admin):**
+- `web-design-guidelines` - audit the changed components against the Vercel web interface rules (accessibility, focus, forms, responsive behaviour). Fix what it flags.
+- `impeccable` - critique pass on the page; use its polish / distill / bolder / quieter directions to tune, not to restyle from scratch.
+
+**When adding features or data flows:**
+- `vercel-react-best-practices` - Server Component, data fetching and bundle patterns for Next.js 16 / React 19.
+- `ui-styling` - shadcn/ui and Radix usage; pair with the Shadcn UI MCP `list_blocks` / `get_block` for section layouts to restyle rather than invent.
+
+**Limits that still apply when a skill suggests otherwise:**
+- Fonts are fixed on both surfaces. A skill recommending a new typeface is a proposal to raise with the user, never an install.
+- No new npm dependencies (Framer Motion, GSAP, icon packs, chart libraries) without asking. Animation stays on `tw-animate-css`.
+- Admin pages keep the admin palette and Archivo type scale. The public-surface skills above are not licence to add texture, uppercase tracking or gold to admin.
+- Verify visually: open the page in the built-in browser at the mobile preset and desktop, screenshot both, and check console errors before calling a UI change done.
+
+---
+
 ## Code style
 
 - **Do not add comments to code.** The code should be self-documenting - prefer a clearer name or a small extracted function over a comment explaining what something does.

@@ -46,6 +46,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Claude Code skills (locally installed, not project source)
+.agents/skills/
+.claude/skills/
+
 # design-sync (claude.ai/design)
 .ds-sync/
 ds-bundle/

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import type { SerializedEvent } from "@/lib/events-display";
 
 const base =
-  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-black uppercase tracking-wide whitespace-nowrap";
+  "flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold whitespace-nowrap";
 
 /* Pressable "3D" treatment: a hard flank under the button that collapses on
    press, so it reads as a physical key rather than a flat pill. */
