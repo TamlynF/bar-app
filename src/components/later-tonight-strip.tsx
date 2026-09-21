@@ -35,7 +35,7 @@ export function LaterTonightStrip({
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[11px] font-semibold text-gold">{label}</span>
+                <span className="block text-eyebrow font-semibold text-gold">{label}</span>
                 <span className="mt-0.5 block truncate font-black text-sm leading-tight tracking-tight text-ink uppercase">
                   {e.title}
                 </span>

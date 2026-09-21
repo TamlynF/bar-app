@@ -15,6 +15,7 @@ import { LaterTonightStrip } from "@/components/later-tonight-strip";
 import { HomeMarketTicker } from "@/components/home-market-ticker";
 import { SpecialsBand } from "@/components/specials-band";
 import { FloorStrip } from "@/components/floor-strip";
+import { HomeGallery, type HomeGalleryItem } from "@/components/home-gallery";
 import { VisitFooter } from "@/components/visit-footer";
 import type { SpecialRow } from "@/components/specials-section";
 import type { MerchandiseRow } from "@/components/merchandise-section";
@@ -33,6 +34,7 @@ import { format } from "date-fns";
 export const revalidate = 300;
 
 const CAROUSEL_EVENTS = 8;
+const GALLERY_SLIDES = 10;
 const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 function clock(hhmm: string | null | undefined) {
@@ -45,7 +47,7 @@ async function HomeContent() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawPromos }, info] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawPromos }, { data: rawGallery }, info] =
     await Promise.all([
       supabase
         .from("events")
@@ -73,6 +75,12 @@ async function HomeContent() {
         .eq("is_active", true)
         .order("display_order", { ascending: true })
         .limit(6),
+      supabase
+        .from("gallery_images")
+        .select("id, title, image_url, media_type")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true })
+        .limit(GALLERY_SLIDES),
       getCompanyInfo(),
     ]);
 
@@ -97,6 +105,7 @@ async function HomeContent() {
   );
   const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
   const promos = (rawPromos ?? []) as PromoRow[];
+  const gallery = (rawGallery ?? []) as HomeGalleryItem[];
 
   return (
     <>
@@ -146,6 +155,9 @@ async function HomeContent() {
           <FloorStrip posts={promos} merchandise={merchandise} instagram={info?.instagram ?? null} />
         </Reveal>
         <Reveal index={2}>
+          <HomeGallery items={gallery} />
+        </Reveal>
+        <Reveal index={3}>
           <VisitFooter info={info} />
         </Reveal>
       </div>

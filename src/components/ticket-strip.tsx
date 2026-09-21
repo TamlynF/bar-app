@@ -1,8 +1,9 @@
 import Image from "next/image";
 import { format } from "date-fns";
-import { ArrowRight, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import Link from "next/link";
 import { BookingButton } from "@/components/editorial/booking-button";
+import { SectionAction } from "@/components/editorial/section-heading";
 import { PriceChip } from "@/components/editorial/event-poster";
 import { VinylPeek } from "@/components/vinyl-peek";
 import { cn } from "@/lib/utils";
@@ -53,16 +54,9 @@ export function TicketStrip({
             Next up
           </h2>
         </div>
-        <Link
-          href="/whats-on"
-          className="group inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-4 font-black text-[11px] tracking-widest text-ink uppercase transition-colors hover:border-gold/60 hover:text-gold"
-        >
+        <SectionAction href="/whats-on" className="shrink-0">
           Full schedule
-          <ArrowRight
-            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
+        </SectionAction>
       </div>
 
       {nights.length === 0 ? (

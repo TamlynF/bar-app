@@ -61,7 +61,7 @@ export function MobileBottomBar({ currentPath, marketLive }: { currentPath?: str
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-11 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-semibold whitespace-nowrap transition-colors",
+              "relative flex min-h-11 min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-pill font-semibold whitespace-nowrap transition-colors",
               active ? "text-gold" : live ? "text-ink" : "text-ink-2 active:text-ink"
             )}
           >

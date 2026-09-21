@@ -41,11 +41,11 @@ export function FloorStrip({
             <div>
               <h2
                 id="floor-heading"
-                className="m-0 font-black text-[22px] leading-none tracking-tighter text-ink uppercase md:text-[28px] md:leading-[0.95]"
+                className="m-0 font-black text-h3 tracking-tighter text-ink uppercase"
               >
                 From the floor
               </h2>
-              <p className="mt-1.5 text-[11px] font-semibold text-ink-2 md:mt-2.5 md:text-xs md:leading-snug md:text-gold">
+              <p className="mt-1.5 text-meta font-medium text-ink-2 md:mt-2.5 md:text-gold">
                 Real nights.
                 <span className="hidden md:inline">
                   <br />
@@ -59,7 +59,7 @@ export function FloorStrip({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Follow Don Fenticas on Instagram"
-                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full pr-4 pl-3 text-[11px] font-semibold shadow-lg shadow-black/40 transition-transform hover:scale-105 active:scale-95 md:mt-3 md:self-start ${SOCIAL_BRANDS.instagram.solid}`}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full pr-4 pl-3 text-btn font-semibold shadow-lg shadow-black/40 transition-transform hover:scale-105 active:scale-95 md:mt-3 md:self-start ${SOCIAL_BRANDS.instagram.solid}`}
               >
                 <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Follow
@@ -67,7 +67,7 @@ export function FloorStrip({
             ) : (
               <a
                 href={igHref}
-                className="group inline-flex min-h-11 items-center gap-1.5 text-[11px] font-semibold text-gold md:mt-3 md:min-h-0 md:text-ink"
+                className="group inline-flex min-h-11 items-center gap-1.5 text-btn font-semibold text-gold md:mt-3 md:min-h-0 md:text-ink"
               >
                 View gallery
                 <ArrowRight
@@ -157,7 +157,7 @@ export function FloorStrip({
                       />
                     )}
                     {tiles.length === 1 && (
-                      <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-3.5 pt-8 pb-3 text-[13px] font-bold text-ink">
+                      <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent px-3.5 pt-8 pb-3 text-body font-bold text-ink">
                         {post.title}
                       </span>
                     )}
@@ -179,11 +179,11 @@ export function FloorStrip({
             <div>
               <h2
                 id="merch-heading"
-                className="m-0 font-black text-[22px] leading-none tracking-tighter text-ink uppercase md:text-[28px] md:leading-[0.95]"
+                className="m-0 font-black text-h3 tracking-tighter text-ink uppercase"
               >
                 Take a little noise home
               </h2>
-              <p className="mt-1.5 text-[11px] font-semibold text-ink-2 md:mt-2.5 md:text-xs md:leading-snug md:text-gold">
+              <p className="mt-1.5 text-meta font-medium text-ink-2 md:mt-2.5 md:text-gold">
                 Available
                 <span className="hidden md:inline">
                   <br />
@@ -191,7 +191,7 @@ export function FloorStrip({
                 at the bar.
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-ink-2 md:mt-3">
+            <span className="inline-flex shrink-0 items-center gap-1 text-meta font-semibold text-ink-2 md:mt-3">
               {merchandise.length} {merchandise.length === 1 ? "item" : "items"}
               {merch.length > 2 && (
                 <span className="inline-flex items-center gap-0.5 text-gold md:hidden">

@@ -64,7 +64,7 @@ export function MarketSection() {
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gold">
+                <p className="inline-flex items-center gap-1.5 text-eyebrow font-semibold text-gold">
                   <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
                   {crash ? "Everything's down" : "Best deal right now"}
                 </p>
@@ -84,7 +84,7 @@ export function MarketSection() {
               </div>
             </div>
             <Sparkline points={deal.spark} stroke={trend(deal.changePct)} className="mt-4 h-20 w-full" />
-            <span className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-ink">
+            <span className="mt-3 inline-flex items-center gap-2 text-btn font-semibold text-ink">
               {crash ? <Zap className="h-3.5 w-3.5 text-gold" aria-hidden="true" /> : <TrendingDown className="h-3.5 w-3.5 text-gold" aria-hidden="true" />}
               Buy at the bar for this price
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

@@ -20,12 +20,12 @@ export function MerchRail({ merchandise, className }: { merchandise: Merchandise
                 <ShoppingBag className="absolute top-1/2 left-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2" strokeWidth={1.6} aria-hidden="true" />
               )}
               {price !== null && (
-                <span className="absolute top-1.5 right-1.5 animate-[ad-fade-in_1s_ease-in_both] rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold md:px-1.5 text-on-gold tabular-nums shadow-md shadow-black/40">
+                <span className="absolute top-1.5 right-1.5 animate-[ad-fade-in_1s_ease-in_both] rounded-full bg-gold px-2 py-0.5 text-pill font-bold md:px-1.5 text-on-gold tabular-nums shadow-md shadow-black/40">
                   {formatGBP(price)}
                 </span>
               )}
             </div>
-            <p className="mt-1.5 line-clamp-2 text-xs font-semibold leading-tight text-ink">{item.name}</p>
+            <p className="mt-1.5 line-clamp-2 text-meta font-semibold leading-tight text-ink">{item.name}</p>
           </li>
         );
       })}

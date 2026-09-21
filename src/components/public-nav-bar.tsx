@@ -97,7 +97,7 @@ export function PublicNavBar({
               />
               <span
                 className={cn(
-                  "hidden items-center gap-1.5 text-[11px] font-semibold leading-none text-ink sm:inline-flex",
+                  "hidden items-center gap-1.5 text-eyebrow font-semibold leading-none text-ink sm:inline-flex",
                   !solid && "drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]"
                 )}
               >
@@ -118,7 +118,7 @@ export function PublicNavBar({
                   className={cn("ad-live-dot h-2 w-2 shrink-0 rounded-full", status.tone === "live" ? "bg-neon" : "bg-gold")}
                   aria-hidden="true"
                 />
-                <span className={cn("truncate text-[11px] font-semibold leading-none", status.tone === "live" ? "text-ink" : "text-gold")}>
+                <span className={cn("truncate text-eyebrow font-semibold leading-none", status.tone === "live" ? "text-ink" : "text-gold")}>
                   {status.label}
                 </span>
               </Link>
@@ -131,7 +131,7 @@ export function PublicNavBar({
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "relative inline-flex items-center py-2 text-[13px] font-semibold whitespace-nowrap transition-colors",
+                  "relative inline-flex items-center py-2 text-nav font-semibold whitespace-nowrap transition-colors",
                   currentPath === link.href ? "text-[#FDCC4B]" : "hover:text-ink",
                   currentPath !== link.href && (solid ? "text-stone-400" : "text-ink"),
                   !solid && "drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]",
@@ -145,7 +145,7 @@ export function PublicNavBar({
                 )}
                 {link.label}
                 {marketLive && link.href === "/market" && (
-                  <span className="rounded-full bg-[#FDCC4B] px-1.5 py-0.5 text-[9px] font-bold leading-none tracking-wide text-[#1a2008] uppercase">
+                  <span className="rounded-full bg-[#FDCC4B] px-1.5 py-0.5 text-pill font-bold leading-none tracking-wide text-[#1a2008] uppercase">
                     Open
                   </span>
                 )}
@@ -167,7 +167,7 @@ export function PublicNavBar({
                 )}
               >
                 <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="hidden text-[12px] font-semibold whitespace-nowrap lg:inline">
+                <span className="hidden text-nav font-semibold whitespace-nowrap lg:inline">
                   Follow us
                 </span>
               </a>
@@ -175,7 +175,7 @@ export function PublicNavBar({
 
             <Link
               href="/book"
-              className="hidden shrink-0 rounded-full bg-[#FDCC4B] px-4 py-2 text-[13px] font-semibold text-[#1a2008]! transition-colors hover:bg-[#e5b843] active:scale-95 sm:inline-flex lg:px-5 lg:text-sm"
+              className="hidden shrink-0 rounded-full bg-[#FDCC4B] px-4 py-2 text-btn font-semibold text-[#1a2008]! transition-colors hover:bg-[#e5b843] active:scale-95 sm:inline-flex lg:px-5 lg:text-sm"
             >
               Book
             </Link>
@@ -216,7 +216,7 @@ export function PublicNavBar({
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
-                    "relative flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold transition-colors",
+                    "relative flex items-center justify-between rounded-xl px-3 py-3 text-body font-semibold transition-colors",
                     currentPath === link.href
                       ? "bg-canvas-2 text-[#FDCC4B]"
                       : "text-stone-400 hover:bg-canvas-2 hover:text-ink"
@@ -224,7 +224,7 @@ export function PublicNavBar({
                 >
                   {link.label}
                   {marketLive && link.href === "/market" && (
-                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 text-[11px] font-semibold text-[#FDCC4B] ring-1 ring-[#FDCC4B]/40">
+                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 text-eyebrow font-semibold text-[#FDCC4B] ring-1 ring-[#FDCC4B]/40">
                       <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
                       Open now
                     </span>
@@ -243,7 +243,7 @@ export function PublicNavBar({
                     <SiInstagram className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">Follow us</span>
+                    <span className="block text-body font-semibold">Follow us</span>
                     {instagramHandle && <span className="block truncate text-xs text-ink-2 normal-case">{instagramHandle}</span>}
                   </span>
                 </a>

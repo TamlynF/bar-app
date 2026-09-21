@@ -76,12 +76,12 @@ export function NowPlaying({ event, isTonight }: { event: SerializedEvent | null
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 text-[11px] font-semibold text-gold">
+        <span className="flex items-center gap-2 text-eyebrow font-semibold text-gold">
           <Waveform bars={5} active={live} className="h-2.5 text-gold" />
           {status}
         </span>
         <span className="mt-1 block truncate font-black text-[15px] leading-tight tracking-tight text-ink uppercase">{title}</span>
-        <span className="mt-0.5 block truncate text-[11px] text-ink-2">{artist}</span>
+        <span className="mt-0.5 block truncate text-meta text-ink-2">{artist}</span>
         <span className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
           <span
             className={cn("ad-np-progress block h-full rounded-full bg-gold", !started && "ad-np-idle")}

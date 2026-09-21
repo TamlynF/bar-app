@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ArrowCta } from "@/components/ui/arrow-cta";
+import { SectionAction } from "@/components/editorial/section-heading";
 import { Waveform } from "@/components/ui/waveform";
 import { groupByDate } from "@/components/ticket-strip";
 import { revealDelay } from "@/lib/motion";
@@ -35,27 +36,19 @@ export function DateSleeves({ events }: { events: SerializedEvent[] }) {
     >
       <div className="flex items-end justify-between gap-3 px-4 md:px-0">
         <div>
-          <span className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-gold">
-            <Waveform bars={5} className="h-2.5 text-gold" />
-            The crate
-          </span>
           <h2
             id="coming-up-heading"
-            className="m-0 font-black text-[26px] leading-[0.9] tracking-tighter text-ink uppercase md:text-4xl"
+            className="m-0 flex items-center gap-2.5 font-black text-h2 tracking-tighter text-ink uppercase"
           >
+            <Waveform bars={5} className="h-3.5 text-gold" />
             Next up
           </h2>
         </div>
-        <ArrowCta
-          href="/whats-on"
-          variant="goldOutline"
-          size="sm"
-          className="ad-cta hidden rounded-full md:inline-flex"
-        >
+        <SectionAction href="/whats-on" className="hidden md:inline-flex">
           Full schedule
-        </ArrowCta>
+        </SectionAction>
         {nights.length > 1 && (
-          <span className="pb-0.5 text-[11px] font-semibold text-ink-2 md:hidden">
+          <span className="pb-0.5 text-meta font-semibold text-ink-2 md:hidden">
             Tap a sleeve
           </span>
         )}
@@ -165,7 +158,7 @@ function Crate({ night, index }: { night: SerializedEvent[]; index: number }) {
                       <span className="block truncate font-black text-[13px] leading-tight tracking-tight text-ink uppercase">
                         {e.title}
                       </span>
-                      <span className="mt-0.5 block truncate text-[11px] text-ink-2 tabular-nums">
+                      <span className="mt-0.5 block truncate text-meta text-ink-2 tabular-nums">
                         {[
                           e.startTimeLabel,
                           e.isFullyBooked
@@ -220,13 +213,13 @@ function Crate({ night, index }: { night: SerializedEvent[]; index: number }) {
             />
             <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-linear-to-t from-black/90 via-black/60 to-transparent px-3.5 pt-10 pb-3 text-left">
               <span className="flex flex-col leading-none">
-                <span className="text-[10px] font-semibold tracking-wide text-gold uppercase">
+                <span className="text-pill font-semibold tracking-wide text-gold uppercase">
                   {format(date, "EEEE")}
                 </span>
                 <span className="mt-1 font-black text-[44px] leading-[0.85] tracking-tighter text-ink tabular-nums">
                   {format(date, "d")}
                 </span>
-                <span className="mt-1 text-[10px] font-semibold tracking-wide text-ink-2 uppercase">
+                <span className="mt-1 text-pill font-semibold tracking-wide text-ink-2 uppercase">
                   {format(date, "MMMM")}
                 </span>
               </span>

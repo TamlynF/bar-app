@@ -1,6 +1,25 @@
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowCta } from "@/components/ui/arrow-cta";
 import { cn } from "@/lib/utils";
+
+/* The one link that sits at the top-right of a public section header
+   ("Full schedule", "Open the market"). Every section uses this so they
+   all match; on phones a section renders it full-width under the content
+   instead (variant goldOutline, className w-full). */
+export function SectionAction({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <ArrowCta href={href} variant="goldOutline" size="sm" className={cn("rounded-full", className)}>
+      {children}
+    </ArrowCta>
+  );
+}
 
 export function SectionHeading({
   eyebrow,
@@ -22,7 +41,7 @@ export function SectionHeading({
       className="mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
     >
       <div className="min-w-0 max-w-full">
-        <span className="mb-2 block text-[11px] font-semibold text-[#FDCC4B] sm:text-xs">
+        <span className="mb-2 block text-eyebrow font-semibold text-[#FDCC4B]">
           {eyebrow}
         </span>
         <h2 className="font-black text-[clamp(1.5rem,4.5vw,2.25rem)] leading-[0.95] tracking-tighter text-ink uppercase">
@@ -30,19 +49,9 @@ export function SectionHeading({
         </h2>
       </div>
       {action && (
-        <Link
-          href={action.href}
-          className={cn(
-            "group inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-4 text-[12px] font-semibold text-ink transition-colors hover:border-gold/60 hover:text-gold sm:text-[13px]",
-            !actionOnMobile && "hidden sm:inline-flex"
-          )}
-        >
+        <SectionAction href={action.href} className={cn("shrink-0", !actionOnMobile && "hidden sm:inline-flex")}>
           {action.label}
-          <ArrowRight
-            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
+        </SectionAction>
       )}
     </div>
   );

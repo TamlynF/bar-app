@@ -54,7 +54,7 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
     "flex min-h-13 cursor-pointer list-none items-center gap-3 px-3.5 py-2.5 select-none [&::-webkit-details-marker]:hidden";
   const iconCls = "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/12 text-gold";
   const linkRow =
-    "flex min-h-11 items-center justify-between gap-3 rounded-xl border border-ink/15 bg-canvas px-3.5 text-[12px] font-bold text-ink transition-[scale,background-color] duration-150 active:scale-[0.985] active:bg-white/5";
+    "flex min-h-11 items-center justify-between gap-3 rounded-xl border border-ink/15 bg-canvas px-3.5 text-btn font-semibold text-ink transition-[scale,background-color] duration-150 active:scale-[0.985] active:bg-white/5";
 
   return (
     <footer className="mx-4 mt-6 sm:mx-6 md:mt-5 lg:mx-10">
@@ -65,14 +65,14 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <Clock className="h-4.5 w-4.5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold text-ink">Opening hours</span>
-              <span className="mt-0.5 block truncate text-xs text-ink-2 tabular-nums group-open:hidden">
+              <span className="block text-body font-semibold text-ink">Opening hours</span>
+              <span className="mt-0.5 block truncate text-meta text-ink-2 tabular-nums group-open:hidden">
                 {hours[0] ?? "Hours on the contact page"}
               </span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-ink-2 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <ul className="m-0 list-none px-3.5 pb-3.5 pl-16 text-[12px] leading-relaxed text-ink tabular-nums">
+          <ul className="m-0 list-none px-3.5 pb-3.5 pl-16 text-meta leading-relaxed text-ink tabular-nums">
             {(hours.length ? hours : ["Hours on the contact page"]).map((line) => (
               <li key={line}>{line}</li>
             ))}
@@ -85,15 +85,15 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <MapPin className="h-4.5 w-4.5" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold text-ink">Find us &amp; directions</span>
-              <span className="mt-0.5 block text-xs leading-snug text-ink-2 group-open:hidden">
+              <span className="block text-body font-semibold text-ink">Find us &amp; directions</span>
+              <span className="mt-0.5 block text-meta text-ink-2 group-open:hidden">
                 {info?.address ?? "See you at the bar."}
               </span>
             </span>
             <ChevronDown className="h-4 w-4 shrink-0 text-ink-2 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div className="flex flex-col gap-2 px-3.5 pb-3.5">
-            {info?.address && <p className="m-0 text-[12px] leading-snug text-ink">{info.address}</p>}
+            {info?.address && <p className="m-0 text-meta text-ink">{info.address}</p>}
             {mapsHref && (
               <a href={mapsHref} target="_blank" rel="noopener noreferrer" aria-label="Open in maps" className={linkRow}>
                 <span className="inline-flex items-center gap-2">
@@ -116,8 +116,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
               <SiInstagram className="h-4 w-4" aria-hidden="true" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold text-ink">Follow us</span>
-              {igHandle && <span className="mt-0.5 block truncate text-xs text-ink-2">{igHandle} · nights, gigs and specials</span>}
+              <span className="block text-body font-semibold text-ink">Follow us</span>
+              {igHandle && <span className="mt-0.5 block truncate text-meta text-ink-2">{igHandle} · nights, gigs and specials</span>}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-ink-2" aria-hidden="true" />
           </a>
@@ -132,8 +132,8 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
                 <Icon className="h-4.5 w-4.5 md:h-5.5 md:w-5.5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold text-ink">{title}</span>
-                <span className="mt-0.5 block text-xs leading-snug text-ink-2 tabular-nums md:mt-1 md:leading-relaxed">
+                <span className="block text-body font-semibold text-ink">{title}</span>
+                <span className="mt-0.5 block text-meta text-ink-2 tabular-nums md:mt-1">
                   {lines.map((l, j) => (
                     <span key={j} className={j > 0 ? "md:block" : undefined}>
                       {j > 0 && <span className="md:hidden"> · </span>}
@@ -187,7 +187,7 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
             </a>
           )}
         </div>
-        <p className="m-0 text-center text-[11px] text-stone-500">
+        <p className="m-0 text-center text-xs text-stone-500">
           &copy; {new Date().getFullYear()}{" "}
           <CompanyWordmark className="inline-block h-2.5 align-[-0.15em] opacity-80" />{" "}
           &middot; Licensed venue &middot; Drink responsibly

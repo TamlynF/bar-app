@@ -183,6 +183,27 @@
   --font-black: var(--font-black); /* Archivo Black */
   --font-board-display: var(--font-board-display);
   --font-board-mono: var(--font-board-mono);
+
+  /* Public type scale by role. Fluid between a 375px phone and a 1280px
+     desktop so every device gets the same proportions. text-h2 26→40px,
+     text-h3 22→28px, text-body 14→16px, text-btn 14→15px, text-meta
+     13→14px, text-eyebrow 12→15px, text-pill 11px, text-nav 13→14px. */
+  --text-h2: clamp(1.625rem, 1.25rem + 1.6vw, 2.5rem);
+  --text-h2--line-height: 0.95;
+  --text-h3: clamp(1.375rem, 1.2rem + 0.75vw, 1.75rem);
+  --text-h3--line-height: 0.95;
+  --text-body: clamp(0.875rem, 0.82rem + 0.25vw, 1rem);
+  --text-body--line-height: 1.5;
+  --text-btn: clamp(0.875rem, 0.85rem + 0.1vw, 0.9375rem);
+  --text-btn--line-height: 1.2;
+  --text-meta: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
+  --text-meta--line-height: 1.4;
+  --text-eyebrow: clamp(0.75rem, 0.68rem + 0.33vw, 0.9375rem);
+  --text-eyebrow--line-height: 1.2;
+  --text-pill: 0.6875rem;
+  --text-pill--line-height: 1.2;
+  --text-nav: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
+  --text-nav--line-height: 1.2;
 }
 
 html,

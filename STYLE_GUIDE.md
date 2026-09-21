@@ -137,12 +137,32 @@ Type on dark:
 
 ### Typography on the public site
 
-- Two voices only. **Archivo Black is the poster voice**: page H1s, section H2s, event / special / product titles and big numerals, set `font-black uppercase tracking-tighter` so they feel like signage. **Archivo is the interface voice**: everything that explains, labels or navigates.
-- Eyebrows, section labels, nav links, counts, footer row titles and CTAs: `text-[11px]` to `text-[13px] font-semibold` in sentence case, no letter-spacing. They support the poster type; they don't compete with it. The old `text-[10px] font-black uppercase tracking-[0.2em]` eyebrow is retired.
-- Uppercase survives only where the word is a stamp: date abbreviations (`THU`, `SEP`), stickers and status pills (`Theme`, `£5`, `Sold out`, `Live`). Set those `text-[10px] font-bold tracking-wide uppercase` - never `font-black`, never tracking wider than `tracking-wide`.
-- Body: `text-sm font-medium` for descriptions, `text-xs` for metadata. Nothing that carries meaning goes below 10px.
-- Numerals always `tabular-nums` when in lists/tables.
+Two voices, both already loaded. **Archivo Black is the poster voice**: page H1s, section H2s, event / special / product titles and big numerals, `font-black uppercase tracking-tighter`. **Archivo is the interface voice**: everything that explains, labels or navigates, in sentence case with no letter-spacing.
+
+Sizes come from role tokens in `src/app/globals.css` (`@theme`), not from `text-[Npx]`. Each token is fluid between a 375px phone and a 1280px desktop so proportions hold on every device. Pick the token by what the text *is*:
+
+| Role | Class | Phone → desktop | Weight and case |
+|---|---|---|---|
+| Page H1 | hero's own fluid clamp | fits the column | `font-black uppercase tracking-tighter` |
+| Section H2 | `text-h2` | 26 → 40px | `font-black uppercase tracking-tighter` |
+| Sub-section H2 (side-by-side cards) | `text-h3` | 22 → 28px | `font-black uppercase tracking-tighter` |
+| Card / item title | `text-sm` to `text-base` | 14 → 16px | `font-black uppercase tracking-tight` |
+| Body | `text-body` | 14 → 16px | `font-medium`, sentence case |
+| Button and link label | `text-btn` | 14 → 15px | `font-semibold` (hero CTA `font-bold`), sentence case |
+| Nav link | `text-nav` | 13 → 14px | `font-semibold`, sentence case |
+| Meta - subtitles, captions, counts, addresses, hours | `text-meta` | 13 → 14px | regular or `font-semibold`, sentence case |
+| Eyebrow / section label | `text-eyebrow` | 12 → 15px | `font-semibold`, sentence case, usually `text-gold` |
+| Stamp - date abbreviation, sticker, status pill, price pill | `text-pill` | 11px | `font-bold tracking-wide uppercase` |
+| Legal / footnote | `text-xs` | 12px | regular |
+
+Rules:
+- Nothing readable goes below `text-pill` (11px). The bottom nav labels use it too.
+- Uppercase survives only on stamps. Eyebrows, buttons, nav and meta are sentence case. The old `text-[10px] font-black uppercase tracking-[0.2em]` eyebrow is retired.
+- `tracking-wide` is the widest letter-spacing on the public surface; `tracking-[0.2em]` and `tracking-widest` are retired.
+- Numerals in lists and prices take `tabular-nums`.
 - Never centre long body copy. Centre headlines and short taglines only.
+- Eyebrows carry information, never decoration. Keep "Open now" or "Best deal right now"; cut "The crate" or "Food & drink" and put a small motif beside the heading instead.
+- Add a new role token before reaching for an arbitrary size; a one-off `text-[13px]` means the scale is missing something.
 
 ### Texture & atmosphere
 
@@ -164,13 +184,16 @@ Type on dark:
 Every section follows the same skeleton:
 
 ```
-[eyebrow pill - small, coloured, uppercase, tracked]
-[H2 headline - display, uppercase, tight]
-[Optional subtitle - stone-500, regular weight]
+[eyebrow - only when it carries a status or category the H2 doesn't; text-eyebrow, sentence case]   [SectionAction - top right, ≥md]
+[H2 headline - text-h2, Archivo Black, uppercase, tight; optional small gold motif beside it]
+[Optional subtitle - text-meta]
 [Content - cards / list / grid]
+[SectionAction full-width under the content - phones only]
 ```
 
 Sections are separated by `py-10 sm:py-16` (generous breathing room).
+
+**Same role, same component.** A section's "see more" link is `SectionAction` from `src/components/editorial/section-heading.tsx` (an `ArrowCta` in `goldOutline`, size `sm`, `rounded-full`), right-aligned to the heading with `items-end`. Nothing else may play that role: no hand-styled `<Link>` with its own border and arrow, no second variant, no different height. The same applies to every repeated role on the public surface - a primary CTA is `ArrowCta` gold, a booking CTA is `BookingButton`, a status pill is the `text-pill` stamp. Before styling a button, link, pill or card by hand, grep for the role; if a component exists, use it, and if it doesn't fit, change the component so every instance moves together.
 
 ---
 
