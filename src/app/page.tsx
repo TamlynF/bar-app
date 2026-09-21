@@ -6,7 +6,6 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { HomeSkeleton } from "@/components/home-skeleton";
 import { GrainOverlay } from "@/components/ui/grain-overlay";
-import { NowPlaying } from "@/components/home/now-playing";
 import { Reveal } from "@/components/animations/reveal";
 import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
@@ -125,7 +124,6 @@ async function HomeContent() {
             isTonight={isTonight}
             dayName={format(parseDate(featuredDate as string), "EEEE")}
           />
-          <NowPlaying event={nightEvents[0]} isTonight={isTonight} />
         </>
       ) : (
         <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
@@ -136,12 +134,7 @@ async function HomeContent() {
         </section>
       )}
 
-      {nightEvents.length === 0 && (
-        <>
-          <HomeMarketTicker />
-          <NowPlaying event={null} isTonight={false} />
-        </>
-      )}
+      {nightEvents.length === 0 && <HomeMarketTicker />}
 
       <div className="mx-auto w-full max-w-400">
         <DateSleeves events={later.slice(0, CAROUSEL_EVENTS)} />
