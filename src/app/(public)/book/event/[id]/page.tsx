@@ -13,6 +13,7 @@ import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config
 import { PublicNav } from "@/components/public-nav";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { ExtrudedTitle } from "@/components/extruded-title";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -202,7 +203,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         <div className="flex flex-col items-center gap-4 mt-auto mb-6 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="bg-stone-800/50 w-6 h-px" />
-            <span className="font-bold text-[9px] uppercase tracking-[0.4em]">Don Fenticas</span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="bg-stone-800/50 w-6 h-px" />
           </div>
           <p className="opacity-30 text-[8px] text-stone-600 uppercase tracking-widest">

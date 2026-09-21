@@ -60,7 +60,7 @@ export const CONFIG_FIELDS: ConfigField[] = [
     label: "Leaderboard drinks per column",
     step: "1",
     hint: "0 = as many as fit the screen",
-    help: "How many drinks the big-screen leaderboard view lists under Best deals and Top shelf. Leave at 0 and the board works out how many fit the screen it is on (a 16:9 TV shows about six, a taller projector more). A number caps the list at that many; it is still trimmed if the screen cannot fit them all, so nothing is cut off.",
+    help: "How many drinks the big-screen leaderboard view lists under Best deals and In demand. Leave at 0 and the board works out how many fit the screen it is on (a 16:9 TV shows about six, a taller projector more). A number caps the list at that many; it is still trimmed if the screen cannot fit them all, so nothing is cut off.",
   },
 ];
 

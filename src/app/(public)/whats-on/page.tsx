@@ -5,6 +5,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
 import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
+import { CompanyWordmark } from "@/components/company-wordmark";
 import {
   getEventType,
   serializeEvent,
@@ -121,7 +122,7 @@ export default async function WhatsOnPage() {
         <footer className="mt-16 text-center">
           <div className="flex items-center justify-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
           <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">

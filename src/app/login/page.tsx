@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signIn } from "./actions";
 import LoginForm from "./_components/login-form";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 /* Staff only ever reach this page on their way into the admin, and it is
    where an expired-session launch of the installed "DF Admin" app lands.
@@ -48,7 +49,7 @@ export default async function LoginPage() {
             priority
             className="mb-4 inline-block h-14 w-14 rounded-2xl shadow-lg"
           />
-          <h1 className="font-black text-2xl tracking-widest text-white uppercase">Don Fenticas</h1>
+          <h1 className="m-0"><CompanyWordmark className="mx-auto h-7" priority /></h1>
           <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Staff Portal</p>
         </div>
 

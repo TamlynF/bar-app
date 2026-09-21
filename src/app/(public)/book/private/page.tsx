@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PrivateHireForm from "./_components/private-hire-form";
 import { PublicNav } from "@/components/public-nav";
 import { getCompanyInfo } from "@/lib/company-info";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Private Hire",
@@ -76,7 +77,7 @@ export default async function PrivateHirePage() {
         <div className="mt-auto mb-6 flex flex-col items-center gap-3 pt-8">
           <div className="flex items-center gap-4 text-stone-300">
             <div className="h-px w-6 bg-white/20" />
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-4 opacity-80" />
             <div className="h-px w-6 bg-white/20" />
           </div>
           <p className="text-[9px] tracking-widest text-stone-400 uppercase">

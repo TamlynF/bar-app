@@ -4,6 +4,7 @@ import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config
 import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 import ManageBookingView, { type ManageEventBooking } from "./_components/manage-booking-view";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Manage Booking",
@@ -123,7 +124,7 @@ export default async function ManageBookingPage({
         </div>
 
         <div className="mt-6 pt-4 text-center opacity-30 sm:mt-auto">
-          <p className="font-black text-[9px] tracking-[0.4em] uppercase">Don Fenticas</p>
+          <CompanyWordmark className="mx-auto h-3.5" />
         </div>
       </div>
     </main>

@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
+import { CompanyWordmark } from "@/components/company-wordmark";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { useMarketState } from "../use-market-state";
-import { FlipPrice, eventCopy, formatChangePct, formatDisplayPrice } from "../market-ui";
+import { FlipPrice, displayChangePct, displayPrice, eventCopy, formatChangePct, formatDisplayPrice } from "../market-ui";
 import type { MarketStatePayload } from "@/lib/market/tick";
 
 export type BoardView = "categories" | "table" | "movers" | "leaderboard";
@@ -40,7 +41,7 @@ function trendOf(changePct: number): Trend {
 }
 
 function isAtFloor(instrument: MarketInstrumentPayload): boolean {
-  return instrument.price <= instrument.floor + 0.001;
+  return (displayPrice(instrument) ?? instrument.price) <= instrument.floor + 0.001;
 }
 
 function formatCountdown(ms: number): string {
@@ -175,14 +176,15 @@ function CategoryRow({
   instrument: MarketInstrumentPayload;
   crash: boolean;
 }) {
-  const trend = trendOf(instrument.changePct);
+  const changePct = displayChangePct(instrument);
+  const trend = trendOf(changePct);
   const atFloor = isAtFloor(instrument);
   return (
     <div className={`${CATEGORY_COLUMNS} border-t border-[#3a4520] py-[0.55vw]`}>
       <NameCell instrument={instrument} />
       <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
-      <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
+      <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
     </div>
   );
 }
@@ -286,7 +288,8 @@ function FlatRow({
   crash: boolean;
   chevron?: ReactNode;
 }) {
-  const trend = trendOf(instrument.changePct);
+  const changePct = displayChangePct(instrument);
+  const trend = trendOf(changePct);
   const atFloor = isAtFloor(instrument);
   return (
     <div className={`${FLAT_COLUMNS} border-t border-[#3a4520] py-[0.45vw]`}>
@@ -294,7 +297,7 @@ function FlatRow({
       <span className="truncate text-[0.95vw] text-[#a9ae8d]">{instrument.category ?? "-"}</span>
       <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
-      <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
+      <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
     </div>
   );
 }
@@ -503,7 +506,8 @@ function LeaderboardColumn({
             <FlipPrice value={group.category} />
           </p>
           {group.rows.map(({ instrument, rank }) => {
-            const trend = trendOf(instrument.changePct);
+            const changePct = displayChangePct(instrument);
+            const trend = trendOf(changePct);
             const atFloor = isAtFloor(instrument);
             return (
               <div key={rank} data-board-row className={`${BOARD_COLUMNS} border-t border-[#3a4520] py-[0.4vw]`}>
@@ -517,7 +521,7 @@ function LeaderboardColumn({
                 <NameCell instrument={instrument} size="text-[1.3vw]" flip showServe={false} />
                 <OpenCell instrument={instrument} size="text-[1.1vw]" align="text-center" />
                 <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} size="text-[2.3vw]" align="text-center" />
-                <ChangePill changePct={instrument.changePct} trend={trend} atFloor={atFloor} crash={crash} />
+                <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
               </div>
             );
           })}
@@ -553,12 +557,12 @@ function LeaderboardView({
 
   const deals = tiers
     ? instruments
-        .filter((i) => (i.tierPct ?? 0) < 0 && i.price < i.openingPrice)
+        .filter((i) => (i.tierPct ?? 0) < 0 && (displayPrice(i) ?? i.price) < i.openingPrice)
         .sort((a, b) => (a.tierPct ?? 0) - (b.tierPct ?? 0) || (a.pace ?? 0) - (b.pace ?? 0))
     : [...instruments].sort(byChangeDesc).reverse();
   const risers = tiers
     ? instruments
-        .filter((i) => (i.tierPct ?? 0) > 0 && i.price > i.openingPrice)
+        .filter((i) => (i.tierPct ?? 0) > 0 && (displayPrice(i) ?? i.price) > i.openingPrice)
         .sort((a, b) => (b.tierPct ?? 0) - (a.tierPct ?? 0) || (b.pace ?? 0) - (a.pace ?? 0))
     : [...instruments].sort(byChangeDesc);
   const requested = state.leaderboardRows ?? 0;
@@ -608,7 +612,7 @@ function LeaderboardView({
         columnRef={dealsRef}
       />
       <LeaderboardColumn
-        title="Top shelf"
+        title="In demand"
         subtitle={tiers ? "selling fast, price going up" : "biggest rises since open"}
         shown={shown}
         arrow="▲"
@@ -718,7 +722,7 @@ export default function MarketBoard({
   initialView: BoardView;
   qrDataUrl: string | null;
 }) {
-  const { state, feed } = useMarketState(5000);
+  const { state, feed } = useMarketState(5000, true);
   const [view, setView] = useState<BoardView>(initialView);
   const crash = state?.crashActive === true;
   const crashCountdown = useCountdown(state?.crashRemainingSec);
@@ -732,8 +736,9 @@ export default function MarketBoard({
         <p className="font-board-display text-[9vw] leading-none text-[#FDCC4B]">
           {state ? "MARKETS CLOSED" : "OPENING…"}
         </p>
-        <p className="font-board-mono text-[1.2vw] tracking-[0.3em] text-[#a9ae8d] uppercase">
-          Don Fenticas drink exchange
+        <p className="flex items-center gap-[0.6vw] font-board-mono text-[1.2vw] tracking-[0.3em] text-[#a9ae8d] uppercase">
+          <CompanyWordmark className="h-[1.1vw]" />
+          drink exchange
         </p>
       </div>
     );
@@ -754,13 +759,9 @@ export default function MarketBoard({
         }`}
       >
         <div>
-          <p
-            className={`font-board-display text-[5vw] leading-[0.9] tracking-[0.02em] ${
-              crash ? "text-white" : "text-[#FDCC4B]"
-            }`}
-          >
-            Don Fenticas
-          </p>
+          <CompanyWordmark
+            className={`h-[3.6vw] ${crash ? "brightness-0 invert" : ""}`}
+          />
           <p className="font-board-mono text-[1.5vw] tracking-[0.18em] text-[#f3f0dc]">
             DRINK EXCHANGE · HINCKLEY
           </p>

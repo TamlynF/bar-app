@@ -5,6 +5,7 @@ import { toCamelCase } from "@/lib/utils";
 import { getAvailableBandDates } from "@/lib/band-availability-data";
 import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Book the Stage",
@@ -77,7 +78,7 @@ export default async function BandBookingPage() {
         <div className="mt-auto mb-6 flex flex-col items-center gap-3 pt-8">
           <div className="flex items-center gap-4 text-stone-300">
             <div className="h-px w-6 bg-white/20" />
-            <span className="text-[10px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-4 opacity-80" />
             <div className="h-px w-6 bg-white/20" />
           </div>
           <p className="text-[9px] tracking-widest text-stone-400 uppercase">

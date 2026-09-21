@@ -5,6 +5,7 @@ import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { instagramHandle, instagramUrl } from "@/lib/company-info";
 import type { CompanyInfo } from "@/lib/company-info";
 import { summariseOpeningHours } from "@/lib/opening-hours";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 type Cell = {
   Icon: LucideIcon;
@@ -187,7 +188,9 @@ export function VisitFooter({ info }: { info: CompanyInfo }) {
           )}
         </div>
         <p className="m-0 text-center text-[9px] tracking-widest text-stone-600 uppercase">
-          &copy; {new Date().getFullYear()}{" "}Don Fenticas &middot; Licensed venue &middot; Drink responsibly
+          &copy; {new Date().getFullYear()}{" "}
+          <CompanyWordmark className="inline-block h-2.5 align-[-0.15em] opacity-80" />{" "}
+          &middot; Licensed venue &middot; Drink responsibly
         </p>
       </div>
     </footer>

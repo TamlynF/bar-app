@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { Wine } from "lucide-react";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Menu",
@@ -161,7 +162,9 @@ export default async function MenuPage() {
 
       <div className="no-print mx-auto max-w-4xl px-4 pb-10 text-center">
         <p className="text-[9px] font-bold tracking-widest text-[#4a5a28] uppercase">
-          &copy; {new Date().getFullYear()} Don Fenticas &middot; Regent Street, Hinckley
+          &copy; {new Date().getFullYear()}{" "}
+          <CompanyWordmark className="inline-block h-2.5 align-[-0.15em]" />{" "}
+          &middot; Regent Street, Hinckley
         </p>
       </div>
     </main>

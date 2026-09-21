@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/editorial/page-header";
 import { toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import EnquiryForm from "./_components/enquiry-form";
 import CopyAddressButton from "./_components/copy-address-button";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Contact Us",
@@ -141,9 +142,7 @@ export default async function ContactPage() {
         <div className="mt-auto pt-16 text-center">
           <div className="flex items-center justify-center gap-3 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">
-              Don Fenticas
-            </span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
         </div>

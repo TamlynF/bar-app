@@ -10,6 +10,7 @@ import {
   Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Music Bingo",
@@ -167,7 +168,7 @@ export default async function BingoBookingPage({
         <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
           <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">

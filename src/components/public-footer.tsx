@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { SiInstagram, SiFacebook } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import type { CompanyInfo } from "@/components/find-us";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 const FOOTER_LINKS = [
   { href: "/whats-on", label: "What's On" },
@@ -24,9 +25,7 @@ export function PublicFooter({ info }: { info?: CompanyInfo }) {
     <footer className="border-t border-hairline pt-10">
       <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
         <div>
-          <p className="font-black text-[10px] tracking-[0.4em] text-stone-500 uppercase">
-            Don Fenticas
-          </p>
+          <CompanyWordmark className="h-4 opacity-80" />
           <p className="mt-2 max-w-60 text-xs leading-relaxed text-stone-500">
             Live music, DJs, quiz nights and karaoke - your local late-night
             bar.
@@ -100,7 +99,8 @@ export function PublicFooter({ info }: { info?: CompanyInfo }) {
       <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-hairline py-6 sm:flex-row">
         <p className="text-[9px] tracking-widest text-stone-600 uppercase">
           &copy; {new Date().getFullYear()}{" "}
-          Don Fenticas &middot; Licensed venue &middot; Drink responsibly
+          <CompanyWordmark className="inline-block h-2.5 align-[-0.15em] opacity-80" />{" "}
+          &middot; Licensed venue &middot; Drink responsibly
         </p>
         <Link
           href="/login"

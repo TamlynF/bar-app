@@ -4,6 +4,7 @@ import React, { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { markInviteAcceptedAction } from "@/app/(private)/settings/users/actions";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function AcceptInvitePage() {
           <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDCC4B] shadow-lg">
             <span className="font-black text-xl text-[#26300D]">DF</span>
           </div>
-          <h1 className="font-black text-2xl tracking-widest text-white uppercase">Don Fenticas</h1>
+          <h1 className="m-0"><CompanyWordmark className="mx-auto h-7" /></h1>
           <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Set Your Password</p>
         </div>
 

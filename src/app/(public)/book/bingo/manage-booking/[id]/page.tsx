@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import ManageBingoBooking from "./_components/manage-bingo-booking";
 import type { BingoManageBooking } from "./_components/manage-bingo-booking";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Manage Booking",
@@ -68,7 +69,7 @@ export default async function ManageBingoBookingPage({
         </div>
 
         <div className="mt-6 text-center opacity-30">
-          <p className="font-black text-[9px] tracking-[0.4em] uppercase">Don Fenticas</p>
+          <CompanyWordmark className="mx-auto h-3.5" />
         </div>
       </div>
     </main>

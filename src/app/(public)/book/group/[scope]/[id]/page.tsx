@@ -36,6 +36,7 @@ import {
 } from '@/lib/booking-config'
 import { PublicNav } from '@/components/public-nav'
 import { MarqueeTicker } from '@/components/marquee-ticker'
+import { CompanyWordmark } from '@/components/company-wordmark'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Banknote,
@@ -234,8 +235,9 @@ export default async function GroupedBookingPage ({
                   height={26}
                   className='rounded-lg'
                 />
-                <span className='font-black text-[#FDCC4B] text-[10px] uppercase tracking-[0.25em]'>
-                  Don Fenticas presents
+                <span className='inline-flex items-center gap-2 font-black text-[#FDCC4B] text-[10px] uppercase tracking-[0.25em]'>
+                  <CompanyWordmark className='h-3' />
+                  presents
                 </span>
                 <span aria-hidden className='bg-[#FDCC4B]/30 w-7 h-px' />
               </div>
@@ -298,9 +300,7 @@ export default async function GroupedBookingPage ({
         <div className='mt-auto mb-6 flex flex-col items-center gap-4 pt-8'>
           <div className='flex items-center gap-4 text-stone-800'>
             <div className='h-px w-6 bg-stone-800/50' />
-            <span className='text-[9px] font-bold tracking-[0.4em] uppercase'>
-              Don Fenticas
-            </span>
+            <CompanyWordmark className='h-3.5 opacity-50' />
             <div className='h-px w-6 bg-stone-800/50' />
           </div>
           <p className='text-[8px] tracking-widest text-stone-600 uppercase opacity-30'>

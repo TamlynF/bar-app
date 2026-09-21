@@ -29,6 +29,7 @@ import {
   type EventRow,
 } from "@/lib/events-display";
 import type { OpeningHours } from "@/lib/opening-hours";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const revalidate = 300;
 
@@ -406,7 +407,7 @@ export default async function WhatsOnEventPage({
         <footer className="mt-16 text-center">
           <div className="flex items-center justify-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
           <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">

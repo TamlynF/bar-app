@@ -4,6 +4,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
 import GalleryGrid, { type GalleryItem } from "./gallery-grid";
 import { format } from "date-fns";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Gallery",
@@ -68,7 +69,7 @@ export default async function GalleryPage() {
         <div className="mt-8 flex flex-col items-center gap-4 pt-12">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <CompanyWordmark className="h-3.5 opacity-50" />
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
           <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">

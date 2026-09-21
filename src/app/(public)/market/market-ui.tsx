@@ -20,6 +20,18 @@ export function formatDisplayPrice(instrument: Pick<MarketInstrumentPayload, "li
   return value == null ? PRICE_PENDING : formatGbp(value);
 }
 
+/* Change measured from the price the board is showing, so the pill and the
+   price cell always move together. The engine's changePct leads a linked
+   drink by a Square round trip; while the till price is still pending there
+   is nothing shown to measure, so fall back to the engine's figure. */
+export function displayChangePct(
+  instrument: Pick<MarketInstrumentPayload, "linkedToTill" | "tillPrice" | "price" | "openingPrice" | "changePct">
+): number {
+  const value = displayPrice(instrument);
+  if (value == null || instrument.openingPrice <= 0) return instrument.changePct;
+  return Math.round(((value - instrument.openingPrice) / instrument.openingPrice) * 1000) / 10;
+}
+
 export function tierLabel(pct: number | null | undefined): string | null {
   if (pct == null || pct === 0) return null;
   return `${pct > 0 ? "+" : "−"}${Math.round(Math.abs(pct) * 100)}%`;

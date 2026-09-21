@@ -294,7 +294,7 @@ function useWatchedDrinks(): [number[], (id: number) => void] {
    market status and alert controls, leaving the whole right column to the
    drinks. On a phone everything stacks in the same order as before. */
 export default function MarketFeed({ header, footer }: { header: ReactNode; footer: ReactNode }) {
-  const { state, fresh } = useMarketState();
+  const { state, fresh } = useMarketState(6000, true);
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
   const [muted, setMuted] = useAlertsMuted();

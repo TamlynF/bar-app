@@ -130,6 +130,7 @@ export type MarketStatePayload = {
   tickNo?: number;
   tickIntervalSec?: number;
   nextTickInSec?: number;
+  tickLeadSec?: number;
   crashActive?: boolean;
   crashRemainingSec?: number;
   pushAlertsEnabled?: boolean;
@@ -291,9 +292,21 @@ async function eventServeIds(
   );
 }
 
+/* How early a tick may start ahead of its due time. The engine, the Square
+   catalog write and the confirming webhook all run inside this lead, so the
+   new prices are already the till's prices when the board's countdown lands;
+   the board holds them back until then. Short intervals get a shorter lead. */
+const TICK_LEAD_SEC = 8;
+
+export function tickLeadSec(config: MarketConfig): number {
+  return Math.max(0, Math.min(TICK_LEAD_SEC, Math.floor(config.tickIntervalSec / 4)));
+}
+
 /* The winner of the compare-and-swap on last_tick_at runs one engine tick;
    everyone else reads the state as-is. Square being down degrades to a pure
-   random-walk tick rather than freezing the board. */
+   random-walk tick rather than freezing the board. A tick claimed inside the
+   lead is stamped with its due time, not the claim time, so the countdown
+   grid holds still and the next tick is not pulled earlier every cycle. */
 export async function maybeRunMarketTick(
   supabase: SupabaseClient,
   session: MarketSessionRow,
@@ -301,13 +314,15 @@ export async function maybeRunMarketTick(
 ): Promise<void> {
   const config = resolveMarketConfig(session.config);
   const lastTick = session.last_tick_at ? new Date(session.last_tick_at) : null;
-  if (lastTick && now.getTime() - lastTick.getTime() < config.tickIntervalSec * 1000) return;
+  const due = lastTick ? lastTick.getTime() + config.tickIntervalSec * 1000 : now.getTime();
+  if (now.getTime() < due - tickLeadSec(config) * 1000) return;
+  const stamp = new Date(Math.max(due, now.getTime()));
 
   /* tick_no equality is the compare-and-swap: a competing request that won
      already incremented it, so everyone else matches zero rows and reads. */
   const { data: won, error: casError } = await supabase
     .from("market_sessions")
-    .update({ last_tick_at: now.toISOString(), tick_no: session.tick_no + 1 })
+    .update({ last_tick_at: stamp.toISOString(), tick_no: session.tick_no + 1 })
     .eq("id", session.id)
     .eq("status", "live")
     .eq("tick_no", session.tick_no)
@@ -691,6 +706,7 @@ export async function readMarketState(
     tickNo: session.tick_no,
     tickIntervalSec: config.tickIntervalSec,
     nextTickInSec: secondsUntilNextTick(session, config, now),
+    tickLeadSec: tickLeadSec(config),
     crashActive,
     ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
     pushAlertsEnabled: config.pushAlertsEnabled,

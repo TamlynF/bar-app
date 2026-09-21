@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import CancelButton from "./_components/cancel-button";
 import type { ManageBooking } from "./_components/cancel-button";
+import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Manage Booking",
@@ -72,7 +73,7 @@ export default async function ManageBookingPage({
         </div>
 
         <div className="mt-6 pt-4 text-center opacity-30 sm:mt-auto">
-           <p className="font-black text-[9px] tracking-[0.4em] uppercase">Don Fenticas</p>
+           <CompanyWordmark className="mx-auto h-3.5" />
         </div>
       </div>
     </main>
