@@ -3,7 +3,24 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CircleAlert, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, SearchX, Upload, Wand2, Wine, Ellipsis } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  CircleAlert,
+  Download,
+  Ellipsis,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Loader2,
+  RefreshCw,
+  SearchX,
+  Upload,
+  Wand2,
+  Wine,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -13,7 +30,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FilterChip, ListSearchInput, RecordList, StatusPill } from "@/components/admin";
+import {
+  FilterChip,
+  ListSearchInput,
+  RecordList,
+  StatusPill,
+} from "@/components/admin";
 import { formatGbp } from "@/lib/price";
 import { squareItemUrl } from "@/lib/market/simulate";
 import type { CatalogVariation } from "@/lib/market/mapping";
@@ -24,18 +46,113 @@ import {
   pushAlcoholToSquareAction,
   pushMenuToSquareAction,
   saveMappingAction,
+  syncSquareSalesAction,
 } from "../actions";
-import { NEUTRAL_BUTTON, OUTLINE_BUTTON } from "../ui";
+import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp } from "../ui";
 import type { MixerChoice } from "@/lib/market/mixer";
 import type { ModifierListOption } from "@/lib/market/square-mixers";
 import MixerModifierCard from "./mixer-modifier-card";
 
 type LinkFilter = "all" | "unlinked" | "board" | "event";
 
+export type SaleLineCount = {
+  lines: number;
+  units: number;
+  firstNight: string | null;
+  lastNight: string | null;
+};
+
+type Group = { name: string; rows: MappingRow[] };
+
+const COLUMN_COUNT = 7;
+
+function formatNight(night: string): string {
+  return new Date(night + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function saleLinesTitle(count: SaleLineCount): string {
+  const units = Number.isInteger(count.units)
+    ? count.units
+    : count.units.toFixed(1);
+  const span =
+    count.firstNight && count.lastNight
+      ? ` from ${formatNight(count.firstNight)} to ${formatNight(count.lastNight)}`
+      : "";
+  return `${count.lines} Square order ${count.lines === 1 ? "line" : "lines"}, ${units} units${span}`;
+}
+
+function SaleLines({
+  row,
+  counts,
+}: {
+  row: MappingRow;
+  counts: Record<string, SaleLineCount> | null;
+}) {
+  if (!row.squareVariationId || !counts)
+    return <span className="text-admin-muted">-</span>;
+  const count = counts[row.squareVariationId];
+  if (!count) {
+    return (
+      <span
+        className="text-admin-muted"
+        title="No Square sales synced for this variation yet"
+      >
+        0
+      </span>
+    );
+  }
+  return (
+    <span className="text-admin-ink tabular-nums" title={saleLinesTitle(count)}>
+      {count.lines.toLocaleString("en-GB")}
+    </span>
+  );
+}
+
+function CategoryToggle({
+  group,
+  open,
+  onToggle,
+  className,
+}: {
+  group: Group;
+  open: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  const linked = group.rows.filter((row) => row.squareVariationId).length;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className={cn(
+        "flex min-h-11 w-full items-center gap-2 bg-admin-surface text-left text-[11px] font-semibold tracking-wide text-admin-muted uppercase transition-colors hover:bg-admin-line/40 sm:min-h-9",
+        className,
+      )}
+    >
+      <ChevronDown
+        className={cn(
+          "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+          !open && "-rotate-90",
+        )}
+        aria-hidden="true"
+      />
+      <span className="min-w-0 truncate">{group.name}</span>
+      <span className="font-medium tracking-normal normal-case">
+        {linked} of {group.rows.length} linked
+      </span>
+    </button>
+  );
+}
+
 function matches(needle: string, row: MappingRow): boolean {
   if (!needle) return true;
-  return [row.itemName, row.categoryName, row.serve, ...row.onEvents].some((field) =>
-    field.toLowerCase().includes(needle)
+  return [row.itemName, row.categoryName, row.serve, ...row.onEvents].some(
+    (field) => field.toLowerCase().includes(needle),
   );
 }
 
@@ -60,13 +177,14 @@ function VariationSelect({
       onChange={(event) => onChange(event.target.value || null)}
       className={cn(
         "h-11 w-full cursor-pointer rounded-lg border border-admin-line bg-admin-card px-2 text-[13px] font-semibold text-admin-ink outline-none disabled:opacity-60 sm:h-9",
-        className
+        className,
       )}
     >
       <option value="">Not linked</option>
-      {row.squareVariationId && !variations?.some((v) => v.variationId === row.squareVariationId) && (
-        <option value={row.squareVariationId}>Linked (current)</option>
-      )}
+      {row.squareVariationId &&
+        !variations?.some((v) => v.variationId === row.squareVariationId) && (
+          <option value={row.squareVariationId}>Linked (current)</option>
+        )}
       {(variations ?? []).map((variation) => (
         <option key={variation.variationId} value={variation.variationId}>
           {variation.itemName}
@@ -106,7 +224,11 @@ function LinkStatus({
     );
   }
   const pill = (
-    <StatusPill tone="success" icon={itemId ? <ExternalLink className="h-3 w-3" /> : undefined} showLabelOnMobile>
+    <StatusPill
+      tone="success"
+      icon={itemId ? <ExternalLink className="h-3 w-3" /> : undefined}
+      showLabelOnMobile
+    >
       Linked
     </StatusPill>
   );
@@ -129,11 +251,19 @@ function LinkStatus({
         type="button"
         onClick={onToggle}
         aria-pressed={revealed}
-        aria-label={revealed ? "Hide the Square variation id" : "Show the Square variation id"}
+        aria-label={
+          revealed
+            ? "Hide the Square variation id"
+            : "Show the Square variation id"
+        }
         title={revealed ? "Hide variation id" : "Show variation id"}
         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
       >
-        {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        {revealed ? (
+          <EyeOff className="h-3.5 w-3.5" />
+        ) : (
+          <Eye className="h-3.5 w-3.5" />
+        )}
       </button>
       {untracked && (
         <span
@@ -146,7 +276,10 @@ function LinkStatus({
         </span>
       )}
       {revealed && (
-        <code className="max-w-40 truncate rounded bg-admin-surface px-1.5 py-0.5 font-mono text-[11px] text-admin-ink" title={row.squareVariationId}>
+        <code
+          className="max-w-40 truncate rounded bg-admin-surface px-1.5 py-0.5 font-mono text-[11px] text-admin-ink"
+          title={row.squareVariationId}
+        >
           {row.squareVariationId}
         </code>
       )}
@@ -163,8 +296,12 @@ export default function SquareLinksClient({
   untrackedVariationIds,
   mixerChoice,
   modifierLists,
+  saleLineCounts,
+  salesSyncedAt,
 }: {
   rows: MappingRow[];
+  saleLineCounts: Record<string, SaleLineCount> | null;
+  salesSyncedAt: string | null;
   untrackedVariationIds: string[];
   variations: CatalogVariation[] | null;
   focusEvent: { id: number; name: string } | null;
@@ -176,6 +313,8 @@ export default function SquareLinksClient({
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
+  const [isSyncing, startSyncing] = useTransition();
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [revealedIds, setRevealedIds] = useState<Set<number>>(() => new Set());
   const toggleRevealed = (id: number) =>
     setRevealedIds((current) => {
@@ -188,21 +327,31 @@ export default function SquareLinksClient({
   const linkStatus = (row: MappingRow) => (
     <LinkStatus
       row={row}
-      itemId={row.squareVariationId ? itemIds[row.squareVariationId] : undefined}
+      itemId={
+        row.squareVariationId ? itemIds[row.squareVariationId] : undefined
+      }
       environment={environment}
       revealed={revealedIds.has(row.menuItemPriceId)}
-      untracked={row.squareVariationId != null && untrackedSet.has(row.squareVariationId)}
+      untracked={
+        row.squareVariationId != null && untrackedSet.has(row.squareVariationId)
+      }
       onToggle={() => toggleRevealed(row.menuItemPriceId)}
     />
   );
-  const [variations, setVariations] = useState<CatalogVariation[] | null>(initialVariations);
+  const [variations, setVariations] = useState<CatalogVariation[] | null>(
+    initialVariations,
+  );
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<LinkFilter>(focusEvent ? "event" : "all");
+  const [filter, setFilter] = useState<LinkFilter>(
+    focusEvent ? "event" : "all",
+  );
 
   const linkedCount = rows.filter((row) => row.squareVariationId).length;
   const onBoard = rows.filter((row) => row.onEvents.length > 0);
-  const unlinkedOnBoard = onBoard.filter((row) => !row.squareVariationId).length;
+  const unlinkedOnBoard = onBoard.filter(
+    (row) => !row.squareVariationId,
+  ).length;
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -210,13 +359,14 @@ export default function SquareLinksClient({
       if (!matches(needle, row)) return false;
       if (filter === "unlinked") return !row.squareVariationId;
       if (filter === "board") return row.onEvents.length > 0;
-      if (filter === "event") return focusEvent != null && row.onEvents.includes(focusEvent.name);
+      if (filter === "event")
+        return focusEvent != null && row.onEvents.includes(focusEvent.name);
       return true;
     });
   }, [rows, query, filter, focusEvent]);
 
   const groups = useMemo(() => {
-    const out: { name: string; rows: MappingRow[] }[] = [];
+    const out: Group[] = [];
     for (const row of shown) {
       const last = out[out.length - 1];
       if (last && last.name === row.categoryName) last.rows.push(row);
@@ -225,7 +375,40 @@ export default function SquareLinksClient({
     return out;
   }, [shown]);
 
-  function run(action: () => Promise<{ error?: string } | void>, success?: string) {
+  const searching = query.trim().length > 0;
+  const isOpen = (name: string) => searching || !collapsed.has(name);
+  const toggleGroup = (name: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  const allCollapsed =
+    groups.length > 0 && groups.every((group) => collapsed.has(group.name));
+  const toggleAllGroups = () =>
+    setCollapsed(
+      allCollapsed ? new Set() : new Set(groups.map((group) => group.name)),
+    );
+
+  function handleSyncSales() {
+    startSyncing(async () => {
+      const result = await syncSquareSalesAction();
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        `Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square.`,
+      );
+      router.refresh();
+    });
+  }
+
+  function run(
+    action: () => Promise<{ error?: string } | void>,
+    success?: string,
+  ) {
     startTransition(async () => {
       const result = await action();
       if (result && "error" in result && result.error) {
@@ -263,7 +446,7 @@ export default function SquareLinksClient({
         return;
       }
       toast.success(
-        `Square catalog updated - ${result?.created ?? 0} items created, ${result?.linked ?? 0} serves linked${result?.skipped ? `, ${result.skipped} already existed` : ""}.`
+        `Square catalog updated - ${result?.created ?? 0} items created, ${result?.linked ?? 0} serves linked${result?.skipped ? `, ${result.skipped} already existed` : ""}.`,
       );
       await retryCatalog();
       router.refresh();
@@ -286,12 +469,16 @@ export default function SquareLinksClient({
       }
       const notes = [
         result.alreadyRight ? `${result.alreadyRight} already right` : "",
-        result.conflicts ? `${result.conflicts} skipped (serves in categories that disagree)` : "",
+        result.conflicts
+          ? `${result.conflicts} skipped (serves in categories that disagree)`
+          : "",
         result.missing ? `${result.missing} links no longer in Square` : "",
       ].filter(Boolean);
       const summary = `${result.updated} Square ${result.updated === 1 ? "item" : "items"} updated${notes.length ? ` · ${notes.join(" · ")}` : ""}.`;
       if (result.failed.length > 0) {
-        toast.error(`${summary} ${result.failed.length} failed: ${result.failed[0].message}`);
+        toast.error(
+          `${summary} ${result.failed.length} failed: ${result.failed[0].message}`,
+        );
       } else {
         toast.success(summary);
       }
@@ -306,17 +493,21 @@ export default function SquareLinksClient({
         return;
       }
       toast.success(
-        `Matched ${result?.matched ?? 0} serves${result?.unmatched ? `, ${result.unmatched} still unmatched` : ""}.`
+        `Matched ${result?.matched ?? 0} serves${result?.unmatched ? `, ${result.unmatched} still unmatched` : ""}.`,
       );
       router.refresh();
     });
   }
 
   const eventsLabel = (row: MappingRow) =>
-    row.onEvents.length === 0 ? "" : row.onEvents.length <= 2 ? row.onEvents.join(", ") : `${row.onEvents.length} events`;
+    row.onEvents.length === 0
+      ? ""
+      : row.onEvents.length <= 2
+        ? row.onEvents.join(", ")
+        : `${row.onEvents.length} events`;
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-4 py-3 sm:px-4 sm:py-0 md:px-6 xl:max-w-6xl">
+    <div className="mx-auto w-full max-w-7xl space-y-4 py-3 sm:py-0 2xl:max-w-[110rem]">
       {ConfirmDialogUI}
 
       {focusEvent && (
@@ -331,13 +522,18 @@ export default function SquareLinksClient({
 
       {unlinkedOnBoard > 0 && (
         <div className="flex items-start gap-2.5 rounded-2xl border border-admin-warning/40 bg-admin-warning-bg px-4 py-3 text-[13px] text-admin-ink sm:px-5">
-          <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-admin-warning" aria-hidden="true" />
+          <CircleAlert
+            className="mt-0.5 h-4 w-4 shrink-0 text-admin-warning"
+            aria-hidden="true"
+          />
           <p>
             <span className="font-semibold">
-              {unlinkedOnBoard} {unlinkedOnBoard === 1 ? "serve" : "serves"} on the board {unlinkedOnBoard === 1 ? "is" : "are"} not linked.
+              {unlinkedOnBoard} {unlinkedOnBoard === 1 ? "serve" : "serves"} on
+              the board {unlinkedOnBoard === 1 ? "is" : "are"} not linked.
             </span>{" "}
             <span className="text-admin-muted">
-              Unlinked serves get no till demand, no stock alerts, and their market price never reaches the till.
+              Unlinked serves get no till demand, no stock alerts, and their
+              market price never reaches the till.
             </span>
           </p>
         </div>
@@ -346,10 +542,19 @@ export default function SquareLinksClient({
       {variations === null && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-admin-error/30 bg-admin-error-bg px-4 py-3 text-[13px] sm:px-5">
           <p className="text-admin-ink">
-            <span className="font-semibold">Could not reach the Square catalog.</span>{" "}
-            <span className="text-admin-muted">Links are shown but cannot be changed until it loads.</span>
+            <span className="font-semibold">
+              Could not reach the Square catalog.
+            </span>{" "}
+            <span className="text-admin-muted">
+              Links are shown but cannot be changed until it loads.
+            </span>
           </p>
-          <button type="button" onClick={retryCatalog} disabled={loadingCatalog} className={NEUTRAL_BUTTON}>
+          <button
+            type="button"
+            onClick={retryCatalog}
+            disabled={loadingCatalog}
+            className={NEUTRAL_BUTTON}
+          >
             {loadingCatalog ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
@@ -366,7 +571,7 @@ export default function SquareLinksClient({
         variant="panel"
         title="Square links"
         count={shown.length}
-        subtitle={`${linkedCount} of ${rows.length} serves linked · till sales drive demand for linked serves`}
+        subtitle={`${linkedCount} of ${rows.length} serves linked · sales synced ${salesSyncedAt ? formatStamp(salesSyncedAt) : "never"}`}
         collapsible={false}
         activeFilterCount={filter === "all" ? 0 : 1}
         toolbar={
@@ -379,17 +584,29 @@ export default function SquareLinksClient({
         }
         filters={
           <div className="flex flex-wrap items-center gap-1.5">
-            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+            <FilterChip
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            >
               All
             </FilterChip>
-            <FilterChip active={filter === "unlinked"} onClick={() => setFilter("unlinked")}>
+            <FilterChip
+              active={filter === "unlinked"}
+              onClick={() => setFilter("unlinked")}
+            >
               Not linked
             </FilterChip>
-            <FilterChip active={filter === "board"} onClick={() => setFilter("board")}>
+            <FilterChip
+              active={filter === "board"}
+              onClick={() => setFilter("board")}
+            >
               On the board
             </FilterChip>
             {focusEvent && (
-              <FilterChip active={filter === "event"} onClick={() => setFilter("event")}>
+              <FilterChip
+                active={filter === "event"}
+                onClick={() => setFilter("event")}
+              >
                 On {focusEvent.name}
               </FilterChip>
             )}
@@ -398,17 +615,48 @@ export default function SquareLinksClient({
         actions={
           <>
             <div className="hidden items-center gap-1.5 sm:flex">
-              <button type="button" onClick={handleAutoMatch} disabled={isPending} className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}>
+              <button
+                type="button"
+                onClick={handleSyncSales}
+                disabled={isSyncing}
+                className={cn(
+                  NEUTRAL_BUTTON,
+                  "h-8 px-3 text-[11px] whitespace-nowrap",
+                )}
+              >
+                <Download
+                  className={cn("h-3.5 w-3.5", isSyncing && "animate-pulse")}
+                  aria-hidden="true"
+                />
+                Sync sales from Square
+              </button>
+              <button
+                type="button"
+                onClick={handleAutoMatch}
+                disabled={isPending}
+                className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}
+              >
                 {isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
                 Auto-match
               </button>
-              <button type="button" onClick={handlePushToSquare} disabled={isPending} className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}>
+              <button
+                type="button"
+                onClick={handlePushToSquare}
+                disabled={isPending}
+                className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}
+              >
                 {isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <Upload className="h-3.5 w-3.5" aria-hidden="true" />
                 )}
@@ -424,24 +672,61 @@ export default function SquareLinksClient({
                   className={cn(NEUTRAL_BUTTON, "h-9 w-9 px-0 sm:h-8 sm:w-8")}
                 >
                   {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
                   ) : (
                     <Ellipsis className="h-4 w-4" aria-hidden="true" />
                   )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled={isPending} onSelect={handleAutoMatch} className="min-h-11 sm:hidden">
+                <DropdownMenuItem
+                  disabled={isSyncing}
+                  onSelect={handleSyncSales}
+                  className="min-h-11 sm:hidden"
+                >
+                  <Download className="h-4 w-4" />
+                  Sync sales from Square
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={isPending}
+                  onSelect={handleAutoMatch}
+                  className="min-h-11 sm:hidden"
+                >
                   <Wand2 className="h-4 w-4" />
                   Auto-match serves
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isPending} onSelect={handlePushToSquare} className="min-h-11 sm:hidden">
+                <DropdownMenuItem
+                  disabled={isPending}
+                  onSelect={handlePushToSquare}
+                  className="min-h-11 sm:hidden"
+                >
                   <Upload className="h-4 w-4" />
                   Send menu to Square
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isPending} onSelect={handlePushAlcohol} className="min-h-11">
+                <DropdownMenuItem
+                  disabled={isPending}
+                  onSelect={handlePushAlcohol}
+                  className="min-h-11"
+                >
                   <Wine className="h-4 w-4" />
                   Update alcohol in Square
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={searching || groups.length === 0}
+                  onSelect={toggleAllGroups}
+                  className="min-h-11"
+                >
+                  {allCollapsed ? (
+                    <ChevronsUpDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronsDownUp className="h-4 w-4" />
+                  )}
+                  {allCollapsed
+                    ? "Expand all categories"
+                    : "Collapse all categories"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -451,42 +736,74 @@ export default function SquareLinksClient({
         {shown.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
             <SearchX className="h-6 w-6 text-admin-muted" aria-hidden="true" />
-            <p className="text-[13px] font-semibold text-admin-ink">No serves match</p>
-            <p className="text-[11px] text-admin-muted">Try a different search or filter.</p>
+            <p className="text-[13px] font-semibold text-admin-ink">
+              No serves match
+            </p>
+            <p className="text-[11px] text-admin-muted">
+              Try a different search or filter.
+            </p>
           </div>
         ) : (
           <>
             <ul className="m-0 list-none p-0 sm:hidden">
               {groups.map((group) => (
                 <li key={group.name}>
-                  <p className="bg-admin-surface px-3 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-                    {group.name}
-                  </p>
-                  <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
-                    {group.rows.map((row) => (
-                      <li key={row.menuItemPriceId} className="space-y-2 px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold text-admin-ink">
-                              {row.itemName}
-                              <span className="font-medium text-admin-muted"> · {row.serve}</span>
-                            </p>
-                            <p className="text-[11px] text-admin-muted">
-                              {formatGbp(row.amount)}
-                              {row.onEvents.length > 0 && ` · ${eventsLabel(row)}`}
-                            </p>
+                  <CategoryToggle
+                    group={group}
+                    open={isOpen(group.name)}
+                    onToggle={() => toggleGroup(group.name)}
+                    className="px-3"
+                  />
+                  {isOpen(group.name) && (
+                    <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
+                      {group.rows.map((row) => (
+                        <li
+                          key={row.menuItemPriceId}
+                          className="space-y-2 px-3 py-2.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-semibold text-admin-ink">
+                                {row.itemName}
+                                <span className="font-medium text-admin-muted">
+                                  {" "}
+                                  · {row.serve}
+                                </span>
+                              </p>
+                              <p className="text-[11px] text-admin-muted">
+                                {formatGbp(row.amount)}
+                                {row.onEvents.length > 0 &&
+                                  ` · ${eventsLabel(row)}`}
+                                {row.squareVariationId && saleLineCounts && (
+                                  <>
+                                    {" · "}
+                                    <SaleLines
+                                      row={row}
+                                      counts={saleLineCounts}
+                                    />{" "}
+                                    sales lines
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            {linkStatus(row)}
                           </div>
-                          {linkStatus(row)}
-                        </div>
-                        <VariationSelect
-                          row={row}
-                          variations={variations}
-                          disabled={isPending}
-                          onChange={(id) => run(() => saveMappingAction(row.menuItemPriceId, id), "Link saved.")}
-                        />
-                      </li>
-                    ))}
-                  </ul>
+                          <VariationSelect
+                            row={row}
+                            variations={variations}
+                            disabled={isPending}
+                            onChange={(id) =>
+                              run(
+                                () =>
+                                  saveMappingAction(row.menuItemPriceId, id),
+                                "Link saved.",
+                              )
+                            }
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               ))}
             </ul>
@@ -500,6 +817,12 @@ export default function SquareLinksClient({
                     <th className="py-2 pr-3 text-right">Price</th>
                     <th className="py-2 pr-3">On events</th>
                     <th className="py-2 pr-3">Square variation</th>
+                    <th
+                      className="py-2 pr-3 text-right"
+                      title="Square order lines synced for this variation, across every night"
+                    >
+                      Sales lines
+                    </th>
                     <th className="py-2 pr-4 sm:pr-5">Status</th>
                   </tr>
                 </thead>
@@ -508,10 +831,18 @@ export default function SquareLinksClient({
                     <GroupRows
                       key={group.name}
                       group={group}
+                      open={isOpen(group.name)}
+                      onToggle={() => toggleGroup(group.name)}
+                      saleLineCounts={saleLineCounts}
                       variations={variations}
                       isPending={isPending}
                       eventsLabel={eventsLabel}
-                      onChange={(row, id) => run(() => saveMappingAction(row.menuItemPriceId, id), "Link saved.")}
+                      onChange={(row, id) =>
+                        run(
+                          () => saveMappingAction(row.menuItemPriceId, id),
+                          "Link saved.",
+                        )
+                      }
                       status={linkStatus}
                     />
                   ))}
@@ -527,13 +858,19 @@ export default function SquareLinksClient({
 
 function GroupRows({
   group,
+  open,
+  onToggle,
+  saleLineCounts,
   variations,
   isPending,
   eventsLabel,
   onChange,
   status,
 }: {
-  group: { name: string; rows: MappingRow[] };
+  group: Group;
+  open: boolean;
+  onToggle: () => void;
+  saleLineCounts: Record<string, SaleLineCount> | null;
   variations: CatalogVariation[] | null;
   isPending: boolean;
   eventsLabel: (row: MappingRow) => string;
@@ -543,28 +880,48 @@ function GroupRows({
   return (
     <>
       <tr>
-        <td colSpan={6} className="bg-admin-surface px-4 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase sm:px-5">
-          {group.name}
+        <td colSpan={COLUMN_COUNT} className="p-0">
+          <CategoryToggle
+            group={group}
+            open={open}
+            onToggle={onToggle}
+            className="px-4 sm:px-5"
+          />
         </td>
       </tr>
-      {group.rows.map((row) => (
-        <tr key={row.menuItemPriceId} className="border-b border-admin-line/60">
-          <td className="py-1.5 pr-3 pl-4 text-[13px] font-semibold text-admin-ink sm:pl-5">{row.itemName}</td>
-          <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{row.serve}</td>
-          <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">{formatGbp(row.amount)}</td>
-          <td className="py-1.5 pr-3 text-[12px] text-admin-muted">{eventsLabel(row) || "-"}</td>
-          <td className="py-1.5 pr-3">
-            <VariationSelect
-              row={row}
-              variations={variations}
-              disabled={isPending}
-              onChange={(id) => onChange(row, id)}
-              className="max-w-64"
-            />
-          </td>
-          <td className="py-1.5 pr-4 sm:pr-5">{status(row)}</td>
-        </tr>
-      ))}
+      {open &&
+        group.rows.map((row) => (
+          <tr
+            key={row.menuItemPriceId}
+            className="border-b border-admin-line/60"
+          >
+            <td className="py-1.5 pr-3 pl-4 text-[13px] font-semibold text-admin-ink sm:pl-5">
+              {row.itemName}
+            </td>
+            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">
+              {row.serve}
+            </td>
+            <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+              {formatGbp(row.amount)}
+            </td>
+            <td className="py-1.5 pr-3 text-[12px] text-admin-muted">
+              {eventsLabel(row) || "-"}
+            </td>
+            <td className="py-1.5 pr-3">
+              <VariationSelect
+                row={row}
+                variations={variations}
+                disabled={isPending}
+                onChange={(id) => onChange(row, id)}
+                className="max-w-80"
+              />
+            </td>
+            <td className="py-1.5 pr-3 text-right text-[13px]">
+              <SaleLines row={row} counts={saleLineCounts} />
+            </td>
+            <td className="py-1.5 pr-4 sm:pr-5">{status(row)}</td>
+          </tr>
+        ))}
     </>
   );
 }

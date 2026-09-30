@@ -1,13 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
-import { buildMappingRows, type MappingCategoryRow } from "@/lib/market/mapping-rows";
+import {
+  buildMappingRows,
+  type MappingCategoryRow,
+} from "@/lib/market/mapping-rows";
 import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
 import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import type { CatalogVariation } from "@/lib/market/mapping";
-import { fetchModifierListOptions, readMixerChoice, type ModifierListOption } from "@/lib/market/square-mixers";
+import {
+  fetchModifierListOptions,
+  readMixerChoice,
+  type ModifierListOption,
+} from "@/lib/market/square-mixers";
 import { untrackedVariationIds } from "@/lib/market/square-stock-tracking";
-import SquareLinksClient from "./square-links-client";
+import SquareLinksClient, { type SaleLineCount } from "./square-links-client";
 
 export const dynamic = "force-dynamic";
+
+type SaleLineCountRow = {
+  variation_id: string;
+  line_count: number;
+  units: number | string | null;
+  first_night: string | null;
+  last_night: string | null;
+};
 
 type EventRow = {
   id: number;
@@ -23,11 +38,20 @@ export default async function SquareLinksPage({
   const supabase = await createClient();
   const { event } = await searchParams;
 
-  const [{ data: categoryRows }, { data: eventRows }, catalog, itemIdMap, mixerChoice, modifierLists] = await Promise.all([
+  const [
+    { data: categoryRows },
+    { data: eventRows },
+    catalog,
+    itemIdMap,
+    mixerChoice,
+    modifierLists,
+    { data: lineCountRows, error: lineCountError },
+    { data: syncState },
+  ] = await Promise.all([
     supabase
       .from("menu_categories")
       .select(
-        "id, name, is_active, menu_items(id, name, is_active, menu_item_prices(id, serve, amount, display_order, square_variation_id))"
+        "id, name, is_active, menu_items(id, name, is_active, menu_item_prices(id, serve, amount, display_order, square_variation_id))",
       )
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
@@ -43,7 +67,7 @@ export default async function SquareLinksPage({
       (err) => {
         console.error("[market] catalog fetch failed:", err);
         return null;
-      }
+      },
     ),
     squareItemIdsByVariation(),
     readMixerChoice(supabase),
@@ -52,17 +76,46 @@ export default async function SquareLinksPage({
       (err) => {
         console.error("[market] modifier list fetch failed:", err);
         return null;
-      }
+      },
     ),
+    supabase
+      .from("square_sale_line_counts")
+      .select("variation_id, line_count, units, first_night, last_night"),
+    supabase
+      .from("square_sync_state")
+      .select("last_synced_at")
+      .eq("id", 1)
+      .maybeSingle(),
   ]);
+  if (lineCountError)
+    console.error("[market] sale line counts failed:", lineCountError);
+
+  const saleLineCounts: Record<string, SaleLineCount> = Object.fromEntries(
+    ((lineCountRows ?? []) as SaleLineCountRow[]).map((row) => [
+      row.variation_id,
+      {
+        lines: row.line_count,
+        units: Number(row.units ?? 0),
+        firstNight: row.first_night,
+        lastNight: row.last_night,
+      },
+    ]),
+  );
 
   const events = ((eventRows ?? []) as EventRow[]).map((row) => ({
     id: row.id,
     name: row.name,
-    menuItemPriceIds: (row.stock_market_event_items ?? []).map((item) => item.menu_item_price_id),
+    menuItemPriceIds: (row.stock_market_event_items ?? []).map(
+      (item) => item.menu_item_price_id,
+    ),
   }));
-  const rows = buildMappingRows((categoryRows ?? []) as MappingCategoryRow[], events);
-  const untracked = await untrackedVariationIds(rows.map((row) => row.squareVariationId));
+  const rows = buildMappingRows(
+    (categoryRows ?? []) as MappingCategoryRow[],
+    events,
+  );
+  const untracked = await untrackedVariationIds(
+    rows.map((row) => row.squareVariationId),
+  );
 
   const eventId = event && /^\d+$/.test(event) ? Number(event) : null;
   const focusEvent = events.find((row) => row.id === eventId) ?? null;
@@ -73,10 +126,19 @@ export default async function SquareLinksPage({
       variations={catalog}
       focusEvent={focusEvent}
       itemIds={Object.fromEntries(itemIdMap)}
-      environment={process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox"}
+      environment={
+        process.env.SQUARE_ENVIRONMENT === "production"
+          ? "production"
+          : "sandbox"
+      }
       untrackedVariationIds={untracked}
       mixerChoice={mixerChoice}
       modifierLists={modifierLists}
+      saleLineCounts={lineCountError ? null : saleLineCounts}
+      salesSyncedAt={
+        (syncState as { last_synced_at: string | null } | null)
+          ?.last_synced_at ?? null
+      }
     />
   );
 }
