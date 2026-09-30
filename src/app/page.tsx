@@ -2,27 +2,24 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
+import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { RevealOnScroll } from "@/components/reveal-on-scroll";
 import { HomeSkeleton } from "@/components/home-skeleton";
 import { GrainOverlay } from "@/components/ui/grain-overlay";
 import { Reveal } from "@/components/animations/reveal";
-import { MarketSection } from "@/components/market-section";
-import { PosterHero } from "@/components/poster-hero";
-import { DateSleeves } from "@/components/home/date-sleeves";
-import { LaterTonightStrip } from "@/components/later-tonight-strip";
+import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HomeMarketTicker } from "@/components/home-market-ticker";
-import { SpecialsBand } from "@/components/specials-band";
-import { FloorStrip } from "@/components/floor-strip";
-import { HomeGallery, type HomeGalleryItem } from "@/components/home-gallery";
-import { VisitFooter } from "@/components/visit-footer";
+import { HomeHero } from "@/components/home/home-hero";
+import { ComingUpMonths } from "@/components/home/coming-up-months";
+import { DealsStrip } from "@/components/home/deals-strip";
+import { MerchGrid } from "@/components/home/merch-grid";
+import { HomeFindUs } from "@/components/home/home-find-us";
 import type { SpecialRow } from "@/components/specials-section";
 import type { MerchandiseRow } from "@/components/merchandise-section";
-import type { PromoRow } from "@/components/instagram-strip";
-import { formatClock, toMinutes } from "@/lib/opening-hours";
+import { taglineItems } from "@/lib/tagline-ticker";
 import {
   getEventType,
-  parseDate,
   serializeEvent,
   BOOKED_BAND_FILTER,
   PUBLIC_EVENT_SELECT,
@@ -32,21 +29,18 @@ import { format } from "date-fns";
 
 export const revalidate = 300;
 
-const CAROUSEL_EVENTS = 8;
-const GALLERY_SLIDES = 10;
-const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const SCHEDULE_EVENTS = 12;
 
-function clock(hhmm: string | null | undefined) {
-  const m = toMinutes(hhmm);
-  return m == null ? null : formatClock(m);
-}
+/* Weekly nights (quiz, karaoke) are shown in the hero's weekly strip, so the
+   dated schedule only carries one-off nights. */
+const WEEKLY_BEHAVIORS = new Set(["quiz", "karaoke"]);
 
 async function HomeContent() {
   const supabase = await createClient();
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawPromos }, { data: rawGallery }, info] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, info] =
     await Promise.all([
       supabase
         .from("events")
@@ -56,7 +50,7 @@ async function HomeContent() {
         .gte("date", todayStr)
         .order("date", { ascending: true })
         .order("start_time", { ascending: true })
-        .limit(16),
+        .limit(24),
       supabase
         .from("specials")
         .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
@@ -68,91 +62,51 @@ async function HomeContent() {
         .eq("is_active", true)
         .order("display_order", { ascending: true })
         .limit(8),
-      supabase
-        .from("promo_content")
-        .select("id, title, description, media_url, media_type, external_url")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true })
-        .limit(6),
-      supabase
-        .from("gallery_images")
-        .select("id, title, image_url, media_type")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true })
-        .limit(GALLERY_SLIDES),
       getCompanyInfo(),
     ]);
 
   const events = ((rawEvents ?? []) as EventRow[])
-    .filter((e) => getEventType(e)?.behavior !== "private")
-    .map((e) => serializeEvent(e));
+    .filter((e) => {
+      const behavior = getEventType(e)?.behavior;
+      return behavior !== "private" && !(behavior && WEEKLY_BEHAVIORS.has(behavior));
+    })
+    .map((e) => serializeEvent(e))
+    .filter((e) => !e.isKaraoke)
+    .slice(0, SCHEDULE_EVENTS);
 
-  const featuredDate = events.find((e) => e.date === todayStr)?.date ?? events[0]?.date ?? null;
-  const isTonight = featuredDate === todayStr;
-  const nightEvents = featuredDate ? events.filter((e) => e.date === featuredDate) : [];
-  const later = featuredDate ? events.filter((e) => e.date > featuredDate) : events;
-
-  const hours = info?.opening_hours ?? null;
-  const featuredDay = featuredDate ? DOW_KEYS[parseDate(featuredDate).getDay()] : DOW_KEYS[today.getDay()];
-  const doors = clock(hours?.[featuredDay]?.open);
-  const todayOpen = clock(hours?.[DOW_KEYS[today.getDay()]]?.open);
-  const todayClose = clock(hours?.[DOW_KEYS[today.getDay()]]?.close);
-  const openTonight = todayOpen ? `Bar open tonight ${todayOpen}${todayClose ? ` – ${todayClose}` : ""} · walk in` : null;
-
+  const featured = events[0] ?? null;
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
     (s) => (!s.start_date || s.start_date <= todayStr) && (!s.end_date || s.end_date >= todayStr)
   );
   const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
-  const promos = (rawPromos ?? []) as PromoRow[];
-  const gallery = (rawGallery ?? []) as HomeGalleryItem[];
+  const tickerItems = taglineItems(info?.tagline);
+  const hasMap = Boolean(process.env.GOOGLE_MAPS_API_KEY && info?.address);
 
   return (
     <>
-      <PublicNav currentPath="/" overlay ticker={false} />
+      <PublicNav currentPath="/" ticker={false} />
+      <MarqueeTicker items={tickerItems} />
 
-      {nightEvents.length > 0 ? (
-        <>
-          <PosterHero
-            nightEvents={nightEvents}
-            isTonight={isTonight}
-            doors={doors}
-            openTonight={openTonight}
-          />
-          <HomeMarketTicker />
-          <LaterTonightStrip
-            events={nightEvents.slice(1)}
-            isTonight={isTonight}
-            dayName={format(parseDate(featuredDate as string), "EEEE")}
-          />
-        </>
-      ) : (
-        <section className="flex min-h-100 flex-col items-center justify-center px-6 pt-24 text-center">
-          <h1 className="m-0 font-black text-5xl leading-[0.9] tracking-tighter text-ink uppercase">What&apos;s on</h1>
-          <p className="mt-4 max-w-sm text-sm text-ink-2">
-            Nothing booked yet - {openTonight ? openTonight.toLowerCase() : "check back soon"}.
-          </p>
-        </section>
-      )}
+      <HomeHero featured={featured} today={today} />
+      <HomeMarketTicker />
 
-      {nightEvents.length === 0 && <HomeMarketTicker />}
-
-      <div className="mx-auto w-full max-w-400">
-        <DateSleeves events={later.slice(0, CAROUSEL_EVENTS)} />
-        <div className="mt-14 hidden px-6 sm:block lg:px-10">
-          <MarketSection />
-        </div>
+      <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>
-          <SpecialsBand specials={specials} today={today} />
+          <ComingUpMonths events={events} />
         </Reveal>
         <Reveal index={1}>
-          <FloorStrip posts={promos} merchandise={merchandise} instagram={info?.instagram ?? null} />
+          <DealsStrip specials={specials} />
         </Reveal>
         <Reveal index={2}>
-          <HomeGallery items={gallery} />
+          <MerchGrid items={merchandise} />
         </Reveal>
         <Reveal index={3}>
-          <VisitFooter info={info} />
+          <HomeFindUs info={info} hasMap={hasMap} />
         </Reveal>
+      </div>
+
+      <div className="mx-auto mt-12 w-full max-w-400 px-4 sm:px-6 lg:mt-16 lg:px-10">
+        <PublicFooter info={info} />
       </div>
       <RevealOnScroll />
     </>
@@ -161,7 +115,7 @@ async function HomeContent() {
 
 export default function HomePage() {
   return (
-    <main className="relative isolate min-h-dvh w-full bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.5rem)] text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008] sm:pb-16">
+    <main className="relative isolate min-h-dvh w-full bg-canvas pb-[calc(env(safe-area-inset-bottom)+4.5rem)] text-ink-2 antialiased selection:bg-gold selection:text-on-gold sm:pb-16">
       <SmoothScroll />
       <GrainOverlay fixed />
       <Suspense fallback={<HomeSkeleton />}>
