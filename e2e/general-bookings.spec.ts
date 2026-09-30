@@ -15,9 +15,11 @@ const ROUTE = "/event-bookings/general/music/gig";
 
 let contactId: number;
 let bookingId: number;
+let groupName: string;
 
 test.beforeEach(async ({}, testInfo) => {
   const uniq = `${Date.now()}-${testInfo.workerIndex}-${Math.floor(Math.random() * 1e6)}`;
+  groupName = `E2E Original Group ${uniq}`;
   const { data: contact, error: cErr } = await admin
     .from("contacts")
     .insert({ full_name: "E2E General Tester", email: `e2e-general-${uniq}@example.com`, phone_no: "111222" })
@@ -31,7 +33,7 @@ test.beforeEach(async ({}, testInfo) => {
     .insert({
       event_id: GIG_EVENT_ID,
       contact_id: contactId,
-      group_name: "E2E Original Group",
+      group_name: groupName,
       group_size: 2,
       status: "pending",
       special_requests: "Window seat please",
@@ -50,50 +52,45 @@ test.afterEach(async () => {
   if (contactId) await admin.from("contacts").delete().eq("id", contactId);
 });
 
-test.describe("general bookings - sheet edit & delete", () => {
+test.describe("general bookings - inline edit & delete", () => {
   test("edit updates the booking and persists", async ({ page }) => {
+    const editedName = groupName.replace("Original", "Edited");
     await page.goto(ROUTE);
 
-    await page.getByText("E2E Original Group", { exact: false }).first().click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText(`Ref: ${bookingId}`)).toBeVisible();
+    await page.getByRole("button", { name: `Show details for ${groupName}` }).click();
+    await expect(page.getByText(`#${bookingId}`, { exact: true })).toBeVisible();
 
-    await dialog.getByRole("button", { name: /^Edit$/i }).click();
-    await expect(dialog.getByText("Modify Record")).toBeVisible();
+    await page.getByRole("button", { name: /^Edit( booking)?$/ }).click();
+    await expect(page.getByText(`Editing booking #${bookingId}`)).toBeVisible();
 
-    await dialog.getByLabel("Group Name").fill("E2E Edited Group");
-    await dialog.getByTitle("Status").selectOption("confirmed");
+    await page.getByLabel("Team name").fill(editedName);
+    await page.getByRole("button", { name: "Confirmed", exact: true }).click();
 
-    await dialog.getByRole("button", { name: /^Save$/i }).click();
+    await page.getByRole("button", { name: "Save changes" }).click();
 
     await expect(page.getByText("Booking updated successfully")).toBeVisible();
-
-    await expect(dialog).toBeHidden();
-    await expect(page.getByText("E2E Edited Group", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText(`Editing booking #${bookingId}`)).toBeHidden();
+    await expect(page.getByRole("button", { name: `Hide details for ${editedName}` })).toBeVisible();
 
     await expect.poll(async () => {
       const { data } = await admin.from("bookings").select("group_name, status").eq("id", bookingId).single();
       return data;
-    }).toMatchObject({ group_name: "E2E Edited Group", status: "confirmed" });
+    }).toMatchObject({ group_name: editedName, status: "confirmed" });
   });
 
-  test("delete removes the booking", async ({ page }) => {
+  test("delete removes the booking", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === "mobile", "Delete is only offered from the desktop row actions");
     await page.goto(ROUTE);
 
-    await page.getByText("E2E Original Group", { exact: false }).first().click();
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
+    await page.getByRole("button", { name: `Show details for ${groupName}` }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-    await dialog.getByRole("button", { name: /^Delete$/i }).click();
-
-    await expect(page.getByText(/Permanently delete this booking/i)).toBeVisible();
-    await page.locator("button.bg-red-600", { hasText: "Delete" }).click();
+    const confirmDialog = page.getByRole("dialog");
+    await expect(confirmDialog.getByText(/Permanently delete this booking/i)).toBeVisible();
+    await confirmDialog.getByRole("button", { name: "Delete", exact: true }).click();
 
     await expect(page.getByText("Booking deleted permanently")).toBeVisible();
-
-    await expect(dialog).toBeHidden();
-    await expect(page.getByText("E2E Original Group")).toHaveCount(0);
+    await expect(page.getByText(groupName)).toHaveCount(0);
 
     await expect.poll(async () => {
       const { data } = await admin.from("bookings").select("id").eq("id", bookingId);

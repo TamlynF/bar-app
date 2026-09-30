@@ -12,7 +12,7 @@ test.describe("band booking - selected date/time editing", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
 
-    await expect(dialog.getByText("Selected Date", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Selected Date & Time", { exact: true })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /pick a date/i })).toBeVisible();
     const start = dialog.getByLabel("Performance start time");
     const end = dialog.getByLabel("Performance end time");

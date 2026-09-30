@@ -5,11 +5,12 @@ export interface RawBookingRowIds {
 }
 
 export function withStringBookingIds<T extends RawBookingRowIds>(row: T) {
+  const { id, event_id, booking_table_mappings, ...rest } = row;
   return {
-    ...row,
-    id: String(row.id),
-    event_id: row.event_id == null ? null : String(row.event_id),
-    booking_table_mappings: (row.booking_table_mappings ?? []).map((mapping) =>
+    ...rest,
+    id: String(id),
+    event_id: event_id == null ? null : String(event_id),
+    booking_table_mappings: (booking_table_mappings ?? []).map((mapping) =>
       mapping?.tables
         ? {
             ...mapping,

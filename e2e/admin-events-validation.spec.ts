@@ -1,80 +1,102 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 import path from "path";
 
 test.use({ storageState: path.resolve(__dirname, ".auth/admin.json") });
 
-function isoDateInDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
+
+const SEEDED_QUIZ_EVENT_ID = 1;
+
+async function openNewEventForm(page: Page) {
+  await page.goto("/event-setups/events");
+  await page.getByRole("button", { name: "Add event" }).first().click();
+  const sheet = page.getByRole("dialog", { name: "New event" });
+  await expect(sheet.getByRole("combobox", { name: "Event Type" })).toBeVisible();
+  return sheet;
 }
 
-async function openNewEventForm(page: import("@playwright/test").Page) {
-  await page.goto("/event-setups/events");
-  await page.getByTitle("New Event").click();
-  await expect(page.locator('select[name="event_types_id"]')).toBeVisible();
+async function chooseGamesQuiz(page: Page) {
+  const sheet = page.getByRole("dialog", { name: "New event" });
+  await sheet.getByRole("combobox", { name: "Event Type" }).selectOption({ label: "Games" });
+  await sheet.getByRole("combobox", { name: "Sub-Type" }).selectOption({ label: "Quiz" });
+}
+
+async function pickDate(page: Page, isoDate: string) {
+  const sheet = page.getByRole("dialog", { name: "New event" });
+  await sheet.getByRole("button", { name: "Pick a date" }).click();
+  const dayKey = await page.evaluate((d) => new Date(d + "T00:00:00").toLocaleDateString(), isoDate);
+  const day = page.locator(`[data-day="${dayKey}"]`).first();
+  for (let i = 0; i < 24 && !(await day.isVisible()); i++) {
+    await page.getByRole("button", { name: /next month/i }).click();
+  }
+  await day.click();
 }
 
 test.describe("event create validation", () => {
   test("blocks save when required date / time fields are missing", async ({ page }) => {
-    await openNewEventForm(page);
-    await page.locator('select[name="event_types_id"]').selectOption({ label: "Games" });
-    await page.locator('select[name="event_subtypes_id"]').selectOption({ label: "Quiz" });
-    await expect(page.locator('input[name="title"]')).toHaveValue("Quiz Night");
+    const sheet = await openNewEventForm(page);
+    await chooseGamesQuiz(page);
+    await expect(sheet.locator('input[name="title"]')).toHaveValue("Quiz Night");
 
-    await page.getByRole("button", { name: /save/i }).click();
-    await expect(
-      page.getByText(/Fill in event type, sub-type, title, date, start time and end time/i)
-    ).toBeVisible();
+    await expect(sheet.getByText("Pick a date.")).toBeVisible();
+    await expect(sheet.getByText("Set a start and end time.")).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   test("blocks save when end time is not after start time", async ({ page }) => {
-    await openNewEventForm(page);
-    await page.locator('select[name="event_types_id"]').selectOption({ label: "Games" });
-    await page.locator('select[name="event_subtypes_id"]').selectOption({ label: "Quiz" });
+    const sheet = await openNewEventForm(page);
+    await chooseGamesQuiz(page);
 
-    await page.locator('input[name="date"]').fill("2030-01-01");
-    await page.locator('input[name="start_time"]').fill("21:00");
-    await page.locator('input[name="end_time"]').fill("20:00");
+    await sheet.getByRole("textbox", { name: "Start time" }).fill("21:00");
+    await sheet.getByRole("textbox", { name: "End time" }).fill("20:00");
 
-    await page.getByRole("button", { name: /save/i }).click();
-    await expect(page.getByText(/End time must be after the start time/i)).toBeVisible();
+    await expect(sheet.getByText(/End time must be after the start time/i)).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   test("blocks save when the time window clashes with an active event on the same date", async ({ page }) => {
-    await openNewEventForm(page);
-    await page.locator('select[name="event_types_id"]').selectOption({ label: "Games" });
-    await page.locator('select[name="event_subtypes_id"]').selectOption({ label: "Quiz" });
+    const { data: seeded, error } = await admin
+      .from("events")
+      .select("date")
+      .eq("id", SEEDED_QUIZ_EVENT_ID)
+      .single();
+    if (error) throw error;
 
-    await page.locator('input[name="date"]').fill(isoDateInDays(7));
-    await page.locator('input[name="start_time"]').fill("21:00"); // overlaps 20:00–22:00
-    await page.locator('input[name="end_time"]').fill("23:00");
+    const sheet = await openNewEventForm(page);
+    await chooseGamesQuiz(page);
 
-    await page.getByRole("button", { name: /save/i }).click();
-    await expect(page.getByText(/Clashes with an active event/i)).toBeVisible();
-    await expect(page.getByText(/Quiz Night \(20:00 - 22:00\)/i)).toBeVisible();
+    await pickDate(page, seeded.date);
+    await sheet.getByRole("textbox", { name: "Start time" }).fill("21:00");
+    await sheet.getByRole("textbox", { name: "End time" }).fill("23:00");
+
+    await expect(sheet.getByText(/Clashes with Quiz Night \(20:00 - 22:00\)/i)).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Save" })).toBeDisabled();
   });
-
 });
 
 test.describe("public booking settings section", () => {
   test("booking fields appear only when Public Booking is on", async ({ page }) => {
-    await openNewEventForm(page);
-    await page.locator('select[name="event_types_id"]').selectOption({ label: "Games" });
-    await page.locator('select[name="event_subtypes_id"]').selectOption({ label: "Quiz" });
+    const sheet = await openNewEventForm(page);
+    await chooseGamesQuiz(page);
 
-    await expect(page.getByText("Public Booking Settings")).toBeVisible();
+    await sheet.getByRole("button", { name: /More settings/ }).click();
+    await expect(sheet.getByText("Public booking settings")).toBeVisible();
 
-    const publicToggle = page.getByRole("switch", { name: "Public booking" });
+    const publicToggle = sheet.getByRole("switch", { name: "Public booking" });
     await expect(publicToggle).toHaveAttribute("aria-checked", "false");
-    await expect(page.locator('input[name="booking_page_url"]')).toHaveCount(0);
-    await expect(page.getByRole("switch", { name: "Fully booked" })).toHaveCount(0);
-    await expect(page.getByText("Booking Page", { exact: true })).toHaveCount(0);
+    await expect(sheet.locator('input[name="booking_page_url"]')).toHaveCount(0);
+    await expect(sheet.getByRole("switch", { name: "Fully booked" })).toHaveCount(0);
+    await expect(sheet.getByText("Booking URL", { exact: true })).toHaveCount(0);
 
     await publicToggle.click();
     await expect(publicToggle).toHaveAttribute("aria-checked", "true");
-    await expect(page.getByRole("switch", { name: "Fully booked" })).toHaveCount(1);
-    await expect(page.locator('input[name="booking_page_url"]')).toHaveCount(1);
-    await expect(page.getByText("Booking Page", { exact: true })).toBeVisible();
+    await expect(sheet.getByRole("switch", { name: "Fully booked" })).toHaveCount(1);
+    await expect(sheet.locator('input[name="booking_page_url"]')).toHaveCount(1);
+    await expect(sheet.getByText("Booking URL", { exact: true })).toBeVisible();
   });
 });

@@ -13,7 +13,7 @@ function pngBytes(width: number, height: number) {
 }
 
 function mockFetch(response: Partial<Response> | Error) {
-  const fetchMock = vi.fn(() =>
+  const fetchMock = vi.fn<typeof fetch>(() =>
     response instanceof Error ? Promise.reject(response) : Promise.resolve(response as Response)
   );
   vi.stubGlobal("fetch", fetchMock);
