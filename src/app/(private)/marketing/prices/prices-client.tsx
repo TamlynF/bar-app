@@ -221,7 +221,7 @@ export default function PricesClient({
 
   const scoreLine =
     scored.length === 0
-      ? "No local prices yet — capture a rival menu under Settings → Rivals."
+      ? "No local prices yet - capture a rival menu under Settings → Rivals."
       : yourScore === scored.length
         ? `You're the cheaper round on all ${scored.length}. Clean sweep. 🎉`
         : yourScore === 0
@@ -888,7 +888,7 @@ export default function PricesClient({
       )}
 
       <p className="text-center text-[11px] text-[#5E6654]/60">
-        Friendly competition only — prices come from each rival&apos;s published menu or a board photo. Empty cells
+        Friendly competition only - prices come from each rival&apos;s published menu or a board photo. Empty cells
         mean that drink has not been captured yet.
       </p>
 

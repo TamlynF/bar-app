@@ -12,6 +12,7 @@ const items: MenuPushItem[] = [
     menuItemId: 1,
     name: "Hawkstone Premium Lager",
     categoryName: "Draught",
+    isAlcoholic: true,
     prices: [
       { priceId: 10, serve: "pint", amount: 5.5 },
       { priceId: 11, serve: "half pint", amount: 3.25 },
@@ -21,6 +22,7 @@ const items: MenuPushItem[] = [
     menuItemId: 2,
     name: "Guinness",
     categoryName: "Draught",
+    isAlcoholic: true,
     prices: [
       { priceId: 12, serve: "pint", amount: 4.95 },
       { priceId: 13, serve: "half pint", amount: 2.95 },
@@ -30,6 +32,7 @@ const items: MenuPushItem[] = [
     menuItemId: 3,
     name: "Aperol Spritz",
     categoryName: "Classic Cocktails",
+    isAlcoholic: true,
     prices: [{ priceId: 14, serve: "each", amount: 8.95 }],
   },
 ];
@@ -41,6 +44,8 @@ type ItemObject = {
   id: string;
   itemData: {
     name: string;
+    productType?: string;
+    isAlcoholic?: boolean;
     categories?: { id: string }[];
     reportingCategory?: { id: string };
     variations: {
@@ -51,6 +56,29 @@ type ItemObject = {
 };
 
 describe("buildCatalogUpsertPlan", () => {
+  it("creates every item as prepared food and beverage", () => {
+    const plan = buildCatalogUpsertPlan(items, empty, normaliseName);
+    const created = plan.objects.filter((o) => (o as ItemObject).type === "ITEM") as ItemObject[];
+    expect(created).toHaveLength(3);
+    expect(created.every((item) => item.itemData.productType === "FOOD_AND_BEV")).toBe(true);
+  });
+
+  it("marks items alcoholic from their menu category", () => {
+    const softs: MenuPushItem = {
+      menuItemId: 4,
+      name: "Diet Coke",
+      categoryName: "Soft Drinks",
+      isAlcoholic: false,
+      prices: [{ priceId: 15, serve: "each", amount: 2.5 }],
+    };
+    const plan = buildCatalogUpsertPlan([...items, softs], empty, normaliseName);
+    const byName = new Map(
+      (plan.objects.filter((o) => (o as ItemObject).type === "ITEM") as ItemObject[]).map((item) => [item.itemData.name, item])
+    );
+    expect(byName.get("Guinness")?.itemData.isAlcoholic).toBe(true);
+    expect(byName.get("Diet Coke")?.itemData.isAlcoholic).toBe(false);
+  });
+
   it("creates a category per new menu category and links items to it", () => {
     const plan = buildCatalogUpsertPlan(items, empty, normaliseName);
     const categories = plan.objects.filter((o) => (o as { type: string }).type === "CATEGORY");
@@ -105,6 +133,7 @@ describe("buildCatalogUpsertPlan", () => {
       menuItemId: 99,
       name: "Tap Water",
       categoryName: "Soft Drinks",
+      isAlcoholic: false,
       prices: [{ priceId: 90, serve: "each", amount: 0 }],
     };
     const plan = buildCatalogUpsertPlan([...items, freeTapWater], empty, normaliseName);

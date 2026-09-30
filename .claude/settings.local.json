@@ -112,7 +112,17 @@
       "PowerShell(npx eslint --no-warn-ignored \"src/app/\\(private\\)/private-layout-client.tsx\" \"src/app/\\(private\\)/event-setups/events/[[]id]/category-section.tsx\" src/lib/print-in-frame.ts src/lib/quiz/picture-sheet-html.ts src/lib/__tests__/picture-sheet-html.test.ts; Write-Output \"lint-exit:$LASTEXITCODE\"; npx vitest run src/lib/__tests__/picture-sheet-html.test.ts 2>&1 | Select-String -Pattern \"Tests|passed|failed\" | Select-Object -First 3; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 6)",
       "PowerShell(npx eslint --no-warn-ignored \"src/app/\\(private\\)/private-layout-client.tsx\"; Write-Output \"lint-exit:$LASTEXITCODE\"; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)",
       "PowerShell(npx eslint --no-warn-ignored src/lib/print-in-frame.ts src/lib/quiz/picture-sheet-html.ts; Write-Output \"lint-exit:$LASTEXITCODE\"; npx vitest run src/lib/__tests__/picture-sheet-html.test.ts 2>&1 | Select-String -Pattern \"Tests \" ; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)",
-      "PowerShell(npx eslint --no-warn-ignored src/lib/quiz/picture-sheet-html.ts; Write-Output \"lint-exit:$LASTEXITCODE\"; npx vitest run src/lib/__tests__/picture-sheet-html.test.ts 2>&1 | Select-String -Pattern \"Tests \"; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)"
+      "PowerShell(npx eslint --no-warn-ignored src/lib/quiz/picture-sheet-html.ts; Write-Output \"lint-exit:$LASTEXITCODE\"; npx vitest run src/lib/__tests__/picture-sheet-html.test.ts 2>&1 | Select-String -Pattern \"Tests \"; npm run build 2>&1 | Select-String -Pattern \"error|Compiled|Failed\" | Select-Object -First 5)",
+      "Bash(cd /c/DFRepo/bar-app/supabase/migrations && grep -lE \"table \\(public\\\\.\\)?menu_item|menu_item_variant|menu_items\" *.sql | head; grep -nE \"create table[^\\(]*menu|alter table[^;]*menu_item\" *.sql | head -40)",
+      "Read(//c/DFRepo/bar-app/supabase/migrations/**)",
+      "mcp__claude_ai_Square__make_api_request_read",
+      "Bash(cd \"/c/DFRepo/bar-app/src/app/\\(private\\)/settings/market\" && ls \"[id]\" history && wc -l \"[id]\"/* market-client.tsx actions.ts live-floor.tsx page.tsx)",
+      "Read(//c/DFRepo/bar-app/src/app/\\\\\\(private\\\\\\)/settings/market/**)",
+      "Bash(cd /c/DFRepo/bar-app/src && wc -l lib/market/*.ts && ls \"app/\\(public\\)\" 2>/dev/null; find app -path \"*market*\" -name \"*.tsx\" | grep -v settings; find components -ipath \"*market*\")",
+      "Read(//c/DFRepo/bar-app/src/**)",
+      "Bash(cd \"/c/DFRepo/bar-app/src/app/\\(public\\)/market\" && wc -l *.tsx board/*.tsx && grep -nE \"^\\(export \\)?\\(default \\)?function \\\\w+|\\\\.name\\\\b|\\\\.serve\\\\b|tillPrice|formatGbp|formatPrice\" market-ui.tsx market-feed.tsx board/market-board.tsx page.tsx | head -80)",
+      "Read(//c/DFRepo/bar-app/src/app/\\\\\\(public\\\\\\)/market/**)",
+      "Bash(sed 's/_.*//')"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",

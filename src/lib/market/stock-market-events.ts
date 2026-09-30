@@ -17,6 +17,7 @@ export type StockMarketEventRow = {
   pace_floor_units?: number | string | null;
   session_ticks_hint?: number | string | null;
   leaderboard_rows?: number | string | null;
+  mixer_price?: number | string | null;
   weekdays?: number[] | null;
   bank_holiday_profile?: number | null;
   exclude_market_nights?: boolean | null;
@@ -67,6 +68,7 @@ export function eventConfig(row: StockMarketEventRow): MarketConfig {
     paceFloorUnits: numberOr(row.pace_floor_units, d.paceFloorUnits),
     sessionTicksHint: numberOr(row.session_ticks_hint, d.sessionTicksHint),
     leaderboardRows: numberOr(row.leaderboard_rows, d.leaderboardRows),
+    mixerPrice: numberOr(row.mixer_price, d.mixerPrice),
   };
 }
 

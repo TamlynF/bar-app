@@ -4,6 +4,7 @@ import { instrumentLimits } from "./engine";
 import { runTierTick, type TierInstrumentTickResult } from "./tier-engine";
 import { publicTillPrice } from "./square-confirmation";
 import { optionalNumber } from "./drink-overrides";
+import { mixerServeLabel, servedChangePct, servedEventPayload, withMixer, withMixerOrNull } from "./mixer";
 import { syncMarketPricesToSquare } from "./square-price-sync";
 import {
   resolveMarketConfig,
@@ -49,6 +50,7 @@ export type MarketInstrumentRow = {
   stock_state: StockState;
   stock_override: StockState | null;
   stock_qty: number | string | null;
+  stock_tracked?: boolean | null;
   square_variation_id: string | null;
   min_price: number | string | null;
   max_price: number | string | null;
@@ -73,6 +75,7 @@ export type MarketInstrumentRow = {
   low_price?: number | string | null;
   tier_changes?: number | null;
   price_changes?: number | null;
+  mixer_price?: number | string | null;
 };
 
 type CrashWindow = { crash_from_tick?: number | null; crash_until_tick: number | null };
@@ -130,6 +133,11 @@ export type MarketInstrumentPayload = {
   normalUnitsPerNight: number | null;
   /* Square's IN_STOCK count at the last tick; null when unlinked or unknown. */
   stockQty: number | null;
+  /* The mixer the till adds to this spirit, null when sold on its own. Every
+     price in this payload (price, till, base, opening, floor, ceil, target,
+     spark) already includes it - the public pays spirit + mixer - and
+     `serve` reads "single + mixer". Only the spirit price moves. */
+  mixerPrice: number | null;
 };
 
 export type MarketEventPayload = {
@@ -218,6 +226,7 @@ function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
     stockState: row.stock_state,
     stockOverride: row.stock_override,
     squareVariationId: row.square_variation_id,
+    stockTracked: row.stock_tracked ?? null,
     minPrice: optionalNumber(row.min_price),
     maxPrice: optionalNumber(row.max_price),
     crashPrice: optionalNumber(row.crash_price),
@@ -416,7 +425,12 @@ export async function maybeRunMarketTick(
       } catch (err) {
         console.error("[market] orders fetch failed, ticking without demand:", err);
       }
-      stockQtyByVariation = await fetchStockByVariation(locationId, mappedVariationIds);
+      stockQtyByVariation = await fetchStockByVariation(
+        locationId,
+        instruments
+          .filter((i) => i.square_variation_id && i.stock_tracked !== false)
+          .map((i) => i.square_variation_id as string)
+      );
     }
 
     let newUnitsByInstrument = new Map<number, number>();
@@ -479,7 +493,7 @@ export async function maybeRunMarketTick(
     const instrumentPatch = (result: (typeof results)[number], withStats: boolean) => {
       const row = byId.get(result.id);
       const variationId = row?.square_variation_id;
-      const stockQty = variationId ? stockQtyByVariation.get(variationId) : undefined;
+      const stockQty = variationId && row?.stock_tracked !== false ? stockQtyByVariation.get(variationId) : undefined;
       return {
         current_price: result.price,
         demand_units: result.demandUnits,
@@ -587,7 +601,18 @@ export async function maybeRunMarketTick(
       if (eventError) throw eventError;
       if (config.pushAlertsEnabled) {
         try {
-          await sendMarketPushAlerts(supabase, events);
+          await sendMarketPushAlerts(
+            supabase,
+            events.map((event) => ({
+              ...event,
+              payload: servedEventPayload(
+                event.kind,
+                event.payload,
+                event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.mixer_price),
+                event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.base_price)
+              ),
+            }))
+          );
         } catch (err) {
           console.error("[market] push alerts failed:", err);
         }
@@ -717,6 +742,12 @@ export async function readMarketState(
     (row) => onEvent == null || onEvent.has(row.menu_item_price_id)
   );
   const shownInstrumentIds = new Set(instruments.map((row) => row.id));
+  const mixerById = new Map(
+    ((instrumentRows ?? []) as MarketInstrumentRow[]).map((row) => [row.id, optionalNumber(row.mixer_price)])
+  );
+  const baseById = new Map(
+    ((instrumentRows ?? []) as MarketInstrumentRow[]).map((row) => [row.id, Number(row.base_price)])
+  );
   const config = resolveMarketConfig(session.config);
   const crashActive = crashActiveAt(session, session.tick_no);
 
@@ -760,9 +791,9 @@ export async function readMarketState(
     leaderboardRows: config.leaderboardRows,
     closesAt,
     instruments: instruments.map((row) => {
+      const mixer = mixerById.get(row.id) ?? null;
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
-      const basePrice = Number(row.base_price);
       const spark = sparkByInstrument.get(row.id) ?? [];
       const previous = lastDifferentPrice(spark, price) ?? opening;
       const category = instrumentCategory(row);
@@ -770,40 +801,46 @@ export async function readMarketState(
       return {
         id: row.id,
         name: row.display_name,
-        serve: row.serve,
-        price,
-        basePrice,
-        openingPrice: opening,
-        changePct: opening > 0 ? Math.round(((price - opening) / opening) * 1000) / 10 : 0,
+        serve: mixerServeLabel(row.serve, mixer),
+        price: withMixer(price, mixer),
+        basePrice: withMixer(Number(row.base_price), mixer),
+        openingPrice: withMixer(opening, mixer),
+        changePct: opening > 0 ? servedChangePct(opening, price, mixer) : 0,
         direction: price > previous ? "up" : price < previous ? "down" : "flat",
         stock: row.stock_state,
-        spark,
+        spark: spark.map((point) => withMixer(point, mixer)),
         category: category.name,
         categoryOrder: category.order,
         demandUnits: Number(row.demand_units),
-        floor: Math.round(limits.floor * 100) / 100,
-        ceil: Math.round(limits.ceil * 100) / 100,
-        tillPrice: publicTillPrice(session, row),
+        floor: withMixer(Math.round(limits.floor * 100) / 100, mixer),
+        ceil: withMixer(Math.round(limits.ceil * 100) / 100, mixer),
+        tillPrice: withMixerOrNull(publicTillPrice(session, row), mixer),
         tillSyncError: row.square_sync_error ?? null,
         linkedToTill: Boolean(row.square_variation_id),
         tierPct: optionalNumber(row.tier_pct) ?? 0,
-        targetPrice: optionalNumber(row.target_price),
+        targetPrice: withMixerOrNull(optionalNumber(row.target_price), mixer),
         pace: optionalNumber(row.pace) ?? 0,
         rankPos: row.rank_pos ?? null,
         normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
-        stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
+        stockQty: row.stock_qty == null || row.stock_tracked === false ? null : Number(row.stock_qty),
+        mixerPrice: mixer,
       };
     }),
     events: (eventRows ?? [])
       .filter((row) => row.instrument_id == null || shownInstrumentIds.has(row.instrument_id as number))
       .map((row) => {
-        const payload = (row.payload ?? {}) as {
-          name?: string;
-          serve?: string;
-          from?: number;
-          to?: number;
-          pct?: number;
-        };
+        const payload = servedEventPayload(
+          row.kind as string,
+          (row.payload ?? {}) as {
+            name?: string;
+            serve?: string;
+            from?: number;
+            to?: number;
+            pct?: number;
+          },
+          row.instrument_id == null ? null : mixerById.get(row.instrument_id as number),
+          row.instrument_id == null ? null : baseById.get(row.instrument_id as number)
+        );
         return {
           id: row.id as number,
           kind: row.kind as MarketEventKind,

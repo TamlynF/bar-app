@@ -57,6 +57,14 @@ import {
 } from "@/lib/market/simulate";
 import { SQUARE_ITEM_MAP_TAG } from "@/lib/market/square-item-links";
 import {
+  fetchModifierListOptions,
+  mixerModifierIdsByVariation,
+  pickMixerModifier,
+  refreshSessionMixers,
+} from "@/lib/market/square-mixers";
+import { pushAlcoholFlagsToSquare } from "@/lib/market/square-alcohol";
+import { refreshStockTracking } from "@/lib/market/square-stock-tracking";
+import {
   addInventory,
   assertSandbox,
   deleteSeededItems,
@@ -92,6 +100,7 @@ const configSchema = z.object({
   moveNotifyPct: z.coerce.number().min(0.01).max(0.5),
   lowStockThreshold: z.coerce.number().min(1).max(100),
   leaderboardRows: z.coerce.number().int().min(0).max(15),
+  mixerPrice: z.coerce.number().min(0).max(20),
 });
 
 const tierSchema = z.object({
@@ -139,6 +148,7 @@ function readConfig(formData: FormData, base: MarketConfig = DEFAULT_MARKET_CONF
     moveNotifyPct: formData.get("moveNotifyPct"),
     lowStockThreshold: formData.get("lowStockThreshold"),
     leaderboardRows: formData.get("leaderboardRows") ?? 0,
+    mixerPrice: formData.get("mixerPrice") ?? base.mixerPrice,
   });
   if (!parsed.success) return null;
   const tier = readTierConfig(formData, base);
@@ -297,6 +307,17 @@ async function openSession(
     console.error("[market] could not snapshot Square prices:", err);
   }
 
+  try {
+    await refreshSessionMixers(supabase, session.id, { requireSquare: false });
+  } catch (err) {
+    console.error("[market] could not set mixer prices:", err);
+  }
+  try {
+    await refreshStockTracking(supabase, session.id, { requireSquare: false });
+  } catch (err) {
+    console.error("[market] could not read stock tracking:", err);
+  }
+
   return { success: true, count: instrumentRows.length };
 }
 
@@ -343,6 +364,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     moveNotifyPct: formData.get("moveNotifyPct"),
     lowStockThreshold: formData.get("lowStockThreshold"),
     leaderboardRows: formData.get("leaderboardRows") ?? 0,
+    mixerPrice: formData.get("mixerPrice") ?? DEFAULT_MARKET_CONFIG.mixerPrice,
   });
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -373,6 +395,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     move_notify_pct: values.moveNotifyPct,
     low_stock_threshold: values.lowStockThreshold,
     leaderboard_rows: values.leaderboardRows,
+    mixer_price: values.mixerPrice,
     push_alerts_enabled: readPushAlertsEnabled(formData),
     rerank_every_ticks: tier.rerankEveryTicks,
     warmup_units: tier.warmupUnits,
@@ -720,6 +743,32 @@ async function writeDrinkOverrides(
   return error ? { error: error.message } : null;
 }
 
+/* "Served with a mixer" lives on the menu serve so every event, the board
+   and the phone page share it. A live market picks the change up at once. */
+async function saveServeMixer(supabase: ServerClient, menuItemPriceId: number, formData: FormData) {
+  if (!formData.has("with_mixer_field")) return null;
+  const { error } = await supabase
+    .from("menu_item_prices")
+    .update({ with_mixer: formData.get("with_mixer") === "on" })
+    .eq("id", menuItemPriceId);
+  if (error) return { error: error.message };
+  const { data: live } = await supabase
+    .from("market_instruments")
+    .select("session_id, market_sessions!inner(status)")
+    .eq("menu_item_price_id", menuItemPriceId)
+    .eq("market_sessions.status", "live")
+    .limit(1)
+    .maybeSingle();
+  if (live) {
+    try {
+      await refreshSessionMixers(supabase, live.session_id as number, { requireSquare: false });
+    } catch (err) {
+      console.error("[market] could not refresh mixer prices:", err);
+    }
+  }
+  return null;
+}
+
 export async function saveEventDrinkPricingAction(formData: FormData) {
   const supabase = await createClient();
   const eventId = Number(formData.get("event_id"));
@@ -736,6 +785,8 @@ export async function saveEventDrinkPricingAction(formData: FormData) {
 
   const writeError = await writeDrinkOverrides(supabase, eventId, serve, overrides);
   if (writeError) return writeError;
+  const mixerError = await saveServeMixer(supabase, menuItemPriceId, formData);
+  if (mixerError) return mixerError;
   revalidateMarket();
   return { success: true, id: menuItemPriceId };
 }
@@ -820,6 +871,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
       overrides
     );
     if (overrideError) return overrideError;
+    const mixerError = await saveServeMixer(supabase, savedPrice.id as number, formData);
+    if (mixerError) return mixerError;
 
     revalidateMarket();
     return { success: true, id: savedPrice.id as number };
@@ -867,6 +920,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
     ...overridesToRow(overrides),
   });
   if (linkError) return { error: linkError.message };
+  const mixerError = await saveServeMixer(supabase, insertedPrice.id as number, formData);
+  if (mixerError) return mixerError;
 
   revalidateMarket();
   return { success: true, id: insertedPrice.id as number };
@@ -876,7 +931,7 @@ export async function updateConfigAction(formData: FormData) {
   const supabase = await createClient();
   const { data: live } = await supabase
     .from("market_sessions")
-    .select("config")
+    .select("id, config")
     .eq("status", "live")
     .maybeSingle();
   const config = readConfig(formData, resolveMarketConfig(live?.config));
@@ -887,6 +942,13 @@ export async function updateConfigAction(formData: FormData) {
     .update({ config })
     .eq("status", "live");
   if (error) return { error: error.message };
+  if (live) {
+    try {
+      await refreshSessionMixers(supabase, live.id as number, { requireSquare: false });
+    } catch (err) {
+      console.error("[market] could not refresh mixer prices:", err);
+    }
+  }
   revalidateMarket();
   return { success: true };
 }
@@ -1165,6 +1227,60 @@ async function syncMappingsToLiveSession(
   }
 }
 
+export async function loadModifierListsAction() {
+  try {
+    return { lists: await fetchModifierListOptions() };
+  } catch (err) {
+    console.error("[market] modifier list fetch failed:", err);
+    return { error: "Could not reach Square to list the modifier lists." };
+  }
+}
+
+/* Which Square modifier list is the mixer, for the whole venue. A live market
+   re-reads its mixer prices straight away so the board follows the choice. */
+export async function saveMixerChoiceAction(choice: { mode: "auto" | "list" | "off"; listId?: string | null }) {
+  const supabase = await createClient();
+  if (!["auto", "list", "off"].includes(choice.mode)) return { error: "Pick how the mixer is found." };
+
+  let listName: string | null = null;
+  if (choice.mode === "list") {
+    if (!choice.listId) return { error: "Pick the modifier list the till uses for mixers." };
+    try {
+      const lists = await fetchModifierListOptions();
+      const list = lists.find((option) => option.id === choice.listId);
+      if (!list) return { error: "That modifier list is no longer in Square." };
+      listName = list.name;
+    } catch (err) {
+      console.error("[market] modifier list fetch failed:", err);
+      return { error: "Could not reach Square to check that modifier list." };
+    }
+  }
+
+  const { error } = await supabase.from("market_settings").upsert(
+    {
+      id: 1,
+      mixer_mode: choice.mode,
+      mixer_modifier_list_id: choice.mode === "list" ? choice.listId : null,
+      mixer_modifier_list_name: listName,
+      updated_at: new Date().toISOString(),
+      updated_by: await getCurrentEmployeeId(supabase),
+    },
+    { onConflict: "id" }
+  );
+  if (error) return { error: error.message };
+
+  const { data: live } = await supabase.from("market_sessions").select("id").eq("status", "live").maybeSingle();
+  if (live) {
+    try {
+      await refreshSessionMixers(supabase, live.id as number, { requireSquare: false });
+    } catch (err) {
+      console.error("[market] could not refresh mixer prices:", err);
+    }
+  }
+  revalidateMarket();
+  return { success: true };
+}
+
 export async function loadCatalogVariationsAction() {
   try {
     const variations = await fetchCatalogVariations();
@@ -1235,7 +1351,7 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
 type PushItemRow = {
   id: number;
   name: string;
-  menu_categories: { name: string } | { name: string }[] | null;
+  menu_categories: { name: string; is_alcoholic: boolean | null } | { name: string; is_alcoholic: boolean | null }[] | null;
   menu_item_prices: PriceRow[];
 };
 
@@ -1254,6 +1370,47 @@ async function fetchExistingCatalog(): Promise<ExistingCatalog> {
   return { itemNames, categoryIdsByName };
 }
 
+type AlcoholServeRow = {
+  square_variation_id: string | null;
+  menu_items:
+    | { menu_categories: { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null }
+    | { menu_categories: { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null }[]
+    | null;
+};
+
+/* Copies each menu category's Alcoholic tick onto the Square items its
+   linked serves belong to. Refused while a market is live because Square
+   makes it re-send every variation's price along with the item. */
+export async function pushAlcoholToSquareAction() {
+  const supabase = await createClient();
+  if ((await liveMarketSessionId(supabase)) != null) return { error: LIVE_MARKET_MENU_MESSAGE };
+
+  const { data, error } = await supabase
+    .from("menu_item_prices")
+    .select("square_variation_id, menu_items(menu_categories(is_alcoholic))")
+    .not("square_variation_id", "is", null);
+  if (error) return { error: error.message };
+
+  const serves = ((data ?? []) as AlcoholServeRow[]).flatMap((row) => {
+    if (!row.square_variation_id) return [];
+    const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+    const category = Array.isArray(item?.menu_categories) ? item.menu_categories[0] : item?.menu_categories;
+    return [{ variationId: row.square_variation_id, isAlcoholic: Boolean(category?.is_alcoholic) }];
+  });
+  if (serves.length === 0) return { error: "No serves are linked to Square yet." };
+
+  try {
+    const result = await pushAlcoholFlagsToSquare(serves, `alcohol-${randomUUID()}`);
+    if (result.failed.length > 0) {
+      console.error("[market] alcohol push failures:", result.failed);
+    }
+    return { success: true, ...result };
+  } catch (err) {
+    console.error("[market] alcohol push failed:", err);
+    return { error: err instanceof Error ? err.message : "Could not update Square." };
+  }
+}
+
 export async function pushMenuToSquareAction() {
   const supabase = await createClient();
   if ((await liveMarketSessionId(supabase)) != null) return { error: LIVE_MARKET_MENU_MESSAGE };
@@ -1261,7 +1418,7 @@ export async function pushMenuToSquareAction() {
   const { data: items, error: itemsError } = await supabase
     .from("menu_items")
     .select(
-      "id, name, menu_categories(name), menu_item_prices(id, serve, amount, display_order, square_variation_id)"
+      "id, name, menu_categories(name, is_alcoholic), menu_item_prices(id, serve, amount, display_order, square_variation_id)"
     )
     .eq("is_active", true);
   if (itemsError) return { error: itemsError.message };
@@ -1274,6 +1431,7 @@ export async function pushMenuToSquareAction() {
       menuItemId: item.id,
       name: item.name,
       categoryName: category?.name ?? "",
+      isAlcoholic: Boolean(category?.is_alcoholic),
       prices: [...item.menu_item_prices]
         .sort((a, b) => a.display_order - b.display_order || a.id - b.id)
         .map((price) => ({
@@ -1581,11 +1739,18 @@ export async function simulateSaleAction(
         error: `${instrument.display_name} is not linked to Square - map it on the menu, or seed a temporary item for it.`,
       };
     }
+    const mixers = await mixerModifierIdsByVariation(supabase, [instrument.square_variation_id]);
     let rung: RungSale;
     try {
       rung = await ringSaleThroughSquare(
         guard.locationId,
-        [{ variationId: instrument.square_variation_id, quantity: units }],
+        [
+          {
+            variationId: instrument.square_variation_id,
+            quantity: units,
+            mixerModifierId: pickMixerModifier(mixers.get(instrument.square_variation_id)),
+          },
+        ],
         "card"
       );
     } catch (err) {
@@ -1647,14 +1812,16 @@ export async function simulateBusyRoundAction(
     if (plan.length === 0) return { error: "Every drink on the board is sold out - nothing to sell." };
 
     const variationById = new Map(linked.map((row) => [row.id, row.square_variation_id as string]));
+    const mixers = await mixerModifierIdsByVariation(supabase, [...variationById.values()]);
     const tenders = planRoundTenders(plan.length, tenderMode);
     const rung: { instrumentId: number; units: number; rung: RungSale }[] = [];
     let failure: string | null = null;
     for (const [index, sale] of plan.entries()) {
       try {
+        const variationId = variationById.get(sale.instrumentId) as string;
         const result = await ringSaleThroughSquare(
           guard.locationId,
-          [{ variationId: variationById.get(sale.instrumentId) as string, quantity: sale.units }],
+          [{ variationId, quantity: sale.units, mixerModifierId: pickMixerModifier(mixers.get(variationId)) }],
           tenders[index]
         );
         rung.push({ instrumentId: sale.instrumentId, units: sale.units, rung: result });
@@ -1804,13 +1971,18 @@ export async function addStockAction(instrumentId: number, quantity: number) {
 
   const { data: instrument } = await supabase
     .from("market_instruments")
-    .select("id, display_name, square_variation_id")
+    .select("id, display_name, square_variation_id, stock_tracked")
     .eq("id", instrumentId)
     .eq("session_id", session.id)
     .maybeSingle();
   if (!instrument) return { error: "That drink is not trading on the live market." };
   if (!instrument.square_variation_id) {
     return { error: `${instrument.display_name} is not linked to Square, so it has no stock to add to.` };
+  }
+  if (instrument.stock_tracked === false) {
+    return {
+      error: `Square does not track stock for ${instrument.display_name}. Turn tracking on in Square, or use the stock override to mark it sold out.`,
+    };
   }
 
   try {

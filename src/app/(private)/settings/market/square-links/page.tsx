@@ -3,6 +3,8 @@ import { buildMappingRows, type MappingCategoryRow } from "@/lib/market/mapping-
 import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
 import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import type { CatalogVariation } from "@/lib/market/mapping";
+import { fetchModifierListOptions, readMixerChoice, type ModifierListOption } from "@/lib/market/square-mixers";
+import { untrackedVariationIds } from "@/lib/market/square-stock-tracking";
 import SquareLinksClient from "./square-links-client";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function SquareLinksPage({
   const supabase = await createClient();
   const { event } = await searchParams;
 
-  const [{ data: categoryRows }, { data: eventRows }, catalog, itemIdMap] = await Promise.all([
+  const [{ data: categoryRows }, { data: eventRows }, catalog, itemIdMap, mixerChoice, modifierLists] = await Promise.all([
     supabase
       .from("menu_categories")
       .select(
@@ -44,6 +46,14 @@ export default async function SquareLinksPage({
       }
     ),
     squareItemIdsByVariation(),
+    readMixerChoice(supabase),
+    fetchModifierListOptions().then(
+      (lists): ModifierListOption[] | null => lists,
+      (err) => {
+        console.error("[market] modifier list fetch failed:", err);
+        return null;
+      }
+    ),
   ]);
 
   const events = ((eventRows ?? []) as EventRow[]).map((row) => ({
@@ -52,6 +62,7 @@ export default async function SquareLinksPage({
     menuItemPriceIds: (row.stock_market_event_items ?? []).map((item) => item.menu_item_price_id),
   }));
   const rows = buildMappingRows((categoryRows ?? []) as MappingCategoryRow[], events);
+  const untracked = await untrackedVariationIds(rows.map((row) => row.squareVariationId));
 
   const eventId = event && /^\d+$/.test(event) ? Number(event) : null;
   const focusEvent = events.find((row) => row.id === eventId) ?? null;
@@ -63,6 +74,9 @@ export default async function SquareLinksPage({
       focusEvent={focusEvent}
       itemIds={Object.fromEntries(itemIdMap)}
       environment={process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox"}
+      untrackedVariationIds={untracked}
+      mixerChoice={mixerChoice}
+      modifierLists={modifierLists}
     />
   );
 }

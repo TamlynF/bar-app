@@ -175,10 +175,12 @@ export function useSimTools({
       const reused = "reused" in result ? result.reused : 0;
       const created = "created" in result ? result.created : 0;
       const deleted = "deleted" in result ? result.deleted : 0;
+      const mixers = "mixersAttached" in result ? result.mixersAttached : 0;
       const parts = [
         reused > 0 ? `${reused} existing` : null,
         created > 0 ? `${created} new` : null,
         deleted > 0 ? `${deleted} replaced` : null,
+        mixers > 0 ? `mixer added to ${mixers}` : null,
       ].filter(Boolean);
       toast.success(
         parts.length > 0

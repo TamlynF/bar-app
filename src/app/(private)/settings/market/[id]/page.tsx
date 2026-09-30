@@ -5,6 +5,8 @@ import {
   summariseEvent,
   type StockMarketEventRow,
 } from "@/lib/market/stock-market-events";
+import { withSquareMixers } from "@/lib/market/square-mixers";
+import { untrackedVariationIds } from "@/lib/market/square-stock-tracking";
 import { serveOptionsFromCategories, type ServeCategoryRow } from "@/lib/market/event-serves";
 import {
   EMPTY_OVERRIDES,
@@ -55,11 +57,12 @@ type EventServeRow = {
   amount: number | string;
   display_order: number;
   square_variation_id: string | null;
+  with_mixer: boolean | null;
   menu_items: ItemJoin | ItemJoin[];
 };
 
 const SERVE_SELECT =
-  "id, menu_item_id, serve, amount, display_order, square_variation_id, menu_items(id, name, is_active, menu_categories(id, name, display_order, market_only))";
+  "*, menu_items(id, name, is_active, menu_categories(id, name, display_order, market_only))";
 
 export default async function StockMarketEventPage({
   params,
@@ -98,7 +101,7 @@ export default async function StockMarketEventPage({
     supabase
       .from("menu_categories")
       .select(
-        "id, name, display_order, menu_items(id, name, is_active, menu_item_prices(id, serve, amount, display_order, square_variation_id))",
+        "id, name, display_order, menu_items(id, name, is_active, menu_item_prices(*))",
       )
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
@@ -116,7 +119,7 @@ export default async function StockMarketEventPage({
 
   const isLive = liveRow?.stock_market_event_id === id;
 
-  const drinks: EventDrink[] = ((serveRows ?? []) as EventServeRow[])
+  const unpricedDrinks: EventDrink[] = ((serveRows ?? []) as EventServeRow[])
     .flatMap((serve) => {
       const item = Array.isArray(serve.menu_items) ? serve.menu_items[0] : serve.menu_items;
       if (!item) return [];
@@ -142,6 +145,9 @@ export default async function StockMarketEventPage({
           basePrice: amount > 0 ? amount : null,
           linked: Boolean(serve.square_variation_id),
           squareVariationId: serve.square_variation_id ?? null,
+          withMixer: Boolean(serve.with_mixer),
+          squareMixerPrice: null,
+          stockTracked: null,
           overrides: overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES,
         },
       ];
@@ -156,10 +162,19 @@ export default async function StockMarketEventPage({
     );
 
   const inEvent = new Set(menuItemPriceIds);
-  const available: AvailableDrink[] = serveOptionsFromCategories(
-    (categoryRows ?? []) as ServeCategoryRow[],
-  )
-    .filter((serve) => !inEvent.has(serve.id))
+  const [mixedDrinks, menuServes, untracked] = await Promise.all([
+    withSquareMixers(supabase, unpricedDrinks),
+    withSquareMixers(
+      supabase,
+      serveOptionsFromCategories((categoryRows ?? []) as ServeCategoryRow[]).filter((serve) => !inEvent.has(serve.id)),
+    ),
+    untrackedVariationIds(unpricedDrinks.map((drink) => drink.squareVariationId)),
+  ]);
+  const untrackedSet = new Set(untracked);
+  const drinks: EventDrink[] = mixedDrinks.map((drink) =>
+    drink.squareVariationId ? { ...drink, stockTracked: !untrackedSet.has(drink.squareVariationId) } : drink,
+  );
+  const available: AvailableDrink[] = menuServes
     .map((serve) => ({
       id: serve.id,
       name: serve.name,
@@ -167,6 +182,8 @@ export default async function StockMarketEventPage({
       serve: serve.serve,
       basePrice: serve.amount,
       linked: serve.linked,
+      withMixer: serve.withMixer,
+      squareMixerPrice: serve.squareMixerPrice,
     }));
 
   const sessions: EventSession[] = (sessionRows ?? []).map((session) => ({

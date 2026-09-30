@@ -39,6 +39,7 @@ export function nextStockState(
   stockQtyByVariation: Map<string, number>
 ): StockState {
   if (instrument.stockOverride) return instrument.stockOverride;
+  if (instrument.stockTracked === false) return "ok";
   const qty = instrument.squareVariationId
     ? stockQtyByVariation.get(instrument.squareVariationId)
     : undefined;

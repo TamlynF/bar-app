@@ -33,6 +33,7 @@ import {
 } from "@/components/admin";
 import { formatGbp } from "@/lib/price";
 import type { MarketConfig } from "@/lib/market/types";
+import { serveMixerPrice, withMixer } from "@/lib/market/mixer";
 import {
   formatTimeWindow,
   type StockMarketEventSummary,
@@ -71,6 +72,10 @@ export type EventDrink = {
   basePrice: number | null;
   linked: boolean;
   squareVariationId: string | null;
+  withMixer: boolean;
+  squareMixerPrice: number | null;
+  /* False when Square does not count this serve's stock; null when unknown. */
+  stockTracked: boolean | null;
   overrides: DrinkOverrides;
 };
 
@@ -81,6 +86,8 @@ export type AvailableDrink = {
   serve: string;
   basePrice: number;
   linked: boolean;
+  withMixer: boolean;
+  squareMixerPrice: number | null;
 };
 
 type AddPicker = { kind: "add" };
@@ -98,14 +105,29 @@ const PRICE_LABELS: Record<PriceKey, string> = {
 
 const EMPTY_DRAFT: PriceDraft = { openingPrice: "", minPrice: "", maxPrice: "", crashPrice: "" };
 
-function draftFromOverrides(overrides: DrinkOverrides): PriceDraft {
+/* Spirits sold with a mixer are priced on this page as guests pay for them,
+   spirit + mixer. The event stores the spirit price the engine and the till
+   move, so values are shifted by the mixer on the way in and out. */
+function shiftPrice(value: string, by: number): string {
+  if (value.trim() === "" || by === 0) return value;
+  const n = Number(value);
+  return Number.isFinite(n) ? String(withMixer(n, by)) : value;
+}
+
+function shiftedOverride(value: number | null | undefined, mixer: number): string {
+  return value == null ? "" : String(withMixer(value, mixer));
+}
+
+function draftFromOverrides(overrides: DrinkOverrides, mixer = 0): PriceDraft {
   return {
-    openingPrice: overrides.openingPrice?.toString() ?? "",
-    minPrice: overrides.minPrice?.toString() ?? "",
-    maxPrice: overrides.maxPrice?.toString() ?? "",
-    crashPrice: overrides.crashPrice?.toString() ?? "",
+    openingPrice: shiftedOverride(overrides.openingPrice, mixer),
+    minPrice: shiftedOverride(overrides.minPrice, mixer),
+    maxPrice: shiftedOverride(overrides.maxPrice, mixer),
+    crashPrice: shiftedOverride(overrides.crashPrice, mixer),
   };
 }
+
+const PRICE_FIELD_NAMES = ["opening_price", "min_price", "max_price", "crash_price"];
 
 function normalisePrice(value: string): string {
   return value.trim() === "" ? "" : String(Number(value));
@@ -257,11 +279,14 @@ function OverrideFields({
   drink,
   basePrice,
   config,
+  mixer,
 }: {
   drink: EventDrink | null;
   basePrice: number | null;
   config: MarketConfig;
+  mixer: number | null;
 }) {
+  const isPrice = (key: OverrideField["key"]) => PRICE_KEYS.includes(key as PriceKey);
   const defaults =
     basePrice != null ? defaultDrinkSettings(basePrice, config) : null;
   return (
@@ -276,9 +301,15 @@ function OverrideFields({
               step={field.step}
               aria-label={field.label}
               placeholder={
-                defaults ? `Event: ${field.format(defaults[field.key])}` : ""
+                defaults
+                  ? `Event: ${field.format(isPrice(field.key) ? withMixer(defaults[field.key], mixer) : defaults[field.key])}`
+                  : ""
               }
-              defaultValue={drink?.overrides[field.key] ?? ""}
+              defaultValue={
+                isPrice(field.key)
+                  ? shiftedOverride(drink?.overrides[field.key], mixer ?? 0)
+                  : (drink?.overrides[field.key] ?? "")
+              }
               className={FIELD_INPUT}
             />
           </FormRow>
@@ -286,10 +317,42 @@ function OverrideFields({
       </DetailCard>
       <p className="px-1 text-[11px] text-admin-muted">
         Leave a field blank to use the event setting. Opening price defaults to
-        the base price. Alert threshold is a fraction, so 0.05 alerts on a 5%
-        move. Changes apply the next time this event is opened.
+        the base price.{" "}
+        {mixer != null &&
+          `Prices here include the ${formatGbp(mixer)} mixer, as guests pay them; only the spirit part moves. `}
+        Alert threshold is a fraction, so 0.05 alerts on a 5% move. Changes
+        apply the next time this event is opened.
       </p>
     </>
+  );
+}
+
+/* The spirit and the mixer that make up a with-mixer price. */
+function SpiritPrice({ base, mixer }: { base: number | null; mixer: number | null }) {
+  if (base == null || mixer == null) return null;
+  return (
+    <span className="block text-[11px] font-medium whitespace-nowrap text-admin-muted tabular-nums">
+      {formatGbp(base)} + {formatGbp(mixer)} mixer
+    </span>
+  );
+}
+
+function UntrackedTag() {
+  return (
+    <span
+      title="Square does not count this serve's stock. It never goes low or sold out on its own; mark it sold out on the trading floor."
+      className="rounded-full bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-admin-muted"
+    >
+      Stock not tracked
+    </span>
+  );
+}
+
+function MixerTag() {
+  return (
+    <span className="rounded-full bg-admin-primary-soft px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-admin-primary">
+      + mixer
+    </span>
   );
 }
 
@@ -298,6 +361,7 @@ function DrinkForm({
   drink,
   nightOnly,
   config,
+  mixer,
   formError,
   onSubmit,
 }: {
@@ -305,6 +369,7 @@ function DrinkForm({
   drink: EventDrink | null;
   nightOnly: boolean;
   config: MarketConfig;
+  mixer: number | null;
   formError: string | null;
   onSubmit: (formData: FormData) => void;
 }) {
@@ -366,10 +431,34 @@ function DrinkForm({
           </p>
         </>
       )}
+      <DetailCard>
+        <FormRow label="Served with a mixer" dense>
+          <span className="flex flex-1 items-center justify-end">
+            <input type="hidden" name="with_mixer_field" value="1" />
+            <input
+              type="checkbox"
+              name="with_mixer"
+              value="on"
+              aria-label="Always sold with a mixer"
+              defaultChecked={drink?.withMixer ?? false}
+              className="h-4 w-4 cursor-pointer accent-admin-primary"
+            />
+          </span>
+        </FormRow>
+        <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+          Tick this for a spirit the till always rings with a mixer that Square does not already mark. Drinks that
+          carry the mixer modifier chosen on{" "}
+          <Link href="/settings/market/square-links" className="font-semibold text-admin-primary underline">
+            Square links
+          </Link>{" "}
+          get it automatically at Square&rsquo;s price. A ticked drink adds {formatGbp(config.mixerPrice)} from the event
+          settings. The board and phone page show spirit + mixer; only the spirit price moves.
+        </p>
+      </DetailCard>
       <h4 className="px-1 text-[12px] font-semibold text-admin-ink">
         Pricing on this event
       </h4>
-      <OverrideFields drink={drink} basePrice={amount} config={config} />
+      <OverrideFields drink={drink} basePrice={amount} config={config} mixer={mixer} />
       {formError && <ErrorBox message={formError} />}
     </form>
   );
@@ -377,10 +466,12 @@ function DrinkForm({
 
 function AddDrinksForm({
   available,
+  mixerPrice,
   formError,
   onSubmit,
 }: {
   available: AvailableDrink[];
+  mixerPrice: number;
   formError: string | null;
   onSubmit: (formData: FormData) => void;
 }) {
@@ -444,14 +535,18 @@ function AddDrinksForm({
                   <span className="block truncate text-[13px] font-semibold text-admin-ink">
                     {drink.name}
                     <span className="font-medium text-admin-muted"> · {drink.serve}</span>
+                    {serveMixerPrice(drink, mixerPrice) != null && (
+                      <span className="font-medium text-admin-muted"> + mixer</span>
+                    )}
                   </span>
                   <span className="block text-[11px] text-admin-muted">
                     {drink.categoryName}
                     {!drink.linked && " · not linked to Square"}
                   </span>
                 </span>
-                <span className="text-[13px] text-admin-muted tabular-nums">
-                  {formatGbp(drink.basePrice)}
+                <span className="shrink-0 text-right text-[13px] text-admin-muted tabular-nums">
+                  {formatGbp(withMixer(drink.basePrice, serveMixerPrice(drink, mixerPrice)))}
+                  <SpiritPrice base={drink.basePrice} mixer={serveMixerPrice(drink, mixerPrice)} />
                 </span>
               </label>
             ))}
@@ -510,19 +605,21 @@ export default function EventDetailClient({
   );
   const groups = useMemo(() => groupByCategory(shownDrinks), [shownDrinks]);
 
+  const mixerOf = (drink: EventDrink) => serveMixerPrice(drink, event.config.mixerPrice) ?? 0;
+
   const dirtyDrinks = drinks.filter((drink) => {
     const draft = priceDrafts[drink.id];
-    return draft != null && !sameDraft(draft, draftFromOverrides(drink.overrides));
+    return draft != null && !sameDraft(draft, draftFromOverrides(drink.overrides, mixerOf(drink)));
   });
 
   function draftFor(drink: EventDrink): PriceDraft {
-    return priceDrafts[drink.id] ?? draftFromOverrides(drink.overrides);
+    return priceDrafts[drink.id] ?? draftFromOverrides(drink.overrides, mixerOf(drink));
   }
 
   function setDraft(drink: EventDrink, key: PriceKey, value: string) {
     setPriceDrafts((prev) => ({
       ...prev,
-      [drink.id]: { ...(prev[drink.id] ?? draftFromOverrides(drink.overrides)), [key]: value },
+      [drink.id]: { ...(prev[drink.id] ?? draftFromOverrides(drink.overrides, mixerOf(drink))), [key]: value },
     }));
   }
 
@@ -532,14 +629,20 @@ export default function EventDetailClient({
 
   function handleSavePrices() {
     if (dirtyDrinks.length === 0) return;
-    const rows = dirtyDrinks.map((drink) => ({
+    const rows = dirtyDrinks.map((drink) => {
+      const draft = draftFor(drink);
+      const spirit = Object.fromEntries(
+        PRICE_KEYS.map((key) => [key, shiftPrice(draft[key], -mixerOf(drink))])
+      ) as PriceDraft;
+      return {
       menuItemPriceId: drink.id,
       overrides: {
-        ...draftFor(drink),
+        ...spirit,
         lowStockAt: drink.overrides.lowStockAt,
         alertThreshold: drink.overrides.alertThreshold,
       },
-    }));
+      };
+    });
     startTransition(async () => {
       const result = await saveEventDrinkPricesAction(event.id, rows);
       if ("error" in result && result.error) {
@@ -617,6 +720,11 @@ export default function EventDetailClient({
   }
 
   const submitDrink = drinkSheet.submit(async (formData) => {
+    const mixer = drinkSheet.mode === "edit" ? (selectedMixer ?? 0) : 0;
+    for (const name of PRICE_FIELD_NAMES) {
+      const value = formData.get(name)?.toString();
+      if (value != null) formData.set(name, shiftPrice(value, -mixer));
+    }
     const editingMenuDrink =
       drinkSheet.mode === "edit" && drinkSheet.selected?.nightOnly === false;
     const result = editingMenuDrink
@@ -659,6 +767,7 @@ export default function EventDetailClient({
           ? "Edit drink"
           : "Edit pricing"
         : "Drink";
+  const selectedMixer = selectedDrink ? serveMixerPrice(selectedDrink, event.config.mixerPrice) : null;
   const selectedSettings = selectedDrink
     ? drinkSettings(selectedDrink, event.config)
     : null;
@@ -849,6 +958,8 @@ export default function EventDetailClient({
                               </span>
                               <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] text-admin-muted">
                                 <span>{drink.serve}</span>
+                                {serveMixerPrice(drink, event.config.mixerPrice) != null && <MixerTag />}
+                                {drink.stockTracked === false && <UntrackedTag />}
                                 {drink.linked ? (
                                   <span className="rounded-full bg-admin-success-bg px-1.5 py-0.5 font-semibold text-admin-success">
                                     Square linked
@@ -862,9 +973,10 @@ export default function EventDetailClient({
                             </span>
                             <span className="shrink-0 text-right tabular-nums">
                               <span className="block text-sm font-semibold text-admin-ink">
-                                {drink.basePrice != null ? formatGbp(drink.basePrice) : "-"}
+                                {drink.basePrice != null ? formatGbp(withMixer(drink.basePrice, mixerOf(drink))) : "-"}
                               </span>
                               <span className="block text-[11px] text-admin-muted">base</span>
+                              <SpiritPrice base={drink.basePrice} mixer={serveMixerPrice(drink, event.config.mixerPrice)} />
                             </span>
                             <ChevronRight className="h-4 w-4 shrink-0 text-admin-muted opacity-40" aria-hidden="true" />
                           </div>
@@ -879,7 +991,7 @@ export default function EventDetailClient({
                                     <PriceInput
                                       label={`${PRICE_LABELS[key]} price for ${drink.name}`}
                                       value={draft[key]}
-                                      placeholder={settings.defaults[key].toFixed(2)}
+                                      placeholder={withMixer(settings.defaults[key], mixerOf(drink)).toFixed(2)}
                                       disabled={isPending || isLive}
                                       onChange={(value) => setDraft(drink, key, value)}
                                     />
@@ -949,9 +1061,15 @@ export default function EventDetailClient({
                                 <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(inactive)</span>
                               )}
                             </td>
-                            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{drink.serve}</td>
+                            <td className="py-1.5 pr-3 text-[13px] text-admin-muted">
+                              <span className="flex flex-wrap items-center gap-1.5">
+                                {drink.serve}
+                                {serveMixerPrice(drink, event.config.mixerPrice) != null && <MixerTag />}
+                              </span>
+                            </td>
                             <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
-                              {drink.basePrice != null ? formatGbp(drink.basePrice) : "-"}
+                              {drink.basePrice != null ? formatGbp(withMixer(drink.basePrice, mixerOf(drink))) : "-"}
+                              <SpiritPrice base={drink.basePrice} mixer={serveMixerPrice(drink, event.config.mixerPrice)} />
                             </td>
                             {settings ? (
                               PRICE_KEYS.map((key) => (
@@ -959,7 +1077,7 @@ export default function EventDetailClient({
                                   <PriceInput
                                     label={`${PRICE_LABELS[key]} price for ${drink.name}`}
                                     value={draft[key]}
-                                    placeholder={settings.defaults[key].toFixed(2)}
+                                    placeholder={withMixer(settings.defaults[key], mixerOf(drink)).toFixed(2)}
                                     disabled={isPending || isLive}
                                     onChange={(value) => setDraft(drink, key, value)}
                                     className="mx-auto w-20"
@@ -980,6 +1098,11 @@ export default function EventDetailClient({
                               >
                                 {drink.linked ? "Linked" : "Not linked"}
                               </span>
+                              {drink.stockTracked === false && (
+                                <span className="mt-1 block">
+                                  <UntrackedTag />
+                                </span>
+                              )}
                             </td>
                             <td className="py-1.5 text-right" onClick={(e) => e.stopPropagation()}>
                               {!isLive && hasDraftValue(draft) && (
@@ -1050,15 +1173,29 @@ export default function EventDetailClient({
               <DetailCell
                 dense
                 label="Serve"
-                value={selectedDrink.serve}
+                value={
+                  serveMixerPrice(selectedDrink, event.config.mixerPrice) != null
+                    ? `${selectedDrink.serve} + mixer`
+                    : selectedDrink.serve
+                }
               />
               <DetailCell
                 dense
                 label="Base price"
                 value={
-                  selectedDrink.basePrice != null
-                    ? formatGbp(selectedDrink.basePrice)
-                    : "-"
+                  selectedDrink.basePrice == null ? (
+                    "-"
+                  ) : (
+                    <span className="tabular-nums">
+                      {formatGbp(withMixer(selectedDrink.basePrice, selectedMixer))}
+                      {selectedMixer != null && (
+                        <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
+                          ({formatGbp(selectedDrink.basePrice)} + {formatGbp(selectedMixer)} mixer
+                          {selectedDrink.squareMixerPrice != null ? " from Square" : ""})
+                        </span>
+                      )}
+                    </span>
+                  )
                 }
               />
               <DetailCell
@@ -1071,6 +1208,11 @@ export default function EventDetailClient({
                       {selectedDrink.squareVariationId && (
                         <span className="block text-[11px] font-normal break-all text-admin-muted">
                           {selectedDrink.squareVariationId}
+                        </span>
+                      )}
+                      {selectedDrink.stockTracked === false && (
+                        <span className="block text-[11px] font-normal text-admin-muted">
+                          Stock not tracked in Square - mark it sold out on the trading floor when it runs out.
                         </span>
                       )}
                     </>
@@ -1094,7 +1236,11 @@ export default function EventDetailClient({
                     value={
                       selectedSettings ? (
                         <span className="tabular-nums">
-                          {field.format(selectedSettings.effective[field.key])}
+                          {field.format(
+                            PRICE_KEYS.includes(field.key as PriceKey)
+                              ? withMixer(selectedSettings.effective[field.key], selectedMixer)
+                              : selectedSettings.effective[field.key]
+                          )}
                           {!overridden && (
                             <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
                               (event setting)
@@ -1134,6 +1280,7 @@ export default function EventDetailClient({
             drink={drinkMode === "edit" ? selectedDrink : null}
             nightOnly={drinkMode === "add" || Boolean(selectedDrink?.nightOnly)}
             config={event.config}
+            mixer={drinkMode === "edit" ? selectedMixer : null}
             formError={drinkSheet.formError}
             onSubmit={submitDrink}
           />
@@ -1153,6 +1300,7 @@ export default function EventDetailClient({
         {addSheet.mode === "add" && (
           <AddDrinksForm
             available={available}
+            mixerPrice={event.config.mixerPrice}
             formError={addSheet.formError}
             onSubmit={submitAddDrinks}
           />

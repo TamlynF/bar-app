@@ -34,6 +34,7 @@ import { ListSearchInput } from "@/components/admin";
 import { TickBreakdownSheet } from "./tick-breakdown-sheet";
 import { squareItemUrl } from "@/lib/market/simulate";
 import { mergeLiveInstruments } from "@/lib/market/live-merge";
+import { withMixer } from "@/lib/market/mixer";
 import { useLiveTick } from "@/hooks/use-live-tick";
 import {
   crashInstrumentAction,
@@ -312,6 +313,7 @@ function searchText(instrument: InstrumentSummary, warmedUp: boolean): string {
   return [
     instrument.name,
     instrument.serve,
+    instrument.mixerPrice != null ? "mixer" : "",
     instrument.mapped ? "linked" : "not linked",
     instrument.crashing ? "crashing" : "",
     formatGbp(instrument.openingPrice),
@@ -321,7 +323,7 @@ function searchText(instrument: InstrumentSummary, warmedUp: boolean): string {
     warmedUp && instrument.rankPos != null ? `rank ${instrument.rankPos}` : "",
     warmedUp && tier ? tier : "",
     instrument.pace == null ? "" : `${instrument.pace.toFixed(2)}×`,
-    stockLabel(instrument.stockState, instrument.stockQty).label,
+    stockLabel(instrument.stockState, instrument.stockQty, instrument.stockTracked).label,
     instrument.stockOverride ? `override ${instrument.stockOverride}` : "auto",
     changeSinceOpen(instrument),
   ]
@@ -447,9 +449,10 @@ function DetailCell({ field, children }: { field: FloorField; children: ReactNod
 }
 
 function changeSinceOpen(instrument: InstrumentSummary): string {
-  if (instrument.openingPrice <= 0) return "—";
+  const opening = served(instrument, instrument.openingPrice);
+  if (opening <= 0) return "-";
   const diff = instrument.currentPrice - instrument.openingPrice;
-  const pct = (diff / instrument.openingPrice) * 100;
+  const pct = (diff / opening) * 100;
   const rounded = Math.round(pct * 10) / 10;
   const sign = diff > 0 ? "+" : diff < 0 ? "−" : "";
   return `${sign}${formatGbp(Math.abs(diff))} (${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}%)`;
@@ -461,15 +464,15 @@ function detailValue(field: FloorField, instrument: InstrumentSummary, warmedUp:
   const down = instrument.currentPrice < instrument.openingPrice;
   switch (field.key) {
     case "base":
-      return formatGbp(instrument.basePrice);
+      return formatGbp(served(instrument, instrument.basePrice));
     case "normal":
-      return instrument.normalUnitsPerNight == null ? "—" : instrument.normalUnitsPerNight.toFixed(1);
+      return instrument.normalUnitsPerNight == null ? "-" : instrument.normalUnitsPerNight.toFixed(1);
     case "demand":
       return instrument.demandUnits.toFixed(1);
     case "pace":
-      return instrument.pace == null ? "—" : `${instrument.pace.toFixed(2)}×`;
+      return instrument.pace == null ? "-" : `${instrument.pace.toFixed(2)}×`;
     case "tier":
-      if (!warmedUp || !tier) return <span className="text-admin-muted">—</span>;
+      if (!warmedUp || !tier) return <span className="text-admin-muted">-</span>;
       return (
         <span
           className={cn(
@@ -490,10 +493,10 @@ function detailValue(field: FloorField, instrument: InstrumentSummary, warmedUp:
       return instrument.unitsSold.toFixed(0);
     case "range":
       return instrument.highPrice == null || instrument.lowPrice == null ? (
-        "—"
+        "-"
       ) : (
         <span className="whitespace-nowrap">
-          {formatGbp(instrument.highPrice)} / {formatGbp(instrument.lowPrice)}
+          {formatGbp(served(instrument, instrument.highPrice))} / {formatGbp(served(instrument, instrument.lowPrice))}
         </span>
       );
     case "tierChanges":
@@ -612,7 +615,30 @@ function SquareItemLink({
 const ROW_ACTION =
   "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
-function stockLabel(state: StockState, qty: number | null): { label: string; className: string } {
+/* A spirit sold with a mixer is priced on the floor as guests pay for it,
+   spirit + mixer, with the spirit alone underneath - that is the part the
+   engine and the till variation move. */
+function served(instrument: Pick<InstrumentSummary, "mixerPrice">, price: number): number {
+  return withMixer(price, instrument.mixerPrice);
+}
+
+function SpiritLine({ price, mixer }: { price: number | null; mixer: number | null }) {
+  if (price == null || mixer == null) return null;
+  return (
+    <span className="block text-[11px] font-medium whitespace-nowrap text-admin-muted tabular-nums">
+      {formatGbp(price)} spirit
+    </span>
+  );
+}
+
+function stockLabel(
+  state: StockState,
+  qty: number | null,
+  tracked: boolean | null = null
+): { label: string; className: string } {
+  if (tracked === false && state === "ok") {
+    return { label: "Not tracked in Square", className: "bg-admin-surface text-admin-muted" };
+  }
   const count = qty == null ? "" : ` · ${Math.max(0, Math.round(qty))} left`;
   if (state === "out") return { label: `Sold out${count}`, className: "bg-admin-error-bg text-admin-error" };
   if (state === "low") return { label: `Running low${count}`, className: "bg-admin-warning-bg text-admin-warning" };
@@ -642,7 +668,9 @@ export function LiveFloorCard({
   const [floorOpen, setFloorOpen] = useState(true);
   const [simOpen, setSimOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(() => new Set());
-  const [priceEdit, setPriceEdit] = useState<{ instrumentId: number; value: string } | null>(null);
+  const [priceEdit, setPriceEdit] = useState<{ instrumentId: number; value: string; mixer: number | null } | null>(
+    null
+  );
   const [sort, setSort] = useState<Sort | null>(null);
   const [breakdownFor, setBreakdownFor] = useState<InstrumentSummary | null>(null);
   const [query, setQuery] = useState("");
@@ -741,9 +769,10 @@ export function LiveFloorCard({
 
   function handleSetPrice() {
     if (!priceEdit) return;
-    const price = Number(priceEdit.value);
-    if (!Number.isFinite(price) || price <= 0) {
-      toast.error("Enter a price above zero.");
+    const entered = Number(priceEdit.value);
+    const price = withMixer(entered, -(priceEdit.mixer ?? 0));
+    if (!Number.isFinite(entered) || price <= 0) {
+      toast.error(priceEdit.mixer != null ? "Enter a price above the mixer price." : "Enter a price above zero.");
       return;
     }
     const { instrumentId } = priceEdit;
@@ -943,7 +972,7 @@ export function LiveFloorCard({
                     </tr>
                   )}
                   {shown.map((instrument) => {
-                    const stock = stockLabel(instrument.stockState, instrument.stockQty);
+                    const stock = stockLabel(instrument.stockState, instrument.stockQty, instrument.stockTracked);
                     const up = instrument.currentPrice > instrument.openingPrice;
                     const down = instrument.currentPrice < instrument.openingPrice;
                     const total = instruments.length;
@@ -994,20 +1023,31 @@ export function LiveFloorCard({
                                     </span>
                                   )}
                                 </span>
-                                <span className="block text-[11px] text-admin-muted">
-                                  {instrument.serve}
-                                  {!instrument.mapped && " · not linked to Square"}
+                                <span className="flex flex-wrap items-center gap-1.5 text-[11px] text-admin-muted">
+                                  <span>
+                                    {instrument.serve}
+                                    {!instrument.mapped && " · not linked to Square"}
+                                  </span>
+                                  {instrument.mixerPrice != null && (
+                                    <span
+                                      title={`Prices here include the ${formatGbp(instrument.mixerPrice)} mixer, as on the board. The spirit price is shown underneath.`}
+                                      className="rounded-full bg-admin-primary-soft px-1.5 py-0.5 font-semibold whitespace-nowrap text-admin-primary"
+                                    >
+                                      + mixer {formatGbp(instrument.mixerPrice)}
+                                    </span>
+                                  )}
                                 </span>
                               </span>
                             </button>
                           </td>
                           <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
-                            {formatGbp(instrument.openingPrice)}
+                            {formatGbp(served(instrument, instrument.openingPrice))}
+                            <SpiritLine price={instrument.openingPrice} mixer={instrument.mixerPrice} />
                           </td>
                           <>
                             <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
                               {!warmedUp || instrument.rankPos == null ? (
-                                <span className="text-admin-muted">—</span>
+                                <span className="text-admin-muted">-</span>
                               ) : (
                                 <>
                                   {instrument.rankPos}
@@ -1017,9 +1057,12 @@ export function LiveFloorCard({
                             </td>
                             <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
                               {!warmedUp || instrument.targetPrice == null ? (
-                                <span className="text-admin-muted">—</span>
+                                <span className="text-admin-muted">-</span>
                               ) : (
-                                formatGbp(instrument.targetPrice)
+                                <>
+                                  {formatGbp(served(instrument, instrument.targetPrice))}
+                                  <SpiritLine price={instrument.targetPrice} mixer={instrument.mixerPrice} />
+                                </>
                               )}
                             </td>
                           </>
@@ -1029,7 +1072,8 @@ export function LiveFloorCard({
                               up ? "text-admin-error" : down ? "text-admin-success" : "text-admin-ink"
                             )}
                           >
-                            {formatGbp(instrument.currentPrice)}
+                            {formatGbp(served(instrument, instrument.currentPrice))}
+                            <SpiritLine price={instrument.currentPrice} mixer={instrument.mixerPrice} />
                           </td>
                           <td className="py-2 pr-3">
                             <span
@@ -1104,11 +1148,15 @@ export function LiveFloorCard({
                                     step="0.05"
                                     min="0"
                                     autoFocus
-                                    aria-label={`New price for ${instrument.name}`}
+                                    aria-label={`New price for ${instrument.name}${instrument.mixerPrice != null ? " including the mixer" : ""}`}
                                     value={priceEdit.value}
                                     disabled={isPending}
                                     onChange={(event) =>
-                                      setPriceEdit({ instrumentId: instrument.id, value: event.target.value })
+                                      setPriceEdit({
+                                        instrumentId: instrument.id,
+                                        value: event.target.value,
+                                        mixer: instrument.mixerPrice,
+                                      })
                                     }
                                     onKeyDown={(event) => {
                                       if (event.key === "Enter") {
@@ -1148,7 +1196,11 @@ export function LiveFloorCard({
                                         aria-label={`Set price for ${instrument.name}`}
                                         disabled={isPending || instrument.stockState === "out"}
                                         onClick={() =>
-                                          setPriceEdit({ instrumentId: instrument.id, value: instrument.currentPrice.toFixed(2) })
+                                          setPriceEdit({
+                                            instrumentId: instrument.id,
+                                            value: served(instrument, instrument.currentPrice).toFixed(2),
+                                            mixer: instrument.mixerPrice,
+                                          })
                                         }
                                         className={cn(ROW_ACTION, "border-admin-line text-admin-primary hover:bg-admin-primary-soft")}
                                       >
@@ -1204,7 +1256,8 @@ export function LiveFloorCard({
                                         <DetailCell field={field}>
                                           {field.key === "now" ? (
                                             <span className={cn(up ? "text-admin-error" : down ? "text-admin-success" : undefined)}>
-                                              {formatGbp(instrument.currentPrice)}
+                                              {formatGbp(served(instrument, instrument.currentPrice))}
+                                              <SpiritLine price={instrument.currentPrice} mixer={instrument.mixerPrice} />
                                             </span>
                                           ) : (
                                             detailValue(field, instrument, warmedUp)

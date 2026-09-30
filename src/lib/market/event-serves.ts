@@ -8,6 +8,7 @@ export type ServePriceRow = {
   amount: number | string;
   display_order: number;
   square_variation_id: string | null;
+  with_mixer?: boolean | null;
 };
 
 export type ServeItemRow = {
@@ -30,6 +31,12 @@ export type ServeOption = {
   serve: string;
   amount: number;
   linked: boolean;
+  squareVariationId: string | null;
+  /* Staff tick: always sold with a mixer, at the event's mixer price. */
+  withMixer: boolean;
+  /* The mixer price Square adds when the item carries the chosen mixer
+     modifier list; filled in on the server by withSquareMixers. */
+  squareMixerPrice: number | null;
   categoryId: number;
   categoryName: string;
 };
@@ -72,6 +79,9 @@ export function serveOptionsFromCategories(categories: ServeCategoryRow[]): Serv
             serve: price.serve,
             amount: Number(price.amount),
             linked: Boolean(price.square_variation_id),
+            squareVariationId: price.square_variation_id ?? null,
+            withMixer: Boolean(price.with_mixer),
+            squareMixerPrice: null,
             categoryId: category.id,
             categoryName: category.name,
           }))

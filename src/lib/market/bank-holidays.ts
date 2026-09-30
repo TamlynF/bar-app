@@ -31,7 +31,7 @@ function isStale(rows: CachedRow[], now: Date): boolean {
 }
 
 /* The cached set of bank-holiday dates, refreshed from gov.uk at most once a
-   month. A failed refresh keeps whatever is cached rather than throwing — a
+   month. A failed refresh keeps whatever is cached rather than throwing - a
    missing holiday only means one night is sampled as an ordinary weekday. */
 export async function ensureBankHolidays(supabase: SupabaseClient, now: Date = new Date()): Promise<Set<Ymd>> {
   const { data } = await supabase.from("uk_bank_holidays").select("date, fetched_at");

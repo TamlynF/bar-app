@@ -41,6 +41,7 @@ export type MarketConfig = {
   paceFloorUnits: number;
   sessionTicksHint: number;
   leaderboardRows: number;
+  mixerPrice: number;
 };
 
 export type MarketConfigNumberKey = {
@@ -66,12 +67,14 @@ export const DEFAULT_MARKET_CONFIG: MarketConfig = {
   paceFloorUnits: 8,
   sessionTicksHint: 120,
   leaderboardRows: 0,
+  mixerPrice: 1.25,
 };
 
 /* warmupUnits may legitimately be 0 (tiers from the first tick) and
-   leaderboardRows 0 means "fill the screen"; every other numeric dial is
+   leaderboardRows 0 means "fill the screen" and mixerPrice 0 a free mixer;
+   every other numeric dial is
    meaningless at zero and falls back to its default. */
-const ZERO_ALLOWED = new Set<keyof MarketConfig>(["warmupUnits", "leaderboardRows"]);
+const ZERO_ALLOWED = new Set<keyof MarketConfig>(["warmupUnits", "leaderboardRows", "mixerPrice"]);
 
 function numberList(value: unknown): number[] | null {
   if (!Array.isArray(value) || value.length === 0) return null;
@@ -118,6 +121,10 @@ export type InstrumentState = {
   stockState: StockState;
   stockOverride: StockState | null;
   squareVariationId: string | null;
+  /* False when Square does not track this drink's stock (spirits counted by
+     bottle at stocktake): its Square count is ignored and only a staff
+     override can mark it low or sold out. Null/undefined = read counts. */
+  stockTracked?: boolean | null;
   /* normalUnitsPerNight is what this serve usually sells on a night like
      tonight; lastSaleTick / tierPct carry between ticks. */
   normalUnitsPerNight?: number | null;

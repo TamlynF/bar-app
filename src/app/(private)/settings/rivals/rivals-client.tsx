@@ -216,15 +216,15 @@ function RunLogDialog({
 }
 
 function sourceLabel(rival: MarketingCompetitor): string {
-  if (!rival.last_captured_at) return "None yet — set when drink prices are saved";
+  if (!rival.last_captured_at) return "None yet - set when drink prices are saved";
   if (rival.last_capture_source === "upload") return "Board photo";
   if (rival.last_capture_source === "menu_url") return "Menu URL";
   if (rival.last_capture_source === "website") return "Website";
-  return "None yet — set when drink prices are saved";
+  return "None yet - set when drink prices are saved";
 }
 
 function UrlValue({ href, label }: { href: string | null; label: string }) {
-  if (!href) return "—";
+  if (!href) return "-";
   const clean = stripTrackingParams(href);
 
   const copy = async (e: MouseEvent) => {
@@ -461,7 +461,7 @@ export default function RivalsClient({
       }
       const summary = `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
         failed ? `. ${failed} had no drinks menu online` : ""
-      }${remaining ? `. ${remaining} still to go — click Find drinks menus.` : "."}`;
+      }${remaining ? `. ${remaining} still to go - click Find drinks menus.` : "."}`;
       steps.push(runStep(failed ? "info" : "ok", summary));
       toast.success(summary);
       await finish(true, summary);
@@ -501,7 +501,7 @@ export default function RivalsClient({
       }
       const summary = `Read ${prices} drink prices from ${captured} ${captured === 1 ? "rival" : "rivals"}${
         failed ? `. ${failed} had no drinks menu online` : ""
-      }${queued.leftover ? `. ${queued.leftover} still to go — click Find drinks menus again.` : "."}`;
+      }${queued.leftover ? `. ${queued.leftover} still to go - click Find drinks menus again.` : "."}`;
       steps.push(runStep(failed ? "info" : "ok", summary));
       toast.success(summary);
       await finish(true, summary);
@@ -683,10 +683,10 @@ export default function RivalsClient({
                       {stripTrackingParams(rival.website)}
                     </a>
                   ) : (
-                    <p className="hidden truncate text-[12px] text-admin-muted sm:block">—</p>
+                    <p className="hidden truncate text-[12px] text-admin-muted sm:block">-</p>
                   )}
                   <p className="hidden truncate text-[12px] text-admin-muted sm:block">
-                    {rival.address ?? "—"}
+                    {rival.address ?? "-"}
                   </p>
                   <p className="hidden truncate text-[12px] text-admin-muted sm:block">
                     {menu.label}
@@ -814,7 +814,7 @@ export default function RivalsClient({
                       </a>
                     </span>
                   ) : (
-                    "—"
+                    "-"
                   )
                 }
               />
@@ -834,7 +834,7 @@ export default function RivalsClient({
                       ))}
                     </span>
                   ) : (
-                    "—"
+                    "-"
                   )
                 }
               />
@@ -913,7 +913,7 @@ export default function RivalsClient({
               </div>
               {!hasMenuUrl && (
                 <p className="text-[12px] text-admin-muted">
-                  No website yet — add one under Edit, or upload a photo.
+                  No website yet - add one under Edit, or upload a photo.
                 </p>
               )}
             </form>

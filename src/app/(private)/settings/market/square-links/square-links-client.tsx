@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CircleAlert, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, SearchX, Upload, Wand2 } from "lucide-react";
+import { ArrowLeft, CircleAlert, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, SearchX, Upload, Wand2, Wine, Ellipsis } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -18,8 +18,17 @@ import { formatGbp } from "@/lib/price";
 import { squareItemUrl } from "@/lib/market/simulate";
 import type { CatalogVariation } from "@/lib/market/mapping";
 import type { MappingRow } from "@/lib/market/mapping-rows";
-import { autoMatchMappingsAction, loadCatalogVariationsAction, pushMenuToSquareAction, saveMappingAction } from "../actions";
+import {
+  autoMatchMappingsAction,
+  loadCatalogVariationsAction,
+  pushAlcoholToSquareAction,
+  pushMenuToSquareAction,
+  saveMappingAction,
+} from "../actions";
 import { NEUTRAL_BUTTON, OUTLINE_BUTTON } from "../ui";
+import type { MixerChoice } from "@/lib/market/mixer";
+import type { ModifierListOption } from "@/lib/market/square-mixers";
+import MixerModifierCard from "./mixer-modifier-card";
 
 type LinkFilter = "all" | "unlinked" | "board" | "event";
 
@@ -79,12 +88,14 @@ function LinkStatus({
   itemId,
   environment,
   revealed,
+  untracked,
   onToggle,
 }: {
   row: MappingRow;
   itemId: string | undefined;
   environment: "sandbox" | "production";
   revealed: boolean;
+  untracked: boolean;
   onToggle: () => void;
 }) {
   if (!row.squareVariationId) {
@@ -124,6 +135,16 @@ function LinkStatus({
       >
         {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
+      {untracked && (
+        <span
+          className="whitespace-nowrap"
+          title="Square does not count this serve's stock. It never goes low or sold out on its own; mark it sold out on the trading floor."
+        >
+          <StatusPill tone="neutral" showLabelOnMobile>
+            Stock not tracked
+          </StatusPill>
+        </span>
+      )}
       {revealed && (
         <code className="max-w-40 truncate rounded bg-admin-surface px-1.5 py-0.5 font-mono text-[11px] text-admin-ink" title={row.squareVariationId}>
           {row.squareVariationId}
@@ -139,12 +160,18 @@ export default function SquareLinksClient({
   focusEvent,
   itemIds,
   environment,
+  untrackedVariationIds,
+  mixerChoice,
+  modifierLists,
 }: {
   rows: MappingRow[];
+  untrackedVariationIds: string[];
   variations: CatalogVariation[] | null;
   focusEvent: { id: number; name: string } | null;
   itemIds: Record<string, string>;
   environment: "sandbox" | "production";
+  mixerChoice: MixerChoice;
+  modifierLists: ModifierListOption[] | null;
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
@@ -157,12 +184,14 @@ export default function SquareLinksClient({
       else next.add(id);
       return next;
     });
+  const untrackedSet = new Set(untrackedVariationIds);
   const linkStatus = (row: MappingRow) => (
     <LinkStatus
       row={row}
       itemId={row.squareVariationId ? itemIds[row.squareVariationId] : undefined}
       environment={environment}
       revealed={revealedIds.has(row.menuItemPriceId)}
+      untracked={row.squareVariationId != null && untrackedSet.has(row.squareVariationId)}
       onToggle={() => toggleRevealed(row.menuItemPriceId)}
     />
   );
@@ -241,6 +270,34 @@ export default function SquareLinksClient({
     });
   }
 
+  async function handlePushAlcohol() {
+    const confirmed = await confirm({
+      title: "Update alcohol in Square?",
+      description:
+        "Sets Square's alcohol setting on every linked item from its menu category's Alcoholic tick. Only items whose setting differs are changed; names, prices, modifiers and stock are sent back exactly as Square has them.",
+      confirmLabel: "Update Square",
+    });
+    if (!confirmed) return;
+    startTransition(async () => {
+      const result = await pushAlcoholToSquareAction();
+      if (!result || "error" in result) {
+        toast.error(result?.error ?? "Could not update Square.");
+        return;
+      }
+      const notes = [
+        result.alreadyRight ? `${result.alreadyRight} already right` : "",
+        result.conflicts ? `${result.conflicts} skipped (serves in categories that disagree)` : "",
+        result.missing ? `${result.missing} links no longer in Square` : "",
+      ].filter(Boolean);
+      const summary = `${result.updated} Square ${result.updated === 1 ? "item" : "items"} updated${notes.length ? ` · ${notes.join(" · ")}` : ""}.`;
+      if (result.failed.length > 0) {
+        toast.error(`${summary} ${result.failed.length} failed: ${result.failed[0].message}`);
+      } else {
+        toast.success(summary);
+      }
+    });
+  }
+
   function handleAutoMatch() {
     startTransition(async () => {
       const result = await autoMatchMappingsAction();
@@ -303,6 +360,8 @@ export default function SquareLinksClient({
         </div>
       )}
 
+      <MixerModifierCard choice={mixerChoice} lists={modifierLists} />
+
       <RecordList
         variant="panel"
         title="Square links"
@@ -362,23 +421,27 @@ export default function SquareLinksClient({
                   type="button"
                   aria-label="More Square actions"
                   title="More Square actions"
-                  className={cn(NEUTRAL_BUTTON, "h-9 w-9 px-0 sm:hidden")}
+                  className={cn(NEUTRAL_BUTTON, "h-9 w-9 px-0 sm:h-8 sm:w-8")}
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Wand2 className="h-4 w-4" aria-hidden="true" />
+                    <Ellipsis className="h-4 w-4" aria-hidden="true" />
                   )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled={isPending} onSelect={handleAutoMatch} className="min-h-11">
+                <DropdownMenuItem disabled={isPending} onSelect={handleAutoMatch} className="min-h-11 sm:hidden">
                   <Wand2 className="h-4 w-4" />
                   Auto-match serves
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={isPending} onSelect={handlePushToSquare} className="min-h-11">
+                <DropdownMenuItem disabled={isPending} onSelect={handlePushToSquare} className="min-h-11 sm:hidden">
                   <Upload className="h-4 w-4" />
                   Send menu to Square
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={isPending} onSelect={handlePushAlcohol} className="min-h-11">
+                  <Wine className="h-4 w-4" />
+                  Update alcohol in Square
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -489,7 +552,7 @@ function GroupRows({
           <td className="py-1.5 pr-3 pl-4 text-[13px] font-semibold text-admin-ink sm:pl-5">{row.itemName}</td>
           <td className="py-1.5 pr-3 text-[13px] text-admin-muted">{row.serve}</td>
           <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">{formatGbp(row.amount)}</td>
-          <td className="py-1.5 pr-3 text-[12px] text-admin-muted">{eventsLabel(row) || "—"}</td>
+          <td className="py-1.5 pr-3 text-[12px] text-admin-muted">{eventsLabel(row) || "-"}</td>
           <td className="py-1.5 pr-3">
             <VariationSelect
               row={row}

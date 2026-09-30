@@ -48,6 +48,7 @@ function payload(overrides: Partial<MarketInstrumentPayload>, tickNo = 10): Mark
         rankPos: 2,
         normalUnitsPerNight: 12,
         stockQty: 4,
+        mixerPrice: null,
         ...overrides,
       },
     ],
@@ -55,6 +56,18 @@ function payload(overrides: Partial<MarketInstrumentPayload>, tickNo = 10): Mark
 }
 
 describe("mergeLiveInstruments", () => {
+  it("takes the mixer back off so staff rows hold the spirit price", () => {
+    const [merged] = mergeLiveInstruments([row], payload({ price: 6.25, targetPrice: 6.7, mixerPrice: 1.25 }), 3, 10);
+    expect(merged.currentPrice).toBe(5);
+    expect(merged.targetPrice).toBe(5.45);
+  });
+
+  it("follows the mixer price on rows that show it", () => {
+    const [merged] = mergeLiveInstruments([{ ...row, mixerPrice: null }], payload({ price: 6.25, mixerPrice: 1.25 }), 3, 10);
+    expect(merged.mixerPrice).toBe(1.25);
+    expect(merged.currentPrice).toBe(5);
+  });
+
   it("overlays the moving fields and keeps the rest", () => {
     const [merged] = mergeLiveInstruments([row], payload({}), 3, 10);
     expect(merged.currentPrice).toBe(5.4);

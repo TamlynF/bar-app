@@ -55,6 +55,13 @@ export const CONFIG_FIELDS: ConfigField[] = [
     hint: "0 = as many as fit the screen",
     help: "How many drinks the big-screen leaderboard view lists under Best deals and In demand. Leave at 0 and the board works out how many fit the screen it is on (a 16:9 TV shows about six, a taller projector more). A number caps the list at that many; it is still trimmed if the screen cannot fit them all, so nothing is cut off.",
   },
+  {
+    key: "mixerPrice",
+    label: "Mixer price (£)",
+    step: "0.05",
+    hint: "Added to spirits served with a mixer",
+    help: "What the till adds for the mixer on a spirit served with one (orange juice, tonic, Red Bull…). The board and phone page show the spirit plus this, so a £5.00 Grey Goose single reads £6.25. Only the spirit price moves; the mixer never does. When the drink carries the mixer modifier chosen on Square links, Square's price is used instead so the board always matches the till.",
+  },
 ];
 
 /* Tier leaderboard dials (docs/market-tier-engine-plan.md, workbook tab 10). */

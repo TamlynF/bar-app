@@ -1,6 +1,6 @@
 import type { MarketConfig } from "./types";
 
-/* "What does this serve normally sell on a night like tonight?" — built from
+/* "What does this serve normally sell on a night like tonight?" - built from
    the Square order lines the nightly sync keeps locally, per weekday
    (docs/market-tier-engine-plan.md §3.4). Everything in this file is pure;
    the Supabase calls live in normal-units-server.ts. */
@@ -269,7 +269,7 @@ export function describeSource(source: NormalUnitsSource): string {
 
 export const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-/* How many ticks a night of these hours lasts — the "÷15" on the workbook. */
+/* How many ticks a night of these hours lasts - the "÷15" on the workbook. */
 export function sessionTicksFor(openTime: string, closeTime: string, tickIntervalSec: number): number {
   let minutes = clockMinutes(closeTime) - clockMinutes(openTime);
   if (minutes <= 0) minutes += 24 * 60;

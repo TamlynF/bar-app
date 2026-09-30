@@ -211,7 +211,7 @@ export default function LeaderboardExplainer({
           <span className="font-semibold">normally</span> does, so a cocktail having a big night can
           beat a pint having an ordinary one. Every {config.rerankEveryTicks} ticks the drinks are
           sorted on that comparison: the fastest movers go up, the quietest come down. Prices never
-          jump — they walk to the new level over a few ticks. Nothing moves at all until the bar has
+          jump - they walk to the new level over a few ticks. Nothing moves at all until the bar has
           sold {config.warmupUnits} drinks.
         </p>
         {session ? (
@@ -232,7 +232,7 @@ export default function LeaderboardExplainer({
                     "tick",
                     "ticks"
                   )}`
-                : `Warming up — ${Math.max(0, config.warmupUnits - session.unitsSoldTotal)} more drinks before tiers start`}
+                : `Warming up - ${Math.max(0, config.warmupUnits - session.unitsSoldTotal)} more drinks before tiers start`}
             </span>
           </div>
         ) : (
@@ -249,7 +249,7 @@ export default function LeaderboardExplainer({
       >
         <dl className="grid gap-2 sm:grid-cols-2">
           {[
-            { term: "Units", meaning: "How many of a drink sold in one tick. The only real-world number — everything else is worked out from it." },
+            { term: "Units", meaning: "How many of a drink sold in one tick. The only real-world number - everything else is worked out from it." },
             { term: "Heat", meaning: "Recent sales, fading a little each tick. Busy a few ticks ago still counts for something; busy two hours ago does not." },
             { term: "Pace", meaning: "Heat compared with what this drink normally sells. 1.00× is a normal night for it, 2.00× is twice as busy." },
             { term: "Rank", meaning: "Every drink lined up by pace, fastest first. Rank 1 is the drink having the most unusual night." },
@@ -266,14 +266,14 @@ export default function LeaderboardExplainer({
       <Step
         number={1}
         icon={ShoppingCart}
-        title="Units — what actually sold"
+        title="Units - what actually sold"
         question={`Every ${tickWord} the market reads the till and asks one question per drink: how many went out since the last look?`}
         formula="units = completed Square sales since the last tick"
-        why="This is the only figure that comes from the real world. If the till says nothing sold, nothing sold — there is no guesswork anywhere in the chain."
+        why="This is the only figure that comes from the real world. If the till says nothing sold, nothing sold - there is no guesswork anywhere in the chain."
       >
         <p className="text-[13px] leading-relaxed text-admin-muted">
           A tick is {tickMinutes === 1 ? "one minute" : `${tickMinutes} minutes`} long on this event,
-          and the night is treated as {config.sessionTicksHint} ticks — about {nightHours}{" "}
+          and the night is treated as {config.sessionTicksHint} ticks - about {nightHours}{" "}
           {plural(nightHours, "hour", "hours")} of trading. That length matters in step 3.
         </p>
       </Step>
@@ -281,7 +281,7 @@ export default function LeaderboardExplainer({
       <Step
         number={2}
         icon={Flame}
-        title="Heat — sales that fade"
+        title="Heat - sales that fade"
         question="Adding up the whole night would make an 8pm rush still look busy at 11pm. Looking only at the last tick would jump about from tick to tick. Heat sits in between: keep part of last tick's heat, then add this tick's units."
         formula={`heat = last heat × ${config.decayK} + units this tick`}
         why={`The ${config.decayK} is the "how quickly should the board forget" dial. Higher remembers a rush for longer; lower forgets it in a few ticks.`}
@@ -333,10 +333,10 @@ export default function LeaderboardExplainer({
       <Step
         number={3}
         icon={Gauge}
-        title="Pace — busy for this drink"
+        title="Pace - busy for this drink"
         question="A pint will always out-sell a cocktail on raw units, so raw units would hand the board to the same drinks every week. Instead each drink is measured against itself."
         formula={`pace = heat ÷ (normal units per night ÷ ${config.sessionTicksHint} ticks)`}
-        why={`A drink that normally sells one a night would read as a stampede off a single sale. Anything below ${config.paceFloorUnits} a night is treated as if it sold ${config.paceFloorUnits} — in plain words, "not enough history here to call one sale a trend".`}
+        why={`A drink that normally sells one a night would read as a stampede off a single sale. Anything below ${config.paceFloorUnits} a night is treated as if it sold ${config.paceFloorUnits} - in plain words, "not enough history here to call one sale a trend".`}
       >
         {star && starPace ? (
           <>
@@ -369,7 +369,7 @@ export default function LeaderboardExplainer({
       <Step
         number={4}
         icon={ListOrdered}
-        title="Rank — the league table"
+        title="Rank - the league table"
         question={`Every drink is lined up by pace, fastest first. The table is only rebuilt every ${config.rerankEveryTicks} ticks; in between, every drink keeps the place it had.`}
         formula="rank 1 = highest pace … rank last = lowest pace"
         why={`Rebuilding every tick would let one stray sale re-price the board every tick. ${config.rerankEveryTicks} ticks is long enough for a run of sales to be a real trend, and short enough that the board never looks stale.`}
@@ -377,7 +377,7 @@ export default function LeaderboardExplainer({
         <p className="text-[13px] leading-relaxed text-admin-muted">
           Two drinks on exactly the same pace are separated by whichever sold most recently, and
           after that by the dearer menu price. Those nudges are far too small to overturn a real
-          difference — they only settle dead heats, which is what stops the board shuffling on list
+          difference - they only settle dead heats, which is what stops the board shuffling on list
           order.
         </p>
       </Step>
@@ -385,10 +385,10 @@ export default function LeaderboardExplainer({
       <Step
         number={5}
         icon={Percent}
-        title="Tier — the price a rank earns"
+        title="Tier - the price a rank earns"
         question={`The ${config.tierPcts.bands[0]} fastest sellers get the biggest mark-up and the ${config.tierPcts.bands[0]} quietest the biggest discount, and it softens through the bands from there. Everything in the middle stays at its normal menu price.`}
         formula="tier = looked up from the rank, top and bottom ends only"
-        why={`Nothing gets a tier until the bar has sold ${config.warmupUnits} drinks in total. Early in the night most drinks are tied on zero, so a ranking then would be a coin toss — better to show "market warming up" for a few minutes than to put a mark-up on something nobody bought.`}
+        why={`Nothing gets a tier until the bar has sold ${config.warmupUnits} drinks in total. Early in the night most drinks are tied on zero, so a ranking then would be a coin toss - better to show "market warming up" for a few minutes than to put a mark-up on something nobody bought.`}
       >
         <div className="overflow-hidden rounded-xl border border-admin-line">
           <table className="w-full text-left text-[13px]">
@@ -425,14 +425,14 @@ export default function LeaderboardExplainer({
           </table>
         </div>
         <p className="text-[13px] leading-relaxed text-admin-muted">
-          A drink that lands in both lists — possible on a very small board — takes the discount.
+          A drink that lands in both lists - possible on a very small board - takes the discount.
         </p>
       </Step>
 
       <Step
         number={6}
         icon={Target}
-        title="Target and update — how the price gets there"
+        title="Target and update - how the price gets there"
         question="The tier decides the destination. Prices only move when the board's Next update countdown lands, and then they go straight to the target."
         formula="target = base price × (1 + tier) · at each update, new price = target"
         why={`Sales are read every tick, but the board, the phones and the till all change together once every ${config.rerankEveryTicks} ticks, so guests see one countdown and the price they see is the price they pay. Every price is held between ${config.floorPct}× and ${config.ceilPct}× the menu price and rounded to the nearest ${Math.round(config.roundStep * 100)}p so it is always payable at the till.`}
@@ -501,7 +501,7 @@ export default function LeaderboardExplainer({
           for the pint ({times(quiet.pace.pace)}), so the cocktail ranks higher on identical sales.
           The wine bottle is the reason for the pace floor: on its own figure one sale would read as{" "}
           {times(rare.pace.heat / (rare.pace.normalPerNight / config.sessionTicksHint))} and top the
-          board off one customer — floored to {rare.pace.usedPerNight} a night it reads as{" "}
+          board off one customer - floored to {rare.pace.usedPerNight} a night it reads as{" "}
           {times(rare.pace.pace)}, a good showing rather than a stampede.
         </p>
       </Section>
@@ -528,7 +528,7 @@ export default function LeaderboardExplainer({
                 {ranked.slice(0, 12).map((drink) => (
                   <tr key={drink.id}>
                     <td className="py-2 pr-3 text-admin-muted tabular-nums">
-                      {drink.rankPos ?? "—"}
+                      {drink.rankPos ?? "-"}
                     </td>
                     <th scope="row" className="py-2 pr-3 text-left font-medium text-admin-ink">
                       {drink.name}
@@ -538,11 +538,11 @@ export default function LeaderboardExplainer({
                       {drink.heat.toFixed(1)}
                     </td>
                     <td className="py-2 pr-3 text-right text-admin-ink tabular-nums">
-                      {drink.pace == null ? "—" : times(drink.pace)}
+                      {drink.pace == null ? "-" : times(drink.pace)}
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {drink.tierPct == null || drink.tierPct === 0 ? (
-                        <span className="text-admin-muted">—</span>
+                        <span className="text-admin-muted">-</span>
                       ) : (
                         <span
                           className={

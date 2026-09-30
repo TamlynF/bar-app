@@ -441,6 +441,7 @@ function LeaderboardColumn({
   limit,
   crash,
   columnRef,
+  multiServeNames,
 }: {
   title: string;
   subtitle: string;
@@ -453,6 +454,7 @@ function LeaderboardColumn({
   limit: number;
   crash: boolean;
   columnRef: RefObject<HTMLDivElement | null>;
+  multiServeNames: Set<string>;
 }) {
   const groups = groupLeaderboard(ranked, limit);
   return (
@@ -506,7 +508,12 @@ function LeaderboardColumn({
                 >
                   {rank}
                 </span>
-                <NameCell instrument={instrument} size="text-[1.3vw]" flip showServe={false} />
+                <NameCell
+                  instrument={instrument}
+                  size="text-[1.3vw]"
+                  flip
+                  showServe={multiServeNames.has(instrument.name) || instrument.mixerPrice != null}
+                />
                 <OpenCell instrument={instrument} size="text-[1.1vw]" align="text-center" />
                 <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} size="text-[2.3vw]" align="text-center" />
                 <ChangePill changePct={changePct} trend={trend} />
@@ -527,6 +534,14 @@ function LeaderboardColumn({
    the board rather than showing as a "riser" at a lower price. Each column
    shows as many drinks as the screen has room for (five at least), or the
    event's leaderboard row count when that is set and fits. */
+/* The leaderboard lists names only, so single and double of one drink would
+   read the same; those drinks (and anything sold with a mixer) show the serve. */
+function drinksWithSeveralServes(instruments: MarketInstrumentPayload[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const instrument of instruments) counts.set(instrument.name, (counts.get(instrument.name) ?? 0) + 1);
+  return new Set([...counts].filter(([, count]) => count > 1).map(([name]) => name));
+}
+
 function LeaderboardView({
   instruments,
   crash,
@@ -539,6 +554,7 @@ function LeaderboardView({
   const dealsRef = useRef<HTMLDivElement | null>(null);
   const risersRef = useRef<HTMLDivElement | null>(null);
   const [limit, setLimit] = useState(LEADERBOARD_MIN);
+  const multiServeNames = drinksWithSeveralServes(instruments);
 
   const deals = instruments
     .filter((i) => i.tierPct < 0 && (displayPrice(i) ?? i.price) < i.openingPrice)
@@ -590,6 +606,7 @@ function LeaderboardView({
         ranked={deals}
         limit={limit}
         crash={crash}
+        multiServeNames={multiServeNames}
         columnRef={dealsRef}
       />
       <LeaderboardColumn
@@ -603,6 +620,7 @@ function LeaderboardView({
         ranked={risers}
         limit={limit}
         crash={crash}
+        multiServeNames={multiServeNames}
         columnRef={risersRef}
       />
     </div>

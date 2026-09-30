@@ -38,6 +38,12 @@ export type InstrumentSummary = {
   stockQty: number | null;
   /* Simulated units queued for the next tick (0 when nothing is waiting). */
   simPending: number;
+  /* The mixer the till adds to this spirit, null when sold on its own.
+     currentPrice and the other prices here stay spirit-only. */
+  mixerPrice: number | null;
+  /* False when Square does not track this drink's stock (counted at
+     stocktake instead); its stock only changes through the override. */
+  stockTracked: boolean | null;
   /* Tier leaderboard figures written by the engine each tick; null or 0
      before the market has warmed up. */
   normalUnitsPerNight: number | null;

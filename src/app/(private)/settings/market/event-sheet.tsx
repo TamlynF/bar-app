@@ -11,6 +11,7 @@ import { DEFAULT_MARKET_CONFIG, type MarketConfig } from "@/lib/market/types";
 import { formatTimeWindow, type StockMarketEventSummary } from "@/lib/market/stock-market-events";
 import { WEEKDAY_NAMES } from "@/lib/market/normal-units";
 import { groupServesForPicker, serveLabel, type ServeOption } from "@/lib/market/event-serves";
+import { serveMixerPrice, withMixer } from "@/lib/market/mixer";
 import type { EventReadiness } from "@/lib/market/event-readiness";
 import {
   CONFIG_FIELDS,
@@ -163,10 +164,12 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
 function DrinkPicker({
   drinks,
   selected,
+  mixerPrice,
   onChange,
 }: {
   drinks: ServeOption[];
   selected: number[];
+  mixerPrice: number;
   onChange: (ids: number[]) => void;
 }) {
   const groups = useMemo(() => groupServesForPicker(drinks), [drinks]);
@@ -226,10 +229,12 @@ function DrinkPicker({
             </summary>
             <div className="grid grid-cols-1 gap-x-4 bg-admin-card px-4 py-2 sm:grid-cols-2 sm:px-5">
               {group.items.flatMap((item) =>
-                item.serves.map((serve) => (
+                item.serves.map((serve) => {
+                  const mixer = serveMixerPrice(serve, mixerPrice);
+                  return (
                   <label
                     key={serve.id}
-                    className="flex min-h-9 cursor-pointer items-center gap-2 text-[13px] text-admin-ink"
+                    className="flex min-h-9 cursor-pointer items-center gap-2 py-0.5 text-[13px] text-admin-ink"
                   >
                     <input
                       type="checkbox"
@@ -238,18 +243,28 @@ function DrinkPicker({
                       aria-label={`Trade ${serveLabel(serve.name, serve.serve)}`}
                       className="h-4 w-4 cursor-pointer accent-admin-primary"
                     />
-                    <span className="min-w-0 flex-1 truncate">
-                      {item.name}
-                      {item.serves.length > 1 || serve.serve.toLowerCase() !== "each" ? (
-                        <span className="text-admin-muted"> · {serve.serve}</span>
-                      ) : null}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">
+                        {item.name}
+                        {item.serves.length > 1 || serve.serve.toLowerCase() !== "each" ? (
+                          <span className="text-admin-muted"> · {serve.serve}</span>
+                        ) : null}
+                      </span>
+                      {mixer != null && (
+                        <span className="block truncate text-[11px] text-admin-muted tabular-nums">
+                          with mixer · {formatGbp(serve.amount)} + {formatGbp(mixer)}
+                        </span>
+                      )}
                     </span>
-                    <span className="shrink-0 text-[11px] text-admin-muted tabular-nums">
-                      {formatGbp(serve.amount)}
+                    <span
+                      className="shrink-0 text-[11px] text-admin-muted tabular-nums"
+                    >
+                      {formatGbp(withMixer(serve.amount, mixer))}
                       {!serve.linked && " · not linked"}
                     </span>
                   </label>
-                ))
+                  );
+                })
               )}
             </div>
           </details>
@@ -399,7 +414,12 @@ function EventForm({
             </span>
           </summary>
           <div className="border-t border-admin-line">
-            <DrinkPicker drinks={drinks} selected={selectedDrinks} onChange={setSelectedDrinks} />
+            <DrinkPicker
+              drinks={drinks}
+              selected={selectedDrinks}
+              mixerPrice={config.mixerPrice}
+              onChange={setSelectedDrinks}
+            />
           </div>
         </details>
       </DetailCard>

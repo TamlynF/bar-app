@@ -588,6 +588,9 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
               <p className="font-ui text-[15px] leading-tight font-bold tracking-wide text-ink uppercase">
                 {instrument.name}
               </p>
+              {instrument.serve.trim().toLowerCase() !== "each" && (
+                <p className="mt-0.5 font-ui text-meta text-stone-400">{instrument.serve}</p>
+              )}
               {(instrument.stock !== "ok" || instrument.tierPct !== 0) && (
                 <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {instrument.stock !== "ok" && <StockBadge stock={instrument.stock} />}

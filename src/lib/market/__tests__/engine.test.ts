@@ -59,6 +59,13 @@ describe("stock states", () => {
     expect(nextStockState(instrument({ stockState: "low" }), config, new Map())).toBe("low");
   });
 
+  it("ignores Square's leftover count when stock is not tracked", () => {
+    const stale = new Map([["VAR1", 0]]);
+    expect(nextStockState(instrument({ stockTracked: false, stockState: "out" }), config, stale)).toBe("ok");
+    expect(nextStockState(instrument({ stockTracked: false, stockOverride: "out" }), config, stale)).toBe("out");
+    expect(nextStockState(instrument({ stockTracked: null }), config, stale)).toBe("out");
+  });
+
   it("manual override beats inventory", () => {
     expect(nextStockState(instrument({ stockOverride: "out" }), config, new Map([["VAR1", 100]]))).toBe("out");
   });

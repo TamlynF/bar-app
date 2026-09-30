@@ -160,7 +160,7 @@ export default function NormalUnitsCard({
                             <span className="ml-1 text-[11px] text-admin-muted">/{cell.nightsSampled}n</span>
                           </>
                         ) : (
-                          <span className="text-admin-muted">—</span>
+                          <span className="text-admin-muted">-</span>
                         )}
                       </td>
                     );

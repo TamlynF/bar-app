@@ -3,6 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Square } from "square";
 import { squareClient } from "@/lib/square";
 import type { SeedMode } from "./types";
+import { isStockTrackedAt, refreshStockTracking } from "./square-stock-tracking";
+import { readMixerChoice, refreshSessionMixers } from "./square-mixers";
+import { isMixerList, type MixerChoice } from "./mixer";
+import { resolveMarketConfig } from "./types";
 
 export type { SeedMode };
 
@@ -97,6 +101,8 @@ type SeedRow = {
   opening_price: number | string;
   sandbox_item_id: string | null;
   menu_variation_id: string | null;
+  is_alcoholic?: boolean;
+  mixer_price?: number | string | null;
 };
 
 export type SeedResult = {
@@ -105,6 +111,7 @@ export type SeedResult = {
   created: number;
   reused: number;
   deleted: number;
+  mixersAttached: number;
 };
 
 export type SeedStep =
@@ -146,16 +153,25 @@ export async function seedSandboxCatalog(
   const { data, error } = await supabase
     .from("market_instruments")
     .select(
-      "id, display_name, serve, base_price, opening_price, sandbox_item_id, menu_item_prices(square_variation_id)"
+      "*, menu_item_prices(square_variation_id), menu_items(menu_categories(*))"
     )
     .eq("session_id", sessionId);
   if (error) return { error: error.message };
   const rows = (data ?? []).map((raw) => {
+    type CategoryJoin = { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null;
+    type ItemJoin = { menu_categories: CategoryJoin } | { menu_categories: CategoryJoin }[] | null;
     const row = raw as Omit<SeedRow, "menu_variation_id"> & {
       menu_item_prices: { square_variation_id: string | null } | { square_variation_id: string | null }[] | null;
+      menu_items: ItemJoin;
     };
     const price = Array.isArray(row.menu_item_prices) ? row.menu_item_prices[0] : row.menu_item_prices;
-    return { ...row, menu_variation_id: price?.square_variation_id ?? null } as SeedRow;
+    const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
+    const category = Array.isArray(item?.menu_categories) ? item.menu_categories[0] : item?.menu_categories;
+    return {
+      ...row,
+      menu_variation_id: price?.square_variation_id ?? null,
+      is_alcoholic: Boolean(category?.is_alcoholic),
+    } as SeedRow;
   });
   if (rows.length === 0) return { error: "No drinks on the live market to seed." };
 
@@ -178,6 +194,8 @@ export async function seedSandboxCatalog(
         presentAtAllLocations: true,
         itemData: {
           name: row.display_name,
+          productType: "FOOD_AND_BEV",
+          isAlcoholic: Boolean(row.is_alcoholic),
           ...(demoCategoryId
             ? {
                 categories: [{ id: demoCategoryId }],
@@ -247,6 +265,10 @@ export async function seedSandboxCatalog(
 
   let stocked = 0;
   if (stockQty > 0 && variationIds.length > 0) {
+    await enableStockTracking(
+      variationIds.map(({ variationId }) => variationId),
+      locationId
+    );
     const occurredAt = new Date().toISOString();
     await squareClient.inventory.batchCreateChanges({
       idempotencyKey: randomUUID(),
@@ -265,10 +287,32 @@ export async function seedSandboxCatalog(
     stocked = variationIds.length;
   }
 
+  const mixerVariationIds = variationIds
+    .filter(({ instrumentId }) => {
+      const row = rows.find((candidate) => candidate.id === instrumentId);
+      return row?.mixer_price != null;
+    })
+    .map(({ variationId }) => variationId);
+  let mixersAttached = 0;
+  if (mixerVariationIds.length > 0) {
+    try {
+      const [choice, { data: session }] = await Promise.all([
+        readMixerChoice(supabase),
+        supabase.from("market_sessions").select("config").eq("id", sessionId).maybeSingle(),
+      ]);
+      const listId = await ensureSandboxMixerList(choice, resolveMarketConfig(session?.config).mixerPrice);
+      if (listId) mixersAttached = await attachModifierList(mixerVariationIds, listId);
+    } catch (err) {
+      console.error("[market] could not attach the sandbox mixer list:", err);
+    }
+  }
+
   await supabase
     .from("market_sessions")
     .update({ sandbox_seeded_at: new Date().toISOString() })
     .eq("id", sessionId);
+  await refreshStockTracking(supabase, sessionId, { requireSquare: false });
+  await refreshSessionMixers(supabase, sessionId, { requireSquare: false });
 
   return {
     seeded: variationIds.length,
@@ -276,6 +320,7 @@ export async function seedSandboxCatalog(
     created: createdItemByInstrument.size,
     reused: variationIds.length - createdItemByInstrument.size,
     deleted,
+    mixersAttached,
   };
 }
 
@@ -321,6 +366,126 @@ export function inventoryAdditionChange(
   };
 }
 
+type Variation = Extract<Square.CatalogObject, { type: "ITEM_VARIATION" }>;
+type Item = Extract<Square.CatalogObject, { type: "ITEM" }>;
+
+export const SANDBOX_MIXERS = ["Orange juice", "Tonic water", "Lemonade", "Coke", "Red Bull"];
+
+/* The sandbox's mixer list, so seeded spirits ring up at spirit + mixer like
+   the till: the list chosen on Square links, else an existing list with
+   "mixer" in its name, else a new "Mixers" list at the event's mixer price.
+   Null when mixers are switched off. */
+export async function ensureSandboxMixerList(choice: MixerChoice, mixerPrice: number): Promise<string | null> {
+  if (choice.mode === "off") return null;
+  if (choice.mode === "list") return choice.listId;
+  for await (const obj of await squareClient.catalog.list({ types: "MODIFIER_LIST" })) {
+    if (obj.type === "MODIFIER_LIST" && obj.id && isMixerList({ id: obj.id, name: obj.modifierListData?.name ?? "" }, choice)) {
+      return obj.id;
+    }
+  }
+  const res = await squareClient.catalog.batchUpsert({
+    idempotencyKey: randomUUID(),
+    batches: [
+      {
+        objects: [
+          {
+            type: "MODIFIER_LIST",
+            id: "#sandbox-mixers",
+            presentAtAllLocations: true,
+            modifierListData: {
+              name: "Mixers",
+              selectionType: "SINGLE",
+              modifiers: SANDBOX_MIXERS.map((name, index) => ({
+                type: "MODIFIER",
+                id: `#sandbox-mixer-${index}`,
+                presentAtAllLocations: true,
+                modifierData: { name, priceMoney: poundsToMoney(mixerPrice) },
+              })),
+            },
+          },
+        ],
+      },
+    ],
+  });
+  return res.idMappings?.find((mapping) => mapping.clientObjectId === "#sandbox-mixers")?.objectId ?? null;
+}
+
+/* Puts the mixer list on the items behind these variations. An ITEM upsert
+   must carry the whole item or Square drops the missing variations, so each
+   item is re-read and sent back with only the list added. */
+export async function attachModifierList(variationIds: string[], listId: string): Promise<number> {
+  const variations = await squareClient.catalog.batchGet({
+    objectIds: [...new Set(variationIds)],
+    includeRelatedObjects: false,
+    includeDeletedObjects: false,
+  });
+  const itemIds = [
+    ...new Set(
+      (variations.objects ?? []).flatMap((obj) =>
+        obj.type === "ITEM_VARIATION" && obj.itemVariationData?.itemId ? [obj.itemVariationData.itemId] : []
+      )
+    ),
+  ];
+  if (itemIds.length === 0) return 0;
+  const items = await squareClient.catalog.batchGet({ objectIds: itemIds, includeRelatedObjects: false, includeDeletedObjects: false });
+  const changes = (items.objects ?? []).flatMap((obj) => {
+    if (obj.type !== "ITEM" || !obj.itemData) return [];
+    const item = obj as Item;
+    const lists = item.itemData?.modifierListInfo ?? [];
+    if (lists.some((info) => info.modifierListId === listId)) return [];
+    return [
+      {
+        ...item,
+        itemData: {
+          ...item.itemData,
+          modifierListInfo: [...lists, { modifierListId: listId, enabled: true, minSelectedModifiers: 1, maxSelectedModifiers: 1 }],
+        },
+      },
+    ];
+  });
+  for (let i = 0; i < changes.length; i += 10) {
+    await squareClient.catalog.batchUpsert({ idempotencyKey: randomUUID(), batches: [{ objects: changes.slice(i, i + 10) }] });
+  }
+  return changes.length;
+}
+
+/* Stock added to a serve Square does not track would be ignored by the
+   market, so seeding switches tracking on for every serve it stocks, at the
+   variation and at this location. Sandbox only - callers go through
+   assertSandbox. */
+export async function enableStockTracking(variationIds: string[], locationId: string): Promise<number> {
+  if (variationIds.length === 0) return 0;
+  const res = await squareClient.catalog.batchGet({
+    objectIds: variationIds,
+    includeRelatedObjects: false,
+    includeDeletedObjects: false,
+  });
+  const changes = (res.objects ?? []).flatMap((obj) => {
+    if (obj.type !== "ITEM_VARIATION" || !obj.itemVariationData) return [];
+    const variation = obj as Variation;
+    if (isStockTrackedAt(variation.itemVariationData, locationId)) return [];
+    return [
+      {
+        ...variation,
+        itemVariationData: {
+          ...variation.itemVariationData,
+          trackInventory: true,
+          locationOverrides: variation.itemVariationData?.locationOverrides?.map((override) =>
+            override.locationId === locationId ? { ...override, trackInventory: true } : override
+          ),
+        },
+      },
+    ];
+  });
+  for (let i = 0; i < changes.length; i += 10) {
+    await squareClient.catalog.batchUpsert({
+      idempotencyKey: randomUUID(),
+      batches: [{ objects: changes.slice(i, i + 10) }],
+    });
+  }
+  return changes.length;
+}
+
 export async function addInventory(
   locationId: string,
   variationId: string,
@@ -332,7 +497,7 @@ export async function addInventory(
   });
 }
 
-export type SaleLine = { variationId: string; quantity: number };
+export type SaleLine = { variationId: string; quantity: number; mixerModifierId?: string | null };
 export type RungSale = {
   orderId: string;
   paymentId: string;
@@ -356,6 +521,7 @@ export async function ringSaleThroughSquare(
       lineItems: lines.map((line) => ({
         catalogObjectId: line.variationId,
         quantity: String(line.quantity),
+        ...(line.mixerModifierId ? { modifiers: [{ catalogObjectId: line.mixerModifierId, quantity: "1" }] } : {}),
       })),
     },
   });

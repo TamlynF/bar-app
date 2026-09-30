@@ -6,6 +6,7 @@ import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
 import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
 import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
+import { withSquareMixers } from "@/lib/market/square-mixers";
 import { eventReadiness, type EventReadiness } from "@/lib/market/event-readiness";
 import {
   summariseEvent,
@@ -66,7 +67,7 @@ export default async function MarketSettingsPage({
     supabase
       .from("menu_categories")
       .select(
-        "id, name, is_active, menu_items(id, name, is_active, menu_item_prices(id, serve, amount, display_order, square_variation_id))"
+        "id, name, is_active, menu_items(id, name, is_active, menu_item_prices(*))"
       )
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
@@ -173,6 +174,8 @@ export default async function MarketSettingsPage({
       mapped: Boolean(row.square_variation_id),
       stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       simPending: simPending.get(row.id) ?? 0,
+      mixerPrice: optionalNumber(row.mixer_price),
+      stockTracked: (row.stock_tracked as boolean | null | undefined) ?? null,
       normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
       normalUnitsSource: (row.normal_units_source as string | null) ?? null,
       pace: optionalNumber(row.pace),
@@ -244,7 +247,7 @@ export default async function MarketSettingsPage({
     ).length,
   }));
 
-  const drinks: ServeOption[] = serveOptionsFromCategories(activeCategories);
+  const drinks: ServeOption[] = await withSquareMixers(supabase, serveOptionsFromCategories(activeCategories));
 
   const lastRunByEvent = new Map<number, string>();
   for (const run of runRows ?? []) {

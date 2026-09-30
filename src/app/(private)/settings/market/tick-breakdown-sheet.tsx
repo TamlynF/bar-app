@@ -41,7 +41,7 @@ function sortRows(rows: TickBreakdownRow[], cols: Column[], sort: Sort): TickBre
   });
 }
 
-const dash = "—";
+const dash = "-";
 const num = (value: number | null, digits: number) => (value == null ? dash : value.toFixed(digits));
 const gbp = (value: number | null) => (value == null ? dash : formatGbp(value));
 

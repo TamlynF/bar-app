@@ -112,6 +112,7 @@ export type MenuCategory = AuditFields & {
   name: string;
   note: string | null;
   mixer_surcharge: number | null;
+  is_alcoholic: boolean;
   display_order: number;
   is_active: boolean;
   menu_items: MenuItem[];
@@ -800,6 +801,7 @@ export default function MenuClient({
                     : "-"
                 }
               />
+              <DetailCell label="Alcoholic" value={sheetCategory.is_alcoholic ? "Yes" : "No"} />
               <DetailCell
                 label="Order"
                 value={
@@ -855,6 +857,22 @@ export default function MenuClient({
                   className={FIELD_INPUT}
                 />
               </FormRow>
+              <FormRow label="Alcoholic">
+                <span className="flex flex-1 items-center justify-end">
+                  <input
+                    type="checkbox"
+                    name="is_alcoholic"
+                    value="on"
+                    aria-label="Drinks in this category contain alcohol"
+                    defaultChecked={sheetCategory?.is_alcoholic ?? false}
+                    className="h-4 w-4 cursor-pointer accent-admin-primary"
+                  />
+                </span>
+              </FormRow>
+              <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+                Tick for beers, wines, spirits and cocktails. Items sent to Square from this category are marked
+                alcoholic there. Leave soft drinks, mixers and food unticked.
+              </p>
               <FormRow label="Status">
                 <StatusToggle value={isActive} onChange={setIsActive} />
               </FormRow>

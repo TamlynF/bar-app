@@ -9,6 +9,8 @@ import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-confirmation";
+import { refreshSessionMixers } from "@/lib/market/square-mixers";
+import { refreshStockTracking } from "@/lib/market/square-stock-tracking";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -65,10 +67,26 @@ export async function POST(req: NextRequest) {
   }
 
   if (event.type === CATALOG_VERSION_EVENT) {
+    const admin = createAdminClient();
     try {
-      await confirmCatalogWrite(createAdminClient());
+      await confirmCatalogWrite(admin);
     } catch (err) {
       console.error("[market] catalog confirmation failed:", err);
+    }
+    try {
+      const { data: live } = await admin.from("market_sessions").select("id").eq("status", "live").maybeSingle();
+      if (live) {
+        await Promise.allSettled([
+          refreshSessionMixers(admin, live.id as number, { requireSquare: true }),
+          refreshStockTracking(admin, live.id as number, { requireSquare: true }),
+        ]).then((outcomes) =>
+          outcomes.forEach((outcome) => {
+            if (outcome.status === "rejected") console.error("[market] catalog refresh failed:", outcome.reason);
+          })
+        );
+      }
+    } catch (err) {
+      console.error("[market] catalog refresh failed:", err);
     }
     return NextResponse.json({ received: true });
   }

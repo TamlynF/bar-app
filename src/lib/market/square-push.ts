@@ -8,6 +8,7 @@ export type MenuPushItem = {
   menuItemId: number;
   name: string;
   categoryName: string;
+  isAlcoholic: boolean;
   prices: MenuPushPrice[];
 };
 
@@ -32,7 +33,10 @@ function pence(amount: number): bigint {
    know yet, an ITEM per menu item (skipping names already in the catalog so a
    re-run never duplicates), and an ITEM_VARIATION per serve. Client ids are
    "#var-<menu_item_price_id>" so the response's idMappings hand back exactly
-   which Square variation belongs to which serve row. */
+   which Square variation belongs to which serve row. Items are created as
+   "Prepared food and beverage" (FOOD_AND_BEV), the type Square expects for
+   a bar, because the API cannot change an item's type once it exists, and
+   carry the menu category's alcohol tick as Square's is_alcoholic. */
 export function buildCatalogUpsertPlan(
   items: MenuPushItem[],
   existing: ExistingCatalog,
@@ -92,6 +96,8 @@ export function buildCatalogUpsertPlan(
       presentAtAllLocations: true,
       itemData: {
         name: item.name,
+        productType: "FOOD_AND_BEV",
+        isAlcoholic: item.isAlcoholic,
         ...(categoryId
           ? {
               categories: [{ id: categoryId }],
