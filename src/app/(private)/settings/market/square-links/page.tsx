@@ -79,7 +79,7 @@ export default async function SquareLinksPage({
       },
     ),
     supabase
-      .from("square_sale_line_counts")
+      .from("v_square_sale_line_counts")
       .select("variation_id, line_count, units, first_night, last_night"),
     supabase
       .from("square_sync_state")
