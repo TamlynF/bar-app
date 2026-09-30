@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import NormalUnitsCard, { type NormalUnitsView } from "./normal-units-card";
+import { NormalUnitsCell, NormalUnitsOverrideInput, type NormalUnitsView } from "./normal-units-card";
 import { ReadyToOpenChecklist } from "./ready-to-open";
 import { MarketNightsMenu, type EventSession } from "./market-nights-menu";
 import { useSalesSyncCheck } from "../use-sales-sync-check";
@@ -606,6 +606,10 @@ export default function EventDetailClient({
     [drinks, needle],
   );
   const groups = useMemo(() => groupByCategory(shownDrinks), [shownDrinks]);
+  const normalsById = useMemo(
+    () => new Map(normalUnits.rows.map((row) => [row.menuItemPriceId, row])),
+    [normalUnits.rows]
+  );
 
   const mixerOf = (drink: EventDrink) => serveMixerPrice(drink, event.config.mixerPrice) ?? 0;
 
@@ -938,6 +942,7 @@ export default function EventDetailClient({
                     {group.drinks.map((drink) => {
                       const settings = drinkSettings(drink, event.config);
                       const draft = draftFor(drink);
+                      const normals = normalsById.get(drink.id);
                       return (
                         <li key={drink.id} className="py-2.5">
                           <div
@@ -1002,6 +1007,25 @@ export default function EventDetailClient({
                                   </label>
                                 ))}
                               </div>
+                              {normals && (
+                                <div className="mt-2 flex items-center justify-between gap-3">
+                                  <span className="min-w-0 text-[11px] text-admin-muted">
+                                    <span className="mb-0.5 block text-[10px] font-semibold">Normal per night</span>
+                                    <NormalUnitsCell row={normals} weekdays={normalUnits.weekdays} />
+                                  </span>
+                                  <label className="block shrink-0">
+                                    <span className="mb-0.5 block text-right text-[10px] font-semibold text-admin-muted">
+                                      Override
+                                    </span>
+                                    <NormalUnitsOverrideInput
+                                      key={normals.override ?? "auto"}
+                                      eventId={event.id}
+                                      row={normals}
+                                      className="h-11"
+                                    />
+                                  </label>
+                                </div>
+                              )}
                               {!isLive && hasDraftValue(draft) && (
                                 <button
                                   type="button"
@@ -1028,6 +1052,15 @@ export default function EventDetailClient({
                   <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
                     <th className="py-2 pr-3">Drink</th>
                     <th className="py-2 pr-3">Serve</th>
+                    <th
+                      className="py-2 pr-3 text-right"
+                      title="Average units sold per night on the event's weekday(s), worked out from Square sales, with nights sampled"
+                    >
+                      Normal / night
+                    </th>
+                    <th className="py-2 pr-3 text-center" title="Replaces the Square history figure; blank uses history">
+                      Override
+                    </th>
                     <th className="py-2 pr-3 text-right">Base</th>
                     <th className="py-2 pr-3 text-center">Opening</th>
                     <th className="py-2 pr-3 text-center">Min</th>
@@ -1044,7 +1077,7 @@ export default function EventDetailClient({
                     <Fragment key={group.name}>
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={11}
                           className="bg-admin-surface px-2 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"
                         >
                           {group.name}
@@ -1053,6 +1086,7 @@ export default function EventDetailClient({
                       {group.drinks.map((drink) => {
                         const settings = drinkSettings(drink, event.config);
                         const draft = draftFor(drink);
+                        const normals = normalsById.get(drink.id);
                         return (
                           <tr
                             key={drink.id}
@@ -1070,6 +1104,27 @@ export default function EventDetailClient({
                                 {drink.serve}
                                 {serveMixerPrice(drink, event.config.mixerPrice) != null && <MixerTag />}
                               </span>
+                            </td>
+                            <td className="py-1.5 pr-3 text-right text-[13px]">
+                              {normals ? (
+                                <NormalUnitsCell
+                                  row={normals}
+                                  weekdays={normalUnits.weekdays}
+                                  className="items-end"
+                                />
+                              ) : (
+                                <span className="text-admin-muted">-</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 pr-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              {normals && (
+                                <NormalUnitsOverrideInput
+                                  key={normals.override ?? "auto"}
+                                  eventId={event.id}
+                                  row={normals}
+                                  className="mx-auto"
+                                />
+                              )}
                             </td>
                             <td className="py-1.5 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
                               {drink.basePrice != null ? formatGbp(withMixer(drink.basePrice, mixerOf(drink))) : "-"}
@@ -1310,15 +1365,6 @@ export default function EventDetailClient({
           />
         )}
       </RecordSheet>
-
-      <NormalUnitsCard
-        view={normalUnits}
-        defaultOpen={!normalUnits.computedAt && normalUnits.weekdays.length > 0}
-        reading={readingNormals}
-        syncing={syncingSales}
-        onRecalculate={handleReadNormals}
-        onSync={handleSyncSales}
-      />
     </div>
   );
 }

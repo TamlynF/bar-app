@@ -6,7 +6,7 @@ import { ChevronDown, Download, Link2, Loader2, Play, Plus, RefreshCw } from "lu
 import { cn } from "@/lib/utils";
 import type { EventReadiness } from "@/lib/market/event-readiness";
 import { StepMark, drinksStepText, linksStepText, normalsStepText } from "../readiness-ui";
-import { OUTLINE_BUTTON, PRIMARY_BUTTON } from "../ui";
+import { NEUTRAL_BUTTON, OUTLINE_BUTTON, PRIMARY_BUTTON } from "../ui";
 
 /* The steps between an event and its first tick, in the order they are
    done, each with the one control that does it, ending with Open market.
@@ -108,15 +108,26 @@ export function ReadyToOpenChecklist({
             Sync sales from Square
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={onReadNormals}
-            disabled={readingNormals || syncingSales || !canReadNormals}
-            className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
-          >
-            <RefreshCw className={cn("h-4 w-4", readingNormals && "animate-spin")} aria-hidden="true" />
-            {readiness.normalsComputedAt ? "Recalculate" : "Work out now"}
-          </button>
+          <span className="flex flex-wrap items-center gap-2 [&_button]:max-sm:flex-1">
+            <button
+              type="button"
+              onClick={onSyncSales}
+              disabled={syncingSales || readingNormals}
+              className={cn(NEUTRAL_BUTTON, "whitespace-nowrap")}
+            >
+              <Download className={cn("h-4 w-4", syncingSales && "animate-pulse")} aria-hidden="true" />
+              Sync sales
+            </button>
+            <button
+              type="button"
+              onClick={onReadNormals}
+              disabled={readingNormals || syncingSales || !canReadNormals}
+              className={cn(OUTLINE_BUTTON, "whitespace-nowrap")}
+            >
+              <RefreshCw className={cn("h-4 w-4", readingNormals && "animate-spin")} aria-hidden="true" />
+              {readiness.normalsComputedAt ? "Recalculate" : "Work out now"}
+            </button>
+          </span>
         ),
     },
     {
