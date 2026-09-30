@@ -31,6 +31,8 @@ export type InstrumentSummary = {
   stockOverride: StockState | null;
   /* A crash on this drink alone is still running down its ticks. */
   crashing: boolean;
+  /* A crash on this drink is waiting for the next board update. */
+  crashQueued: boolean;
   mapped: boolean;
   /* Square's IN_STOCK count at the last tick; null when unlinked or unknown. */
   stockQty: number | null;

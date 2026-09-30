@@ -44,6 +44,15 @@ function aged(data: MarketStatePayload, receivedAt: number, now: number): Market
   };
 }
 
+/* When the tick in this payload was due. A scheduled tick run early inside
+   the lead is stamped with its due time, so this lands on the countdown; a
+   tick staff forced (crash now, re-rank now) is stamped when it ran, so it
+   shows straight away instead of waiting out the old countdown. */
+function tickDueAt(data: MarketStatePayload, receivedAt: number): number | null {
+  if (data.nextTickInSec == null || !data.tickIntervalSec) return null;
+  return receivedAt + (data.nextTickInSec - data.tickIntervalSec) * 1000;
+}
+
 /* One shared poll loop for the phone feed and the TV board. `feed` is the
    rolling alert history; `fresh` is only the events that arrived after the
    first load - the ones worth a toast or a phone buzz. Polls are chained,
@@ -102,9 +111,10 @@ export function useMarketState(pollMs: number = 6000, followTicks: boolean = fal
       const shown = shownRef.current;
       const isNewTick =
         followTicks && shown != null && data.status === "live" && data.tickNo != null && data.tickNo > shown.tickNo;
-      if (isNewTick && arrival.receivedAt < shown.dueAt) {
+      const releaseAt = isNewTick ? Math.min(shown.dueAt, tickDueAt(data, arrival.receivedAt) ?? shown.dueAt) : 0;
+      if (isNewTick && arrival.receivedAt < releaseAt) {
         heldRef.current = { ...arrival, events: [...(heldRef.current?.events ?? []), ...events] };
-        if (!releaseTimer) releaseTimer = setTimeout(release, shown.dueAt - arrival.receivedAt);
+        if (!releaseTimer) releaseTimer = setTimeout(release, releaseAt - arrival.receivedAt);
         return;
       }
       if (heldRef.current) {

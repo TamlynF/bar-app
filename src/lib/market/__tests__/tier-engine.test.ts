@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { clamp, instrumentLimits, roundToStep } from "../engine";
 import {
-  glideTowards,
   minutesSinceSale,
   paceOf,
   rankInstruments,
@@ -54,7 +54,7 @@ const warm = resolveMarketConfig({ ...DEFAULT_MARKET_CONFIG, pricingMode: "tiers
 describe("golden replay of the workbook night (tab 10)", () => {
   const config = resolveMarketConfig({ ...DEFAULT_MARKET_CONFIG, ...fixture.config });
 
-  it("reproduces every rank, tier and target, and every price to within one rounding step", () => {
+  it("reproduces every rank, tier and target, and only moves prices on update ticks", () => {
     let states: InstrumentState[] = fixture.drinks.map((d) => ({
       id: d.id,
       basePrice: d.basePrice,
@@ -69,7 +69,6 @@ describe("golden replay of the workbook night (tab 10)", () => {
       tierPct: 0,
     }));
     let sess = session({ tickNo: 0 });
-    let exactPrices = 0;
     let comparedPrices = 0;
 
     for (let tick = 1; tick <= fixture.session.length; tick++) {
@@ -90,11 +89,13 @@ describe("golden replay of the workbook night (tab 10)", () => {
         expect(result.rankPos, `${label} rank`).toBe(expected.rank);
         expect(result.tierPct, `${label} tier`).toBeCloseTo(expected.tierPct, 9);
         expect(result.targetPrice, `${label} target`).toBeCloseTo(drink.basePrice * (1 + expected.tierPct), 6);
-        expect(Math.abs(result.price - expected.price), `${label} price ${result.price} vs ${expected.price}`).toBeLessThanOrEqual(
-          config.roundStep + 1e-9
-        );
+        const before = states.find((s) => s.id === drink.id)!.currentPrice;
+        const limits = instrumentLimits({ basePrice: drink.basePrice }, config);
+        const expectedPrice = outcome.reranked
+          ? roundToStep(clamp(result.targetPrice, limits.floor, limits.ceil), config.roundStep)
+          : before;
+        expect(result.price, `${label} price`).toBeCloseTo(expectedPrice, 9);
         comparedPrices += 1;
-        if (Math.abs(result.price - expected.price) < 1e-9) exactPrices += 1;
       }
 
       states = states.map((s) => {
@@ -112,7 +113,6 @@ describe("golden replay of the workbook night (tab 10)", () => {
       sess = outcome.session;
     }
 
-    expect(exactPrices / comparedPrices).toBeGreaterThan(0.97);
     expect(comparedPrices).toBe(42 * 15);
   });
 });
@@ -211,55 +211,69 @@ describe("warm-up and re-rank cadence", () => {
   });
 });
 
-describe("glide, rounding and limits", () => {
-  it("moves a fixed share of the remaining gap and rounds to 5p", () => {
-    expect(glideTowards(9.95, 6.965, 0.35)).toBeCloseTo(8.90525, 6);
-    const config = resolveMarketConfig({ ...warm, tierPcts: { down: [0.3], up: [0.3], bands: [1] } });
-    const drink = instrument({ id: 1, basePrice: 9.95, currentPrice: 9.95, lastNotifiedPrice: 9.95, tierPct: -0.3 });
-    const other = instrument({ id: 2, basePrice: 5, currentPrice: 5, lastNotifiedPrice: 5, tierPct: 0.3 });
-    const outcome = runTierTick([drink, other], inputs(config, { newUnitsByInstrument: new Map([[2, 3]]), session: session({ tickNo: 3, warmedUpTick: 1 }) }));
+describe("updates, rounding and limits", () => {
+  it("jumps straight to the target on a re-rank and rounds to 5p", () => {
+    const config = resolveMarketConfig({ ...warm, rerankEveryTicks: 5, tierPcts: { down: [0.3], up: [0.3], bands: [1] } });
+    const drink = instrument({ id: 1, basePrice: 9.95, currentPrice: 9.95, lastNotifiedPrice: 9.95 });
+    const other = instrument({ id: 2, basePrice: 5, currentPrice: 5, lastNotifiedPrice: 5 });
+    const outcome = runTierTick([drink, other], inputs(config, { newUnitsByInstrument: new Map([[2, 3]]), session: session({ tickNo: 5, warmedUpTick: 1 }) }));
+    expect(outcome.reranked).toBe(true);
     const result = outcome.results.find((r) => r.id === 1)!;
     expect(result.targetPrice).toBeCloseTo(6.965, 6);
-    expect(result.price).toBe(8.9);
+    expect(result.price).toBe(6.95);
+    expect(outcome.results.find((r) => r.id === 2)!.price).toBe(6.5);
   });
 
-  it("stalls a few pence short of the target once a step rounds to nothing", () => {
-    const config = resolveMarketConfig({ ...warm, tierPcts: { down: [0.3], up: [0.3], bands: [1] } });
-    let price = 9.95;
-    const drink = () => instrument({ id: 1, basePrice: 9.95, currentPrice: price, lastNotifiedPrice: 9.95, tierPct: -0.3 });
+  it("holds every price between re-ranks, even when the target is elsewhere", () => {
+    const config = resolveMarketConfig({ ...warm, rerankEveryTicks: 5, tierPcts: { down: [0.3], up: [0.3], bands: [1] } });
+    const drink = instrument({ id: 1, basePrice: 9.95, currentPrice: 9.95, lastNotifiedPrice: 9.95, tierPct: -0.3 });
     const other = instrument({ id: 2, tierPct: 0.3 });
-    for (let tick = 3; tick < 40; tick++) {
-      const out = runTierTick([drink(), other], inputs(config, { newUnitsByInstrument: new Map([[2, 3]]), session: session({ tickNo: tick, warmedUpTick: 1 }) }));
-      price = out.results.find((r) => r.id === 1)!.price;
+    for (const tickNo of [6, 7, 8, 9]) {
+      const out = runTierTick([drink, other], inputs(config, { newUnitsByInstrument: new Map([[2, 3]]), session: session({ tickNo, warmedUpTick: 1 }) }));
+      expect(out.reranked).toBe(false);
+      const result = out.results.find((r) => r.id === 1)!;
+      expect(result.price).toBe(9.95);
+      expect(result.events).toEqual([]);
     }
-    expect(price).toBeGreaterThanOrEqual(6.95);
-    expect(price).toBeLessThanOrEqual(7.05);
+  });
+
+  it("holds the opening price through warm-up", () => {
+    const config = resolveMarketConfig({ ...warm, warmupUnits: 100 });
+    const drink = instrument({ id: 1, basePrice: 5, currentPrice: 4.5, lastNotifiedPrice: 4.5 });
+    const out = runTierTick([drink, instrument({ id: 2 })], inputs(config, { newUnitsByInstrument: new Map([[1, 3]]) }));
+    expect(out.results.find((r) => r.id === 1)!.price).toBe(4.5);
   });
 
   it("never leaves the floor/ceiling band and freezes a sold-out drink", () => {
-    const config = resolveMarketConfig({ ...warm, glidePct: 1, tierPcts: { down: [0.9], up: [0.9], bands: [1] } });
+    const config = resolveMarketConfig({ ...warm, rerankEveryTicks: 100, tierPcts: { down: [0.9], up: [0.9], bands: [1] } });
     const cheap = instrument({ id: 1, tierPct: -0.9 });
     const dear = instrument({ id: 2, tierPct: 0.9 });
-    const out = runTierTick([cheap, dear], inputs(config, { newUnitsByInstrument: new Map([[2, 3]]), session: session({ tickNo: 3, warmedUpTick: 1 }) }));
+    const out = runTierTick([cheap, dear], inputs(config, { crashEnded: true, session: session({ tickNo: 3, warmedUpTick: 1 }) }));
     expect(out.results.find((r) => r.id === 1)!.price).toBe(3.5);
     expect(out.results.find((r) => r.id === 2)!.price).toBe(7.5);
 
     const soldOut = instrument({ id: 3, currentPrice: 6.2, stockOverride: "out", tierPct: -0.3 });
-    const frozen = runTierTick([soldOut, dear], inputs(config, { session: session({ tickNo: 3, warmedUpTick: 1 }) }));
+    const frozen = runTierTick([soldOut, dear], inputs(config, { crashEnded: true, session: session({ tickNo: 3, warmedUpTick: 1 }) }));
     expect(frozen.results.find((r) => r.id === 3)!.price).toBe(6.2);
   });
 });
 
 describe("crash", () => {
-  it("points every target at the crash price while active and back at the tier price after", () => {
+  it("drops to the crash price the tick it starts and restores the tier price the tick after it ends", () => {
     const config = resolveMarketConfig({ ...warm, rerankEveryTicks: 100 });
     const drinks = [instrument({ id: 1, tierPct: 0.3, currentPrice: 6.5 }), instrument({ id: 2, tierPct: -0.3, currentPrice: 3.5 })];
     const crashed = runTierTick(drinks, inputs(config, { crashActive: true, session: session({ tickNo: 7, warmedUpTick: 1 }) }));
     expect(crashed.results.every((r) => r.targetPrice === 3.75)).toBe(true);
-    expect(crashed.results.find((r) => r.id === 1)!.price).toBe(5.55);
+    expect(crashed.results.find((r) => r.id === 1)!.price).toBe(3.75);
     expect(crashed.results.find((r) => r.id === 1)!.tierPct).toBe(0.3);
-    const recovered = runTierTick(drinks, inputs(config, { crashActive: false, session: session({ tickNo: 8, warmedUpTick: 1 }) }));
+
+    const atCrash = drinks.map((d) => ({ ...d, currentPrice: crashed.results.find((r) => r.id === d.id)!.price }));
+    const recovered = runTierTick(atCrash, inputs(config, { crashEnded: true, session: session({ tickNo: 8, warmedUpTick: 1 }) }));
     expect(recovered.results.find((r) => r.id === 1)!.targetPrice).toBe(6.5);
+    expect(recovered.results.find((r) => r.id === 1)!.price).toBe(6.5);
+
+    const between = runTierTick(atCrash, inputs(config, { session: session({ tickNo: 9, warmedUpTick: 1 }) }));
+    expect(between.results.find((r) => r.id === 1)!.price).toBe(3.75);
   });
 
   it("honours a per-drink crash", () => {
@@ -267,19 +281,21 @@ describe("crash", () => {
     const drinks = [instrument({ id: 1, tierPct: 0.3, currentPrice: 6.5, crashActive: true }), instrument({ id: 2, tierPct: 0, currentPrice: 5 })];
     const out = runTierTick(drinks, inputs(config, { session: session({ tickNo: 7, warmedUpTick: 1 }) }));
     expect(out.results.find((r) => r.id === 1)!.targetPrice).toBe(3.75);
+    expect(out.results.find((r) => r.id === 1)!.price).toBe(3.75);
     expect(out.results.find((r) => r.id === 2)!.targetPrice).toBe(5);
+    expect(out.results.find((r) => r.id === 2)!.price).toBe(5);
   });
 });
 
 describe("alerts", () => {
-  it("fires a surge once the glide has moved 5% from the last alerted price and re-arms", () => {
+  it("fires a surge when an update moves the price 5% from the last alerted price and re-arms", () => {
     const config = resolveMarketConfig({ ...warm, rerankEveryTicks: 100 });
     const drink = instrument({ id: 1, tierPct: 0.3, currentPrice: 5.2, lastNotifiedPrice: 5 });
-    const out = runTierTick([drink, instrument({ id: 2 })], inputs(config, { session: session({ tickNo: 7, warmedUpTick: 1 }) }));
+    const out = runTierTick([drink, instrument({ id: 2 })], inputs(config, { crashEnded: true, session: session({ tickNo: 7, warmedUpTick: 1 }) }));
     const result = out.results.find((r) => r.id === 1)!;
-    expect(result.price).toBe(5.65);
+    expect(result.price).toBe(6.5);
     expect(result.events.map((e) => e.kind)).toContain("surge");
-    expect(result.lastNotifiedPrice).toBe(5.65);
+    expect(result.lastNotifiedPrice).toBe(6.5);
   });
 });
 

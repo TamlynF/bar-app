@@ -14,6 +14,10 @@ export type MarketEventKind =
 
 export type PricingMode = "demand" | "tiers";
 
+/* When a staff-triggered crash hits the board: on the very next tick, or
+   held back to land with the next board update (tier pricing only). */
+export type CrashTiming = "now" | "next_update";
+
 /* Rank bands are cumulative upper bounds: bands [5, 10, 15] with down
    [0.3, 0.2, 0.1] means fewest-sold ranks 1–5 → −30%, 6–10 → −20%, 11–15 → −10%. */
 export type TierPcts = {
@@ -145,6 +149,8 @@ export type InstrumentState = {
   /* True while this drink alone is crashing; the board-wide crash lives on
      TickInputs. */
   crashActive?: boolean;
+  /* True on the tick straight after this drink's own crash ran out. */
+  crashEnded?: boolean;
 };
 
 export type EngineEvent = {
@@ -156,6 +162,8 @@ export type EngineEvent = {
 export type TickInputs = {
   config: MarketConfig;
   crashActive: boolean;
+  /* True on the tick straight after a board-wide crash ran out. */
+  crashEnded?: boolean;
   newUnitsByInstrument: Map<number, number>;
   /* Inventory quantity per Square variation; a variation missing from the map
      is "unknown this tick" and keeps its previous stock state. */

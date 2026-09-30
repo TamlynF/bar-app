@@ -38,8 +38,9 @@ export function tierLabel(pct: number | null | undefined): string | null {
 }
 
 /* Deals first: −30% … −10%, then the unchanged middle, then the mark-ups
-   ending on +30%; inside a tier the drink furthest into its discount (lowest
-   pace) leads. Demand mode keeps the server's order. */
+   ending on +30%; inside a tier the biggest move on the shown price leads,
+   so the order only changes when prices do. Demand mode keeps the server's
+   order. */
 export function sortForPhone(
   instruments: MarketInstrumentPayload[],
   pricingMode: MarketStatePayload["pricingMode"]
@@ -49,9 +50,9 @@ export function sortForPhone(
     const tierA = a.tierPct ?? 0;
     const tierB = b.tierPct ?? 0;
     if (tierA !== tierB) return tierA - tierB;
-    const paceA = a.pace ?? 0;
-    const paceB = b.pace ?? 0;
-    if (paceA !== paceB) return tierA <= 0 ? paceA - paceB : paceB - paceA;
+    const changeA = displayChangePct(a);
+    const changeB = displayChangePct(b);
+    if (changeA !== changeB) return tierA <= 0 ? changeA - changeB : changeB - changeA;
     return a.name.localeCompare(b.name);
   });
 }

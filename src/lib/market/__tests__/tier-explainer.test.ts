@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_MARKET_CONFIG, type MarketConfig } from "../types";
 import {
-  gapClosedPct,
   heatDecaySeries,
   paceBreakdown,
-  priceWalk,
   rankExample,
   ticksUntilRerank,
   tierBandRows,
   tierPctForRank,
+  updatePrice,
 } from "../tier-explainer";
 
 const config: MarketConfig = { ...DEFAULT_MARKET_CONFIG, pricingMode: "tiers", sessionTicksHint: 15 };
@@ -63,37 +62,19 @@ describe("tierBandRows", () => {
   });
 });
 
-describe("priceWalk", () => {
-  it("closes part of the gap each tick without overshooting", () => {
-    const walk = priceWalk(5, 5, 6.5, config, 5);
-    expect(walk[0].price).toBe(5);
-    const prices = walk.map((step) => step.price);
-    for (let i = 1; i < prices.length; i += 1) {
-      expect(prices[i]).toBeGreaterThan(prices[i - 1]);
-      expect(prices[i]).toBeLessThanOrEqual(6.5);
-    }
-    expect(walk[walk.length - 1].gap).toBeLessThan(0.3);
+describe("updatePrice", () => {
+  it("lands on the target in one step", () => {
+    expect(updatePrice(5, 6.5, config)).toBe(6.5);
   });
 
-  it("never walks past the floor or the ceiling", () => {
-    const belowFloor = priceWalk(5, 5, 1, config, 10);
-    expect(belowFloor[belowFloor.length - 1].price).toBeGreaterThanOrEqual(5 * config.floorPct);
-
-    const aboveCeiling = priceWalk(5, 5, 99, config, 10);
-    expect(aboveCeiling[aboveCeiling.length - 1].price).toBeLessThanOrEqual(5 * config.ceilPct);
+  it("never goes past the floor or the ceiling", () => {
+    expect(updatePrice(5, 1, config)).toBeGreaterThanOrEqual(5 * config.floorPct);
+    expect(updatePrice(5, 99, config)).toBeLessThanOrEqual(5 * config.ceilPct);
   });
 
-  it("rounds every step to a payable amount", () => {
-    for (const step of priceWalk(4.75, 4.75, 6.18, config, 6)) {
-      expect(Math.round((step.price * 100) % (config.roundStep * 100))).toBe(0);
-    }
-  });
-});
-
-describe("gapClosedPct", () => {
-  it("works out how far a glide gets in a few ticks", () => {
-    expect(gapClosedPct(0.35, 5)) .toBe(88);
-    expect(gapClosedPct(1, 1)).toBe(100);
+  it("rounds to a payable amount", () => {
+    const price = updatePrice(4.75, 6.18, config);
+    expect(Math.round((price * 100) % (config.roundStep * 100))).toBe(0);
   });
 });
 

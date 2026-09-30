@@ -54,7 +54,6 @@ const bandList = (bands: number[]) =>
 function dials(config: MarketConfig): { label: string; value: string }[] {
   return [
     { label: "Re-rank every N ticks", value: String(config.rerankEveryTicks) },
-    { label: "Glide per tick", value: `${Math.round(config.glidePct * 100)}%` },
     { label: "Warm-up: units sold before tiers apply", value: String(config.warmupUnits) },
     {
       label: `Mark-up tiers (most sold ${bandList(config.tierPcts.bands)})`,
@@ -157,8 +156,8 @@ function columns(config: MarketConfig, normalPerNight: number | null, openingPri
     {
       key: "price",
       label: "Price",
-      hint: `last price + ${Math.round(config.glidePct * 100)}% of the gap to Target, held within the limits, rounded to ${Math.round(config.roundStep * 100)}p`,
-      help: "The board price. It glides toward Target rather than jumping, and freezes while the drink is sold out.",
+      hint: `Target on an update tick, otherwise the last price; held within the limits, rounded to ${Math.round(config.roundStep * 100)}p`,
+      help: "The board price. It only moves on a board update - a re-rank, or a crash starting or ending - and then jumps straight to Target. It freezes while the drink is sold out.",
       render: (row) => gbp(row.price),
       value: (row) => row.price,
     },

@@ -469,6 +469,17 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
 
   const watchedCount = instruments.filter((instrument) => watched.includes(instrument.id)).length;
   const tiersLive = state.pricingMode === "tiers";
+  const tickKey = state.tickNo ?? 0;
+  const countdown =
+    state.crashActive && state.crashRemainingSec != null
+      ? { key: `crash-${tickKey}`, seconds: state.crashRemainingSec, label: "Recovery in" }
+      : tiersLive
+        ? state.warmedUp && state.nextRerankInSec != null
+          ? { key: `update-${tickKey}`, seconds: state.nextRerankInSec, label: "Next update" }
+          : null
+        : state.nextTickInSec != null
+          ? { key: `tick-${tickKey}`, seconds: state.nextTickInSec, label: "Next update" }
+          : null;
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
   const alertsOff = !alertsAllowed;
@@ -479,20 +490,14 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
       {header}
       <div className="-mt-2 flex items-center justify-between gap-3 font-black text-[10px] tracking-wider text-stone-500 uppercase">
         <span className="min-w-0 truncate">
-          <span className="text-[#FDCC4B]">Market open</span>
+          <span className="text-[#FDCC4B]">{state.closesAt ? `Open until ${state.closesAt}` : "Market open"}</span>
           {" · "}
           {tradingCount} {tradingCount === 1 ? "drink" : "drinks"}
         </span>
-        {tiersLive && state.warmedUp && state.nextRerankInSec != null ? (
+        {countdown && (
           <span className="shrink-0 whitespace-nowrap">
-            <NextTickCountdown key={`rerank-${state.tickNo ?? 0}`} seconds={state.nextRerankInSec} label="Re-rank in" />
+            <NextTickCountdown key={countdown.key} seconds={countdown.seconds} label={countdown.label} />
           </span>
-        ) : (
-          state.nextTickInSec != null && (
-            <span className="shrink-0 whitespace-nowrap">
-              <NextTickCountdown key={state.tickNo ?? 0} seconds={state.nextTickInSec} />
-            </span>
-          )
         )}
       </div>
 

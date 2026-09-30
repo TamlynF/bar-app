@@ -10,13 +10,12 @@ import {
 } from "lucide-react";
 import { formatGbp } from "@/lib/price";
 import {
-  gapClosedPct,
   heatDecaySeries,
   paceBreakdown,
-  priceWalk,
   rankExample,
   ticksUntilRerank,
   tierBandRows,
+  updatePrice,
   type PaceBreakdown,
 } from "@/lib/market/tier-explainer";
 import type { MarketConfig } from "@/lib/market/types";
@@ -195,18 +194,11 @@ export default function LeaderboardExplainer({
   const tickWord = config.tickIntervalSec === 60 ? "minute" : `${config.tickIntervalSec} seconds`;
   const decay = heatDecaySeries([5, 0, 0, 0, 0, 0], config.decayK);
   const steady = heatDecaySeries(Array(12).fill(2), config.decayK);
-  const glideDemo = star
-    ? priceWalk(
-        star.basePrice,
-        star.basePrice,
-        star.basePrice * (1 + (topBand?.up ?? 0.3)),
-        config,
-        5
-      )
-    : priceWalk(5, 5, 5 * (1 + (topBand?.up ?? 0.3)), config, 5);
+  const demoBase = star ? star.basePrice : 5;
+  const updateDemo = [demoBase, updatePrice(demoBase, demoBase * (1 + (topBand?.up ?? 0.3)), config)];
 
   const setTarget = 8 * (1 + (topBand?.up ?? 0.3));
-  const setWalk = priceWalk(8, 6, setTarget, config, 2);
+  const setBack = updatePrice(8, setTarget, config);
   const busy = rankExample("Cocktail", 1, 12, 7.5, config);
   const quiet = rankExample("Pint of lager", 1, 60, 4.75, config);
   const rare = rankExample("Bottle of wine", 1, 1, 24, config);
@@ -449,34 +441,32 @@ export default function LeaderboardExplainer({
       <Step
         number={6}
         icon={Target}
-        title="Target and glide — how the price gets there"
-        question="The tier decides the destination; the glide decides the speed. The price closes part of the gap each tick, so nothing on the board ever teleports."
-        formula={`target = base price × (1 + tier) · new price = last price + ${Math.round(config.glidePct * 100)}% × (target − last price)`}
-        why={`Closing ${Math.round(config.glidePct * 100)}% of the gap a tick gets about ${gapClosedPct(config.glidePct, 5)}% of the way there in five ticks, and the guest watching the screen sees a price move rather than a glitch. Every price is then held between ${config.floorPct}× and ${config.ceilPct}× the menu price and rounded to the nearest ${Math.round(config.roundStep * 100)}p so it is always payable at the till.`}
+        title="Target and update — how the price gets there"
+        question="The tier decides the destination. Prices only move when the board's Next update countdown lands, and then they go straight to the target."
+        formula="target = base price × (1 + tier) · at each update, new price = target"
+        why={`Sales are read every tick, but the board, the phones and the till all change together once every ${config.rerankEveryTicks} ticks, so guests see one countdown and the price they see is the price they pay. Every price is held between ${config.floorPct}× and ${config.ceilPct}× the menu price and rounded to the nearest ${Math.round(config.roundStep * 100)}p so it is always payable at the till.`}
       >
         <ExampleTag live={Boolean(star)} />
         <p className="text-[13px] leading-relaxed text-admin-muted">
-          {star ? star.name : "A £5.00 drink"} at {formatGbp(glideDemo[0].price)} that has just
+          {star ? star.name : "A £5.00 drink"} at {formatGbp(updateDemo[0])} that has just
           earned {pct(Math.abs(topBand?.up ?? 0.3))}, heading for{" "}
           {formatGbp(star ? star.basePrice * (1 + (topBand?.up ?? 0.3)) : 5 * (1 + (topBand?.up ?? 0.3)))}:
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          {glideDemo.map((step) => (
-            <span key={step.tick} className="flex items-center gap-2">
-              {step.tick > 0 && (
-                <ArrowRight className="h-3.5 w-3.5 text-admin-muted" aria-hidden="true" />
-              )}
+          {updateDemo.map((price, index) => (
+            <span key={index} className="flex items-center gap-2">
+              {index > 0 && <ArrowRight className="h-3.5 w-3.5 text-admin-muted" aria-hidden="true" />}
               <span className="rounded-lg bg-admin-surface px-2 py-1 text-[13px] font-semibold text-admin-ink tabular-nums">
-                {formatGbp(step.price)}
+                {formatGbp(price)}
               </span>
             </span>
           ))}
         </div>
         <p className="text-[13px] leading-relaxed text-admin-muted">
           Hit crash and every target is replaced by the crash price ({Math.round(config.crashFactor * 100)}
-          % of the menu price) for {config.crashDurationTicks} ticks. Nothing else changes: prices walk
-          down at the same speed and walk back up again afterwards, and every drink returns to the tier
-          it had earned.
+          % of the menu price) for {config.crashDurationTicks} ticks. Staff choose whether it starts now or
+          lands with the next board update. Prices drop the moment it starts and go back the moment it
+          ends, and every drink returns to the tier it had earned.
         </p>
       </Step>
 
@@ -626,7 +616,7 @@ export default function LeaderboardExplainer({
             { label: "Target", value: "base price with the tier applied" },
             {
               label: "Now",
-              value: `closes ${Math.round(config.glidePct * 100)}% of the gap to Target each tick, never jumps`,
+              value: "jumps to Target at each board update and holds until the next",
             },
             { label: "Warm-up", value: `every tier is 0 until ${config.warmupUnits} drinks have sold` },
           ]}
@@ -637,8 +627,8 @@ export default function LeaderboardExplainer({
           which is the point: the board rewards drinks that are hotter than their own usual, not the
           biggest sellers. A drink ranked in the top band with a base price of £8.00 gets{" "}
           {pct(topBand?.up ?? 0.3)}, a target of{" "}
-          {formatGbp(8 * (1 + (topBand?.up ?? 0.3)))}, and its board price walks there over a few
-          ticks. Between re-ranks pace keeps moving but rank and tier hold still, so the leaderboard
+          {formatGbp(8 * (1 + (topBand?.up ?? 0.3)))}, and its board price moves there at the next
+          update. Between re-ranks pace keeps moving but rank and tier hold still, so the leaderboard
           plays out in rounds.
         </p>
       </Section>
@@ -658,15 +648,15 @@ export default function LeaderboardExplainer({
             { label: "Rank, tier, Target", value: "unchanged, since those come from sales" },
             {
               label: "Then",
-              value: `each tick closes ${Math.round(config.glidePct * 100)}% of the gap back to Target`,
+              value: "holds until the next board update, then jumps back to Target",
             },
             { label: "Alerts", value: "a big enough drop pings guests watching the drink, like an earned one" },
           ]}
         />
         <p className="text-[13px] leading-relaxed text-admin-muted">
-          A cocktail heading for {formatGbp(setTarget)} that you set to {formatGbp(setWalk[0].price)}{" "}
-          moves to {formatGbp(setWalk[1].price)} on the next tick, then {formatGbp(setWalk[2].price)},
-          and is back near its target within a handful of ticks. Use it to clear a bottle, fix a
+          A cocktail heading for {formatGbp(setTarget)} that you set to {formatGbp(6)} stays at{" "}
+          {formatGbp(6)} until the next board update, then goes straight back to {formatGbp(setBack)}.
+          Use it to clear a bottle, fix a
           mis-keyed price or run a ten-minute shout. For a price that stays put, lower the base
           price, edit the drink&apos;s floor and ceiling, or mark it sold out to freeze it.
         </p>
@@ -706,10 +696,6 @@ export default function LeaderboardExplainer({
           lines={[
             { label: "A tick is", value: `${config.tickIntervalSec} seconds` },
             { label: "Re-rank the table every", value: `${config.rerankEveryTicks} ticks` },
-            {
-              label: "Close this much of the price gap per tick",
-              value: `${Math.round(config.glidePct * 100)}%`,
-            },
             { label: "Tiers start after", value: `${config.warmupUnits} drinks sold` },
             { label: "Treat every drink as selling at least", value: `${config.paceFloorUnits} a night` },
             { label: "Heat keeps this much each tick", value: `${Math.round(config.decayK * 100)}%` },

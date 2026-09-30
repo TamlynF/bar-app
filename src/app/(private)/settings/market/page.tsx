@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveMarketConfig } from "@/lib/market/types";
+import { crashActiveAt, crashQueuedAt } from "@/lib/market/tick";
 import { optionalNumber } from "@/lib/market/drink-overrides";
 import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
@@ -167,7 +168,8 @@ export default async function MarketSettingsPage({
       demandUnits: Number(row.demand_units),
       stockState: row.stock_state,
       stockOverride: row.stock_override,
-      crashing: row.crash_until_tick != null && sessionRow.tick_no <= row.crash_until_tick,
+      crashing: crashActiveAt(row, sessionRow.tick_no),
+      crashQueued: crashQueuedAt(row, sessionRow.tick_no),
       mapped: Boolean(row.square_variation_id),
       stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       simPending: simPending.get(row.id) ?? 0,

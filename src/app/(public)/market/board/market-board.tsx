@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { useMarketState } from "../use-market-state";
-import { FlipPrice, displayChangePct, displayPrice, eventCopy, formatChangePct, formatDisplayPrice } from "../market-ui";
+import { FlipPrice, displayChangePct, displayPrice, formatChangePct, formatDisplayPrice } from "../market-ui";
 import type { MarketStatePayload } from "@/lib/market/tick";
 
 export type BoardView = "categories" | "table" | "movers" | "leaderboard";
@@ -139,21 +139,9 @@ function PriceCell({
   );
 }
 
-function ChangePill({
-  changePct,
-  trend,
-  atFloor,
-  crash,
-}: {
-  changePct: number;
-  trend: Trend;
-  atFloor: boolean;
-  crash: boolean;
-}) {
+function ChangePill({ changePct, trend }: { changePct: number; trend: Trend }) {
   const base =
     "justify-self-end rounded-[0.3vw] px-[0.5vw] py-[0.25vw] text-[1.05vw] font-semibold whitespace-nowrap text-right";
-  if (crash) return <span className={`${base} bg-[#ff2e4c] text-white`}>FLOOR</span>;
-  if (atFloor) return <span className={`${base} bg-[#FDCC4B] text-[#1a2008]`}>FLOOR</span>;
   if (trend === "up") {
     return (
       <FlipPrice value={`▲ ${formatChangePct(changePct)}`} className={`${base} bg-[#FF4D6D]/12 ${UP_TEXT}`} />
@@ -184,7 +172,7 @@ function CategoryRow({
       <NameCell instrument={instrument} />
       <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
-      <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
+      <ChangePill changePct={changePct} trend={trend} />
     </div>
   );
 }
@@ -297,7 +285,7 @@ function FlatRow({
       <span className="truncate text-[0.95vw] text-[#a9ae8d]">{instrument.category ?? "-"}</span>
       <OpenCell instrument={instrument} />
       <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} />
-      <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
+      <ChangePill changePct={changePct} trend={trend} />
     </div>
   );
 }
@@ -521,7 +509,7 @@ function LeaderboardColumn({
                 <NameCell instrument={instrument} size="text-[1.3vw]" flip showServe={false} />
                 <OpenCell instrument={instrument} size="text-[1.1vw]" align="text-center" />
                 <PriceCell instrument={instrument} trend={trend} atFloor={atFloor} crash={crash} size="text-[2.3vw]" align="text-center" />
-                <ChangePill changePct={changePct} trend={trend} atFloor={atFloor} crash={crash} />
+                <ChangePill changePct={changePct} trend={trend} />
               </div>
             );
           })}
@@ -558,12 +546,12 @@ function LeaderboardView({
   const deals = tiers
     ? instruments
         .filter((i) => (i.tierPct ?? 0) < 0 && (displayPrice(i) ?? i.price) < i.openingPrice)
-        .sort((a, b) => (a.tierPct ?? 0) - (b.tierPct ?? 0) || (a.pace ?? 0) - (b.pace ?? 0))
+        .sort((a, b) => (a.tierPct ?? 0) - (b.tierPct ?? 0) || displayChangePct(a) - displayChangePct(b))
     : [...instruments].sort(byChangeDesc).reverse();
   const risers = tiers
     ? instruments
         .filter((i) => (i.tierPct ?? 0) > 0 && (displayPrice(i) ?? i.price) > i.openingPrice)
-        .sort((a, b) => (b.tierPct ?? 0) - (a.tierPct ?? 0) || (b.pace ?? 0) - (a.pace ?? 0))
+        .sort((a, b) => (b.tierPct ?? 0) - (a.tierPct ?? 0) || displayChangePct(b) - displayChangePct(a))
     : [...instruments].sort(byChangeDesc);
   const requested = state.leaderboardRows ?? 0;
   useLayoutEffect(() => {
@@ -632,61 +620,33 @@ function TickerSeparator() {
   return <span className="mx-[0.6vw] text-[#a9ae8d]">·</span>;
 }
 
-function TickerSegments({
-  crash,
-  instruments,
-  feedCopy,
-}: {
-  crash: boolean;
-  instruments: MarketInstrumentPayload[];
-  feedCopy: string[];
-}) {
-  const top = instruments.length
-    ? instruments.reduce((best, candidate) =>
-        candidate.changePct > best.changePct ? candidate : best
-      )
-    : null;
-  const bargain = instruments.length
-    ? instruments.reduce((best, candidate) =>
-        candidate.changePct < best.changePct ? candidate : best
-      )
-    : null;
+/* The ticker teaches a first-timer how the exchange works, one short step
+   at a time, so nobody needs staff to explain it. */
+const HOW_IT_WORKS = [
+  "Drink prices go up and down during the night",
+  "Popular drinks cost more, quiet drinks cost less",
+  "Green ▼ means cheaper than the menu price",
+  "Red ▲ means more expensive than the menu price",
+  "Prices change when the Next update clock reaches 0:00",
+  "Order at the bar as normal",
+  "You pay the price on this screen when you order",
+  "Scan the QR code to see every drink on your phone",
+];
 
-  const segments: ReactNode[] = [
-    <span key="dfx" className="font-semibold text-[#FDCC4B]">
-      DFX
-    </span>,
-    <span key="status">
-      {crash
-        ? "MARKET CRASH - every drink at its floor price"
-        : "prices move with what you buy · slow sellers get cheaper"}
-    </span>,
-  ];
-  if (top && bargain) {
-    segments.push(
-      <span key="top">
-        <span className="font-semibold text-[#FDCC4B]">TOP</span> {top.name}{" "}
-        <span className={UP_TEXT}>▲</span>
-      </span>,
-      <span key="bargain">
-        <span className="font-semibold text-[#FDCC4B]">BARGAIN</span> {bargain.name}{" "}
-        <span className={DOWN_TEXT}>▼</span> {formatDisplayPrice(bargain)}
-      </span>
-    );
-  }
-  feedCopy.forEach((copy, index) => {
-    segments.push(<span key={`feed-${index}`}>{copy}</span>);
-  });
-  segments.push(
-    <span key="karaoke">karaoke thursdays</span>,
-    <span key="live">live music saturdays</span>
-  );
-
+function TickerSegments({ crash }: { crash: boolean }) {
+  const steps = crash
+    ? ["Market crash - every drink is at its lowest price", "Get to the bar before the clock runs out", ...HOW_IT_WORKS]
+    : HOW_IT_WORKS;
   return (
     <>
-      {segments.map((segment, index) => (
-        <span key={index} className="flex items-center">
-          {segment}
+      <span className="flex items-center">
+        <span className="font-semibold text-[#FDCC4B]">{crash ? "CRASH" : "HOW IT WORKS"}</span>
+        <TickerSeparator />
+      </span>
+      {steps.map((step, index) => (
+        <span key={step} className="flex items-center">
+          <span className="mr-[0.6vw] font-semibold text-[#FDCC4B]">{index + 1}.</span>
+          {step}
           <TickerSeparator />
         </span>
       ))}
@@ -715,6 +675,32 @@ function useCountdown(remainingSec: number | undefined): string {
   return countdown;
 }
 
+/* One header figure: a small label, the big value and a one-line note, so
+   every figure on the header sits on the same three baselines. */
+function StatCell({
+  label,
+  value,
+  valueClass,
+  note,
+  divided = false,
+}: {
+  label: string;
+  value: string;
+  valueClass: string;
+  note: string | null;
+  divided?: boolean;
+}) {
+  return (
+    <div className={`flex min-w-[9vw] flex-col gap-[0.5vw] px-[1.6vw] ${divided ? "border-l border-[#3a4520]" : ""}`}>
+      <p className="text-[0.9vw] leading-none tracking-[0.18em] whitespace-nowrap text-[#a9ae8d] uppercase">{label}</p>
+      <p className={`font-board-display text-[3.4vw] leading-none tabular-nums ${valueClass}`}>{value}</p>
+      <p className="text-[0.9vw] leading-none tracking-[0.18em] whitespace-nowrap text-[#f3f0dc] uppercase">
+        {note ?? " "}
+      </p>
+    </div>
+  );
+}
+
 export default function MarketBoard({
   initialView,
   qrDataUrl,
@@ -722,13 +708,14 @@ export default function MarketBoard({
   initialView: BoardView;
   qrDataUrl: string | null;
 }) {
-  const { state, feed } = useMarketState(5000, true);
+  const { state } = useMarketState(5000, true);
   const [view, setView] = useState<BoardView>(initialView);
   const crash = state?.crashActive === true;
   const crashCountdown = useCountdown(state?.crashRemainingSec);
   const nextTickCountdown = useCountdown(state?.nextTickInSec);
   const rerankCountdown = useCountdown(state?.nextRerankInSec ?? undefined);
   const tiersLive = state?.pricingMode === "tiers";
+  const warmingUp = tiersLive && state?.warmedUp === false;
 
   if (!state || state.status === "closed") {
     return (
@@ -745,7 +732,6 @@ export default function MarketBoard({
   }
 
   const instruments = state.instruments ?? [];
-  const feedCopy = feed.slice(-2).map(eventCopy);
 
   return (
     <div
@@ -754,63 +740,60 @@ export default function MarketBoard({
       }`}
     >
       <header
-        className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-end gap-[2vw] border-b-2 pb-[0.8vw] ${
+        className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-[2vw] border-b-2 pb-[1vw] ${
           crash ? "border-white" : "border-[#FDCC4B]"
         }`}
       >
-        <div>
-          <CompanyWordmark
-            className={`h-[3.6vw] ${crash ? "brightness-0 invert" : ""}`}
+        <div className="flex min-w-0 items-center gap-[1.6vw]">
+          <CompanyWordmark className={`h-[4.2vw] shrink-0 ${crash ? "brightness-0 invert" : ""}`} />
+          <p
+            className={`shrink-0 border-l-2 pl-[1.6vw] font-board-display text-[2.8vw] leading-none whitespace-nowrap text-[#f3f0dc] ${
+              crash ? "border-white" : "border-[#FDCC4B]"
+            }`}
+          >
+            DRINK EXCHANGE
+          </p>
+        </div>
+
+        <div className="flex items-stretch">
+          <StatCell
+            label="Market"
+            value={crash ? "CRASH" : "OPEN"}
+            valueClass={crash ? "text-white" : "text-[#8CFF6A]"}
+            note={state.closesAt ? `Until ${state.closesAt}` : null}
           />
-          <p className="font-board-mono text-[1.5vw] tracking-[0.18em] text-[#f3f0dc]">
-            DRINK EXCHANGE · HINCKLEY
-          </p>
+          <StatCell
+            label={crash ? "Recovery in" : warmingUp ? "Warming up" : "Next update"}
+            value={
+              crash
+                ? crashCountdown
+                : warmingUp
+                  ? `${state.unitsSoldTotal ?? 0}/${state.warmupUnits ?? 0}`
+                  : tiersLive
+                    ? rerankCountdown
+                    : nextTickCountdown
+            }
+            valueClass={crash ? "ad-blink text-white" : warmingUp ? "text-[#8CFF6A]" : "text-[#FDCC4B]"}
+            note={warmingUp ? "Drinks sold" : null}
+            divided
+          />
         </div>
-        <div className="text-right">
-          <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">Market</p>
-          <p
-            className={`font-board-display text-[3.4vw] leading-none ${
-              crash ? "text-white" : "text-[#8CFF6A]"
-            }`}
-          >
-            {crash ? "CRASH" : "OPEN"}
-          </p>
-        </div>
-        {tiersLive && !crash && (
-          <div className="text-right">
-            <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">
-              {state.warmedUp === false ? "Warming up" : "Next re-rank"}
-            </p>
-            <p className="font-board-display text-[3.4vw] leading-none text-[#8CFF6A]">
-              {state.warmedUp === false ? `${state.unitsSoldTotal ?? 0}/${state.warmupUnits ?? 0}` : rerankCountdown}
-            </p>
-          </div>
-        )}
-        <div className="text-right">
-          <p className="text-[0.9vw] tracking-[0.18em] text-[#a9ae8d] uppercase">
-            {crash ? "Recovery in" : "Next update"}
-          </p>
-          <p
-            className={`font-board-display text-[3.4vw] leading-none ${
-              crash ? "ad-blink text-white" : "text-[#FDCC4B]"
-            }`}
-          >
-            {crash ? crashCountdown : nextTickCountdown}
-          </p>
-        </div>
+
         {qrDataUrl && (
-          <div className="flex items-center gap-[0.9vw] self-center border-l border-[#3a4520] pl-[1.8vw]">
+          <div className="flex items-center gap-[1.2vw] border-l border-[#3a4520] pl-[2vw]">
             <Image
               src={qrDataUrl}
               alt="QR code linking to the Market Night page"
               width={384}
               height={384}
               unoptimized
-              className="h-[6.2vw] w-[6.2vw] rounded-[0.4vw] bg-white p-[0.3vw]"
+              className="h-[6vw] w-[6vw] rounded-[0.4vw] bg-white p-[0.3vw]"
             />
-            <div className="max-w-[12vw] text-[0.8vw] leading-[1.4] tracking-widest uppercase">
-              <p className="font-semibold text-[#f3f0dc]">Scan for the market on your phone</p>
-              <p className="text-[#a9ae8d]">Get alerts on the drinks you watch</p>
+            <div className="space-y-[0.5vw] uppercase">
+              <p className="font-board-display text-[2vw] leading-none whitespace-nowrap text-[#FDCC4B]">
+                View the full menu
+              </p>
+              <p className="text-[0.9vw] tracking-[0.18em] whitespace-nowrap text-[#f3f0dc]">More drinks available</p>
             </div>
           </div>
         )}
@@ -835,14 +818,14 @@ export default function MarketBoard({
           crash ? "border-white" : "border-[#FDCC4B]"
         }`}
       >
-        <div className="ad-marquee-track [--marquee-duration:40s]">
+        <div className="ad-marquee-track [--marquee-duration:110s]">
           {[0, 1].map((copy) => (
             <div
               key={copy}
               className="flex shrink-0 items-center text-[1.3vw] tracking-[0.06em]"
               aria-hidden={copy === 1}
             >
-              <TickerSegments crash={crash} instruments={instruments} feedCopy={feedCopy} />
+              <TickerSegments crash={crash} />
             </div>
           ))}
         </div>
@@ -853,7 +836,7 @@ export default function MarketBoard({
           <div className="ad-shake text-center font-board-display text-[11vw] leading-[0.9] tracking-[0.08em] text-white [text-shadow:0_0_3vw_#ff2e4c]">
             MARKET CRASH
             <span className="block text-[2.2vw] tracking-[0.3em]">
-              ALL PRICES AT FLOOR · GET TO THE BAR
+              CRASH · GET TO THE BAR
             </span>
           </div>
         </div>

@@ -20,10 +20,12 @@ import type {
    Every tick each drink gets a "heat" (recent sales, decaying) and a "pace"
    (heat relative to what that drink normally sells). Every N ticks the drinks
    are ranked on pace; the fastest movers get a mark-up tier, the slowest a
-   discount tier. The tier sets a TARGET price and the board price glides a
-   fixed share of the remaining gap each tick, so nothing teleports. Tiers are
-   off until the bar has sold warmupUnits in total. CRASH replaces every
-   target with the crash price for its duration. */
+   discount tier. The tier sets a TARGET price. Prices only move on an update
+   tick - a re-rank, or a crash starting, running or ending - and then jump
+   straight to the target, so the board, the phones and the till all change
+   together when the one countdown lands. Tiers are off until the bar has sold
+   warmupUnits in total. CRASH replaces every target with the crash price for
+   its duration. */
 
 export const NEVER_SOLD_MINUTES = 99;
 
@@ -109,10 +111,6 @@ export function shouldRerank(
   return tickNo % Math.max(1, Math.round(rerankEveryTicks)) === 0;
 }
 
-export function glideTowards(current: number, target: number, glidePct: number): number {
-  return current + glidePct * (target - current);
-}
-
 export function runTierTick(instruments: InstrumentState[], inputs: TierTickInputs): TierTickOutcome {
   const { config, session } = inputs;
   const tickNo = session.tickNo;
@@ -161,15 +159,15 @@ export function runTierTick(instruments: InstrumentState[], inputs: TierTickInpu
 
     const limits = instrumentLimits(instrument, config);
     const crashing = inputs.crashActive || instrument.crashActive === true;
+    const crashEnded = inputs.crashEnded === true || instrument.crashEnded === true;
     const targetPrice = crashing ? limits.crashTarget : instrument.basePrice * (1 + tierPct);
 
     const frozen = stockState === "out" || instrument.stockOverride === "out";
-    const price = frozen
-      ? instrument.currentPrice
-      : roundToStep(
-          clamp(glideTowards(instrument.currentPrice, targetPrice, config.glidePct), limits.floor, limits.ceil),
-          config.roundStep
-        );
+    const updates = reranked || crashing || crashEnded;
+    const price =
+      frozen || !updates
+        ? instrument.currentPrice
+        : roundToStep(clamp(targetPrice, limits.floor, limits.ceil), config.roundStep);
 
     const alert = moveAlert(instrument, price, limits.moveNotifyPct);
     if (alert.event) events.push(alert.event);

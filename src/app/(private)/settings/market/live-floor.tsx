@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatGbp } from "@/lib/price";
-import type { StockState } from "@/lib/market/types";
+import type { CrashTiming, StockState } from "@/lib/market/types";
 import { ListSearchInput } from "@/components/admin";
 import { TickBreakdownSheet } from "./tick-breakdown-sheet";
 import { squareItemUrl } from "@/lib/market/simulate";
@@ -48,6 +48,53 @@ import { SimPanel } from "./sim-panel";
 import { useSimTools } from "./sim-tools";
 import type { InstrumentSummary, SessionSummary, SquareSimSummary } from "./types";
 import { CARD, NEUTRAL_BUTTON, PRIMARY_BUTTON } from "./ui";
+
+const CRASH_TIMINGS: { value: CrashTiming; label: string; hint: string }[] = [
+  { value: "now", label: "Now", hint: "Hits the board and the till straight away." },
+  {
+    value: "next_update",
+    label: "At the next update",
+    hint: "Waits for the board countdown so it lands with the next price update.",
+  },
+];
+
+/* Lives inside the confirm dialog, which only reports yes or no, so the
+   pick is handed back through onChange rather than the dialog result. */
+function CrashTimingChoice({ onChange }: { onChange: (timing: CrashTiming) => void }) {
+  const [timing, setTiming] = useState<CrashTiming>("now");
+  return (
+    <fieldset className="space-y-2 pb-2">
+      <legend className="mb-2 text-[13px] font-semibold text-admin-ink">When should it start?</legend>
+      {CRASH_TIMINGS.map((option) => (
+        <label
+          key={option.value}
+          htmlFor={`crash-timing-${option.value}`}
+          className={cn(
+            "flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border bg-admin-card px-3 py-2.5 transition-colors",
+            timing === option.value ? "border-admin-primary bg-admin-primary-soft" : "border-admin-line hover:bg-admin-surface"
+          )}
+        >
+          <input
+            id={`crash-timing-${option.value}`}
+            type="radio"
+            name="crash-timing"
+            value={option.value}
+            checked={timing === option.value}
+            onChange={() => {
+              setTiming(option.value);
+              onChange(option.value);
+            }}
+            className="mt-0.5 h-4 w-4 accent-admin-primary"
+          />
+          <span>
+            <span className="block text-[13px] font-semibold text-admin-ink">{option.label}</span>
+            <span className="block text-[11px] text-admin-muted">{option.hint}</span>
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
 
 function formatCountdown(ms: number): string {
   const clamped = Math.max(0, ms);
@@ -119,7 +166,7 @@ const FLOOR_FIELDS: FloorField[] = [
     label: "Target",
     align: "right",
     tiersOnly: true,
-    help: "Base price with the tier applied: £8.95 at +30% targets £11.64. The board price closes a fixed share of the gap each tick instead of jumping, so Now catches up over a few ticks. During a crash every target is the crash price instead.",
+    help: "Base price with the tier applied: £8.95 at +30% targets £11.64. Now jumps straight to Target at the next board update (re-rank) and holds there until the one after. During a crash every target is the crash price instead.",
   },
   {
     key: "now",
@@ -220,7 +267,7 @@ const ACTIONS_HEADING: FloorField = {
   key: "actions",
   label: "Stock override · price · crash",
   align: "right",
-  help: "Stock override replaces Square's count with your word: Sold out freezes the price and hides the drink from the deals, Running low is a badge and an alert only, and it holds until set back to Auto. Rank and tier never change with stock. £ puts a price on the board this moment, within the drink's limits; rank, tier and Target don't move, so it glides back toward Target over a few ticks - a nudge, not a lock. Crash drops this one drink to its crash price for the crash duration.",
+  help: "Stock override replaces Square's count with your word: Sold out freezes the price and hides the drink from the deals, Running low is a badge and an alert only, and it holds until set back to Auto. Rank and tier never change with stock. £ puts a price on the board this moment, within the drink's limits; rank, tier and Target don't move, so it holds until the next board update and then jumps back to Target - a nudge, not a lock. Crash drops this one drink to its crash price for the crash duration.",
 };
 
 type SortKey = "drink" | "opening" | "rank" | "target" | "now" | "stock";
@@ -670,13 +717,30 @@ export function LiveFloorCard({
     if (confirmed) run(endMarketAction, "Market closed - till prices restored.");
   }
 
-  async function handleCrash() {
+  const canQueueCrash = tiersLive && warmedUp;
+  const crashTimingRef = useRef<CrashTiming>("now");
+
+  async function confirmCrash(title: string, description: string): Promise<CrashTiming | null> {
+    crashTimingRef.current = "now";
     const confirmed = await confirm({
-      title: "Crash the market?",
-      description: "Every price tumbles toward the crash floor for the next few ticks.",
+      title,
+      description,
+      content: canQueueCrash ? <CrashTimingChoice onChange={(timing) => (crashTimingRef.current = timing)} /> : undefined,
       confirmLabel: "Crash it",
     });
-    if (confirmed) run(crashMarketAction, "Crash triggered - watch the board.");
+    return confirmed ? (canQueueCrash ? crashTimingRef.current : "now") : null;
+  }
+
+  async function handleCrash() {
+    const timing = await confirmCrash(
+      "Crash the market?",
+      "Every price drops to its crash price for the crash duration, then goes back to its tier price."
+    );
+    if (!timing) return;
+    run(
+      () => crashMarketAction(timing),
+      timing === "now" ? "Crash triggered - watch the board." : "Crash queued - it lands with the next board update."
+    );
   }
 
   function handleRerank() {
@@ -696,13 +760,17 @@ export function LiveFloorCard({
   }
 
   async function handleCrashDrink(instrument: InstrumentSummary) {
-    const confirmed = await confirm({
-      title: `Crash ${instrument.name}?`,
-      description:
-        "This drink's price tumbles toward its crash price for the next few ticks. Everything else keeps trading normally.",
-      confirmLabel: "Crash it",
-    });
-    if (confirmed) run(() => crashInstrumentAction(instrument.id), `${instrument.name} is crashing - watch the board.`);
+    const timing = await confirmCrash(
+      `Crash ${instrument.name}?`,
+      "This drink drops to its crash price for the crash duration. Everything else keeps trading normally."
+    );
+    if (!timing) return;
+    run(
+      () => crashInstrumentAction(instrument.id, timing),
+      timing === "now"
+        ? `${instrument.name} is crashing - watch the board.`
+        : `${instrument.name} crash queued for the next board update.`
+    );
   }
 
   return (
@@ -930,6 +998,11 @@ export function LiveFloorCard({
                                       Crashing
                                     </span>
                                   )}
+                                  {instrument.crashQueued && (
+                                    <span className="ml-1.5 rounded-full bg-admin-warning-bg px-2 py-0.5 text-[11px] font-semibold text-admin-warning">
+                                      Crash at next update
+                                    </span>
+                                  )}
                                 </span>
                                 <span className="block text-[11px] text-admin-muted">
                                   {instrument.serve}
@@ -1099,8 +1172,8 @@ export function LiveFloorCard({
                                       <p className="text-[11px] leading-snug text-admin-muted">
                                         Put a price on the board this moment, held within the drink&apos;s floor and
                                         ceiling and rounded to the step. The till gets it next tick. Rank, tier and
-                                        Target don&apos;t change, so the price glides back toward Target over the
-                                        next few ticks: a nudge, not a lock. To hold a price, lower the base, edit the
+                                        Target don&apos;t change, so the price holds until the next board update and
+                                        then jumps back to Target: a nudge, not a lock. To hold a price, lower the base, edit the
                                         limits, or mark it sold out. A big enough drop alerts guests watching it.
                                       </p>
                                     </TooltipContent>
@@ -1109,7 +1182,7 @@ export function LiveFloorCard({
                                     type="button"
                                     aria-label={`Crash ${instrument.name}`}
                                     title="Crash this drink"
-                                    disabled={isPending || instrument.crashing || instrument.stockState === "out"}
+                                    disabled={isPending || instrument.crashing || instrument.crashQueued || instrument.stockState === "out"}
                                     onClick={() => handleCrashDrink(instrument)}
                                     className={cn(ROW_ACTION, "border-admin-warning/40 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15")}
                                   >

@@ -1,5 +1,5 @@
 import { clamp, instrumentLimits, roundToStep } from "./engine";
-import { glideTowards, paceOf, rankValue, tierPctFor } from "./tier-engine";
+import { paceOf, rankValue, tierPctFor } from "./tier-engine";
 import type { MarketConfig } from "./types";
 
 /* Numbers behind the "How the leaderboard works" page. Everything here calls
@@ -73,35 +73,11 @@ export function tierPctForRank(rank: number, total: number, config: MarketConfig
   return tierPctFor(rank, total, config.tierPcts);
 }
 
-export type GlideStep = { tick: number; price: number; gap: number };
-
-/* The same walk the engine takes: glide a share of the gap, hold inside the
-   floor and ceiling, round to a payable amount. */
-export function priceWalk(
-  basePrice: number,
-  fromPrice: number,
-  targetPrice: number,
-  config: MarketConfig,
-  steps: number
-): GlideStep[] {
+/* The price the engine puts on the board at an update: the target, held
+   inside the floor and ceiling and rounded to a payable amount. */
+export function updatePrice(basePrice: number, targetPrice: number, config: MarketConfig): number {
   const limits = instrumentLimits({ basePrice }, config);
-  const walk: GlideStep[] = [{ tick: 0, price: fromPrice, gap: targetPrice - fromPrice }];
-  let price = fromPrice;
-  for (let tick = 1; tick <= steps; tick += 1) {
-    price = roundToStep(
-      clamp(glideTowards(price, targetPrice, config.glidePct), limits.floor, limits.ceil),
-      config.roundStep
-    );
-    walk.push({ tick, price, gap: Math.round((targetPrice - price) * 100) / 100 });
-  }
-  return walk;
-}
-
-/* How much of the gap the glide has closed after N ticks, as a percentage -
-   the "88% of the way there in five ticks" claim, worked out rather than
-   remembered. */
-export function gapClosedPct(glidePct: number, ticks: number): number {
-  return Math.round((1 - Math.pow(1 - glidePct, ticks)) * 100);
+  return roundToStep(clamp(targetPrice, limits.floor, limits.ceil), config.roundStep);
 }
 
 export function ticksUntilRerank(tickNo: number, rerankEveryTicks: number): number {

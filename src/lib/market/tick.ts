@@ -16,6 +16,7 @@ import {
   type StockState,
 } from "./types";
 import { sendMarketPushAlerts } from "./push-alerts";
+import { normaliseClock } from "./stock-market-events";
 import { mergeUnits, sumPendingUnits, type SimSaleRow } from "./simulate";
 
 export type MarketSessionRow = {
@@ -26,6 +27,7 @@ export type MarketSessionRow = {
   last_tick_at: string | null;
   orders_watermark: string | null;
   crash_until_tick: number | null;
+  crash_from_tick?: number | null;
   started_at: string;
   stock_market_event_id?: number | null;
   units_sold_total?: number | null;
@@ -57,6 +59,7 @@ export type MarketInstrumentRow = {
   low_stock_at: number | string | null;
   alert_threshold: number | string | null;
   crash_until_tick: number | null;
+  crash_from_tick?: number | null;
   square_original_price: number | string | null;
   square_synced_price: number | string | null;
   square_sync_error: string | null;
@@ -75,8 +78,28 @@ export type MarketInstrumentRow = {
   price_changes?: number | null;
 };
 
+type CrashWindow = { crash_from_tick?: number | null; crash_until_tick: number | null };
+
+/* A crash runs from crash_from_tick (or straight away when that is null)
+   through crash_until_tick inclusive. A crash queued for the next board
+   update has a from tick still ahead of it and is not live yet. */
+export function crashActiveAt(window: CrashWindow, tickNo: number): boolean {
+  if (window.crash_until_tick == null || tickNo > window.crash_until_tick) return false;
+  return window.crash_from_tick == null || tickNo >= window.crash_from_tick;
+}
+
+export function crashQueuedAt(window: CrashWindow, tickNo: number): boolean {
+  return window.crash_from_tick != null && window.crash_until_tick != null && tickNo < window.crash_from_tick;
+}
+
+/* The tick after a crash runs out is an update tick of its own, so prices
+   recover exactly when the board's "Recovery in" countdown lands. */
+export function crashEndedAt(window: CrashWindow, tickNo: number): boolean {
+  return window.crash_until_tick != null && tickNo === window.crash_until_tick + 1;
+}
+
 export function instrumentCrashActive(row: MarketInstrumentRow, tickNo: number): boolean {
-  return row.crash_until_tick != null && tickNo <= row.crash_until_tick;
+  return crashActiveAt(row, tickNo);
 }
 
 export type MarketInstrumentPayload = {
@@ -140,6 +163,8 @@ export type MarketStatePayload = {
   warmupUnits?: number;
   nextRerankInSec?: number | null;
   leaderboardRows?: number;
+  /* The event's closing time as HH:MM, null when the session has no event. */
+  closesAt?: string | null;
   instruments?: MarketInstrumentPayload[];
   events?: MarketEventPayload[];
 };
@@ -177,6 +202,15 @@ function crashRemainingSeconds(session: MarketSessionRow, config: MarketConfig, 
 }
 
 const SPARK_TICKS = 30;
+
+/* Prices hold between board updates, so the tick before is usually the same
+   number; the direction is measured against the last price that differed. */
+function lastDifferentPrice(spark: number[], price: number): number | null {
+  for (let i = spark.length - 1; i >= 0; i--) {
+    if (spark[i] !== price) return spark[i];
+  }
+  return null;
+}
 const WATERMARK_OVERLAP_MS = 60 * 1000;
 
 function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
@@ -200,10 +234,21 @@ function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
   };
 }
 
-function secondsUntilNextRerank(session: MarketSessionRow, config: MarketConfig, now: Date): number | null {
+/* The tick the next board update (re-rank) lands on; null before warm-up
+   and under demand pricing, where there is no fixed update cadence. */
+export function nextUpdateTick(
+  session: Pick<MarketSessionRow, "tick_no" | "warmed_up_tick">,
+  config: MarketConfig
+): number | null {
   if (config.pricingMode !== "tiers" || session.warmed_up_tick == null) return null;
   const every = Math.max(1, Math.round(config.rerankEveryTicks));
-  const ticksLeft = every - (session.tick_no % every);
+  return session.tick_no + (every - (session.tick_no % every));
+}
+
+function secondsUntilNextRerank(session: MarketSessionRow, config: MarketConfig, now: Date): number | null {
+  const updateTick = nextUpdateTick(session, config);
+  if (updateTick == null) return null;
+  const ticksLeft = updateTick - session.tick_no;
   return (ticksLeft - 1) * config.tickIntervalSec + secondsUntilNextTick(session, config, now);
 }
 
@@ -274,6 +319,16 @@ async function fetchStockByVariation(
     console.error("[market] inventory fetch failed, keeping previous stock states:", err);
   }
   return stock;
+}
+
+async function eventClosingTime(supabase: SupabaseClient, session: MarketSessionRow): Promise<string | null> {
+  if (session.stock_market_event_id == null) return null;
+  const { data } = await supabase
+    .from("stock_market_events")
+    .select("close_time")
+    .eq("id", session.stock_market_event_id)
+    .maybeSingle();
+  return normaliseClock(data?.close_time as string | undefined) || null;
 }
 
 /* The serves (menu_item_price ids) on the session's event, or null when the
@@ -391,16 +446,17 @@ export async function maybeRunMarketTick(
       newUnitsByInstrument = mergeUnits(newUnitsByInstrument, sumPendingUnits(pendingSim));
     }
 
-    const crashActive =
-      session.crash_until_tick != null && tickNo <= session.crash_until_tick;
+    const crashActive = crashActiveAt(session, tickNo);
 
     const states = instruments.map((row) => ({
       ...toInstrumentState(row),
       crashActive: instrumentCrashActive(row, tickNo),
+      crashEnded: crashEndedAt(row, tickNo),
     }));
     const tickInputs = {
       config,
       crashActive,
+      crashEnded: crashEndedAt(session, tickNo),
       newUnitsByInstrument,
       stockQtyByVariation,
       rng: tickRng(session.id, tickNo),
@@ -429,6 +485,7 @@ export async function maybeRunMarketTick(
     } else {
       results = runTick(states, tickInputs);
     }
+    if (session.crash_from_tick === tickNo) sessionEvents.push({ kind: "crash", payload: {} });
 
     const byId = new Map(instruments.map((i) => [i.id, i] as const));
     const instrumentPatch = (result: (typeof results)[number], withStats: boolean) => {
@@ -523,6 +580,14 @@ export async function maybeRunMarketTick(
         kind: event.kind,
         payload: event.payload,
       })),
+      ...instruments
+        .filter((row) => row.crash_from_tick === tickNo)
+        .map((row) => ({
+          session_id: session.id,
+          instrument_id: row.id as number | null,
+          kind: "crash" as MarketEventKind,
+          payload: { name: row.display_name, serve: row.serve } as Record<string, unknown>,
+        })),
       ...results.flatMap((result) =>
         result.events.map((event) => {
           const row = byId.get(event.instrumentId);
@@ -655,7 +720,7 @@ export async function readMarketState(
   let session = sessionRow as MarketSessionRow;
   await maybeRunMarketTick(supabase, session, now);
 
-  const [{ data: refreshed }, { data: instrumentRows }, onEvent] = await Promise.all([
+  const [{ data: refreshed }, { data: instrumentRows }, onEvent, closesAt] = await Promise.all([
     supabase.from("market_sessions").select("*").eq("id", session.id).maybeSingle(),
     supabase
       .from("market_instruments")
@@ -663,6 +728,7 @@ export async function readMarketState(
       .eq("session_id", session.id)
       .order("display_name", { ascending: true }),
     eventServeIds(supabase, session),
+    eventClosingTime(supabase, session),
   ]);
   if (refreshed) session = refreshed as MarketSessionRow;
 
@@ -674,8 +740,7 @@ export async function readMarketState(
   );
   const shownInstrumentIds = new Set(instruments.map((row) => row.id));
   const config = resolveMarketConfig(session.config);
-  const crashActive =
-    session.crash_until_tick != null && session.tick_no <= session.crash_until_tick;
+  const crashActive = crashActiveAt(session, session.tick_no);
 
   const { data: tickRows } = await supabase
     .from("market_ticks")
@@ -716,12 +781,13 @@ export async function readMarketState(
     warmupUnits: config.warmupUnits,
     nextRerankInSec: secondsUntilNextRerank(session, config, now),
     leaderboardRows: config.leaderboardRows,
+    closesAt,
     instruments: instruments.map((row) => {
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
       const basePrice = Number(row.base_price);
       const spark = sparkByInstrument.get(row.id) ?? [];
-      const previous = spark.length > 1 ? spark[spark.length - 2] : opening;
+      const previous = lastDifferentPrice(spark, price) ?? opening;
       const category = instrumentCategory(row);
       const limits = instrumentLimits(toInstrumentState(row), config);
       return {

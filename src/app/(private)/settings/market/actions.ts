@@ -8,7 +8,13 @@ import { squareClient } from "@/lib/square";
 import type { Square } from "square";
 import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
 import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
-import { resolveMarketConfig, DEFAULT_MARKET_CONFIG, type MarketConfig, type PricingMode } from "@/lib/market/types";
+import {
+  resolveMarketConfig,
+  DEFAULT_MARKET_CONFIG,
+  type CrashTiming,
+  type MarketConfig,
+  type PricingMode,
+} from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import { sessionTicksFor } from "@/lib/market/normal-units";
 import { shouldRerank } from "@/lib/market/tier-engine";
@@ -41,7 +47,7 @@ import {
 import { normaliseName } from "@/lib/menu-import";
 import { randomUUID } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { maybeRunMarketTick, type MarketSessionRow } from "@/lib/market/tick";
+import { maybeRunMarketTick, nextUpdateTick, type MarketSessionRow } from "@/lib/market/tick";
 import {
   isValidSaleUnits,
   planBusyRound,
@@ -92,7 +98,6 @@ const configSchema = z.object({
 
 const tierSchema = z.object({
   rerankEveryTicks: z.coerce.number().int().min(1).max(60),
-  glidePct: z.coerce.number().min(0.05).max(1),
   warmupUnits: z.coerce.number().int().min(0).max(1000),
   paceFloorUnits: z.coerce.number().min(1).max(500),
   tierPcts: z.object({
@@ -102,7 +107,7 @@ const tierSchema = z.object({
   }),
 });
 
-type TierConfig = z.infer<typeof tierSchema> & { pricingMode: PricingMode };
+type TierConfig = z.infer<typeof tierSchema> & { pricingMode: PricingMode; glidePct: number };
 
 function readPushAlertsEnabled(formData: FormData): boolean {
   return formData.get("pushAlertsEnabled") === "on";
@@ -130,7 +135,6 @@ function readTierConfig(formData: FormData, current: MarketConfig = DEFAULT_MARK
   }
   const parsed = tierSchema.safeParse({
     rerankEveryTicks: formData.get("rerankEveryTicks"),
-    glidePct: formData.get("glidePct"),
     warmupUnits: formData.get("warmupUnits"),
     paceFloorUnits: formData.get("paceFloorUnits"),
     tierPcts: {
@@ -139,7 +143,7 @@ function readTierConfig(formData: FormData, current: MarketConfig = DEFAULT_MARK
       bands: current.tierPcts.bands,
     },
   });
-  return parsed.success ? { pricingMode, ...parsed.data } : null;
+  return parsed.success ? { pricingMode, glidePct: current.glidePct, ...parsed.data } : null;
 }
 
 function readConfig(formData: FormData, base: MarketConfig = DEFAULT_MARKET_CONFIG) {
@@ -1045,37 +1049,51 @@ export async function rerankNowAction() {
   return { success: true };
 }
 
-export async function crashMarketAction() {
+/* "now" starts the crash on a tick forced straight away; "next_update" parks
+   it on the next re-rank tick so it lands with the board's countdown. The
+   tick that starts it logs the crash event and buzzes phones. */
+function crashWindow(
+  session: { tick_no: number; config: unknown; warmed_up_tick: number | null },
+  timing: CrashTiming
+): { crash_from_tick: number | null; crash_until_tick: number } | { error: string } {
+  const config = resolveMarketConfig(session.config);
+  if (timing === "now") {
+    return { crash_from_tick: session.tick_no + 1, crash_until_tick: session.tick_no + config.crashDurationTicks };
+  }
+  const updateTick = nextUpdateTick(session, config);
+  if (updateTick == null) {
+    return { error: "There is no board update scheduled yet - crash it now instead." };
+  }
+  return { crash_from_tick: updateTick, crash_until_tick: updateTick + config.crashDurationTicks - 1 };
+}
+
+export async function crashMarketAction(timing: CrashTiming = "now") {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("market_sessions")
-    .select("id, tick_no, config")
+    .select("id, tick_no, config, warmed_up_tick")
     .eq("status", "live")
     .maybeSingle();
   if (!session) return { error: "No live market to crash." };
 
-  const config = resolveMarketConfig(session.config);
-  const { error } = await supabase
-    .from("market_sessions")
-    .update({ crash_until_tick: session.tick_no + config.crashDurationTicks })
-    .eq("id", session.id);
+  const window = crashWindow(session, timing);
+  if ("error" in window) return { error: window.error };
+  const { error } = await supabase.from("market_sessions").update(window).eq("id", session.id);
   if (error) return { error: error.message };
 
-  await supabase.from("market_events").insert({
-    session_id: session.id,
-    kind: "crash",
-    payload: {},
-  });
-
+  if (timing === "now") {
+    const forced = await forceTickNow(session.id);
+    if ("error" in forced) return { error: forced.error };
+  }
   revalidateMarket();
   return { success: true };
 }
 
-export async function crashInstrumentAction(instrumentId: number) {
+export async function crashInstrumentAction(instrumentId: number, timing: CrashTiming = "now") {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("market_sessions")
-    .select("id, tick_no, config")
+    .select("id, tick_no, config, warmed_up_tick")
     .eq("status", "live")
     .maybeSingle();
   if (!session) return { error: "No live market to crash." };
@@ -1088,20 +1106,15 @@ export async function crashInstrumentAction(instrumentId: number) {
     .maybeSingle();
   if (!instrument) return { error: "That drink is not trading on the live market." };
 
-  const config = resolveMarketConfig(session.config);
-  const { error } = await supabase
-    .from("market_instruments")
-    .update({ crash_until_tick: session.tick_no + config.crashDurationTicks })
-    .eq("id", instrument.id);
+  const window = crashWindow(session, timing);
+  if ("error" in window) return { error: window.error };
+  const { error } = await supabase.from("market_instruments").update(window).eq("id", instrument.id);
   if (error) return { error: error.message };
 
-  await supabase.from("market_events").insert({
-    session_id: session.id,
-    instrument_id: instrument.id,
-    kind: "crash",
-    payload: { name: instrument.display_name, serve: instrument.serve },
-  });
-
+  if (timing === "now") {
+    const forced = await forceTickNow(session.id);
+    if ("error" in forced) return { error: forced.error };
+  }
   revalidateMarket();
   return { success: true };
 }
