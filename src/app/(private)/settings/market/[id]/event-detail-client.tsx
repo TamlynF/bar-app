@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import NormalUnitsCard, { type NormalUnitsView } from "./normal-units-card";
 import { ReadyToOpenChecklist } from "./ready-to-open";
 import { MarketNightsMenu, type EventSession } from "./market-nights-menu";
+import { useSalesSyncCheck } from "../use-sales-sync-check";
 import type { EventReadiness } from "@/lib/market/event-readiness";
 import { FIELD_INPUT, OUTLINE_BUTTON, PRIMARY_BUTTON, formatStamp } from "../ui";
 import { cn } from "@/lib/utils";
@@ -583,6 +584,7 @@ export default function EventDetailClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { checkSalesSync, SalesSyncDialogUI } = useSalesSyncCheck();
   const [readingNormals, startReadingNormals] = useTransition();
   const [syncingSales, startSyncingSales] = useTransition();
   const [query, setQuery] = useState("");
@@ -654,7 +656,8 @@ export default function EventDetailClient({
     });
   }
 
-  function handleOpen() {
+  async function handleOpen() {
+    if (!(await checkSalesSync())) return;
     startTransition(async () => {
       const result = await openStockMarketEventAction(event.id);
       if ("error" in result && result.error) {
@@ -775,6 +778,7 @@ export default function EventDetailClient({
 
   return (
     <div className="w-full space-y-4 px-2 py-3 sm:px-4 sm:py-0 md:px-6">
+      {SalesSyncDialogUI}
       <section className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">

@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { orderToLineRows } from "../square-sync";
 
 describe("orderToLineRows", () => {
+  it("records the mixer rung on a spirit line", () => {
+    const [row] = orderToLineRows({
+      id: "ORD9",
+      closedAt: "2026-09-19T21:00:00Z",
+      lineItems: [
+        {
+          uid: "a",
+          catalogObjectId: "GOOSE_SINGLE",
+          quantity: "2",
+          modifiers: [{ catalogObjectId: "TONIC", name: "Tonic", quantity: "1", totalPriceMoney: { amount: BigInt(250) } }],
+        },
+      ],
+    });
+    expect(row.variation_id).toBe("GOOSE_SINGLE");
+    expect(row.quantity).toBe(2);
+    expect(row.modifiers).toEqual([{ catalogObjectId: "TONIC", name: "Tonic", quantity: 1, totalPrice: 2.5 }]);
+  });
+
   it("emits one row per line with the uid, quantity and trading night", () => {
     const rows = orderToLineRows({
       id: "ORD1",
@@ -12,8 +30,8 @@ describe("orderToLineRows", () => {
       ],
     });
     expect(rows).toEqual([
-      { square_order_id: "ORD1", line_uid: "a", variation_id: "V1", quantity: 2, closed_at: "2026-09-19T22:50:00Z", trading_night: "2026-09-19" },
-      { square_order_id: "ORD1", line_uid: "b", variation_id: "V2", quantity: 1, closed_at: "2026-09-19T22:50:00Z", trading_night: "2026-09-19" },
+      { square_order_id: "ORD1", line_uid: "a", variation_id: "V1", quantity: 2, closed_at: "2026-09-19T22:50:00Z", trading_night: "2026-09-19", modifiers: [] },
+      { square_order_id: "ORD1", line_uid: "b", variation_id: "V2", quantity: 1, closed_at: "2026-09-19T22:50:00Z", trading_night: "2026-09-19", modifiers: [] },
     ]);
   });
 

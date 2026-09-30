@@ -4,6 +4,7 @@ import { useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useSalesSyncCheck } from "./use-sales-sync-check";
 import { useRecordSheet } from "@/components/admin";
 import type { StockMarketEventSummary } from "@/lib/market/stock-market-events";
 import type { ServeOption } from "@/lib/market/event-serves";
@@ -58,6 +59,7 @@ export default function MarketClient({
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
+  const { checkSalesSync, SalesSyncDialogUI } = useSalesSyncCheck();
   const [isPending, startTransition] = useTransition();
 
   const sheet = useRecordSheet<StockMarketEventSummary>({
@@ -116,7 +118,8 @@ export default function MarketClient({
     });
   }
 
-  function handleOpen(event: StockMarketEventSummary) {
+  async function handleOpen(event: StockMarketEventSummary) {
+    if (!(await checkSalesSync())) return;
     startTransition(async () => {
       const result = await openStockMarketEventAction(event.id);
       if ("error" in result && result.error) {
@@ -191,6 +194,7 @@ export default function MarketClient({
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 py-3 sm:py-0 2xl:max-w-[110rem]">
       {ConfirmDialogUI}
+      {SalesSyncDialogUI}
 
       {tillRestore && (
         <TillRestoreBanner tillRestore={tillRestore} onRestore={handleRestoreTill} isPending={isPending} />

@@ -89,6 +89,12 @@ type SquareOrder = {
     quantity?: string | number | null;
     grossSalesMoney?: Money;
     totalMoney?: Money;
+    modifiers?: Array<{
+      catalogObjectId?: string | null;
+      name?: string | null;
+      quantity?: string | number | null;
+      totalPriceMoney?: Money;
+    }> | null;
   }> | null;
   netAmounts?: {
     totalMoney?: Money;
@@ -122,7 +128,30 @@ export type SquareSaleLineRow = {
   quantity: number;
   closed_at: string;
   trading_night: string;
+  modifiers: SaleLineModifier[];
 };
+
+/* What was rung on top of a line - for a spirit, the mixer it was sold with. */
+export type SaleLineModifier = {
+  catalogObjectId: string | null;
+  name: string | null;
+  quantity: number;
+  totalPrice: number;
+};
+
+type LineModifier = NonNullable<NonNullable<SquareOrder["lineItems"]>[number]["modifiers"]>[number];
+
+function lineModifiers(modifiers: LineModifier[] | null | undefined): SaleLineModifier[] {
+  return (modifiers ?? []).map((modifier) => {
+    const quantity = Number(modifier.quantity ?? 1);
+    return {
+      catalogObjectId: modifier.catalogObjectId ?? null,
+      name: modifier.name ?? null,
+      quantity: Number.isFinite(quantity) ? quantity : 1,
+      totalPrice: toGBP(modifier.totalPriceMoney),
+    };
+  });
+}
 
 /* One row per line item, the shape the market's normal-sales maths reads.
    The trading night follows the venue rule (before 06:00 counts as the night
@@ -143,6 +172,7 @@ export function orderToLineRows(order: SquareOrder): SquareSaleLineRow[] {
       quantity,
       closed_at: closed,
       trading_night: tradingNight,
+      modifiers: lineModifiers(li.modifiers),
     });
   });
   return rows;

@@ -63,6 +63,7 @@ import {
   refreshSessionMixers,
 } from "@/lib/market/square-mixers";
 import { pushAlcoholFlagsToSquare } from "@/lib/market/square-alcohol";
+import { salesSyncHealth, type SalesSyncHealth, type SalesSyncState } from "@/lib/market/sales-sync-health";
 import { refreshStockTracking } from "@/lib/market/square-stock-tracking";
 import {
   addInventory,
@@ -1525,6 +1526,18 @@ export async function recalculateNormalUnitsAction(eventId: number) {
 
 /* The same pull the nightly cron does, on demand. Runs as the service role
    because square_sales is written by the cron, never by a signed-in user. */
+/* Checked before a market opens: a failed or missed nightly sync means the
+   normals the tiers rank against are missing recent nights. */
+export async function salesSyncStatusAction(): Promise<SalesSyncHealth> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("square_sync_state")
+    .select("last_synced_at, last_run_at, last_status, last_error")
+    .eq("id", 1)
+    .maybeSingle();
+  return salesSyncHealth((data as SalesSyncState | null) ?? null);
+}
+
 export async function syncSquareSalesAction() {
   const supabase = await createClient();
   const {
