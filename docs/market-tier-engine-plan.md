@@ -1,5 +1,7 @@
 # Plan: implement the recommended tier engine (workbook tab 10) in bar-app
 
+> **Status (30 Sep 2026): the demand engine is retired.** The tier leaderboard is now the only pricing engine. `pricing_mode`, `noise_sigma` and `glide_pct` are dropped from `stock_market_events`, and prices move straight to target only on a re-rank (see §12). The sections below are the original plan and progress log. Everything they say about a demand mode, a per-event mode switch, volatility or glide is history.
+
 Source of truth for behaviour: `docs/Drinks_Market_Explained.xlsx`, tab **10 Recommended Simulation** (rules) and tab **11** (definitions). Every rule below cites the workbook input it mirrors.
 
 ## 0. Principles
@@ -156,3 +158,23 @@ Deviations from the plan above: `targetPrice` is returned unrounded (the glide u
 **To enable the confirmation gate:** in the Square Developer dashboard add the `catalog.version.updated` event to the existing webhook subscription (same URL and signature key). Until then the board runs on synced prices exactly as before.
 
 All four phases are complete. Remaining items are operational: run one real market night in tier mode with the sales simulator first, review the three workbook measures (price changes per tick, minutes per tier, ties at the cut-off), and revisit the 30/20/10 mark-ups if pint drinkers grumble.
+
+## 12. Demand engine retired (30 Sep 2026)
+
+Decision: every stock market event prices on the tier leaderboard, and the per-event switch from §10.1 is withdrawn.
+
+**Pricing rule change.** The glide from §4 step 9 is gone. On a tick that re-ranks, starts a crash or ends one, each price jumps straight to `roundToStep(clamp(target, floor, ceil))`. On every other tick it stays put. Ticks still read sales and stock every `tick_interval_sec`. The board and `/market` show one "Next update" countdown to the next re-rank, and Square is written only when a price actually changes. The board shows the Square-acknowledged till price, so the board and the till always match. Staff choose whether a crash starts now or at the next update (`crash_from_tick` on `market_sessions` / `market_instruments`, migration `20260930120000_market_crash_from_tick.sql`).
+
+**Schema** (`20260930130000_market_retire_demand_engine.sql`): events still on `demand` are moved to `tiers`, then `pricing_mode` (and its check constraint), `noise_sigma` and `glide_pct` are dropped from `stock_market_events`. `market_instruments.demand_units` keeps its name because it holds the tier engine's heat. Old `market_sessions.config` snapshots keep the retired keys, and `resolveMarketConfig` ignores them.
+
+**Code.** The following are removed:
+- `runTick`, `tickInstrument` and `nextPrice` from `engine.ts`, which keeps only the shared helpers (`roundToStep`, `clamp`, `instrumentLimits`, `nextStockState`, `stockEvent`, `moveAlert`);
+- `rng.ts`;
+- `PricingMode` and the `pricingMode` / `noiseSigma` / `demandK` / `reversionK` / `glidePct` config keys;
+- `pricingMode` in the state payload;
+- the Demand / Tier toggle and the Volatility field in admin;
+- the demand fallbacks on the board and the phone.
+
+The readiness checklist now requires normal units for every event.
+
+**Deploy order:** ship the code first, then apply `20260930120000` followed by `20260930130000`. The old code still writes the dropped columns. Events converted from demand need their normal units per night calculated before they next open.
