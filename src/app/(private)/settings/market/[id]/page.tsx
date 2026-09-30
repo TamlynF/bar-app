@@ -229,7 +229,6 @@ export default async function StockMarketEventPage({
     linkedIds: drinks.filter((drink) => drink.linked).map((drink) => drink.id),
     normalsReadIds: [...normalsByPrice.keys()],
     normalsComputedAt: computedAt,
-    pricingMode: event.config.pricingMode,
   });
 
   return (

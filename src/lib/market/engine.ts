@@ -1,11 +1,4 @@
-import type {
-  EngineEvent,
-  InstrumentState,
-  InstrumentTickResult,
-  MarketConfig,
-  StockState,
-  TickInputs,
-} from "./types";
+import type { EngineEvent, InstrumentState, MarketConfig, StockState } from "./types";
 
 export function roundToStep(value: number, step: number): number {
   return Math.round(Math.round(value / step) * step * 100) / 100;
@@ -40,33 +33,6 @@ export function instrumentLimits(
   };
 }
 
-function nextPrice(
-  instrument: InstrumentState,
-  newUnits: number,
-  config: MarketConfig,
-  crashActive: boolean,
-  rng: () => number
-): number {
-  const { basePrice, currentPrice } = instrument;
-  const limits = instrumentLimits(instrument, config);
-
-  const demandBoost = config.demandK * Math.log1p(newUnits);
-  const reversion = config.reversionK * ((currentPrice - basePrice) / basePrice);
-  const noise = config.noiseSigma * (2 * rng() - 1);
-
-  let drift = demandBoost - reversion + noise;
-
-  /* A crash drags every price halfway to the crash floor each tick, so the
-     board visibly tumbles for crashDurationTicks then recovers naturally. */
-  if (crashActive) {
-    drift += 0.5 * ((limits.crashTarget - currentPrice) / currentPrice);
-  }
-
-  const raw = currentPrice * (1 + drift);
-  const clamped = clamp(raw, limits.floor, limits.ceil);
-  return roundToStep(clamped, config.roundStep);
-}
-
 export function nextStockState(
   instrument: InstrumentState,
   config: MarketConfig,
@@ -89,46 +55,7 @@ export function stockEvent(previous: StockState, next: StockState): EngineEvent[
   return previous === "out" ? "restock" : null;
 }
 
-export function tickInstrument(
-  instrument: InstrumentState,
-  inputs: TickInputs
-): InstrumentTickResult {
-  const { config } = inputs;
-  const newUnits = inputs.newUnitsByInstrument.get(instrument.id) ?? 0;
-  const events: EngineEvent[] = [];
-
-  const stockState = nextStockState(instrument, config, inputs.stockQtyByVariation);
-  const stockKind = stockEvent(instrument.stockState, stockState);
-  if (stockKind) events.push({ instrumentId: instrument.id, kind: stockKind, payload: {} });
-
-  const demandUnits =
-    Math.round((instrument.demandUnits * config.decayK + newUnits) * 1000) / 1000;
-
-  /* Sold out freezes the quote - nobody trades what nobody can buy. The
-     override is checked directly too, so a manual "sold out" freezes the very
-     tick it is set rather than one tick later. */
-  const frozen = stockState === "out" || instrument.stockOverride === "out";
-  const crashing = inputs.crashActive || instrument.crashActive === true;
-  const price = frozen
-    ? instrument.currentPrice
-    : nextPrice(instrument, newUnits, config, crashing, inputs.rng);
-
-  const { moveNotifyPct } = instrumentLimits(instrument, config);
-  const alert = moveAlert(instrument, price, moveNotifyPct);
-  if (alert.event) events.push(alert.event);
-
-  return {
-    id: instrument.id,
-    price,
-    units: newUnits,
-    demandUnits,
-    stockState,
-    lastNotifiedPrice: alert.lastNotifiedPrice,
-    events,
-  };
-}
-
-/* Surge / price-drop detection shared by both engines: fires when the price
+/* Surge / price-drop detection: fires when the price
    has moved moveNotifyPct or more away from the last alerted price AND moved
    in that direction this tick, then re-arms at the new price. */
 export function moveAlert(
@@ -146,11 +73,4 @@ export function moveAlert(
     return { event: { instrumentId: instrument.id, kind: "surge", payload }, lastNotifiedPrice: price };
   }
   return { event: null, lastNotifiedPrice };
-}
-
-export function runTick(
-  instruments: InstrumentState[],
-  inputs: TickInputs
-): InstrumentTickResult[] {
-  return instruments.map((instrument) => tickInstrument(instrument, inputs));
 }

@@ -17,15 +17,8 @@ export const CONFIG_FIELDS: ConfigField[] = [
     key: "tickIntervalSec",
     label: "Tick interval (seconds)",
     step: "5",
-    hint: "How often prices move",
-    help: "How often prices are recalculated. A tick runs when the market page is loaded and at least this many seconds have passed since the last tick. Each tick pulls completed till sales since the previous tick to measure demand and refreshes stock counts.",
-  },
-  {
-    key: "noiseSigma",
-    label: "Volatility",
-    step: "0.005",
-    hint: "Random wobble per tick",
-    help: "The random nudge added to every price each tick, as a fraction of the current price. 0.015 means up to 1.5% either way, on top of demand from sales. Set to 0 and prices only move on actual sales.",
+    hint: "How often sales are read",
+    help: "How often the market reads the till. A tick runs when the market page is loaded and at least this many seconds have passed since the last tick. Each tick pulls completed till sales since the previous tick and refreshes stock counts. Prices only change on a re-rank, every few ticks.",
   },
   {
     key: "floorPct",
@@ -106,11 +99,6 @@ export const TIER_PCT_FIELDS: { down: TierPctField; up: TierPctField } = {
   },
 };
 
-export const PRICING_MODES: { value: MarketConfig["pricingMode"]; label: string; hint: string }[] = [
-  { value: "demand", label: "Demand engine", hint: "Each drink moves on its own sales; volatility adds a wobble" },
-  { value: "tiers", label: "Tier leaderboard", hint: "Drinks ranked on pace; top and bottom tiers set target prices" },
-];
-
 export const PUSH_ALERTS_FIELD = {
   label: "Phone alerts",
   hint: "Notify me button on the public page",
@@ -118,24 +106,13 @@ export const PUSH_ALERTS_FIELD = {
 };
 
 export function configSummary(config: MarketConfig): string {
-  if (config.pricingMode === "tiers") {
-    const pct = (v: number) => `${Math.round(v * 100)}`;
-    return [
-      "tier leaderboard",
-      `${config.tickIntervalSec}s ticks`,
-      `re-rank every ${config.rerankEveryTicks}`,
-      `warm-up ${config.warmupUnits}`,
-      `+${config.tierPcts.up.map(pct).join("/")} · −${config.tierPcts.down.map(pct).join("/")}`,
-      config.leaderboardRows > 0 ? `board top ${config.leaderboardRows}` : "board fills screen",
-      config.pushAlertsEnabled ? "phone alerts on" : "phone alerts off",
-    ].join(" · ");
-  }
+  const pct = (v: number) => `${Math.round(v * 100)}`;
   return [
     `${config.tickIntervalSec}s ticks`,
-    `volatility ${config.noiseSigma}`,
-    `${config.floorPct}x to ${config.ceilPct}x base`,
-    `alert at ${Math.round(config.moveNotifyPct * 100)}%`,
-    `low stock at ${config.lowStockThreshold}`,
+    `re-rank every ${config.rerankEveryTicks}`,
+    `warm-up ${config.warmupUnits}`,
+    `+${config.tierPcts.up.map(pct).join("/")} · −${config.tierPcts.down.map(pct).join("/")}`,
+    config.leaderboardRows > 0 ? `board top ${config.leaderboardRows}` : "board fills screen",
     config.pushAlertsEnabled ? "phone alerts on" : "phone alerts off",
   ].join(" · ");
 }

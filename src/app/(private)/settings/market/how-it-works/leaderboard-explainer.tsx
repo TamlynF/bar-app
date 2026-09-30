@@ -172,13 +172,11 @@ export default function LeaderboardExplainer({
   session,
   drinks,
   live,
-  tiersOn,
 }: {
   config: MarketConfig;
   session: ExplainerSession | null;
   drinks: ExplainerDrink[];
   live: boolean;
-  tiersOn: boolean;
 }) {
   const bands = tierBandRows(config);
   const topBand = bands[0];
@@ -241,13 +239,6 @@ export default function LeaderboardExplainer({
           <p className="mt-3 text-[12px] text-admin-muted">
             No market is open, so the numbers below are worked examples using the settings from the
             last market night. Open a market and this page fills with the real thing.
-          </p>
-        )}
-        {!tiersOn && (
-          <p className="mt-3 rounded-xl bg-admin-warning-bg px-3 py-2 text-[12px] leading-relaxed text-admin-warning">
-            The event that is open is using the demand engine, not the tier leaderboard. This page
-            still explains the leaderboard, but the prices on the board tonight are being set the
-            other way.
           </p>
         )}
       </section>

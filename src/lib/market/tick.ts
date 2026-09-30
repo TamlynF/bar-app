@@ -1,18 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { squareClient } from "@/lib/square";
-import { instrumentLimits, runTick } from "./engine";
+import { instrumentLimits } from "./engine";
 import { runTierTick, type TierInstrumentTickResult } from "./tier-engine";
 import { publicTillPrice } from "./square-confirmation";
 import { optionalNumber } from "./drink-overrides";
-import { tickRng } from "./rng";
 import { syncMarketPricesToSquare } from "./square-price-sync";
 import {
   resolveMarketConfig,
   type InstrumentState,
   type MarketConfig,
-  type InstrumentTickResult,
   type MarketEventKind,
-  type PricingMode,
   type StockState,
 } from "./types";
 import { sendMarketPushAlerts } from "./push-alerts";
@@ -126,10 +123,9 @@ export type MarketInstrumentPayload = {
   /* True when the drink is mapped to a Square variation, i.e. tillPrice is
      the price the bar actually charges once the first sync lands. */
   linkedToTill: boolean;
-  /* Tier engine only; null in demand mode. */
-  tierPct: number | null;
+  tierPct: number;
   targetPrice: number | null;
-  pace: number | null;
+  pace: number;
   rankPos: number | null;
   normalUnitsPerNight: number | null;
   /* Square's IN_STOCK count at the last tick; null when unlinked or unknown. */
@@ -157,7 +153,6 @@ export type MarketStatePayload = {
   crashActive?: boolean;
   crashRemainingSec?: number;
   pushAlertsEnabled?: boolean;
-  pricingMode?: PricingMode;
   warmedUp?: boolean;
   unitsSoldTotal?: number;
   warmupUnits?: number;
@@ -234,13 +229,13 @@ function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
   };
 }
 
-/* The tick the next board update (re-rank) lands on; null before warm-up
-   and under demand pricing, where there is no fixed update cadence. */
+/* The tick the next board update (re-rank) lands on; null before warm-up,
+   when there is no fixed update cadence yet. */
 export function nextUpdateTick(
   session: Pick<MarketSessionRow, "tick_no" | "warmed_up_tick">,
   config: MarketConfig
 ): number | null {
-  if (config.pricingMode !== "tiers" || session.warmed_up_tick == null) return null;
+  if (session.warmed_up_tick == null) return null;
   const every = Math.max(1, Math.round(config.rerankEveryTicks));
   return session.tick_no + (every - (session.tick_no % every));
 }
@@ -459,32 +454,25 @@ export async function maybeRunMarketTick(
       crashEnded: crashEndedAt(session, tickNo),
       newUnitsByInstrument,
       stockQtyByVariation,
-      rng: tickRng(session.id, tickNo),
     };
-    let results: (InstrumentTickResult | TierInstrumentTickResult)[];
-    let sessionUpdate: Record<string, unknown> = {};
+    const outcome = runTierTick(states, {
+      ...tickInputs,
+      session: {
+        tickNo,
+        unitsSoldTotal: session.units_sold_total ?? 0,
+        warmedUpTick: session.warmed_up_tick ?? null,
+        lastRerankTick: session.last_rerank_tick ?? null,
+      },
+    });
+    const results = outcome.results;
+    const sessionUpdate = {
+      units_sold_total: outcome.session.unitsSoldTotal,
+      warmed_up_tick: outcome.session.warmedUpTick,
+      last_rerank_tick: outcome.session.lastRerankTick,
+    };
     const sessionEvents: { kind: MarketEventKind; payload: Record<string, unknown> }[] = [];
-    if (config.pricingMode === "tiers") {
-      const outcome = runTierTick(states, {
-        ...tickInputs,
-        session: {
-          tickNo,
-          unitsSoldTotal: session.units_sold_total ?? 0,
-          warmedUpTick: session.warmed_up_tick ?? null,
-          lastRerankTick: session.last_rerank_tick ?? null,
-        },
-      });
-      results = outcome.results;
-      sessionUpdate = {
-        units_sold_total: outcome.session.unitsSoldTotal,
-        warmed_up_tick: outcome.session.warmedUpTick,
-        last_rerank_tick: outcome.session.lastRerankTick,
-      };
-      if (outcome.warmedUpThisTick) sessionEvents.push({ kind: "warmup_done", payload: {} });
-      if (outcome.reranked) sessionEvents.push({ kind: "rerank", payload: {} });
-    } else {
-      results = runTick(states, tickInputs);
-    }
+    if (outcome.warmedUpThisTick) sessionEvents.push({ kind: "warmup_done", payload: {} });
+    if (outcome.reranked) sessionEvents.push({ kind: "rerank", payload: {} });
     if (session.crash_from_tick === tickNo) sessionEvents.push({ kind: "crash", payload: {} });
 
     const byId = new Map(instruments.map((i) => [i.id, i] as const));
@@ -492,7 +480,6 @@ export async function maybeRunMarketTick(
       const row = byId.get(result.id);
       const variationId = row?.square_variation_id;
       const stockQty = variationId ? stockQtyByVariation.get(variationId) : undefined;
-      const tier = "tierPct" in result ? result : null;
       return {
         current_price: result.price,
         demand_units: result.demandUnits,
@@ -500,15 +487,11 @@ export async function maybeRunMarketTick(
         last_notified_price: result.lastNotifiedPrice,
         updated_at: now.toISOString(),
         ...(stockQty === undefined ? {} : { stock_qty: stockQty }),
-        ...(tier
-          ? {
-              pace: tier.pace,
-              last_sale_tick: tier.lastSaleTick,
-              rank_pos: tier.rankPos,
-              tier_pct: tier.tierPct,
-              target_price: Math.round(tier.targetPrice * 100) / 100,
-            }
-          : {}),
+        pace: result.pace,
+        last_sale_tick: result.lastSaleTick,
+        rank_pos: result.rankPos,
+        tier_pct: result.tierPct,
+        target_price: Math.round(result.targetPrice * 100) / 100,
         ...(withStats && row ? sessionStats(row, result) : {}),
       };
     };
@@ -527,31 +510,26 @@ export async function maybeRunMarketTick(
     for (const { error: updateError } of updateResults) {
       if (updateError) throw updateError;
     }
-    if (Object.keys(sessionUpdate).length > 0) {
-      const { error: sessionError } = await supabase
-        .from("market_sessions")
-        .update(sessionUpdate)
-        .eq("id", session.id);
-      if (sessionError) throw sessionError;
-    }
+    const { error: sessionError } = await supabase
+      .from("market_sessions")
+      .update(sessionUpdate)
+      .eq("id", session.id);
+    if (sessionError) throw sessionError;
 
-    const tickRows = results.map((result) => {
-      const tier = "tierPct" in result ? result : null;
-      return {
-        session_id: session.id,
-        instrument_id: result.id,
-        tick_no: tickNo,
-        price: result.price,
-        units: result.units,
-        demand_units: result.demandUnits,
-        pace: tier?.pace ?? null,
-        mins_since_sale: tier?.minsSinceSale ?? null,
-        rank_value: tier ? Math.round(tier.rankValue * 1e7) / 1e7 : null,
-        rank_pos: tier?.rankPos ?? null,
-        tier_pct: tier?.tierPct ?? null,
-        target_price: tier ? Math.round(tier.targetPrice * 100) / 100 : null,
-      };
-    });
+    const tickRows = results.map((result) => ({
+      session_id: session.id,
+      instrument_id: result.id,
+      tick_no: tickNo,
+      price: result.price,
+      units: result.units,
+      demand_units: result.demandUnits,
+      pace: result.pace,
+      mins_since_sale: result.minsSinceSale,
+      rank_value: Math.round(result.rankValue * 1e7) / 1e7,
+      rank_pos: result.rankPos,
+      tier_pct: result.tierPct,
+      target_price: Math.round(result.targetPrice * 100) / 100,
+    }));
     /* The breakdown columns arrived in a later migration; until it has run
        on this database the tick still records price and demand as before. */
     const { error: tickError } = await supabase
@@ -656,10 +634,10 @@ export async function maybeRunMarketTick(
 /* Workbook tab 10's per-drink summary columns, kept as running totals. A
    price change is any move of the board price; a tier change is the tier
    awarded this tick differing from the one before. */
-function sessionStats(row: MarketInstrumentRow, result: InstrumentTickResult | TierInstrumentTickResult) {
+function sessionStats(row: MarketInstrumentRow, result: TierInstrumentTickResult) {
   const previousPrice = Number(row.current_price);
   const previousTier = optionalNumber(row.tier_pct) ?? 0;
-  const tier = "tierPct" in result ? result.tierPct : previousTier;
+  const tier = result.tierPct;
   const high = Math.max(optionalNumber(row.high_price) ?? Number(row.opening_price), previousPrice, result.price);
   const low = Math.min(optionalNumber(row.low_price) ?? Number(row.opening_price), previousPrice, result.price);
   return {
@@ -775,8 +753,7 @@ export async function readMarketState(
     crashActive,
     ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
     pushAlertsEnabled: config.pushAlertsEnabled,
-    pricingMode: config.pricingMode,
-    warmedUp: config.pricingMode === "tiers" ? session.warmed_up_tick != null : true,
+    warmedUp: session.warmed_up_tick != null,
     unitsSoldTotal: session.units_sold_total ?? 0,
     warmupUnits: config.warmupUnits,
     nextRerankInSec: secondsUntilNextRerank(session, config, now),
@@ -809,10 +786,10 @@ export async function readMarketState(
         tillPrice: publicTillPrice(session, row),
         tillSyncError: row.square_sync_error ?? null,
         linkedToTill: Boolean(row.square_variation_id),
-        tierPct: config.pricingMode === "tiers" ? (optionalNumber(row.tier_pct) ?? 0) : null,
-        targetPrice: config.pricingMode === "tiers" ? optionalNumber(row.target_price) : null,
-        pace: config.pricingMode === "tiers" ? (optionalNumber(row.pace) ?? 0) : null,
-        rankPos: config.pricingMode === "tiers" ? (row.rank_pos ?? null) : null,
+        tierPct: optionalNumber(row.tier_pct) ?? 0,
+        targetPrice: optionalNumber(row.target_price),
+        pace: optionalNumber(row.pace) ?? 0,
+        rankPos: row.rank_pos ?? null,
         normalUnitsPerNight: optionalNumber(row.normal_units_per_night),
         stockQty: row.stock_qty == null ? null : Number(row.stock_qty),
       };

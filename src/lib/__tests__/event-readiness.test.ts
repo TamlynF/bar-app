@@ -7,7 +7,6 @@ const base = {
   linkedIds: [1, 2, 3],
   normalsReadIds: [1, 2, 3],
   normalsComputedAt: "2026-09-10T10:00:00Z",
-  pricingMode: "tiers" as const,
 };
 
 describe("eventReadiness", () => {
@@ -39,16 +38,10 @@ describe("eventReadiness", () => {
     expect(r.steps.links).toBe("todo");
   });
 
-  it("needs normal sales under tier pricing", () => {
+  it("needs normal sales before the event is ready", () => {
     const r = eventReadiness({ ...base, normalsReadIds: [], normalsComputedAt: null });
     expect(r.steps.normals).toBe("todo");
     expect(r.ready).toBe(false);
-  });
-
-  it("treats normal sales as optional under demand pricing", () => {
-    const r = eventReadiness({ ...base, pricingMode: "demand", normalsReadIds: [], normalsComputedAt: null });
-    expect(r.steps.normals).toBe("optional");
-    expect(r.ready).toBe(true);
   });
 
   it("only counts ids that are on the event", () => {

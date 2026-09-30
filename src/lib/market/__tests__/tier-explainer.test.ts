@@ -10,7 +10,7 @@ import {
   updatePrice,
 } from "../tier-explainer";
 
-const config: MarketConfig = { ...DEFAULT_MARKET_CONFIG, pricingMode: "tiers", sessionTicksHint: 15 };
+const config: MarketConfig = { ...DEFAULT_MARKET_CONFIG, sessionTicksHint: 15 };
 
 describe("heatDecaySeries", () => {
   it("fades a one-off rush and settles a steady seller", () => {

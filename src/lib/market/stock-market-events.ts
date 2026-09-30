@@ -1,4 +1,4 @@
-import { DEFAULT_MARKET_CONFIG, resolveTierPcts, type MarketConfig, type PricingMode } from "./types";
+import { DEFAULT_MARKET_CONFIG, resolveTierPcts, type MarketConfig } from "./types";
 
 export type StockMarketEventRow = {
   id: number;
@@ -6,15 +6,12 @@ export type StockMarketEventRow = {
   open_time: string;
   close_time: string;
   tick_interval_sec: number | string;
-  noise_sigma: number | string;
   floor_pct: number | string;
   ceil_pct: number | string;
   move_notify_pct: number | string;
   low_stock_threshold: number | string;
   push_alerts_enabled?: boolean | null;
-  pricing_mode?: string | null;
   rerank_every_ticks?: number | string | null;
-  glide_pct?: number | string | null;
   warmup_units?: number | string | null;
   tier_pcts?: unknown;
   pace_floor_units?: number | string | null;
@@ -54,24 +51,17 @@ function numberOr(value: number | string | null | undefined, fallback: number): 
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function pricingModeOf(value: string | null | undefined): PricingMode {
-  return value === "tiers" ? "tiers" : "demand";
-}
-
 export function eventConfig(row: StockMarketEventRow): MarketConfig {
   const d = DEFAULT_MARKET_CONFIG;
   return {
     ...d,
     tickIntervalSec: Number(row.tick_interval_sec),
-    noiseSigma: Number(row.noise_sigma),
     floorPct: Number(row.floor_pct),
     ceilPct: Number(row.ceil_pct),
     moveNotifyPct: Number(row.move_notify_pct),
     lowStockThreshold: Number(row.low_stock_threshold),
     pushAlertsEnabled: row.push_alerts_enabled ?? true,
-    pricingMode: pricingModeOf(row.pricing_mode),
     rerankEveryTicks: numberOr(row.rerank_every_ticks, d.rerankEveryTicks),
-    glidePct: numberOr(row.glide_pct, d.glidePct),
     warmupUnits: numberOr(row.warmup_units, d.warmupUnits),
     tierPcts: row.tier_pcts === undefined || row.tier_pcts === null ? d.tierPcts : resolveTierPcts(row.tier_pcts),
     paceFloorUnits: numberOr(row.pace_floor_units, d.paceFloorUnits),

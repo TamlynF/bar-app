@@ -15,7 +15,6 @@ import type { EventReadiness } from "@/lib/market/event-readiness";
 import {
   CONFIG_FIELDS,
   ConfigHelp,
-  PRICING_MODES,
   PUSH_ALERTS_FIELD,
   TIER_BANDS,
   TIER_FIELDS,
@@ -90,71 +89,41 @@ function TierPctInputs({ field, values }: { field: { key: string; label: string;
 }
 
 function ConfigFormRows({ config }: { config: MarketConfig }) {
-  const [mode, setMode] = useState<MarketConfig["pricingMode"]>(config.pricingMode);
-  const numberFields = CONFIG_FIELDS.filter((field) => mode === "demand" || field.key !== "noiseSigma");
   return (
     <TooltipProvider>
-      <FormRow label="Pricing" align="start" dense>
-        <input type="hidden" name="pricingMode" value={mode} />
-        <span className="flex flex-1 flex-col items-end gap-1.5">
-          <span className="inline-flex rounded-lg border border-admin-line p-0.5" role="radiogroup" aria-label="Pricing mode">
-            {PRICING_MODES.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={mode === option.value}
-                onClick={() => setMode(option.value)}
-                className={cn(
-                  "h-9 rounded-md px-3 text-[12px] font-semibold transition-colors sm:h-8",
-                  mode === option.value ? "bg-admin-primary-soft text-admin-primary" : "text-admin-muted hover:bg-admin-surface"
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+      {TIER_FIELDS.map((field) => (
+        <FormRow key={field.key} label={field.label} dense>
+          <ConfigHelp field={field} />
+          <span className="flex flex-1 justify-end">
+            <input
+              type="number"
+              name={field.key}
+              aria-label={field.label}
+              defaultValue={config[field.key]}
+              step={field.step}
+              min="0"
+              required
+              className={cn(FIELD_INPUT, CONFIG_VALUE)}
+            />
           </span>
-          <span className="text-[11px] text-admin-muted">{PRICING_MODES.find((o) => o.value === mode)?.hint}</span>
-        </span>
+        </FormRow>
+      ))}
+      <FormRow label={TIER_PCT_FIELDS.up.label} dense>
+        <ConfigHelp field={{ ...TIER_PCT_FIELDS.up, hint: "Ranks 1–5, 6–10, 11–15 from the top" }} />
+        <TierPctInputs field={TIER_PCT_FIELDS.up} values={config.tierPcts.up} />
       </FormRow>
-      {mode === "tiers" && (
-        <>
-          {TIER_FIELDS.map((field) => (
-            <FormRow key={field.key} label={field.label} dense>
-              <ConfigHelp field={field} />
-              <span className="flex flex-1 justify-end">
-                <input
-                  type="number"
-                  name={field.key}
-                  aria-label={field.label}
-                  defaultValue={config[field.key]}
-                  step={field.step}
-                  min="0"
-                  required
-                  className={cn(FIELD_INPUT, CONFIG_VALUE)}
-                />
-              </span>
-            </FormRow>
-          ))}
-          <FormRow label={TIER_PCT_FIELDS.up.label} dense>
-            <ConfigHelp field={{ ...TIER_PCT_FIELDS.up, hint: "Ranks 1–5, 6–10, 11–15 from the top" }} />
-            <TierPctInputs field={TIER_PCT_FIELDS.up} values={config.tierPcts.up} />
-          </FormRow>
-          <FormRow label={TIER_PCT_FIELDS.down.label} dense>
-            <ConfigHelp field={{ ...TIER_PCT_FIELDS.down, hint: "Ranks 1–5, 6–10, 11–15 from the bottom" }} />
-            <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
-          </FormRow>
-          <Link
-            href="/settings/market/how-it-works"
-            className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-primary hover:underline"
-          >
-            <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-            How these dials set a price
-          </Link>
-        </>
-      )}
-      {mode === "tiers" && <input type="hidden" name="noiseSigma" value={config.noiseSigma} />}
-      {numberFields.map((field) => (
+      <FormRow label={TIER_PCT_FIELDS.down.label} dense>
+        <ConfigHelp field={{ ...TIER_PCT_FIELDS.down, hint: "Ranks 1–5, 6–10, 11–15 from the bottom" }} />
+        <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
+      </FormRow>
+      <Link
+        href="/settings/market/how-it-works"
+        className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-primary hover:underline"
+      >
+        <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+        How these dials set a price
+      </Link>
+      {CONFIG_FIELDS.map((field) => (
         <FormRow key={field.key} label={field.label} dense>
           <ConfigHelp field={field} />
           <span className="flex flex-1 justify-end">
@@ -443,12 +412,8 @@ function EventForm({
 /* The seven raw config numbers, read as a person would say them. */
 function settingTiles(config: MarketConfig): { label: string; value: string }[] {
   return [
-    {
-      label: "Pricing",
-      value: PRICING_MODES.find((option) => option.value === config.pricingMode)?.label ?? config.pricingMode,
-    },
-    { label: "Prices move", value: `every ${config.tickIntervalSec}s` },
-    { label: "Volatility", value: String(config.noiseSigma) },
+    { label: "Sales read", value: `every ${config.tickIntervalSec}s` },
+    { label: "Prices change", value: `every ${config.rerankEveryTicks} ticks` },
     { label: "Price range", value: `${config.floorPct}× to ${config.ceilPct}× base` },
     { label: "Alert on a move of", value: `${Math.round(config.moveNotifyPct * 100)}%` },
     { label: "Low stock at", value: `${config.lowStockThreshold} left` },

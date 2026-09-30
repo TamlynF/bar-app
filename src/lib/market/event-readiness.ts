@@ -1,5 +1,3 @@
-import type { PricingMode } from "./types";
-
 /* What still stands between a stock market event and its first tick. Only
    the drinks step is a hard gate (openStockMarketEventAction refuses an event
    with nothing tradeable); the other two are strongly advised, because an
@@ -31,14 +29,12 @@ export function eventReadiness({
   linkedIds,
   normalsReadIds,
   normalsComputedAt,
-  pricingMode,
 }: {
   menuItemPriceIds: number[];
   tradeableIds: IdSet;
   linkedIds: IdSet;
   normalsReadIds: IdSet;
   normalsComputedAt: string | null;
-  pricingMode: PricingMode;
 }): EventReadiness {
   const ids = [...new Set(menuItemPriceIds)];
   const tradeable = toSet(tradeableIds);
@@ -54,7 +50,7 @@ export function eventReadiness({
   const steps: EventReadiness["steps"] = {
     drinks: tradeableCount > 0 ? "done" : "todo",
     links: drinks > 0 && linkedCount === drinks ? "done" : "todo",
-    normals: normalsDone ? "done" : pricingMode === "demand" ? "optional" : "todo",
+    normals: normalsDone ? "done" : "todo",
   };
 
   return {

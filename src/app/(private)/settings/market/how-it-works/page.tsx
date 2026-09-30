@@ -81,7 +81,6 @@ export default async function MarketHowItWorksPage() {
       session={session}
       drinks={drinks}
       live={Boolean(liveRow)}
-      tiersOn={config.pricingMode === "tiers"}
     />
   );
 }

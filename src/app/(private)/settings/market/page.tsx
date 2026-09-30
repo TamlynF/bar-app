@@ -294,7 +294,6 @@ export default async function MarketSettingsPage({
       linkedIds,
       normalsReadIds: [...normalsComputedAt.keys()],
       normalsComputedAt: stamps.length ? stamps.reduce((a, b) => (a > b ? a : b)) : null,
-      pricingMode: event.config.pricingMode,
     });
   }
 

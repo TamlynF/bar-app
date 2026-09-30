@@ -50,6 +50,5 @@ export function normalsStepText(readiness: EventReadiness, salesSyncedAt?: strin
     const synced = salesSyncedAt ? ` · sales synced ${formatShortStamp(salesSyncedAt)}` : "";
     return `Worked out ${formatShortStamp(readiness.normalsComputedAt)}${synced}`;
   }
-  if (readiness.steps.normals === "optional") return "Not worked out · optional for demand pricing";
   return "Not worked out yet";
 }

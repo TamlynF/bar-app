@@ -38,8 +38,8 @@ export type InstrumentSummary = {
   stockQty: number | null;
   /* Simulated units queued for the next tick (0 when nothing is waiting). */
   simPending: number;
-  /* Tier leaderboard figures written by the engine each tick; all null or 0
-     under demand pricing and before the market has warmed up. */
+  /* Tier leaderboard figures written by the engine each tick; null or 0
+     before the market has warmed up. */
   normalUnitsPerNight: number | null;
   normalUnitsSource: string | null;
   pace: number | null;

@@ -468,18 +468,13 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
   }
 
   const watchedCount = instruments.filter((instrument) => watched.includes(instrument.id)).length;
-  const tiersLive = state.pricingMode === "tiers";
   const tickKey = state.tickNo ?? 0;
   const countdown =
     state.crashActive && state.crashRemainingSec != null
       ? { key: `crash-${tickKey}`, seconds: state.crashRemainingSec, label: "Recovery in" }
-      : tiersLive
-        ? state.warmedUp && state.nextRerankInSec != null
-          ? { key: `update-${tickKey}`, seconds: state.nextRerankInSec, label: "Next update" }
-          : null
-        : state.nextTickInSec != null
-          ? { key: `tick-${tickKey}`, seconds: state.nextTickInSec, label: "Next update" }
-          : null;
+      : state.warmedUp && state.nextRerankInSec != null
+        ? { key: `update-${tickKey}`, seconds: state.nextRerankInSec, label: "Next update" }
+        : null;
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
   const alertsOff = !alertsAllowed;
@@ -551,7 +546,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
       )}
       <InstallDialog target={installTarget} open={installOpen} onOpenChange={setInstallOpen} />
 
-      {tiersLive && state.warmedUp === false && (
+      {state.warmedUp === false && (
         <div className="rounded-2xl border border-[#FDCC4B]/30 bg-[#FDCC4B]/5 px-4 py-3 text-center">
           <p className="font-black text-xs tracking-widest text-[#FDCC4B] uppercase">Market warming up</p>
           <p className="mt-1 text-[12px] text-stone-400">
@@ -563,7 +558,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
 
       <div className="mt-8 space-y-8 md:mt-0">
       <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-        {sortForPhone(instruments, state.pricingMode).map((instrument) => {
+        {sortForPhone(instruments).map((instrument) => {
           const isWatched = watched.includes(instrument.id);
           return (
           <li
@@ -593,11 +588,11 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
               <p className="font-ui text-[15px] leading-tight font-bold tracking-wide text-ink uppercase">
                 {instrument.name}
               </p>
-              {(instrument.stock !== "ok" || (tiersLive && instrument.tierPct)) && (
+              {(instrument.stock !== "ok" || instrument.tierPct !== 0) && (
                 <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {instrument.stock !== "ok" && <StockBadge stock={instrument.stock} />}
-                  {tiersLive && <TierBadge pct={instrument.tierPct} />}
-                  {tiersLive && instrument.tierPct != null && instrument.tierPct !== 0 && instrument.targetPrice != null && (
+                  <TierBadge pct={instrument.tierPct} />
+                  {instrument.tierPct !== 0 && instrument.targetPrice != null && (
                     <span className="text-[10px] text-stone-500">heading to {formatGbp(instrument.targetPrice)}</span>
                   )}
                 </p>
@@ -621,9 +616,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
       </ul>
 
       <p className="text-center text-[10px] text-stone-500">
-        {tiersLive
-          ? "Deals first, top sellers last. You pay the price on the till when your drink is rung in."
-          : "Prices move all night. What the board says is what the bar charges."}
+        Deals first, top sellers last. You pay the price on the till when your drink is rung in.
       </p>
       {footer}
       </div>

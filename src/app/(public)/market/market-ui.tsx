@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { formatGbp } from "@/lib/price";
-import type { MarketEventPayload, MarketInstrumentPayload, MarketStatePayload } from "@/lib/market/tick";
+import type { MarketEventPayload, MarketInstrumentPayload } from "@/lib/market/tick";
 
 /* The price a punter can be charged. A drink linked to Square shows only what
    Square has acknowledged (null until the first sync lands - render as
@@ -39,13 +39,8 @@ export function tierLabel(pct: number | null | undefined): string | null {
 
 /* Deals first: −30% … −10%, then the unchanged middle, then the mark-ups
    ending on +30%; inside a tier the biggest move on the shown price leads,
-   so the order only changes when prices do. Demand mode keeps the server's
-   order. */
-export function sortForPhone(
-  instruments: MarketInstrumentPayload[],
-  pricingMode: MarketStatePayload["pricingMode"]
-): MarketInstrumentPayload[] {
-  if (pricingMode !== "tiers") return instruments;
+   so the order only changes when prices do. */
+export function sortForPhone(instruments: MarketInstrumentPayload[]): MarketInstrumentPayload[] {
   return [...instruments].sort((a, b) => {
     const tierA = a.tierPct ?? 0;
     const tierB = b.tierPct ?? 0;

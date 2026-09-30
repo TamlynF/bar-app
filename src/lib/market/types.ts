@@ -12,10 +12,8 @@ export type MarketEventKind =
   | "rerank"
   | "warmup_done";
 
-export type PricingMode = "demand" | "tiers";
-
 /* When a staff-triggered crash hits the board: on the very next tick, or
-   held back to land with the next board update (tier pricing only). */
+   held back to land with the next board update. */
 export type CrashTiming = "now" | "next_update";
 
 /* Rank bands are cumulative upper bounds: bands [5, 10, 15] with down
@@ -28,9 +26,6 @@ export type TierPcts = {
 
 export type MarketConfig = {
   tickIntervalSec: number;
-  noiseSigma: number;
-  demandK: number;
-  reversionK: number;
   decayK: number;
   floorPct: number;
   ceilPct: number;
@@ -40,9 +35,7 @@ export type MarketConfig = {
   crashFactor: number;
   crashDurationTicks: number;
   pushAlertsEnabled: boolean;
-  pricingMode: PricingMode;
   rerankEveryTicks: number;
-  glidePct: number;
   warmupUnits: number;
   tierPcts: TierPcts;
   paceFloorUnits: number;
@@ -58,9 +51,6 @@ export type MarketConfigNumberKey = {
    cumulative move (vs the last alerted price) that wakes phones up. */
 export const DEFAULT_MARKET_CONFIG: MarketConfig = {
   tickIntervalSec: 60,
-  noiseSigma: 0.015,
-  demandK: 0.03,
-  reversionK: 0.02,
   decayK: 0.6,
   floorPct: 0.7,
   ceilPct: 1.5,
@@ -70,9 +60,7 @@ export const DEFAULT_MARKET_CONFIG: MarketConfig = {
   crashFactor: 0.75,
   crashDurationTicks: 5,
   pushAlertsEnabled: true,
-  pricingMode: "demand",
   rerankEveryTicks: 5,
-  glidePct: 0.35,
   warmupUnits: 30,
   tierPcts: { down: [0.3, 0.2, 0.1], up: [0.3, 0.2, 0.1], bands: [5, 10, 15] },
   paceFloorUnits: 8,
@@ -109,10 +97,6 @@ export function resolveMarketConfig(raw: unknown): MarketConfig {
       if (typeof source[key] === "boolean") config[key] = source[key];
       continue;
     }
-    if (key === "pricingMode") {
-      if (source[key] === "demand" || source[key] === "tiers") config[key] = source[key];
-      continue;
-    }
     if (key === "tierPcts") {
       if (source[key] !== undefined) config[key] = resolveTierPcts(source[key]);
       continue;
@@ -134,8 +118,8 @@ export type InstrumentState = {
   stockState: StockState;
   stockOverride: StockState | null;
   squareVariationId: string | null;
-  /* Tier engine only. normalUnitsPerNight is what this serve usually sells on
-     a night like tonight; lastSaleTick / tierPct carry between ticks. */
+  /* normalUnitsPerNight is what this serve usually sells on a night like
+     tonight; lastSaleTick / tierPct carry between ticks. */
   normalUnitsPerNight?: number | null;
   lastSaleTick?: number | null;
   tierPct?: number;
@@ -168,7 +152,6 @@ export type TickInputs = {
   /* Inventory quantity per Square variation; a variation missing from the map
      is "unknown this tick" and keeps its previous stock state. */
   stockQtyByVariation: Map<string, number>;
-  rng: () => number;
 };
 
 export type InstrumentTickResult = {

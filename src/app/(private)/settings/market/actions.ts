@@ -13,7 +13,6 @@ import {
   DEFAULT_MARKET_CONFIG,
   type CrashTiming,
   type MarketConfig,
-  type PricingMode,
 } from "@/lib/market/types";
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import { sessionTicksFor } from "@/lib/market/normal-units";
@@ -88,7 +87,6 @@ function revalidateSquareItemMap() {
 
 const configSchema = z.object({
   tickIntervalSec: z.coerce.number().min(15).max(600),
-  noiseSigma: z.coerce.number().min(0.001).max(0.2),
   floorPct: z.coerce.number().min(0.1).max(1),
   ceilPct: z.coerce.number().min(1).max(5),
   moveNotifyPct: z.coerce.number().min(0.01).max(0.5),
@@ -107,7 +105,7 @@ const tierSchema = z.object({
   }),
 });
 
-type TierConfig = z.infer<typeof tierSchema> & { pricingMode: PricingMode; glidePct: number };
+type TierConfig = z.infer<typeof tierSchema>;
 
 function readPushAlertsEnabled(formData: FormData): boolean {
   return formData.get("pushAlertsEnabled") === "on";
@@ -119,20 +117,7 @@ function pctField(formData: FormData, key: string, fallback: number): number {
   return Number(raw) / 100;
 }
 
-/* Tier dials are only on the form when the tier mode is selected; a demand
-   event keeps the defaults so switching modes later starts from sane values. */
 function readTierConfig(formData: FormData, current: MarketConfig = DEFAULT_MARKET_CONFIG): TierConfig | null {
-  const pricingMode: PricingMode = formData.get("pricingMode") === "tiers" ? "tiers" : "demand";
-  if (pricingMode === "demand") {
-    return {
-      pricingMode,
-      rerankEveryTicks: current.rerankEveryTicks,
-      glidePct: current.glidePct,
-      warmupUnits: current.warmupUnits,
-      paceFloorUnits: current.paceFloorUnits,
-      tierPcts: current.tierPcts,
-    };
-  }
   const parsed = tierSchema.safeParse({
     rerankEveryTicks: formData.get("rerankEveryTicks"),
     warmupUnits: formData.get("warmupUnits"),
@@ -143,13 +128,12 @@ function readTierConfig(formData: FormData, current: MarketConfig = DEFAULT_MARK
       bands: current.tierPcts.bands,
     },
   });
-  return parsed.success ? { pricingMode, glidePct: current.glidePct, ...parsed.data } : null;
+  return parsed.success ? parsed.data : null;
 }
 
 function readConfig(formData: FormData, base: MarketConfig = DEFAULT_MARKET_CONFIG) {
   const parsed = configSchema.safeParse({
     tickIntervalSec: formData.get("tickIntervalSec"),
-    noiseSigma: formData.get("noiseSigma"),
     floorPct: formData.get("floorPct"),
     ceilPct: formData.get("ceilPct"),
     moveNotifyPct: formData.get("moveNotifyPct"),
@@ -354,7 +338,6 @@ export async function saveStockMarketEventAction(formData: FormData) {
     open_time: formData.get("open_time"),
     close_time: formData.get("close_time"),
     tickIntervalSec: formData.get("tickIntervalSec"),
-    noiseSigma: formData.get("noiseSigma"),
     floorPct: formData.get("floorPct"),
     ceilPct: formData.get("ceilPct"),
     moveNotifyPct: formData.get("moveNotifyPct"),
@@ -385,16 +368,13 @@ export async function saveStockMarketEventAction(formData: FormData) {
     open_time: values.open_time,
     close_time: values.close_time,
     tick_interval_sec: values.tickIntervalSec,
-    noise_sigma: values.noiseSigma,
     floor_pct: values.floorPct,
     ceil_pct: values.ceilPct,
     move_notify_pct: values.moveNotifyPct,
     low_stock_threshold: values.lowStockThreshold,
     leaderboard_rows: values.leaderboardRows,
     push_alerts_enabled: readPushAlertsEnabled(formData),
-    pricing_mode: tier.pricingMode,
     rerank_every_ticks: tier.rerankEveryTicks,
-    glide_pct: tier.glidePct,
     warmup_units: tier.warmupUnits,
     tier_pcts: tier.tierPcts,
     pace_floor_units: tier.paceFloorUnits,
@@ -1026,16 +1006,14 @@ export async function setSquareSyncEnabledAction(enabled: boolean) {
   return { success: true };
 }
 
-export async function rerankNowAction() {
+export async function rerankNowAction(): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("market_sessions")
-    .select("id, tick_no, config, warmed_up_tick")
+    .select("id, tick_no")
     .eq("status", "live")
     .maybeSingle();
   if (!session) return { error: "No live market to re-rank." };
-  const config = resolveMarketConfig(session.config);
-  if (config.pricingMode !== "tiers") return { error: "This market is running the demand engine - there are no tiers to re-rank." };
   /* Marking warm-up as "this coming tick" makes shouldRerank fire on it, and
      lifts the warm-up gate early if staff want tiers on before the threshold. */
   const { error } = await supabase
@@ -1044,7 +1022,7 @@ export async function rerankNowAction() {
     .eq("id", session.id);
   if (error) return { error: error.message };
   const forced = await forceTickNow(session.id);
-  if ("error" in forced) return forced;
+  if ("error" in forced) return { error: forced.error };
   revalidateMarket();
   return { success: true };
 }

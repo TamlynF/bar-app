@@ -520,15 +520,13 @@ function LeaderboardColumn({
   );
 }
 
-/* Deals on the left, the drinks going up on the right. Tier mode ranks by
-   tier then pace (slowest vs normal = best deal), and a drink only appears
-   once its price has actually crossed the menu price in its tier's direction
-   - a drink just promoted to the top tier that is still gliding up from a
-   discount waits off the board rather than showing as a "riser" at a lower
-   price. Demand mode has no tiers, so the same layout ranks by change since
-   open instead. Each column shows as many drinks as the screen has room for
-   (five at least), or the event's leaderboard row count when that is set
-   and fits. */
+/* Deals on the left, the drinks going up on the right, ranked by tier then
+   by the move on the shown price. A drink only appears once its price has
+   actually crossed the menu price in its tier's direction - a drink just
+   promoted to the top tier that has not reached its new price yet waits off
+   the board rather than showing as a "riser" at a lower price. Each column
+   shows as many drinks as the screen has room for (five at least), or the
+   event's leaderboard row count when that is set and fits. */
 function LeaderboardView({
   instruments,
   crash,
@@ -538,21 +536,16 @@ function LeaderboardView({
   crash: boolean;
   state: MarketStatePayload;
 }) {
-  const tiers = state.pricingMode === "tiers";
   const dealsRef = useRef<HTMLDivElement | null>(null);
   const risersRef = useRef<HTMLDivElement | null>(null);
   const [limit, setLimit] = useState(LEADERBOARD_MIN);
 
-  const deals = tiers
-    ? instruments
-        .filter((i) => (i.tierPct ?? 0) < 0 && (displayPrice(i) ?? i.price) < i.openingPrice)
-        .sort((a, b) => (a.tierPct ?? 0) - (b.tierPct ?? 0) || displayChangePct(a) - displayChangePct(b))
-    : [...instruments].sort(byChangeDesc).reverse();
-  const risers = tiers
-    ? instruments
-        .filter((i) => (i.tierPct ?? 0) > 0 && (displayPrice(i) ?? i.price) > i.openingPrice)
-        .sort((a, b) => (b.tierPct ?? 0) - (a.tierPct ?? 0) || displayChangePct(b) - displayChangePct(a))
-    : [...instruments].sort(byChangeDesc);
+  const deals = instruments
+    .filter((i) => i.tierPct < 0 && (displayPrice(i) ?? i.price) < i.openingPrice)
+    .sort((a, b) => a.tierPct - b.tierPct || displayChangePct(a) - displayChangePct(b));
+  const risers = instruments
+    .filter((i) => i.tierPct > 0 && (displayPrice(i) ?? i.price) > i.openingPrice)
+    .sort((a, b) => b.tierPct - a.tierPct || displayChangePct(b) - displayChangePct(a));
   const requested = state.leaderboardRows ?? 0;
   useLayoutEffect(() => {
     const fit = () => {
@@ -570,7 +563,7 @@ function LeaderboardView({
     return () => observer.disconnect();
   }, [deals, risers, requested]);
 
-  if (tiers && state.warmedUp === false) {
+  if (state.warmedUp === false) {
     const sold = state.unitsSoldTotal ?? 0;
     const need = state.warmupUnits ?? 0;
     return (
@@ -588,7 +581,7 @@ function LeaderboardView({
     <div className="grid h-full min-h-0 grid-cols-2 grid-rows-[minmax(0,1fr)] gap-[3vw] overflow-hidden">
       <LeaderboardColumn
         title="Best deals"
-        subtitle={tiers ? "slow tonight, price coming down" : "biggest drops since open"}
+        subtitle="slow tonight, price coming down"
         shown={shown}
         arrow="▼"
         accent={DOWN_TEXT}
@@ -601,7 +594,7 @@ function LeaderboardView({
       />
       <LeaderboardColumn
         title="In demand"
-        subtitle={tiers ? "selling fast, price going up" : "biggest rises since open"}
+        subtitle="selling fast, price going up"
         shown={shown}
         arrow="▲"
         accent={UP_TEXT}
@@ -712,10 +705,8 @@ export default function MarketBoard({
   const [view, setView] = useState<BoardView>(initialView);
   const crash = state?.crashActive === true;
   const crashCountdown = useCountdown(state?.crashRemainingSec);
-  const nextTickCountdown = useCountdown(state?.nextTickInSec);
   const rerankCountdown = useCountdown(state?.nextRerankInSec ?? undefined);
-  const tiersLive = state?.pricingMode === "tiers";
-  const warmingUp = tiersLive && state?.warmedUp === false;
+  const warmingUp = state?.warmedUp === false;
 
   if (!state || state.status === "closed") {
     return (
@@ -769,9 +760,7 @@ export default function MarketBoard({
                 ? crashCountdown
                 : warmingUp
                   ? `${state.unitsSoldTotal ?? 0}/${state.warmupUnits ?? 0}`
-                  : tiersLive
-                    ? rerankCountdown
-                    : nextTickCountdown
+                  : rerankCountdown
             }
             valueClass={crash ? "ad-blink text-white" : warmingUp ? "text-[#8CFF6A]" : "text-[#FDCC4B]"}
             note={warmingUp ? "Drinks sold" : null}

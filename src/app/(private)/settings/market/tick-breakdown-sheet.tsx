@@ -329,7 +329,7 @@ export function TickBreakdownSheet({
               </table>
               <p className="mt-3 text-[11px] text-admin-muted">
                 Shaded rows are re-rank ticks, when Rank and Adjust can change. Dashes are ticks recorded before the
-                breakdown was kept, or figures the demand engine doesn&apos;t produce.
+                breakdown was kept, or from older nights priced by the retired demand engine.
               </p>
             </TooltipProvider>
           )}

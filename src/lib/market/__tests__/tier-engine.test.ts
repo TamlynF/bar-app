@@ -43,13 +43,12 @@ function inputs(config: MarketConfig, overrides: Partial<TierTickInputs> = {}): 
     crashActive: false,
     newUnitsByInstrument: new Map(),
     stockQtyByVariation: new Map(),
-    rng: () => 0.5,
     session: session(),
     ...overrides,
   };
 }
 
-const warm = resolveMarketConfig({ ...DEFAULT_MARKET_CONFIG, pricingMode: "tiers", warmupUnits: 0, sessionTicksHint: 15 });
+const warm = resolveMarketConfig({ ...DEFAULT_MARKET_CONFIG, warmupUnits: 0, sessionTicksHint: 15 });
 
 describe("golden replay of the workbook night (tab 10)", () => {
   const config = resolveMarketConfig({ ...DEFAULT_MARKET_CONFIG, ...fixture.config });
@@ -300,13 +299,12 @@ describe("alerts", () => {
 });
 
 describe("resolveMarketConfig with tier fields", () => {
-  it("accepts the mode, the tier table and a zero warm-up, and falls back on junk", () => {
-    const config = resolveMarketConfig({ pricingMode: "tiers", warmupUnits: 0, tierPcts: { down: [0.2], up: [0.1], bands: [3] }, glidePct: -1 });
-    expect(config.pricingMode).toBe("tiers");
+  it("accepts the tier table and a zero warm-up, ignores retired keys, and falls back on junk", () => {
+    const config = resolveMarketConfig({ pricingMode: "demand", noiseSigma: 0.02, warmupUnits: 0, tierPcts: { down: [0.2], up: [0.1], bands: [3] } });
     expect(config.warmupUnits).toBe(0);
     expect(config.tierPcts).toEqual({ down: [0.2], up: [0.1], bands: [3] });
-    expect(config.glidePct).toBe(DEFAULT_MARKET_CONFIG.glidePct);
-    expect(resolveMarketConfig({ pricingMode: "bananas" }).pricingMode).toBe("demand");
+    expect(config).not.toHaveProperty("pricingMode");
+    expect(config).not.toHaveProperty("noiseSigma");
     expect(resolveMarketConfig({ tierPcts: { down: "x" } }).tierPcts).toEqual(DEFAULT_MARKET_CONFIG.tierPcts);
   });
 });

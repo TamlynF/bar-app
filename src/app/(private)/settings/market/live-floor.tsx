@@ -134,7 +134,6 @@ type FloorField = {
   label: string;
   help: string;
   align?: "right";
-  tiersOnly?: boolean;
   /* Shown in the row's expanded panel rather than as a table column. */
   detail?: boolean;
 };
@@ -158,14 +157,12 @@ const FLOOR_FIELDS: FloorField[] = [
     key: "rank",
     label: "Rank",
     align: "right",
-    tiersOnly: true,
     help: "Position at the last re-rank, sorted on pace with 1 the busiest drink relative to its own normal. Ties go to the drink that sold most recently, then the dearer one. The top bands earn a mark-up, the bottom bands a discount, the middle stays at base. It only changes at a re-rank, so between re-ranks pace can move while rank stays put.",
   },
   {
     key: "target",
     label: "Target",
     align: "right",
-    tiersOnly: true,
     help: "Base price with the tier applied: £8.95 at +30% targets £11.64. Now jumps straight to Target at the next board update (re-rank) and holds there until the one after. During a crash every target is the crash price instead.",
   },
   {
@@ -189,7 +186,6 @@ const FLOOR_FIELDS: FloorField[] = [
     key: "normal",
     label: "Normal / night",
     detail: true,
-    tiersOnly: true,
     help: "How many of this serve the bar usually sells on a night like tonight, averaged from past Square sales over the event's hours. Pace is measured against it. Drinks under the event's pace floor are treated as selling the floor amount, so one sale of a rare bottle can't top the board.",
   },
   {
@@ -202,14 +198,12 @@ const FLOOR_FIELDS: FloorField[] = [
     key: "pace",
     label: "Pace",
     detail: true,
-    tiersOnly: true,
     help: "Demand divided by what this drink sells per tick on a normal night. 1.00× is a normal night for it, 2.00× twice as busy, 0.50× half. One sale lifts a 3-a-night cocktail well above 1× but barely moves a 60-a-night pint, so the board rewards drinks hotter than their own usual, not just big sellers. This is the only number the rank sorts on.",
   },
   {
     key: "tier",
     label: "Tier",
     detail: true,
-    tiersOnly: true,
     help: "The price move the rank earned at the last re-rank, as a share of base price: +30% for the top band down to −30% for the bottom band. Blank means base price, either because the market is still warming up or because the rank sits in the middle. In a small market where a drink falls in both the top and bottom bands, the discount wins.",
   },
   {
@@ -228,7 +222,6 @@ const FLOOR_FIELDS: FloorField[] = [
     key: "tierChanges",
     label: "Tier changes",
     detail: true,
-    tiersOnly: true,
     help: "How many re-ranks have moved this drink to a different tier tonight. A drink that bounces between bands every re-rank is sitting on a band edge.",
   },
   {
@@ -657,14 +650,13 @@ export function LiveFloorCard({
   const liveState = useLiveTick(true, router.refresh);
   const instruments = mergeLiveInstruments(initialInstruments, liveState, session.id, session.tickNo);
   const nextTickCountdown = useCountdown(liveState?.nextTickInSec);
-  const tiersLive = session.config.pricingMode === "tiers";
   const warmedUp = liveState?.warmedUp ?? true;
   const tickNo = liveState?.status === "live" ? (liveState.tickNo ?? session.tickNo) : session.tickNo;
-  const floorFields = FLOOR_FIELDS.filter((field) => tiersLive || !field.tiersOnly);
+  const floorFields = FLOOR_FIELDS;
   const floorColumns = floorFields.filter((field) => !field.detail);
   const byKey = new Map(floorFields.map((field) => [field.key, field]));
   const pick = (keys: string[]) => keys.map((key) => byKey.get(key)).filter((field): field is FloorField => Boolean(field));
-  const chainFields = pick(tiersLive ? CHAIN_KEYS : ["base", "demand", "now", "change"]);
+  const chainFields = pick(CHAIN_KEYS);
   const tonightFields = pick(TONIGHT_KEYS);
   const moreFields = pick(MORE_KEYS);
   const needle = query.trim().toLowerCase();
@@ -717,7 +709,7 @@ export function LiveFloorCard({
     if (confirmed) run(endMarketAction, "Market closed - till prices restored.");
   }
 
-  const canQueueCrash = tiersLive && warmedUp;
+  const canQueueCrash = warmedUp;
   const crashTimingRef = useRef<CrashTiming>("now");
 
   async function confirmCrash(title: string, description: string): Promise<CrashTiming | null> {
@@ -848,22 +840,20 @@ export function LiveFloorCard({
           <MonitorPlay className="h-4 w-4" aria-hidden="true" />
           Big screen
         </a>
-        {tiersLive && (
-          <button
-            type="button"
-            onClick={handleRerank}
-            disabled={isPending}
-            title={
-              warmedUp
-                ? "Re-rank now"
-                : `Skip warm-up (${liveState?.unitsSoldTotal ?? 0} of ${session.config.warmupUnits} units sold)`
-            }
-            className={cn(NEUTRAL_BUTTON, "max-sm:flex-1")}
-          >
-            <ListOrdered className="h-4 w-4" aria-hidden="true" />
-            {warmedUp ? "Re-rank now" : "Skip warm-up"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleRerank}
+          disabled={isPending}
+          title={
+            warmedUp
+              ? "Re-rank now"
+              : `Skip warm-up (${liveState?.unitsSoldTotal ?? 0} of ${session.config.warmupUnits} units sold)`
+          }
+          className={cn(NEUTRAL_BUTTON, "max-sm:flex-1")}
+        >
+          <ListOrdered className="h-4 w-4" aria-hidden="true" />
+          {warmedUp ? "Re-rank now" : "Skip warm-up"}
+        </button>
         <button
           type="button"
           onClick={handleCrash}
@@ -905,7 +895,7 @@ export function LiveFloorCard({
             isPending={isPending}
           />
 
-          {tiersLive && !warmedUp && (
+          {!warmedUp && (
             <p className="mb-2 text-[11px] text-admin-muted">
               Warming up · {liveState?.unitsSoldTotal ?? 0} of {session.config.warmupUnits} drinks sold before tiers start.
               Rank, tier and target fill in once the bar reaches that number.
@@ -928,7 +918,7 @@ export function LiveFloorCard({
           </div>
           <div className="overflow-x-auto">
             <TooltipProvider>
-              <table className={cn("w-full text-left", tiersLive ? "min-w-160" : "min-w-125")}>
+              <table className={"w-full min-w-160 text-left"}>
                 <thead>
                   <tr className="border-b border-admin-line text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
                     {floorColumns.map((field) => (
@@ -1014,27 +1004,25 @@ export function LiveFloorCard({
                           <td className="py-2 pr-3 text-right text-[13px] text-admin-muted tabular-nums">
                             {formatGbp(instrument.openingPrice)}
                           </td>
-                          {tiersLive && (
-                            <>
-                              <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
-                                {!warmedUp || instrument.rankPos == null ? (
-                                  <span className="text-admin-muted">—</span>
-                                ) : (
-                                  <>
-                                    {instrument.rankPos}
-                                    <span className="text-admin-muted"> / {total}</span>
-                                  </>
-                                )}
-                              </td>
-                              <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
-                                {!warmedUp || instrument.targetPrice == null ? (
-                                  <span className="text-admin-muted">—</span>
-                                ) : (
-                                  formatGbp(instrument.targetPrice)
-                                )}
-                              </td>
-                            </>
-                          )}
+                          <>
+                            <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+                              {!warmedUp || instrument.rankPos == null ? (
+                                <span className="text-admin-muted">—</span>
+                              ) : (
+                                <>
+                                  {instrument.rankPos}
+                                  <span className="text-admin-muted"> / {total}</span>
+                                </>
+                              )}
+                            </td>
+                            <td className="py-2 pr-3 text-right text-[13px] text-admin-ink tabular-nums">
+                              {!warmedUp || instrument.targetPrice == null ? (
+                                <span className="text-admin-muted">—</span>
+                              ) : (
+                                formatGbp(instrument.targetPrice)
+                              )}
+                            </td>
+                          </>
                           <td
                             className={cn(
                               "py-2 pr-3 text-right text-[13px] font-semibold tabular-nums",
@@ -1203,9 +1191,7 @@ export function LiveFloorCard({
                                 <DetailGroup
                                   title="How the price is worked out"
                                   blurb={
-                                    tiersLive
-                                      ? "Left to right: what it normally sells, what it is selling now, how that ranks, and where the price sits."
-                                      : "Left to right: the menu price, what is selling now, and the price on the board."
+                                    "Left to right: what it normally sells, what it is selling now, how that ranks, and where the price sits."
                                   }
                                   className="lg:col-span-2"
                                 >

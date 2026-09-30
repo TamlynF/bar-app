@@ -14,7 +14,6 @@ const row: StockMarketEventRow = {
   open_time: "19:00:00",
   close_time: "23:30:00",
   tick_interval_sec: "45",
-  noise_sigma: "0.02",
   floor_pct: "0.6",
   ceil_pct: "1.8",
   move_notify_pct: "0.1",
@@ -27,10 +26,9 @@ const row: StockMarketEventRow = {
 };
 
 describe("eventConfig", () => {
-  it("maps the six stored columns onto the engine config and keeps the rest at defaults", () => {
+  it("maps the stored columns onto the engine config and keeps the rest at defaults", () => {
     const config = eventConfig(row);
     expect(config.tickIntervalSec).toBe(45);
-    expect(config.noiseSigma).toBe(0.02);
     expect(config.floorPct).toBe(0.6);
     expect(config.ceilPct).toBe(1.8);
     expect(config.moveNotifyPct).toBe(0.1);
@@ -91,24 +89,19 @@ describe("eventConfig tier fields", () => {
   it("maps the tier columns and falls back to defaults when they are absent", () => {
     const tiers = eventConfig({
       ...row,
-      pricing_mode: "tiers",
       rerank_every_ticks: "4",
-      glide_pct: "0.5",
       warmup_units: 0,
       tier_pcts: { down: [0.3, 0.2, 0.1], up: [0.2, 0.15, 0.1], bands: [5, 10, 15] },
       pace_floor_units: "6",
       session_ticks_hint: "90",
     });
-    expect(tiers.pricingMode).toBe("tiers");
     expect(tiers.rerankEveryTicks).toBe(4);
-    expect(tiers.glidePct).toBe(0.5);
     expect(tiers.warmupUnits).toBe(0);
     expect(tiers.tierPcts.up).toEqual([0.2, 0.15, 0.1]);
     expect(tiers.paceFloorUnits).toBe(6);
     expect(tiers.sessionTicksHint).toBe(90);
 
     const legacy = eventConfig(row);
-    expect(legacy.pricingMode).toBe("demand");
     expect(legacy.tierPcts).toEqual(DEFAULT_MARKET_CONFIG.tierPcts);
     expect(legacy.rerankEveryTicks).toBe(DEFAULT_MARKET_CONFIG.rerankEveryTicks);
   });
