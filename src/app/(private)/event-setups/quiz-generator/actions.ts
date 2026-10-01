@@ -33,7 +33,7 @@ import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
 import { renderPrompt, resolvePrompt } from '@/lib/quiz/prompt-templates'
-import { spotifySearchQueries } from '@/lib/quiz/spotify-search'
+import { mapWithLimit, spotifySearchQueries, SPOTIFY_MARKET } from '@/lib/quiz/spotify-search'
 import { exclusionKey, withoutExcluded } from '@/lib/quiz/exclusion-key'
 
 export type QuizQuestion = {
@@ -880,6 +880,12 @@ export async function saveQuizToDatabase(
 }
 
 
+const SPOTIFY_SEARCHES_AT_ONCE = 3
+
+/* Songs with no Spotify match are dropped, so the model is asked for a few
+   more than the sheet needs. */
+const songSpares = (count: number) => Math.max(2, Math.ceil(count * 0.3))
+
 async function getSpotifyAccessToken(): Promise<string | null> {
   const clientId = process.env.SPOTIFY_CLIENT_ID || ''
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || ''
@@ -902,6 +908,17 @@ async function getSpotifyAccessToken(): Promise<string | null> {
   }
 }
 
+/* Spotify answers a burst of requests with 429 and a Retry-After in seconds.
+   One wait-and-retry turns that into a slower answer instead of a missing one. */
+async function spotifyGet(url: string, accessToken: string): Promise<Response> {
+  const get = () => fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+  const res = await get()
+  if (res.status !== 429) return res
+  const waitSeconds = Math.min(Number(res.headers.get('retry-after')) || 1, 5)
+  await wait(waitSeconds * 1000)
+  return get()
+}
+
 async function searchSpotifyTrack(
   artist: string,
   title: string,
@@ -909,9 +926,9 @@ async function searchSpotifyTrack(
 ): Promise<string | null> {
   for (const query of spotifySearchQueries(artist, title)) {
     try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+      const res = await spotifyGet(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1&market=${SPOTIFY_MARKET}`,
+        accessToken
       )
       if (!res.ok) continue
       const data = await res.json()
@@ -980,11 +997,16 @@ export async function lookupSpotifyTrackAction(input: {
 
   try {
     if (pastedId) {
-      const res = await fetch(`https://api.spotify.com/v1/tracks/${pastedId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await spotifyGet(
+        `https://api.spotify.com/v1/tracks/${pastedId}?market=${SPOTIFY_MARKET}`,
+        token
+      )
       if (!res.ok) return { error: 'Spotify has no track behind that link.' }
-      const track = trackDetailsFrom(await res.json())
+      const data = await res.json()
+      if (data?.is_playable === false) {
+        return { error: "That track can't be played in the UK - try another version of the song." }
+      }
+      const track = trackDetailsFrom(data)
       return track ? { track } : { error: 'Spotify has no track behind that link.' }
     }
 
@@ -993,9 +1015,9 @@ export async function lookupSpotifyTrackAction(input: {
 
     const artist = (input.artist ?? '').trim()
     const query = artist ? `track:${title} artist:${artist}` : title
-    const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`,
-      { headers: { Authorization: `Bearer ${token}` } }
+    const res = await spotifyGet(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1&market=${SPOTIFY_MARKET}`,
+      token
     )
     if (!res.ok) return { error: 'Spotify search failed. Try again.' }
 
@@ -1032,6 +1054,11 @@ export async function generateMusicSnippetsAction(
 ): Promise<{ songs?: MusicSnippetCandidate[]; model?: string; error?: string }> {
   try {
     const supabase = await createClient()
+    const spotifyToken = await getSpotifyAccessToken()
+    if (!spotifyToken) {
+      return { error: 'Spotify search is unavailable right now, so no playable songs can be suggested.' }
+    }
+    const requestCount = numberOfSongs + songSpares(numberOfSongs)
     const [{ data: approved }, { data: generated }, { data: config }, lastYear, neverShow] = await Promise.all([
       supabase
         .from('past_quiz_questions')
@@ -1079,7 +1106,7 @@ export async function generateMusicSnippetsAction(
       : '- Provide a balanced variety across genres.'
 
     const snippetTopicLine = topic.trim()
-      ? `- Every song must fit the topic "${topic.trim()}", and this is binding. Where the topic names a decade, a year or a year range, every release year must fall inside it - a song from outside that period is wrong however iconic its intro is. Return fewer than ${numberOfSongs} songs rather than including one that sits outside the topic.`
+      ? `- Every song must fit the topic "${topic.trim()}", and this is binding. Where the topic names a decade, a year or a year range, every release year must fall inside it - a song from outside that period is wrong however iconic its intro is. Return fewer than ${requestCount} songs rather than including one that sits outside the topic.`
       : '- Songs from 1960 to present day, spread across decades - include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.'
 
     const difficultyLine = difficulty === 'Easy'
@@ -1101,8 +1128,8 @@ export async function generateMusicSnippetsAction(
       ? renderPrompt(resolvePrompt('higher_lower', config?.ai_prompt).template, {
           chain_year: chainYear,
           brief: pickedYear != null
-            ? `The host has decided this question's song comes from ${pickedYear}.\nGenerate ${numberOfSongs} candidate songs, every one of them originally released in ${pickedYear}. Exactly one of them will be picked.`
-            : `Generate ${numberOfSongs} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.`,
+            ? `The host has decided this question's song comes from ${pickedYear}.\nGenerate ${requestCount} candidate songs, every one of them originally released in ${pickedYear}. Exactly one of them will be picked.`
+            : `Generate ${requestCount} candidate songs. Exactly one of them will be picked, so every single one must be a legal answer on its own.`,
           year_rules: pickedYear != null
             ? `- The original release year MUST be ${pickedYear}. Judge the song's first release as a single or on an album - not a re-issue, remaster, live recording or cover version. A song first released in any other year is wrong however well it fits everything else.`
             : [
@@ -1116,11 +1143,11 @@ export async function generateMusicSnippetsAction(
           difficulty_line: difficultyLine,
           exclusions: existingList,
           return_rule: pickedYear != null
-            ? `- Return fewer than ${numberOfSongs} songs rather than including one not first released in ${pickedYear}.`
-            : `- Return fewer than ${numberOfSongs} songs rather than including one outside the allowed years.`,
+            ? `- Return fewer than ${requestCount} songs rather than including one not first released in ${pickedYear}.`
+            : `- Return fewer than ${requestCount} songs rather than including one outside the allowed years.`,
         })
       : renderPrompt(resolvePrompt('song', config?.ai_prompt).template, {
-          count: numberOfSongs,
+          count: requestCount,
           topic_line: snippetTopicLine,
           difficulty_line: difficultyLine,
           exclusions: existingList,
@@ -1186,31 +1213,40 @@ export async function generateMusicSnippetsAction(
       }
     }
 
-    /* A name-that-tune round plays oldest-first. A Higher-or-Lower round must not
-       be sorted - ascending years would make every answer after the first
-       "Higher", and the chain order is set by the picking anyway. */
-    if (!isHigherOrLower) candidates.sort((a, b) => a.year - b.year)
-
-    const spotifyToken = await getSpotifyAccessToken()
-    const songs: MusicSnippetCandidate[] = await Promise.all(
-      candidates.map(async (s) => {
-        let spotifyId: string | null = null
-        if (spotifyToken) {
-          spotifyId = await searchSpotifyTrack(s.artist, s.title, spotifyToken)
-        }
-        return { ...s, spotify_track_id: spotifyId }
-      })
+    const searched: MusicSnippetCandidate[] = await mapWithLimit(
+      candidates,
+      SPOTIFY_SEARCHES_AT_ONCE,
+      async (s) => ({ ...s, spotify_track_id: await searchSpotifyTrack(s.artist, s.title, spotifyToken) })
     )
 
-    if (songs.length) {
+    /* A song with no Spotify match cannot be played on the night, so it is never
+       offered. The spares asked for above stand in for it; anything past the
+       count asked for is dropped before it is logged. */
+    const songs = searched.filter((s) => s.spotify_track_id).slice(0, numberOfSongs)
+    const unplayable = searched.filter((s) => !s.spotify_track_id)
+
+    /* A name-that-tune round plays oldest-first. A Higher-or-Lower round must not
+       be sorted - ascending years would make every answer after the first
+       "Higher", and the chain order is set by the picking anyway. Sorting
+       after the cut keeps the cut from favouring the oldest songs. */
+    if (!isHigherOrLower) songs.sort((a, b) => a.year - b.year)
+
+    /* Unplayable songs are logged too, so a top-up for this quiz night does not
+       ask Spotify about them again. */
+    const logged = [...songs, ...unplayable]
+    if (logged.length) {
       const { error: logError } = await supabase
         .from('generated_quiz_questions')
-        .insert(songs.map((s) => ({
+        .insert(logged.map((s) => ({
           events_id: eventId,
           quiz_category_configs_id: categoryConfigId,
           content_text: `${s.artist} - ${s.title}`,
         })))
       if (logError) console.error('Failed to log generated songs:', logError)
+    }
+
+    if (!songs.length) {
+      return { error: 'None of the suggested songs could be found on Spotify. Try again, or try a different topic.' }
     }
 
     return { songs, model: ai.model }

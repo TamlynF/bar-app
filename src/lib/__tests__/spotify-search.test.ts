@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { primaryArtist, spotifySearchQueries } from "@/lib/quiz/spotify-search";
+import { mapWithLimit, primaryArtist, spotifySearchQueries } from "@/lib/quiz/spotify-search";
 
 describe("primaryArtist", () => {
   it("drops featured artists however they are credited", () => {
@@ -30,5 +30,31 @@ describe("spotifySearchQueries", () => {
       "track:Jeremy artist:Pearl Jam",
       "Jeremy Pearl Jam",
     ]);
+  });
+});
+
+describe("mapWithLimit", () => {
+  it("keeps results in input order", async () => {
+    const out = await mapWithLimit([30, 10, 20], 2, async (ms) => {
+      await new Promise((r) => setTimeout(r, ms));
+      return ms;
+    });
+    expect(out).toEqual([30, 10, 20]);
+  });
+
+  it("never runs more than the limit at once", async () => {
+    let running = 0;
+    let peak = 0;
+    await mapWithLimit([1, 2, 3, 4, 5, 6], 2, async () => {
+      running++;
+      peak = Math.max(peak, running);
+      await new Promise((r) => setTimeout(r, 5));
+      running--;
+    });
+    expect(peak).toBe(2);
+  });
+
+  it("handles an empty list", async () => {
+    expect(await mapWithLimit([], 3, async (x) => x)).toEqual([]);
   });
 });

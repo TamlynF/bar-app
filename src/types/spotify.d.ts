@@ -29,6 +29,7 @@ declare namespace Spotify {
     track_window: {
       current_track: {
         id: string
+        linked_from?: { id: string | null }
         name: string
         artists: { name: string }[]
         album: {

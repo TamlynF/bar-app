@@ -28,3 +28,27 @@ export function spotifySearchQueries(artist: string, title: string): string[] {
 
   return queries.filter((query, index) => query.trim() && queries.indexOf(query) === index);
 }
+
+/* Searching without a market can pick a release that is not licensed where the
+   venue plays, and that track then refuses to play on the night. */
+export const SPOTIFY_MARKET = "GB";
+
+/* A batch of songs searched all at once trips Spotify's rate limit, and a
+   rate-limited search reads as "no match" - the card loses its player. This
+   runs the work a few at a time, keeping results in input order. */
+export async function mapWithLimit<T, R>(
+  items: T[],
+  limit: number,
+  work: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const runner = async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await work(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
+  return results;
+}

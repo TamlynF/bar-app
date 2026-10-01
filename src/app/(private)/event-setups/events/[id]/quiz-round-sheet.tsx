@@ -57,7 +57,7 @@ import { SiSpotify } from "react-icons/si";
 
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { SpotifyPlayer } from "@/components/spotify-player";
+import { NoSpotifyTrack, SpotifyPlayer } from "@/components/spotify-player";
 import { cn } from "@/lib/utils";
 
 function DfSpinner({ className }: { className?: string }) {
@@ -108,6 +108,7 @@ import {
 } from "@/lib/quiz/generation-progress";
 import { EMPTY_ROUND_SETTINGS, type RoundSettings } from "@/lib/quiz/round-defaults";
 import { aiOrigin } from "@/lib/quiz/question-origin";
+import { attempt } from "@/lib/attempt";
 import { neverShowByDefault } from "@/lib/quiz/exclusion-key";
 import ManualEntry from "./manual-entry";
 import {
@@ -215,30 +216,18 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 const clockNow = () => Date.now();
 
-// The React Compiler cannot compile a component whose own body holds a
-// try/catch around conditional or optional-chained code, so the handlers hand
-// their work to this instead.
-async function attempt(work: () => Promise<void>, onError: (err: unknown) => void) {
-  try {
-    await work();
-  } catch (err) {
-    onError(err);
-  }
-}
-
-// One question is picked from each batch, so a short list beats a long one.
-const HIGHER_LOWER_BATCH = 5;
-
 // A picture batch loses cards when the image model refuses a subject. The
 // shortfall is asked for again this many times before the batch is shown short.
 const PICTURE_TOP_UPS = 2;
 
-// A question round offers at least this many to pick from - more when the round
-// still needs more, so a big round can be filled from one batch with spares. The
-// model can return short, and never-show questions are filtered out, so the
-// shortfall is asked for again a bounded number of times.
-const QUESTION_BATCH = 15;
-const QUESTION_TOP_UPS = 2;
+// Question and song rounds offer at least this many to pick from - more when the
+// round still needs more, so a big round can be filled from one batch with
+// spares. A Higher-or-Lower round picks one song from the batch, so it gets
+// exactly this many. The model can return short, and never-show questions and
+// songs Spotify cannot find are filtered out, so the shortfall is asked for
+// again a bounded number of times.
+const DRAFT_BATCH = 15;
+const DRAFT_TOP_UPS = 2;
 
 const formatUseDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
@@ -370,14 +359,11 @@ export default function QuizRoundSheet({
   const needed = questionsNeeded(savedCount, question_count);
   const hasAny = savedCount > 0;
   const isComplete = question_count > 0 && savedCount >= question_count;
-  /* A Higher-or-Lower round is built one question at a time - the year you pick
-     sets what the next question can be - so it asks for a short list to choose
-     one from rather than a pool to fill the round from. */
   const batchSize = isHigherOrLower
-    ? HIGHER_LOWER_BATCH
-    : kind === "question"
-      ? Math.max(QUESTION_BATCH, generationCount(savedCount, question_count))
-      : generationCount(savedCount, question_count);
+    ? DRAFT_BATCH
+    : kind === "picture"
+      ? generationCount(savedCount, question_count)
+      : Math.max(DRAFT_BATCH, generationCount(savedCount, question_count));
 
   /* The generator answers in one go, so the bar is paced against an estimate
      for this kind and size of batch rather than fed by real progress. */
@@ -642,12 +628,17 @@ export default function QuizRoundSheet({
           items = [...items, ...more.items];
         }
 
-        for (let topUp = 0; kind === "question" && items.length < batchSize && topUp < QUESTION_TOP_UPS; topUp++) {
+        for (let topUp = 0; kind !== "picture" && items.length < batchSize && topUp < DRAFT_TOP_UPS; topUp++) {
           const more = await requestDrafts(batchSize - items.length);
           if (more.error || !more.items?.length) break;
           const seen = new Set(items.map((d) => normaliseQuestion(draftIdentity(d))));
           const fresh = more.items.filter((d) => !seen.has(normaliseQuestion(draftIdentity(d))));
           items = [...items, ...fresh].slice(0, batchSize);
+        }
+
+        // A name-that-tune round plays oldest-first, top-ups included.
+        if (kind === "song" && !isHigherOrLower) {
+          items = [...items].sort((a, b) => draftYear(a) - draftYear(b));
         }
 
         setDrafts(items);
@@ -2057,13 +2048,17 @@ export default function QuizRoundSheet({
                                 </p>
                               )}
 
-                              {song?.spotify_track_id && (
+                              {song && (
                                 <div className="mt-3">
-                                  <SpotifyPlayer
-                                    trackId={song.spotify_track_id}
-                                    title={`${song.title} - ${song.artist}`}
-                                    compact
-                                  />
+                                  {song.spotify_track_id ? (
+                                    <SpotifyPlayer
+                                      trackId={song.spotify_track_id}
+                                      title={`${song.title} - ${song.artist}`}
+                                      compact
+                                    />
+                                  ) : (
+                                    <NoSpotifyTrack message="No Spotify match - Swap it, or find the song once it's added" />
+                                  )}
                                 </div>
                               )}
 

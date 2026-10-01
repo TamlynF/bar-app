@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BookOpen, Brain, ChevronDown, Flame, Gauge, Leaf, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical, GripVertical, LogOut, CalendarDays } from "lucide-react";
@@ -19,7 +19,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { SpotifyPlayer } from "@/components/spotify-player";
+import { NoSpotifyTrack, SpotifyPlayer } from "@/components/spotify-player";
+import { attempt } from "@/lib/attempt";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import {
@@ -52,10 +53,14 @@ type Question = {
   difficulty?: string | null;
 };
 
-function readCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+function readCookie(cookies: string, name: string): string | null {
+  const match = cookies.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
+
+const noCookieSubscription = () => () => {};
+const browserCookies = () => document.cookie;
+const serverCookies = () => "";
 
 /* A song answer is "artist - title", which runs past the width of a phone. The
    box grows with the answer rather than hiding the end of it. */
@@ -117,10 +122,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   // server sends a different set of rows - keyed on the ids so an unrelated
   // parent re-render doesn't wipe an in-progress edit.
   const initialQuestionIds = initialQuestions.map((q) => q.id).join("|");
-  useEffect(() => {
+  const [syncedQuestionIds, setSyncedQuestionIds] = useState(initialQuestionIds);
+  if (initialQuestionIds !== syncedQuestionIds) {
+    setSyncedQuestionIds(initialQuestionIds);
     setQuestions(initialQuestions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialQuestionIds]);
+  }
 
   const isHigherOrLower = includeSpotify && !!isHigherLower;
   const hideQuestionText = !!includeSpotify && !isHigherLower;
@@ -137,9 +143,16 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [open, setOpen] = useState(!!autoOpen);
   const sectionRef = useRef<HTMLElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
-  const [spotifyAccount, setSpotifyAccount] = useState<string | null>(null);
-  const [spotifyRefreshKey, setSpotifyRefreshKey] = useState(0);
+  /* The account cookie outlives the access token, so it - not the hour-long
+     token - is what says whether Spotify is still connected. Cookies send no
+     change events, so this is re-read whenever the section renders; connecting
+     and disconnecting bump a counter to make sure it does. */
+  const cookies = useSyncExternalStore(noCookieSubscription, browserCookies, serverCookies);
+  const spotifyAccountCookie = readCookie(cookies, "spotify_account");
+  const spotifyConnected =
+    spotifyAccountCookie !== null || readCookie(cookies, "spotify_access_token") !== null;
+  const spotifyAccount = spotifyAccountCookie || null;
+  const [, setSpotifyRefreshKey] = useState(0);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [playlistUrl, setPlaylistUrl] = useState<string | null>(initialPlaylistUrl ?? null);
   const [playlistCopied, setPlaylistCopied] = useState(false);
@@ -170,58 +183,62 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     if (!ok) return;
 
     setIsCopying(true);
-    try {
-      const result = await copyCategoryPlaylistAction(eventId, configId);
-      if (result.ok && result.playlistUrl) {
-        setPlaylistUrl(result.playlistUrl);
-        setPlaylistOwner(null);
-        setIsMyPlaylist(true);
-        toast.success("Copied - the new playlist is in your Spotify library and this round now syncs to it");
-      } else if (result.needsConnect) {
-        toast.warning("Connect Spotify first, then copy the playlist.");
-      } else if (result.error === "no_songs") {
-        toast.error("This round has no songs to copy yet.");
-      } else if (result.error === "no_employee_record") {
-        toast.error("Your login isn't linked to a staff record, so the copy can't be saved to you.");
-      } else {
+    await attempt(
+      async () => {
+        const result = await copyCategoryPlaylistAction(eventId, configId);
+        if (result.ok && result.playlistUrl) {
+          setPlaylistUrl(result.playlistUrl);
+          setPlaylistOwner(null);
+          setIsMyPlaylist(true);
+          toast.success("Copied - the new playlist is in your Spotify library and this round now syncs to it");
+        } else if (result.needsConnect) {
+          toast.warning("Connect Spotify first, then copy the playlist.");
+        } else if (result.error === "no_songs") {
+          toast.error("This round has no songs to copy yet.");
+        } else if (result.error === "no_employee_record") {
+          toast.error("Your login isn't linked to a staff record, so the copy can't be saved to you.");
+        } else {
+          toast.error("Could not copy the playlist");
+        }
+      },
+      () => {
         toast.error("Could not copy the playlist");
       }
-    } catch {
-      toast.error("Could not copy the playlist");
-    } finally {
-      setIsCopying(false);
-    }
+    );
+    setIsCopying(false);
   };
 
   const handleSyncPlaylist = async () => {
     if (configId == null) return;
     setIsSyncing(true);
-    try {
-      const result = await syncCategoryPlaylistAction(eventId, configId);
-      if (result.error === "not_owner") {
-        setPlaylistOwner(result.ownerName ?? null);
-        setIsMyPlaylist(false);
-        toast.warning(notOwnerMessage(result.ownerName));
-      } else if (result.needsConnect) {
-        toast.warning("Reconnect Spotify to build the playlist (new permission needed).");
-      } else if (result.ok) {
-        const wasCreated = !playlistUrl;
-        if (result.playlistUrl) setPlaylistUrl(result.playlistUrl);
-        setPlaylistOwner(null);
-        setIsMyPlaylist(true);
-        toast.success(
-          wasCreated
-            ? "Playlist created - find it in your Spotify library under Playlists"
-            : "Playlist synced"
-        );
-      } else {
+    await attempt(
+      async () => {
+        const result = await syncCategoryPlaylistAction(eventId, configId);
+        if (result.error === "not_owner") {
+          setPlaylistOwner(result.ownerName ?? null);
+          setIsMyPlaylist(false);
+          toast.warning(notOwnerMessage(result.ownerName));
+        } else if (result.needsConnect) {
+          toast.warning("Reconnect Spotify to build the playlist (new permission needed).");
+        } else if (result.ok) {
+          const wasCreated = !playlistUrl;
+          if (result.playlistUrl) setPlaylistUrl(result.playlistUrl);
+          setPlaylistOwner(null);
+          setIsMyPlaylist(true);
+          toast.success(
+            wasCreated
+              ? "Playlist created - find it in your Spotify library under Playlists"
+              : "Playlist synced"
+          );
+        } else {
+          toast.error("Could not sync the playlist");
+        }
+      },
+      () => {
         toast.error("Could not sync the playlist");
       }
-    } catch {
-      toast.error("Could not sync the playlist");
-    } finally {
-      setIsSyncing(false);
-    }
+    );
+    setIsSyncing(false);
   };
 
   /* Connecting leaves the app and comes back, so the return trip names this round
@@ -239,17 +256,17 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     if (!ok) return;
 
     setIsDisconnecting(true);
-    try {
-      await disconnectSpotifyAction();
-      setSpotifyConnected(false);
-      setSpotifyAccount(null);
-      setSpotifyRefreshKey((k) => k + 1);
-      toast.success("Spotify disconnected - connect again to use a different account");
-    } catch {
-      toast.error("Could not disconnect Spotify");
-    } finally {
-      setIsDisconnecting(false);
-    }
+    await attempt(
+      async () => {
+        await disconnectSpotifyAction();
+        setSpotifyRefreshKey((k) => k + 1);
+        toast.success("Spotify disconnected - connect again to use a different account");
+      },
+      () => {
+        toast.error("Could not disconnect Spotify");
+      }
+    );
+    setIsDisconnecting(false);
   };
 
   /* On a phone the link is nearly always on its way to a message, so the share
@@ -271,22 +288,30 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     const canShare =
       typeof navigator.share === "function" && window.matchMedia("(pointer: coarse)").matches;
     if (canShare) {
-      try {
-        await navigator.share({ title: `${category_name} playlist`, url: playlistUrl });
-        return;
-      } catch (error) {
-        if ((error as Error)?.name === "AbortError") return;
-      }
+      let handled = false;
+      await attempt(
+        async () => {
+          await navigator.share({ title: `${category_name} playlist`, url: playlistUrl });
+          handled = true;
+        },
+        (error) => {
+          if (error instanceof Error && error.name === "AbortError") handled = true;
+        }
+      );
+      if (handled) return;
     }
 
-    try {
-      await navigator.clipboard.writeText(playlistUrl);
-      setPlaylistCopied(true);
-      setTimeout(() => setPlaylistCopied(false), 2000);
-      toast.success("Spotify playlist URL is copied");
-    } catch {
-      toast.error("Could not copy the playlist link - open the playlist and copy it from Spotify.");
-    }
+    await attempt(
+      async () => {
+        await navigator.clipboard.writeText(playlistUrl);
+        setPlaylistCopied(true);
+        setTimeout(() => setPlaylistCopied(false), 2000);
+        toast.success("Spotify playlist URL is copied");
+      },
+      () => {
+        toast.error("Could not copy the playlist link - open the playlist and copy it from Spotify.");
+      }
+    );
   };
 
   useEffect(() => {
@@ -297,24 +322,15 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   }, [autoOpen]);
 
-  /* The account cookie outlives the access token, so it - not the hour-long
-     token - is what says whether Spotify is still connected. The return trip's
-     flag is dropped from the URL once read, so a later disconnect isn't undone
-     by a stale query string. */
+  /* The return trip's flag is dropped from the URL once read, so a later
+     disconnect isn't undone by a stale query string. */
   useEffect(() => {
-    const account = readCookie("spotify_account");
     const params = new URLSearchParams(window.location.search);
-    const justConnected = params.get("spotify_connected") === "true";
-    if (justConnected) {
-      params.delete("spotify_connected");
-      const query = params.toString();
-      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
-    }
-    if (account !== null || justConnected || document.cookie.includes("spotify_access_token")) {
-      setSpotifyConnected(true);
-      setSpotifyAccount(account || null);
-    }
-  }, [spotifyRefreshKey]);
+    if (params.get("spotify_connected") !== "true") return;
+    params.delete("spotify_connected");
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }, []);
   const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1, releaseYear: "", imageDescription: "" });
   const [redrawingId, setRedrawingId] = useState<string | null>(null);
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
@@ -368,22 +384,24 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
 
     setIsFindingTrack(true);
-    try {
-      const { track, error } = await lookupSpotifyTrackAction({
-        url: editSpotifyUrl,
-        title: editSpotifyUrl.trim() ? undefined : fallbackQuery,
-      });
-      if (error || !track) {
-        toast.error(error || "No match on Spotify.");
-        return;
+    await attempt(
+      async () => {
+        const { track, error } = await lookupSpotifyTrackAction({
+          url: editSpotifyUrl,
+          title: editSpotifyUrl.trim() ? undefined : fallbackQuery,
+        });
+        if (error || !track) {
+          toast.error(error || "No match on Spotify.");
+          return;
+        }
+        setEditTrackId(track.trackId);
+        toast.success(`Found ${track.artist} - ${track.title}. Play it, then save.`);
+      },
+      () => {
+        toast.error("Could not reach Spotify.");
       }
-      setEditTrackId(track.trackId);
-      toast.success(`Found ${track.artist} - ${track.title}. Play it, then save.`);
-    } catch {
-      toast.error("Could not reach Spotify.");
-    } finally {
-      setIsFindingTrack(false);
-    }
+    );
+    setIsFindingTrack(false);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -435,76 +453,78 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
 
     setIsPending(true);
-    try {
-      let imageData: { base64: string; mimeType: string; oldImageUrl: string | null } | null = null;
-      if (isPicture && newImageFile) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(newImageFile);
+    await attempt(
+      async () => {
+        let imageData: { base64: string; mimeType: string; oldImageUrl: string | null } | null = null;
+        if (isPicture && newImageFile) {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(newImageFile);
+          });
+          const currentQ = questions.find((q) => q.id === id);
+          imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
+        }
+        const trackChanged = !!includeSpotify && editTrackId !== (currentQ?.spotify_track_id ?? null);
+        const trimmedYear = editForm.releaseYear.trim();
+        const nextYear = trimmedYear === "" ? null : parseInt(trimmedYear, 10);
+        const yearChanged = !!includeSpotify && nextYear !== (currentQ?.release_year ?? null);
+        const nextDescription = editForm.imageDescription.trim() || null;
+        const descriptionChanged = isPicture && nextDescription !== (currentQ?.image_description ?? null);
+        const result = await updatePastQuestionAction(
+          id,
+          isPicture ? null : editForm.question,
+          editForm.answer,
+          imageData,
+          editForm.questionNo,
+          eventId,
+          trackChanged ? editTrackId : undefined,
+          yearChanged ? nextYear : undefined,
+          descriptionChanged ? nextDescription : undefined
+        );
+        const cacheBust = `?t=${Date.now()}`;
+        setQuestions((prev) => {
+          const updated = prev.map((q) => q.id === id ? {
+            ...q,
+            ...(!isPicture ? { question_text: editForm.question } : {}),
+            answer_text: editForm.answer,
+            question_no: editForm.questionNo,
+            ...(trackChanged ? { spotify_track_id: editTrackId } : {}),
+            ...(yearChanged ? { release_year: nextYear } : {}),
+            ...(descriptionChanged ? { image_description: nextDescription } : {}),
+            ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
+          } : q);
+          if (!numberChanged) return updated;
+          /* Mirror the server-side swap so the list matches without a refetch. */
+          const swapped = swapWith
+            ? updated.map((q) => (q.id === swapWith.id ? { ...q, question_no: currentNo } : q))
+            : updated;
+          return [...swapped].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
         });
-        const currentQ = questions.find((q) => q.id === id);
-        imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
+        toast.success(
+          swapWith
+            ? `Saved. Questions ${currentNo} and ${editForm.questionNo} swapped places.`
+            : "Question updated"
+        );
+        setEditingId(null);
+        if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+        setNewImageFile(null);
+        setNewImagePreview(null);
+        setEditTrackId(null);
+        setEditSpotifyUrl("");
+        if (trackChanged && configId != null) {
+          syncCategoryPlaylistAction(eventId, configId).catch(() => {});
+        }
+        /* On a Higher-or-Lower round the year is what every later question is
+           measured against, so the server rebuilds the chain - pull it back. */
+        if (yearChanged && isHigherOrLower) router.refresh();
+      },
+      () => {
+        toast.error("Update failed");
       }
-      const trackChanged = !!includeSpotify && editTrackId !== (currentQ?.spotify_track_id ?? null);
-      const trimmedYear = editForm.releaseYear.trim();
-      const nextYear = trimmedYear === "" ? null : parseInt(trimmedYear, 10);
-      const yearChanged = !!includeSpotify && nextYear !== (currentQ?.release_year ?? null);
-      const nextDescription = editForm.imageDescription.trim() || null;
-      const descriptionChanged = isPicture && nextDescription !== (currentQ?.image_description ?? null);
-      const result = await updatePastQuestionAction(
-        id,
-        isPicture ? null : editForm.question,
-        editForm.answer,
-        imageData,
-        editForm.questionNo,
-        eventId,
-        trackChanged ? editTrackId : undefined,
-        yearChanged ? nextYear : undefined,
-        descriptionChanged ? nextDescription : undefined
-      );
-      const cacheBust = `?t=${Date.now()}`;
-      setQuestions((prev) => {
-        const updated = prev.map((q) => q.id === id ? {
-          ...q,
-          ...(!isPicture ? { question_text: editForm.question } : {}),
-          answer_text: editForm.answer,
-          question_no: editForm.questionNo,
-          ...(trackChanged ? { spotify_track_id: editTrackId } : {}),
-          ...(yearChanged ? { release_year: nextYear } : {}),
-          ...(descriptionChanged ? { image_description: nextDescription } : {}),
-          ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
-        } : q);
-        if (!numberChanged) return updated;
-        /* Mirror the server-side swap so the list matches without a refetch. */
-        const swapped = swapWith
-          ? updated.map((q) => (q.id === swapWith.id ? { ...q, question_no: currentNo } : q))
-          : updated;
-        return [...swapped].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
-      });
-      toast.success(
-        swapWith
-          ? `Saved. Questions ${currentNo} and ${editForm.questionNo} swapped places.`
-          : "Question updated"
-      );
-      setEditingId(null);
-      if (newImagePreview) URL.revokeObjectURL(newImagePreview);
-      setNewImageFile(null);
-      setNewImagePreview(null);
-      setEditTrackId(null);
-      setEditSpotifyUrl("");
-      if (trackChanged && configId != null) {
-        syncCategoryPlaylistAction(eventId, configId).catch(() => {});
-      }
-      /* On a Higher-or-Lower round the year is what every later question is
-         measured against, so the server rebuilds the chain - pull it back. */
-      if (yearChanged && isHigherOrLower) router.refresh();
-    } catch {
-      toast.error("Update failed");
-    } finally {
-      setIsPending(false);
-    }
+    );
+    setIsPending(false);
   };
 
   /* Reordering rewrites question_no on every row that moved, and on a
@@ -518,33 +538,35 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
 
     setIsReordering(true);
-    try {
-      const { playlist } = await reorderCategoryQuestionsAction(
-        eventId,
-        configId,
-        ordered.map((q) => q.id)
-      );
+    await attempt(
+      async () => {
+        const { playlist } = await reorderCategoryQuestionsAction(
+          eventId,
+          configId,
+          ordered.map((q) => q.id)
+        );
 
-      if (playlist?.status === "synced") {
-        toast.success("Question order updated - the Spotify playlist now plays in the same order");
-      } else if (playlist?.status === "not_owner") {
-        setPlaylistOwner(playlist.ownerName ?? null);
-        toast.warning(`Question order updated. ${notOwnerMessage(playlist.ownerName)}`);
-      } else if (playlist?.status === "needs_connect") {
-        toast.warning("Question order updated. Connect Spotify to re-order the playlist to match.");
-      } else if (playlist?.status === "failed") {
-        toast.warning("Question order updated, but the Spotify playlist could not be re-ordered.");
-      } else {
-        toast.success("Question order updated");
+        if (playlist?.status === "synced") {
+          toast.success("Question order updated - the Spotify playlist now plays in the same order");
+        } else if (playlist?.status === "not_owner") {
+          setPlaylistOwner(playlist.ownerName ?? null);
+          toast.warning(`Question order updated. ${notOwnerMessage(playlist.ownerName)}`);
+        } else if (playlist?.status === "needs_connect") {
+          toast.warning("Question order updated. Connect Spotify to re-order the playlist to match.");
+        } else if (playlist?.status === "failed") {
+          toast.warning("Question order updated, but the Spotify playlist could not be re-ordered.");
+        } else {
+          toast.success("Question order updated");
+        }
+
+        if (isHigherOrLower) router.refresh();
+      },
+      () => {
+        setQuestions(snapshot);
+        toast.error("Could not save the new order");
       }
-
-      if (isHigherOrLower) router.refresh();
-    } catch {
-      setQuestions(snapshot);
-      toast.error("Could not save the new order");
-    } finally {
-      setIsReordering(false);
-    }
+    );
+    setIsReordering(false);
   }, [configId, eventId, isHigherOrLower, router]);
 
   /* The handle stays enabled while a reorder saves - disabling it would take the
@@ -627,24 +649,26 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const redrawPicture = async (q: Question) => {
     if (redrawingId) return;
     setRedrawingId(q.id);
-    try {
-      const { imageUrl, description } = await redrawPictureQuestionAction(q.id);
-      if (!imageUrl) {
-        toast.error(`No picture came back for "${q.answer_text}" - try again, or upload one.`);
-        return;
+    await attempt(
+      async () => {
+        const { imageUrl, description } = await redrawPictureQuestionAction(q.id);
+        if (!imageUrl) {
+          toast.error(`No picture came back for "${q.answer_text}" - try again, or upload one.`);
+          return;
+        }
+        const freshUrl = imageUrl.split("?")[0] + `?t=${Date.now()}`;
+        setQuestions((prev) =>
+          prev.map((item) =>
+            item.id === q.id ? { ...item, image_url: freshUrl, image_description: description } : item
+          )
+        );
+        toast.success("Picture redrawn");
+      },
+      (err) => {
+        toast.error(err instanceof Error ? err.message : "Could not redraw that picture.");
       }
-      const freshUrl = imageUrl.split("?")[0] + `?t=${Date.now()}`;
-      setQuestions((prev) =>
-        prev.map((item) =>
-          item.id === q.id ? { ...item, image_url: freshUrl, image_description: description } : item
-        )
-      );
-      toast.success("Picture redrawn");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not redraw that picture.");
-    } finally {
-      setRedrawingId(null);
-    }
+    );
+    setRedrawingId(null);
   };
 
   const deleteQuestion = async (id: string) => {
@@ -662,23 +686,25 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     });
     if (!ok) return;
     setIsPending(true);
-    try {
-      await deletePastQuestionAction(id);
-      setQuestions((prev) =>
-        prev
-          .filter((q) => q.id !== id)
-          .sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0))
-          .map((q, i) => ({ ...q, question_no: i + 1 }))
-      );
-      toast.success(willRenumber ? "Question deleted and the rest renumbered" : "Question deleted");
-      if (includeSpotify && configId != null) {
-        syncCategoryPlaylistAction(eventId, configId).catch(() => {});
+    await attempt(
+      async () => {
+        await deletePastQuestionAction(id);
+        setQuestions((prev) =>
+          prev
+            .filter((q) => q.id !== id)
+            .sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0))
+            .map((q, i) => ({ ...q, question_no: i + 1 }))
+        );
+        toast.success(willRenumber ? "Question deleted and the rest renumbered" : "Question deleted");
+        if (includeSpotify && configId != null) {
+          syncCategoryPlaylistAction(eventId, configId).catch(() => {});
+        }
+      },
+      () => {
+        toast.error("Delete failed");
       }
-    } catch {
-      toast.error("Delete failed");
-    } finally {
-      setIsPending(false);
-    }
+    );
+    setIsPending(false);
   };
 
   const sheetKey = questions
@@ -738,15 +764,17 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
     }
     setIsBuildingSheet(true);
-    try {
-      const blob = await buildSheet();
-      const file = new File([blob], pictureSheetFileName(title), { type: "application/pdf" });
-      await shareOrHold(file);
-    } catch {
-      toast.error("Couldn't build the picture sheet");
-    } finally {
-      setIsBuildingSheet(false);
-    }
+    await attempt(
+      async () => {
+        const blob = await buildSheet();
+        const file = new File([blob], pictureSheetFileName(title), { type: "application/pdf" });
+        await shareOrHold(file);
+      },
+      () => {
+        toast.error("Couldn't build the picture sheet");
+      }
+    );
+    setIsBuildingSheet(false);
   };
 
   /* The playlist is public and the link is shared by the round, not by whoever
@@ -1359,12 +1387,14 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               <p className="text-sm leading-snug text-admin-ink">
                                 <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-admin-warning">{q.hint_year}</span>?
                               </p>
-                              {q.spotify_track_id && (
+                              {q.spotify_track_id ? (
                                 <SpotifyPlayer
                                   trackId={q.spotify_track_id}
                                   title={q.answer_text_ext ?? q.answer_text}
                                   compact
                                 />
+                              ) : (
+                                <NoSpotifyTrack message="No Spotify match - edit this question to find the song" />
                               )}
                               <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex w-full items-center gap-2 rounded-lg bg-admin-primary-soft px-3 py-2 text-admin-primary sm:w-fit sm:min-w-50">
@@ -1411,9 +1441,12 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                   </p>
                                 )
                               )}
-                              {hideQuestionText && q.spotify_track_id && (
-                                <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
-                              )}
+                              {hideQuestionText &&
+                                (q.spotify_track_id ? (
+                                  <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
+                                ) : (
+                                  <NoSpotifyTrack message="No Spotify match - edit this question to find the song" />
+                                ))}
                               {isPicture && q.image_description && (
                                 <p className="text-[13px] leading-snug text-admin-muted">{q.image_description}</p>
                               )}
