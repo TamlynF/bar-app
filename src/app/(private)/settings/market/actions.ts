@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { squareClient } from "@/lib/square";
 import type { Square } from "square";
-import { proposeMappings } from "@/lib/market/mapping";
+import { proposeMappings, splitLinks } from "@/lib/market/mapping";
+import { syncLinkedMenuCategories } from "@/lib/market/variation-categories";
 import {
   resolveMarketConfig,
   DEFAULT_MARKET_CONFIG,
@@ -1295,6 +1296,17 @@ export async function loadCatalogVariationsAction() {
   return { variations: copy?.variations ?? [] };
 }
 
+async function refreshLinkedCategories(supabase: ServerClient, variationIds?: (string | null)[]) {
+  try {
+    await syncLinkedMenuCategories(
+      supabase,
+      variationIds?.filter((id): id is string => Boolean(id))
+    );
+  } catch (err) {
+    console.error("[market] menu category refresh failed:", err);
+  }
+}
+
 export async function autoMatchMappingsAction() {
   const supabase = await createClient();
 
@@ -1310,19 +1322,18 @@ export async function autoMatchMappingsAction() {
   }
   const variations = copy.variations;
 
-  const targets = ((items ?? []) as { id: number; name: string; menu_item_prices: PriceRow[] }[])
-    .flatMap((item) =>
-      item.menu_item_prices
-        .filter((price) => !price.square_variation_id)
-        .map((price) => ({
-          menuItemPriceId: price.id,
-          itemName: item.name,
-          serve: price.serve,
-          servesOnItem: item.menu_item_prices.length,
-        }))
-    );
+  const serves = ((items ?? []) as { id: number; name: string; menu_item_prices: PriceRow[] }[]).flatMap((item) =>
+    item.menu_item_prices.map((price) => ({
+      menuItemPriceId: price.id,
+      itemName: item.name,
+      serve: price.serve,
+      servesOnItem: item.menu_item_prices.length,
+      squareVariationId: price.square_variation_id,
+    }))
+  );
+  const { targets, taken } = splitLinks(serves, new Set(variations.map((variation) => variation.variationId)));
 
-  const proposals = proposeMappings(variations, targets);
+  const proposals = proposeMappings(variations, targets, taken);
   for (const [menuItemPriceId, variationId] of proposals) {
     const { error } = await supabase
       .from("menu_item_prices")
@@ -1331,6 +1342,7 @@ export async function autoMatchMappingsAction() {
     if (error) return { error: error.message };
   }
   await syncMappingsToLiveSession(supabase, new Map(proposals));
+  await refreshLinkedCategories(supabase);
 
   revalidateMarket();
   return { success: true, matched: proposals.size, unmatched: targets.length - proposals.size };
@@ -1338,12 +1350,78 @@ export async function autoMatchMappingsAction() {
 
 export async function saveMappingAction(menuItemPriceId: number, variationId: string | null) {
   const supabase = await createClient();
+  const { data: before } = await supabase
+    .from("menu_item_prices")
+    .select("square_variation_id")
+    .eq("id", menuItemPriceId)
+    .maybeSingle();
   const { error } = await supabase
     .from("menu_item_prices")
     .update({ square_variation_id: variationId })
     .eq("id", menuItemPriceId);
   if (error) return { error: error.message };
   await syncMappingsToLiveSession(supabase, new Map([[menuItemPriceId, variationId]]));
+  await refreshLinkedCategories(supabase, [
+    (before as { square_variation_id: string | null } | null)?.square_variation_id ?? null,
+    variationId,
+  ]);
+  revalidateMarket();
+  return { success: true };
+}
+
+/* Links a Square variation to one menu serve from the Square side, or unlinks
+   it when menuItemPriceId is null. A variation feeds one serve, so any other
+   serve pointing at it lets go, and the serve's previous variation is freed. */
+export async function linkVariationToServeAction(variationId: string, menuItemPriceId: number | null) {
+  const supabase = await createClient();
+  const { data: holders, error: holdersError } = await supabase
+    .from("menu_item_prices")
+    .select("id")
+    .eq("square_variation_id", variationId);
+  if (holdersError) return { error: holdersError.message };
+
+  let previousVariationId: string | null = null;
+  if (menuItemPriceId != null) {
+    const { data: serve, error: serveError } = await supabase
+      .from("menu_item_prices")
+      .select("square_variation_id")
+      .eq("id", menuItemPriceId)
+      .maybeSingle();
+    if (serveError) return { error: serveError.message };
+    if (!serve) return { error: "That menu serve no longer exists." };
+    previousVariationId = (serve as { square_variation_id: string | null }).square_variation_id;
+  }
+
+  const changes = new Map<number, string | null>();
+  for (const holder of (holders ?? []) as { id: number }[]) {
+    if (holder.id !== menuItemPriceId) changes.set(holder.id, null);
+  }
+  if (menuItemPriceId != null) changes.set(menuItemPriceId, variationId);
+
+  for (const [id, value] of changes) {
+    const { error } = await supabase.from("menu_item_prices").update({ square_variation_id: value }).eq("id", id);
+    if (error) return { error: error.message };
+  }
+  await syncMappingsToLiveSession(supabase, changes);
+  await refreshLinkedCategories(supabase, [variationId, previousVariationId]);
+  revalidateMarket();
+  return { success: true };
+}
+
+/* Picks a Square variation's menu category by hand, or with null hands it
+   back to whatever serve it is linked to. */
+export async function setVariationMenuCategoryAction(variationId: string, categoryId: number | null) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("square_catalog_variations")
+    .update(
+      categoryId == null
+        ? { menu_category_manual: false, menu_category_id: null }
+        : { menu_category_manual: true, menu_category_id: categoryId }
+    )
+    .eq("variation_id", variationId);
+  if (error) return { error: error.message };
+  if (categoryId == null) await refreshLinkedCategories(supabase, [variationId]);
   revalidateMarket();
   return { success: true };
 }

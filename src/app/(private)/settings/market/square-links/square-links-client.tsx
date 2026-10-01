@@ -72,7 +72,7 @@ function formatNight(night: string): string {
   });
 }
 
-function saleLinesTitle(count: SaleLineCount): string {
+export function saleLinesTitle(count: SaleLineCount): string {
   const units = Number.isInteger(count.units)
     ? count.units
     : count.units.toFixed(1);
@@ -472,7 +472,7 @@ export default function SquareLinksClient({
         : `${row.onEvents.length} events`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 py-3 sm:py-0 2xl:max-w-[110rem]">
+    <div className="space-y-4">
       {ConfirmDialogUI}
 
       {focusEvent && (
@@ -584,10 +584,7 @@ export default function SquareLinksClient({
                 type="button"
                 onClick={handleSyncSales}
                 disabled={isSyncing}
-                className={cn(
-                  NEUTRAL_BUTTON,
-                  "h-8 px-3 text-[11px] whitespace-nowrap",
-                )}
+                className={cn(NEUTRAL_BUTTON, "hidden h-8 px-3 text-[11px] whitespace-nowrap 2xl:flex")}
               >
                 <Download
                   className={cn("h-3.5 w-3.5", isSyncing && "animate-pulse")}
@@ -650,7 +647,7 @@ export default function SquareLinksClient({
                 <DropdownMenuItem
                   disabled={isSyncing}
                   onSelect={handleSyncSales}
-                  className="min-h-11 sm:hidden"
+                  className="min-h-11 2xl:hidden"
                 >
                   <Download className="h-4 w-4" />
                   Sync sales from Square

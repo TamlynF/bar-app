@@ -8,8 +8,18 @@ const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SU
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-type Fixture = { categoryId: number; itemId: number; priceId: number; eventId: number; names: Names };
-type Names = { category: string; drink: string; event: string };
+type Fixture = {
+  categoryId: number;
+  itemId: number;
+  priceId: number;
+  eventId: number;
+  squareItemId: number;
+  squarePriceId: number;
+  variationId: string;
+  modifierListId: string;
+  names: Names;
+};
+type Names = { category: string; drink: string; event: string; gin: string; squareItem: string };
 
 async function must<T>(query: PromiseLike<{ data: T; error: { message: string } | null }>): Promise<NonNullable<T>> {
   const { data, error } = await query;
@@ -24,7 +34,10 @@ async function createFixture(suffix: string): Promise<Fixture> {
     category: `E2E Spirits ${suffix}`,
     drink: `E2E Vodka ${suffix}`,
     event: `E2E Market ${suffix}`,
+    gin: `E2E Gin ${suffix}`,
+    squareItem: `E2E Square Gin ${suffix}`,
   };
+  const key = suffix.replace(/[^A-Za-z0-9]/g, "");
   const category = await must(
     admin.from("menu_categories").insert({ name: names.category, display_order: 900 }).select("id").single()
   );
@@ -51,14 +64,72 @@ async function createFixture(suffix: string): Promise<Fixture> {
       .insert({ event_id: event.id, menu_item_id: item.id, menu_item_price_id: price.id })
       .select("event_id")
   );
-  return { categoryId: category.id, itemId: item.id, priceId: price.id, eventId: event.id, names };
+  const squareItem = await must(
+    admin.from("menu_items").insert({ category_id: category.id, name: names.gin, price: "4.00" }).select("id").single()
+  );
+  const squarePrice = await must(
+    admin
+      .from("menu_item_prices")
+      .insert({ menu_item_id: squareItem.id, serve: "single", amount: 4 })
+      .select("id")
+      .single()
+  );
+  const modifierListId = `E2E-ML-${key}`;
+  const variationId = `E2E-VAR-${key}`;
+  await must(
+    admin
+      .from("square_catalog_modifier_lists")
+      .insert({
+        modifier_list_id: modifierListId,
+        name: `E2E Mixer ${key}`,
+        modifiers: [
+          { id: `${modifierListId}-0`, name: "No mixer", price: 0 },
+          { id: `${modifierListId}-1`, name: "Tonic", price: 1.5 },
+          { id: `${modifierListId}-2`, name: "Lemonade", price: 1.5 },
+        ],
+        synced_at: "2100-01-01T00:00:00Z",
+      })
+      .select("modifier_list_id")
+  );
+  /* Dated in the future so a catalog refresh from the sandbox, which retires
+     rows it did not just copy, leaves it in place. */
+  await must(
+    admin
+      .from("square_catalog_variations")
+      .insert({
+        variation_id: variationId,
+        item_id: `E2E-ITEM-${key}`,
+        item_name: names.squareItem,
+        variation_name: "Single",
+        price: 4,
+        reporting_category_name: "E2E Reporting",
+        modifier_list_ids: [modifierListId],
+        modifier_list_names: [`E2E Mixer ${key}`],
+        synced_at: "2100-01-01T00:00:00Z",
+      })
+      .select("variation_id")
+  );
+  return {
+    categoryId: category.id,
+    itemId: item.id,
+    priceId: price.id,
+    eventId: event.id,
+    squareItemId: squareItem.id,
+    squarePriceId: squarePrice.id,
+    variationId,
+    modifierListId,
+    names,
+  };
 }
 
 async function removeFixture(fixture: Fixture | undefined) {
   if (!fixture) return;
   await admin.from("market_sessions").update({ stock_market_event_id: null }).eq("stock_market_event_id", fixture.eventId);
   await admin.from("stock_market_events").delete().eq("id", fixture.eventId);
-  await admin.from("menu_item_prices").delete().eq("id", fixture.priceId);
+  await admin.from("square_catalog_variations").delete().eq("variation_id", fixture.variationId);
+  await admin.from("square_catalog_modifier_lists").delete().eq("modifier_list_id", fixture.modifierListId);
+  await admin.from("menu_item_prices").delete().in("id", [fixture.priceId, fixture.squarePriceId]);
+  await admin.from("menu_items").delete().eq("id", fixture.squareItemId);
   await admin.from("menu_items").delete().eq("id", fixture.itemId);
   await admin.from("menu_categories").delete().eq("id", fixture.categoryId);
 }
@@ -119,12 +190,12 @@ test.describe("stock market", () => {
 
   test("Square links lists the drink and its category opens and closes", async ({ page }) => {
     const { names } = fixture!;
-    await openSettled(page, "/settings/market/square-links");
+    await openSettled(page, "/settings/market/square-links?view=menu");
 
     await expect(visible(page, names.drink)).toBeVisible();
-    await expect(page.getByRole("button", { name: /Sync sales from Square/ }).filter({ visible: true })).toHaveCount(
-      test.info().project.name === "mobile" ? 0 : 1
-    );
+    await page.getByRole("button", { name: "More Square actions" }).filter({ visible: true }).click();
+    await expect(page.getByRole("menuitem", { name: "Sync sales from Square" })).toBeVisible();
+    await page.keyboard.press("Escape");
 
     const category = page.getByRole("button", { name: new RegExp(names.category) }).filter({ visible: true });
     await expect(category).toHaveAttribute("aria-expanded", "true");
@@ -133,6 +204,54 @@ test.describe("stock market", () => {
     await expect(visible(page, names.drink)).toHaveCount(0);
     await category.click();
     await expect(visible(page, names.drink)).toBeVisible();
+  });
+
+  test("Square items links a variation to a serve and follows its menu category", async ({ page }) => {
+    const { names, variationId, modifierListId, squarePriceId, categoryId } = fixture!;
+    await openSettled(page, "/settings/market/square-links");
+    await expect(page.getByRole("link", { name: "Square items" })).toHaveAttribute("aria-current", "page");
+
+    await page.getByRole("textbox", { name: "Search Square items" }).fill(names.squareItem);
+    await expect(visible(page, names.squareItem)).toBeVisible();
+    await expect(
+      page.getByText(`E2E Mixer ${modifierListId.replace("E2E-ML-", "")} +£1.50`).filter({ visible: true })
+    ).toBeVisible();
+
+    const serveSelect = page
+      .getByRole("combobox", { name: `Menu serve for ${names.squareItem} Single` })
+      .filter({ visible: true });
+    await serveSelect.selectOption(String(squarePriceId));
+    await expect(page.getByText("Link saved.")).toBeVisible({ timeout: 15_000 });
+
+    const catalogRow = async () => {
+      const { data } = await admin
+        .from("square_catalog_variations")
+        .select("menu_category_id, menu_category_manual")
+        .eq("variation_id", variationId)
+        .single();
+      return data ? { category: data.menu_category_id == null ? null : Number(data.menu_category_id), manual: data.menu_category_manual } : null;
+    };
+    const linkedVariation = async () => {
+      const { data } = await admin.from("menu_item_prices").select("square_variation_id").eq("id", squarePriceId).single();
+      return data?.square_variation_id ?? null;
+    };
+    await expect.poll(linkedVariation).toBe(variationId);
+    await expect.poll(catalogRow).toEqual({ category: categoryId, manual: false });
+
+    const categorySelect = page
+      .getByRole("combobox", { name: `Menu category for ${names.squareItem} Single` })
+      .filter({ visible: true });
+    await expect(categorySelect).toHaveValue("auto");
+    await expect(categorySelect.locator("option[value=auto]")).toHaveText(`${names.category} (from link)`);
+
+    await categorySelect.selectOption(String(categoryId));
+    await expect(page.getByText("Category saved.")).toBeVisible({ timeout: 15_000 });
+    await expect.poll(catalogRow).toEqual({ category: categoryId, manual: true });
+
+    await serveSelect.selectOption("");
+    await expect(page.getByText("Link removed.")).toBeVisible({ timeout: 15_000 });
+    await expect.poll(linkedVariation).toBeNull();
+    await expect.poll(catalogRow).toEqual({ category: categoryId, manual: true });
   });
 
   test("opening warns about unsynced sales, opens the market and closes it again", async ({ page }) => {

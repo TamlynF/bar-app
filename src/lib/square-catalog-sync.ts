@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Square } from "square";
 import { squareClient } from "@/lib/square";
 import { isStockTrackedAt } from "@/lib/market/square-stock-tracking";
+import { syncLinkedMenuCategories } from "@/lib/market/variation-categories";
 
 /* The nightly copy of the Square catalog into square_catalog_variations,
    one row per item variation. The menu links to Square by variation id; this
@@ -330,6 +331,9 @@ export async function syncSquareCatalog(supabase: SupabaseClient, now: Date = ne
     const removed = await upsertAndRetire(supabase, "square_catalog_variations", "variation_id", rows, syncedAt);
     const modifierLists = catalogToModifierListRows(objects, syncedAt);
     await upsertAndRetire(supabase, "square_catalog_modifier_lists", "modifier_list_id", modifierLists, syncedAt);
+    await syncLinkedMenuCategories(supabase).catch((err) =>
+      console.error("[square-catalog-sync] menu category refresh failed:", err)
+    );
 
     await writeSyncState(supabase, now, {
       catalog_synced_at: syncedAt,
