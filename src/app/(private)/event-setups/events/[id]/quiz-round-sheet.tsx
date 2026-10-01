@@ -94,6 +94,7 @@ import {
 
 import {
   generationCount,
+  normaliseQuestion,
   questionsNeeded,
   findDuplicateIndices,
 } from "@/lib/quiz/round-stages";
@@ -232,6 +233,13 @@ const HIGHER_LOWER_BATCH = 5;
 // shortfall is asked for again this many times before the batch is shown short.
 const PICTURE_TOP_UPS = 2;
 
+// A question round offers at least this many to pick from - more when the round
+// still needs more, so a big round can be filled from one batch with spares. The
+// model can return short, and never-show questions are filtered out, so the
+// shortfall is asked for again a bounded number of times.
+const QUESTION_BATCH = 15;
+const QUESTION_TOP_UPS = 2;
+
 const formatUseDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -367,7 +375,9 @@ export default function QuizRoundSheet({
      one from rather than a pool to fill the round from. */
   const batchSize = isHigherOrLower
     ? HIGHER_LOWER_BATCH
-    : generationCount(savedCount, question_count);
+    : kind === "question"
+      ? Math.max(QUESTION_BATCH, generationCount(savedCount, question_count))
+      : generationCount(savedCount, question_count);
 
   /* The generator answers in one go, so the bar is paced against an estimate
      for this kind and size of batch rather than fed by real progress. */
@@ -613,7 +623,7 @@ export default function QuizRoundSheet({
       async () => {
         const cap = needed > 0 ? needed : question_count;
         const first = await requestDrafts(batchSize);
-        let items = first.items ?? [];
+        let items = (first.items ?? []).slice(0, batchSize);
         let withoutPicture = first.withoutPicture ?? 0;
 
         if (first.error || !items.length) {
@@ -630,6 +640,14 @@ export default function QuizRoundSheet({
           withoutPicture += more.withoutPicture ?? 0;
           if (more.error || !more.items?.length) break;
           items = [...items, ...more.items];
+        }
+
+        for (let topUp = 0; kind === "question" && items.length < batchSize && topUp < QUESTION_TOP_UPS; topUp++) {
+          const more = await requestDrafts(batchSize - items.length);
+          if (more.error || !more.items?.length) break;
+          const seen = new Set(items.map((d) => normaliseQuestion(draftIdentity(d))));
+          const fresh = more.items.filter((d) => !seen.has(normaliseQuestion(draftIdentity(d))));
+          items = [...items, ...fresh].slice(0, batchSize);
         }
 
         setDrafts(items);

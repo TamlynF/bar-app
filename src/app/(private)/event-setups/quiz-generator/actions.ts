@@ -254,7 +254,7 @@ export async function generateQuizAction(
       JSON.parse(ai.text) as QuizQuestion[],
       (q) => q.question,
       neverShow.keys
-    );
+    ).slice(0, numberOfQuestions);
     if (!questions.length) {
       return { error: "Everything that came back has been marked never to show again. Try again, or try a different topic." };
     }
