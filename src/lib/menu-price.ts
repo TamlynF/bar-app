@@ -107,33 +107,48 @@ export type StoredServe = {
   show_on_menu: boolean;
 };
 
+export type ServeInput = MenuItemPrice & { show_on_menu?: boolean };
+
 export type ServeWritePlan = {
-  updates: { id: number; amount: number; display_order: number; show_on_menu: true }[];
-  inserts: { serve: string; amount: number; display_order: number }[];
+  updates: { id: number; amount: number; display_order: number; show_on_menu: boolean }[];
+  inserts: { serve: string; amount: number; display_order: number; show_on_menu: boolean }[];
   deletes: number[];
 };
 
-// Matched on the serve, so a serve the editor keeps keeps its row - and with
-// it the Square link and every market board it is on. A serve hidden from the
-// menu is left alone unless the editor now lists it, which brings it back.
-export function planServeWrites(stored: StoredServe[], serves: MenuItemPrice[]): ServeWritePlan {
+// Matched on the serve, so a serve that stays keeps its row - and with it the
+// Square link and every market board it is on. A serve with no show_on_menu
+// of its own goes on the menu. Hidden serves not in the list are left alone
+// unless fullSet says the list is every serve the item has (the menu editor,
+// which shows hidden serves too); the menu import only knows the printed ones.
+export function planServeWrites(
+  stored: StoredServe[],
+  serves: ServeInput[],
+  options: { fullSet?: boolean } = {}
+): ServeWritePlan {
   const byServe = new Map(stored.map((row) => [row.serve, row]));
   const plan: ServeWritePlan = { updates: [], inserts: [], deletes: [] };
   const kept = new Set<number>();
 
   serves.forEach((serve, index) => {
     const display_order = index + 1;
+    const show_on_menu = serve.show_on_menu ?? true;
     const row = byServe.get(serve.serve);
     if (!row) {
-      plan.inserts.push({ serve: serve.serve, amount: serve.amount, display_order });
+      plan.inserts.push({ serve: serve.serve, amount: serve.amount, display_order, show_on_menu });
       return;
     }
     kept.add(row.id);
-    if (Number(row.amount) !== serve.amount || row.display_order !== display_order || !row.show_on_menu) {
-      plan.updates.push({ id: row.id, amount: serve.amount, display_order, show_on_menu: true });
+    if (
+      Number(row.amount) !== serve.amount ||
+      row.display_order !== display_order ||
+      row.show_on_menu !== show_on_menu
+    ) {
+      plan.updates.push({ id: row.id, amount: serve.amount, display_order, show_on_menu });
     }
   });
 
-  plan.deletes = stored.filter((row) => row.show_on_menu && !kept.has(row.id)).map((row) => row.id);
+  plan.deletes = stored
+    .filter((row) => (options.fullSet || row.show_on_menu) && !kept.has(row.id))
+    .map((row) => row.id);
   return plan;
 }

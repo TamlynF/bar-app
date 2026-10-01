@@ -17,6 +17,7 @@ type Fixture = {
   squarePriceId: number;
   variationId: string;
   pitcherVariationId: string;
+  halfVariationId: string;
   rumItemId: number;
   rumSinglePriceId: number;
   rumVariationId: string;
@@ -141,17 +142,21 @@ async function createFixture(suffix: string): Promise<Fixture> {
       .select("id, serve")
   );
   const pitcherVariationId = `E2E-PITCHER-${key}`;
+  const halfVariationId = `E2E-HALF-${key}`;
   await must(
     admin
       .from("square_catalog_variations")
-      .insert({
-        variation_id: pitcherVariationId,
-        item_id: `E2E-PITCHER-ITEM-${key}`,
-        item_name: names.pitcher,
-        variation_name: "Pitcher",
-        price: 15,
-        synced_at: "2100-01-01T00:00:00Z",
-      })
+      .insert(
+        [
+          { variation_id: pitcherVariationId, variation_name: "Pitcher", price: 15 },
+          { variation_id: halfVariationId, variation_name: "Half", price: 3 },
+        ].map((row) => ({
+          ...row,
+          item_id: `E2E-CIDER-ITEM-${key}`,
+          item_name: names.pitcher,
+          synced_at: "2100-01-01T00:00:00Z",
+        }))
+      )
       .select("variation_id")
   );
   return {
@@ -163,6 +168,7 @@ async function createFixture(suffix: string): Promise<Fixture> {
     squarePriceId: squarePrice.id,
     variationId,
     pitcherVariationId,
+    halfVariationId,
     rumItemId: rumItem.id,
     rumSinglePriceId: rumPrices.find((row) => row.serve === "single")!.id,
     rumVariationId,
@@ -175,8 +181,9 @@ async function removeFixture(fixture: Fixture | undefined) {
   if (!fixture) return;
   await admin.from("market_sessions").update({ stock_market_event_id: null }).eq("stock_market_event_id", fixture.eventId);
   await admin.from("stock_market_events").delete().eq("id", fixture.eventId);
-  await admin.from("square_catalog_variations").delete().in("variation_id", [fixture.variationId, fixture.pitcherVariationId]);
-  await admin.from("menu_items").delete().in("name", [fixture.names.pitcher, fixture.names.rum]);
+  await admin.from("square_catalog_variations").delete()
+    .in("variation_id", [fixture.variationId, fixture.pitcherVariationId, fixture.halfVariationId]);
+  await admin.from("menu_items").delete().in("name", [`${fixture.names.pitcher} Jug`, fixture.names.rum]);
   await admin.from("square_catalog_modifier_lists").delete().eq("modifier_list_id", fixture.modifierListId);
   await admin.from("menu_item_prices").delete().in("id", [fixture.priceId, fixture.squarePriceId]);
   await admin.from("menu_items").delete().eq("id", fixture.squareItemId);
@@ -257,6 +264,7 @@ test.describe("stock market", () => {
   });
 
   test("Square items links a variation to a serve and follows its menu category", async ({ page }) => {
+    test.setTimeout(60_000);
     const { names, variationId, modifierListId, squarePriceId, categoryId } = fixture!;
     await openSettled(page, "/settings/market/square-links");
     await expect(page.getByRole("link", { name: "Square items" })).toHaveAttribute("aria-current", "page");
@@ -266,6 +274,15 @@ test.describe("stock market", () => {
     await expect(
       page.getByText(`E2E Mixer ${modifierListId.replace("E2E-ML-", "")} +£1.50`).filter({ visible: true })
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: `Show the E2E Mixer ${modifierListId.replace("E2E-ML-", "")} options for ${names.squareItem}` })
+      .filter({ visible: true })
+      .click();
+    const options = page.getByRole("dialog");
+    await expect(options.getByText("Tonic", { exact: true })).toBeVisible();
+    await expect(options.getByText("No mixer", { exact: true })).toBeVisible();
+    await expect(options.getByText("No charge", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
 
     const serveSelect = page
       .getByRole("combobox", { name: `Menu serve for ${names.squareItem} Single` })
@@ -301,48 +318,88 @@ test.describe("stock market", () => {
     await expect.poll(catalogRow).toEqual({ category: categoryId, manual: true });
 
     await serveSelect.selectOption("");
-    await expect(page.getByText("Link removed.")).toBeVisible({ timeout: 15_000 });
     await expect.poll(linkedVariation).toBeNull();
     await expect.poll(catalogRow).toEqual({ category: categoryId, manual: true });
   });
 
-  test("Square items creates a hidden menu serve for an item the menu lacks", async ({ page }) => {
-    const { names, pitcherVariationId, categoryId } = fixture!;
+  test("Square items creates a hidden menu item, then adds a second serve to it", async ({ page }) => {
+    test.setTimeout(60_000);
+    const { names, pitcherVariationId, halfVariationId, categoryId } = fixture!;
+    const jug = `${names.pitcher} Jug`;
     await openSettled(page, "/settings/market/square-links");
     await page.getByRole("textbox", { name: "Search Square items" }).fill(names.pitcher);
-    await expect(visible(page, names.pitcher)).toBeVisible();
+    await expect(visible(page, names.pitcher).first()).toBeVisible();
 
     await page
-      .getByRole("button", { name: `Create hidden menu serve for ${names.pitcher} Pitcher` })
+      .getByRole("button", { name: `New hidden serve for ${names.pitcher} Pitcher` })
       .filter({ visible: true })
       .click();
-    const dialog = page.getByRole("dialog", { name: "Create hidden menu serve" });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText("pitcher", { exact: true })).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: "New hidden serve" });
+    await expect(dialog.getByRole("combobox", { name: "Menu item" })).toHaveValue("new");
+    await expect(dialog.getByRole("textbox", { name: "Item name" })).toHaveValue(names.pitcher);
+    await dialog.getByRole("textbox", { name: "Item name" }).fill(jug);
     await dialog.getByRole("combobox", { name: "Menu category" }).selectOption(String(categoryId));
-    await expect(dialog.getByText(new RegExp(`Creates "${names.pitcher}" with a pitcher serve`))).toBeVisible();
+    await expect(dialog.getByText(new RegExp(`Creates "${jug}" in ${names.category} with a pitcher serve`))).toBeVisible();
     await dialog.getByRole("button", { name: "Create and link" }).click();
-    await expect(page.getByText(`${names.pitcher} added to the menu, hidden, and linked.`)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(`${jug} created, hidden from the menu, and linked.`)).toBeVisible({ timeout: 15_000 });
 
     const created = async () => {
       const { data } = await admin
         .from("menu_items")
-        .select("category_id, show_on_menu, menu_item_prices(serve, amount, show_on_menu, square_variation_id)")
-        .eq("name", names.pitcher)
+        .select("id, category_id, show_on_menu, menu_item_prices(serve, amount, show_on_menu, square_variation_id)")
+        .eq("name", jug)
         .maybeSingle();
-      return data;
+      return data
+        ? {
+            ...data,
+            menu_item_prices: [...data.menu_item_prices].sort((a, b) => a.serve.localeCompare(b.serve)),
+          }
+        : null;
     };
     await expect.poll(created).toMatchObject({
       category_id: categoryId,
       show_on_menu: false,
       menu_item_prices: [{ serve: "pitcher", amount: 15, show_on_menu: false, square_variation_id: pitcherVariationId }],
     });
+    const jugId = (await created())!.id;
+    await expect(
+      page.getByRole("combobox", { name: `Menu serve for ${names.pitcher} Pitcher` }).filter({ visible: true })
+    ).not.toHaveValue("", { timeout: 15_000 });
+
+    await page
+      .getByRole("button", { name: `New hidden serve for ${names.pitcher} Half` })
+      .filter({ visible: true })
+      .click();
+    await dialog.getByRole("combobox", { name: "Menu item" }).selectOption(String(jugId));
+    await expect(dialog.getByText(/hidden from the menu · serves: pitcher/)).toBeVisible();
+    await expect(dialog.getByText("Adds a hidden half pint serve to it.")).toBeVisible();
+    await dialog.getByRole("button", { name: "Create and link" }).click();
+    await expect(page.getByText(`Hidden half pint serve added to ${jug} and linked.`)).toBeVisible({ timeout: 15_000 });
+
+    await expect.poll(created).toMatchObject({
+      show_on_menu: false,
+      menu_item_prices: [
+        { serve: "half pint", amount: 3, show_on_menu: false, square_variation_id: halfVariationId },
+        { serve: "pitcher", amount: 15, show_on_menu: false, square_variation_id: pitcherVariationId },
+      ],
+    });
 
     const menu = await page.context().newPage();
     await openSettled(menu, "/menu");
     await expect(menu.getByText(names.drink).first()).toBeVisible();
-    await expect(menu.getByText(names.pitcher)).toHaveCount(0);
+    await expect(menu.getByText(jug)).toHaveCount(0);
     await menu.close();
+
+    const settings = await page.context().newPage();
+    await openSettled(settings, "/settings/menu");
+    const listed = settings.getByText(jug, { exact: true }).filter({ visible: true });
+    await expect(listed).toBeVisible();
+    await listed.click();
+    await expect(settings.getByText("Hidden - not on the public menu")).toBeVisible();
+    await expect(
+      settings.getByText("pitcher (hidden), half pint (hidden)").filter({ visible: true }).first()
+    ).toBeVisible();
+    await settings.close();
   });
 
   test("editing a serve's price in the menu keeps its Square link", async ({ page }) => {

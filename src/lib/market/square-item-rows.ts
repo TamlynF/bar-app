@@ -5,7 +5,9 @@ import { sortServes } from "./event-serves";
 import { proposeMappings, splitLinks, suggestMappings, type CatalogVariation } from "./mapping";
 import { mixerListPrice } from "./mixer";
 
-export type MixerOnItem = { name: string; options: string[]; price: number | null };
+export type MixerOption = { name: string; price: number | null };
+
+export type MixerOnItem = { name: string; options: MixerOption[]; price: number | null };
 
 export type SquareItemRow = {
   variationId: string;
@@ -62,6 +64,7 @@ export type ServeCategoryRow = {
   id: number;
   name: string;
   menu_items: {
+    id: number;
     name: string;
     is_active: boolean;
     show_on_menu?: boolean;
@@ -89,6 +92,44 @@ export function hiddenServeLabel(variationName: string): string {
 
 export function isMixerList(name: string): boolean {
   return /mixer/i.test(name);
+}
+
+export type MenuItemOption = {
+  id: number;
+  name: string;
+  categoryId: number;
+  categoryName: string;
+  hidden: boolean;
+  serves: string[];
+};
+
+/* Every active menu item, hidden ones included, for attaching a Square
+   variation to an item that already exists. */
+export function menuItemOptionsFrom(categories: ServeCategoryRow[]): MenuItemOption[] {
+  return categories.flatMap((category) =>
+    category.menu_items
+      .filter((item) => item.is_active)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((item) => ({
+        id: Number(item.id),
+        name: item.name,
+        categoryId: Number(category.id),
+        categoryName: category.name,
+        hidden: item.show_on_menu === false,
+        serves: item.menu_item_prices.map((price) => price.serve),
+      }))
+  );
+}
+
+/* The item the dialog starts on: one of that name in the variation's own
+   category, then anywhere on the menu; null means a new item. */
+export function defaultMenuItem(
+  items: MenuItemOption[],
+  itemName: string,
+  categoryId: number | null
+): MenuItemOption | null {
+  const named = items.filter((item) => normaliseName(item.name) === normaliseName(itemName));
+  return named.find((item) => item.categoryId === categoryId) ?? named[0] ?? null;
 }
 
 export function serveOptionsFrom(categories: ServeCategoryRow[]): ServeOption[] {
@@ -128,7 +169,9 @@ export function buildSquareItemRows(
           list.modifier_list_id,
           {
             name: list.name,
-            options: modifiers.map((modifier) => modifier.name).filter(Boolean),
+            options: modifiers
+              .filter((modifier) => modifier.name)
+              .map((modifier) => ({ name: modifier.name, price: modifier.price == null ? null : Number(modifier.price) })),
             price: mixerListPrice(modifiers.flatMap((modifier) => (modifier.price == null ? [] : [Number(modifier.price)]))),
           },
         ] as const;

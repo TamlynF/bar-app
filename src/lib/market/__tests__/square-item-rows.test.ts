@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSquareItemRows,
+  defaultMenuItem,
   hiddenServeLabel,
+  menuItemOptionsFrom,
   isMixerList,
   serveOptionsFrom,
   type CatalogItemCopyRow,
@@ -32,6 +34,7 @@ const categories: ServeCategoryRow[] = [
     name: "Gin",
     menu_items: [
       {
+        id: 100,
         name: "Beefeater Dry",
         is_active: true,
         menu_item_prices: [
@@ -46,12 +49,14 @@ const categories: ServeCategoryRow[] = [
     name: "Alcopops",
     menu_items: [
       {
+        id: 200,
         name: "Breezer Orange",
         is_active: true,
         show_on_menu: false,
         menu_item_prices: [{ id: 20, serve: "each", amount: 5, display_order: 1, square_variation_id: null, show_on_menu: false }],
       },
       {
+        id: 201,
         name: "Retired",
         is_active: false,
         menu_item_prices: [{ id: 21, serve: "each", amount: 5, display_order: 1, square_variation_id: null }],
@@ -119,7 +124,15 @@ describe("buildSquareItemRows", () => {
 
   it("shows only mixer modifier lists, with their price", () => {
     expect(byId.get("GIN-SGL")?.mixers).toEqual([
-      { name: "Mixer", options: ["No Mixer", "Tonic", "Coke"], price: 1.95 },
+      {
+        name: "Mixer",
+        options: [
+          { name: "No Mixer", price: 0 },
+          { name: "Tonic", price: 1.95 },
+          { name: "Coke", price: 1.95 },
+        ],
+        price: 1.95,
+      },
     ]);
     expect(byId.get("BRZ-OR")?.mixers).toEqual([]);
   });
@@ -149,5 +162,33 @@ describe("hiddenServeLabel", () => {
     expect(hiddenServeLabel("Pitcher")).toBe("pitcher");
     expect(hiddenServeLabel("Shot Tray")).toBe("shot tray");
     expect(hiddenServeLabel("175ml")).toBe("175ml");
+  });
+});
+
+describe("menuItemOptionsFrom", () => {
+  it("lists active items, hidden ones included, with their serves", () => {
+    expect(menuItemOptionsFrom(categories)).toEqual([
+      { id: 100, name: "Beefeater Dry", categoryId: 1, categoryName: "Gin", hidden: false, serves: ["single", "double"] },
+      { id: 200, name: "Breezer Orange", categoryId: 2, categoryName: "Alcopops", hidden: true, serves: ["each"] },
+    ]);
+  });
+});
+
+describe("defaultMenuItem", () => {
+  const items = [
+    { id: 1, name: "Guinness", categoryId: 10, categoryName: "Draught", hidden: false, serves: ["pint"] },
+    { id: 2, name: "Guinness", categoryId: 20, categoryName: "Cans", hidden: true, serves: ["each"] },
+  ];
+
+  it("prefers the item of that name in the variation's category", () => {
+    expect(defaultMenuItem(items, "guinness", 20)?.id).toBe(2);
+  });
+
+  it("falls back to an item of that name anywhere", () => {
+    expect(defaultMenuItem(items, "Guinness", null)?.id).toBe(1);
+  });
+
+  it("is null when no item has that name", () => {
+    expect(defaultMenuItem(items, "DF Haus Lager", 10)).toBeNull();
   });
 });

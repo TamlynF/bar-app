@@ -11,6 +11,7 @@ import {
 } from "@/lib/market/square-mixers";
 import {
   buildSquareItemRows,
+  menuItemOptionsFrom,
   readCatalogItemCopy,
   readModifierListCopy,
   serveOptionsFrom,
@@ -106,6 +107,7 @@ async function SquareItemsView({ supabase }: { supabase: SupabaseClient }) {
     <SquareItemsClient
       rows={rows}
       serves={serves}
+      items={menuItemOptionsFrom(categories)}
       categories={categories.map((category) => ({
         id: Number(category.id),
         name: category.name,

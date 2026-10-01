@@ -14,6 +14,8 @@ import {
   Check,
   SearchX,
   FileUp,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import MenuImportSheet from "./menu-import-sheet";
 import { toast } from "sonner";
@@ -47,7 +49,7 @@ import {
   SERVES,
   formatPriceText,
   parsePriceText,
-  type MenuItemPrice,
+  type ServeInput,
 } from "@/lib/menu-price";
 import {
   planSave,
@@ -70,6 +72,7 @@ export type MenuItemPriceRow = {
   serve: string;
   amount: number;
   display_order: number;
+  show_on_menu: boolean;
 };
 
 export type MenuItem = AuditFields & {
@@ -79,11 +82,17 @@ export type MenuItem = AuditFields & {
   price: string;
   display_order: number;
   is_active: boolean;
+  show_on_menu: boolean;
   benchmark_key: string | null;
   menu_item_prices: MenuItemPriceRow[];
 };
 
-type ServeDraft = { serve: string; amount: string };
+// hidden marks a serve kept off the public menu, such as one added from Square links.
+type ServeDraft = { serve: string; amount: string; hidden: boolean };
+
+function isMenuServe(serve: string): boolean {
+  return (SERVES as readonly string[]).includes(serve);
+}
 
 function nextUnusedServe(rows: ServeDraft[]): string {
   const used = new Set(rows.map((r) => r.serve));
@@ -93,17 +102,17 @@ function nextUnusedServe(rows: ServeDraft[]): string {
 function serveSummary(rows: ServeDraft[]): string {
   const prices = draftPrices(rows);
   if (prices.length === 0) return "None yet";
-  return prices.map((p) => p.serve).join(", ");
+  return prices.map((p) => (p.show_on_menu ? p.serve : `${p.serve} (hidden)`)).join(", ");
 }
 
-function draftPrices(rows: ServeDraft[]): MenuItemPrice[] {
+function draftPrices(rows: ServeDraft[]): Required<ServeInput>[] {
   const seen = new Set<string>();
   return rows.flatMap((row) => {
     const amount = Number(row.amount);
     if (!row.serve || !Number.isFinite(amount) || amount <= 0) return [];
     if (seen.has(row.serve)) return [];
     seen.add(row.serve);
-    return [{ serve: row.serve, amount: Math.round(amount * 100) / 100 }];
+    return [{ serve: row.serve, amount: Math.round(amount * 100) / 100, show_on_menu: !row.hidden }];
   });
 }
 
@@ -132,17 +141,19 @@ const ICON_BUTTON =
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-[13px] font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 
+// An item hidden from the menu holds no place in its order, like an inactive one.
 function toOrderRow(row: {
   id: number;
   name: string;
   display_order: number;
   is_active: boolean;
+  show_on_menu?: boolean;
 }): OrderRow {
   return {
     id: row.id,
     name: row.name,
     display_order: row.display_order,
-    is_active: row.is_active,
+    is_active: row.is_active && row.show_on_menu !== false,
   };
 }
 
@@ -168,7 +179,25 @@ function benchmarkSummary(
 
 function servesOf(item: MenuItem): string {
   if (!item.menu_item_prices.length) return "No serves";
-  return item.menu_item_prices.map((p) => p.serve).join(", ");
+  return item.menu_item_prices
+    .map((p) => (p.show_on_menu === false ? `${p.serve} (hidden)` : p.serve))
+    .join(", ");
+}
+
+function HiddenPill({ showLabelOnMobile }: { showLabelOnMobile?: boolean }) {
+  return (
+    <StatusPill tone="neutral" icon={<EyeOff className="h-3 w-3" />} showLabelOnMobile={showLabelOnMobile}>
+      Hidden
+    </StatusPill>
+  );
+}
+
+function ItemPill({ item, showLabelOnMobile }: { item: MenuItem; showLabelOnMobile?: boolean }) {
+  return item.is_active && item.show_on_menu === false ? (
+    <HiddenPill showLabelOnMobile={showLabelOnMobile} />
+  ) : (
+    <ActivePill active={item.is_active} showLabelOnMobile={showLabelOnMobile} />
+  );
 }
 
 function ActivePill({
@@ -206,6 +235,7 @@ export default function MenuClient({
   const [importOpen, setImportOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [isActive, setIsActive] = useState(true);
+  const [showOnMenu, setShowOnMenu] = useState(true);
   const [position, setPosition] = useState(1);
   // The item form keeps its values in state so drilling into the serves and
   // back does not wipe what has been typed.
@@ -313,12 +343,13 @@ export default function MenuClient({
       ? sheetItem
       : null;
   const editingId = editingRecord?.id ?? null;
-  const wasActive = editingRecord?.is_active ?? false;
-  const canChoosePosition = !!editingRecord && wasActive && isActive;
+  const wasActive = editingRecord ? toOrderRow(editingRecord).is_active : false;
+  const placed = isActive && (!isItemSheet || showOnMenu);
+  const canChoosePosition = !!editingRecord && wasActive && placed;
 
   const plan = planSave(orderRows, {
     id: editingId,
-    isActive,
+    isActive: placed,
     targetPosition: canChoosePosition ? position : null,
   });
   const affected = describeChanges(orderRows, plan.changes);
@@ -444,8 +475,9 @@ export default function MenuClient({
   const startEditItem = (category: MenuCategory, item: MenuItem | null) => {
     setFormError(null);
     setIsActive(item?.is_active ?? true);
+    setShowOnMenu(item?.show_on_menu ?? true);
     setPosition(
-      item?.is_active
+      item && toOrderRow(item).is_active
         ? item.display_order
         : nextPosition(itemRowsFor(category))
     );
@@ -455,9 +487,9 @@ export default function MenuClient({
     // An item with no serves recorded yet gets them read off its display text,
     // so the editor opens on what the menu already says rather than blank.
     const existing = item?.menu_item_prices?.length
-      ? item.menu_item_prices.map((p) => ({ serve: p.serve, amount: p.amount }))
-      : parsePriceText(item?.price);
-    setServeDrafts(existing.map((p) => ({ serve: p.serve, amount: p.amount.toFixed(2) })));
+      ? item.menu_item_prices.map((p) => ({ serve: p.serve, amount: p.amount, hidden: p.show_on_menu === false }))
+      : parsePriceText(item?.price).map((p) => ({ ...p, hidden: false }));
+    setServeDrafts(existing.map((p) => ({ serve: p.serve, amount: p.amount.toFixed(2), hidden: p.hidden })));
     setSheet({
       type: "edit-item",
       categoryId: category.id,
@@ -489,8 +521,9 @@ export default function MenuClient({
   // what the public menu shows and what the comparison reads cannot drift.
   const applyServes = () => {
     const prices = draftPrices(serveDrafts);
-    setServeDrafts(prices.map((p) => ({ serve: p.serve, amount: p.amount.toFixed(2) })));
-    if (prices.length) setPriceText(formatPriceText(prices));
+    setServeDrafts(prices.map((p) => ({ serve: p.serve, amount: p.amount.toFixed(2), hidden: !p.show_on_menu })));
+    const listed = prices.filter((p) => p.show_on_menu);
+    if (prices.length) setPriceText(formatPriceText(listed.length ? listed : prices));
     backToItem();
   };
 
@@ -715,7 +748,7 @@ export default function MenuClient({
                     onClick={() =>
                       setSheet({ type: "view-item", categoryId: cat.id, itemId: item.id })
                     }
-                    status={<ActivePill active={item.is_active} />}
+                    status={<ItemPill item={item} />}
                   >
                     {/* Fixed tracks, not content-sized ones - an "auto" column
                         takes its width from that row's own badges, which is what
@@ -724,14 +757,14 @@ export default function MenuClient({
                       <p className="hidden text-[11px] font-medium text-admin-muted sm:block">
                         <span className="sr-only">Display order</span>
                         <span className="tabular-nums">
-                          {item.is_active ? `#${item.display_order}` : "-"}
+                          {toOrderRow(item).is_active ? `#${item.display_order}` : "-"}
                         </span>
                       </p>
 
                       <p
                         className={cn(
                           "min-w-0 truncate text-sm leading-snug font-semibold",
-                          item.is_active ? "text-admin-ink" : "text-admin-muted"
+                          toOrderRow(item).is_active ? "text-admin-ink" : "text-admin-muted"
                         )}
                       >
                         {item.name}
@@ -775,7 +808,15 @@ export default function MenuClient({
             : backToView
         }
         confirmUI={ConfirmDialogUI}
-        status={headerRecord && !isEditing && <ActivePill active={headerRecord.is_active} showLabelOnMobile />}
+        status={
+          headerRecord &&
+          !isEditing &&
+          (isItemSheet && sheetItem ? (
+            <ItemPill item={sheetItem} showLabelOnMobile />
+          ) : (
+            <ActivePill active={headerRecord.is_active} showLabelOnMobile />
+          ))
+        }
         systemInfo={
           headerRecord == null
             ? undefined
@@ -858,6 +899,15 @@ export default function MenuClient({
               <FormRow label="Status">
                 <StatusToggle value={isActive} onChange={setIsActive} />
               </FormRow>
+              <FormRow label="On the menu">
+                <StatusToggle
+                  value={showOnMenu}
+                  onChange={setShowOnMenu}
+                  label="On the menu"
+                  onText="Shown"
+                  offText="Hidden"
+                />
+              </FormRow>
               <FormRow label="Order">
                 <OrderField
                   canChoose={canChoosePosition}
@@ -868,7 +918,7 @@ export default function MenuClient({
                 />
               </FormRow>
               <OrderHint
-                isActive={isActive}
+                isActive={placed}
                 canChoose={canChoosePosition}
                 activeCount={activeCount}
                 resolved={plan.position}
@@ -887,11 +937,11 @@ export default function MenuClient({
               <DetailCell label="Category" value={sheetCategory.name} />
               <DetailCell
                 label="Serves"
-                value={
-                  sheetItem.menu_item_prices.length
-                    ? sheetItem.menu_item_prices.map((p) => p.serve).join(", ")
-                    : "None recorded"
-                }
+                value={sheetItem.menu_item_prices.length ? servesOf(sheetItem) : "None recorded"}
+              />
+              <DetailCell
+                label="On the menu"
+                value={sheetItem.show_on_menu === false ? "Hidden - not on the public menu" : "Yes"}
               />
               <DetailCell
                 label="Compares as"
@@ -900,7 +950,11 @@ export default function MenuClient({
               <DetailCell
                 label="Order"
                 value={
-                  sheetItem.is_active ? String(sheetItem.display_order) : "0 (inactive)"
+                  toOrderRow(sheetItem).is_active
+                    ? String(sheetItem.display_order)
+                    : sheetItem.is_active
+                      ? "0 (hidden)"
+                      : "0 (inactive)"
                 }
               />
             </DetailCard>
@@ -917,6 +971,7 @@ export default function MenuClient({
             {sheetItem && <input type="hidden" name="id" value={sheetItem.id} />}
             <input type="hidden" name="category_id" value={sheetCategory.id} />
             <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
+            <input type="hidden" name="show_on_menu" value={showOnMenu ? "true" : "false"} />
             <input type="hidden" name="serves" value={JSON.stringify(draftPrices(serveDrafts))} />
             <DetailCard className="divide-y divide-admin-line/50">
               <FormRow label="Name" required>
@@ -1034,12 +1089,37 @@ export default function MenuClient({
                     }
                     className="min-w-0 flex-1 cursor-pointer bg-transparent text-[13px] font-semibold text-admin-ink outline-none"
                   >
+                    {!isMenuServe(row.serve) && <option value={row.serve}>{row.serve}</option>}
                     {SERVES.map((serve) => (
                       <option key={serve} value={serve}>
                         {serve}
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setServeDrafts((prev) =>
+                        prev.map((r, i) => (i === index ? { ...r, hidden: !r.hidden } : r))
+                      )
+                    }
+                    disabled={row.hidden && !isMenuServe(row.serve)}
+                    aria-pressed={!row.hidden}
+                    aria-label={`Serve ${index + 1} on the menu`}
+                    title={
+                      row.hidden && !isMenuServe(row.serve)
+                        ? "Pick one of the menu's measures to show this serve on the menu"
+                        : row.hidden
+                          ? "Hidden from the menu - click to show it"
+                          : "On the menu - click to hide it"
+                    }
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40 max-sm:h-11 max-sm:w-11",
+                      row.hidden ? "text-admin-muted hover:bg-admin-surface" : "text-admin-primary hover:bg-admin-primary-soft"
+                    )}
+                  >
+                    {row.hidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                   <span className="text-[13px] font-semibold text-admin-muted">£</span>
                   <input
                     type="number"
@@ -1072,7 +1152,7 @@ export default function MenuClient({
               onClick={() =>
                 setServeDrafts((prev) => [
                   ...prev,
-                  { serve: nextUnusedServe(prev), amount: "" },
+                  { serve: nextUnusedServe(prev), amount: "", hidden: false },
                 ])
               }
               className="flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border border-admin-primary bg-admin-card text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
@@ -1086,7 +1166,7 @@ export default function MenuClient({
                 Price will read
               </p>
               <p className="mt-1 text-[14px] font-bold text-admin-ink">
-                {formatPriceText(draftPrices(serveDrafts)) || "-"}
+                {formatPriceText(draftPrices(serveDrafts).filter((p) => p.show_on_menu)) || "-"}
               </p>
             </div>
           </form>
@@ -1099,21 +1179,27 @@ export default function MenuClient({
 function StatusToggle({
   value,
   onChange,
+  label = "Status",
+  onText = "Active",
+  offText = "Inactive",
 }: {
   value: boolean;
   onChange: (next: boolean) => void;
+  label?: string;
+  onText?: string;
+  offText?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={value}
-      aria-label="Status"
+      aria-label={label}
       onClick={() => onChange(!value)}
       className="flex h-11 flex-1 items-center justify-end gap-2.5"
     >
       <span className="text-[13px] font-semibold text-admin-ink">
-        {value ? "Active" : "Inactive"}
+        {value ? onText : offText}
       </span>
       <span
         className={cn(

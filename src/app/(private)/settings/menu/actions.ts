@@ -19,8 +19,8 @@ import {
   isLosslessPriceText,
   parsePriceText,
   planServeWrites,
-  type MenuItemPrice,
   type Serve,
+  type ServeInput,
   type StoredServe,
 } from "@/lib/menu-price";
 import { parseJsonLoose } from "@/lib/gemini";
@@ -52,11 +52,16 @@ async function loadItemRows(
 ): Promise<OrderRow[]> {
   const { data, error } = await supabase
     .from("menu_items")
-    .select("id, name, display_order, is_active")
-    .eq("category_id", categoryId)
-    .eq("show_on_menu", true);
+    .select("id, name, display_order, is_active, show_on_menu")
+    .eq("category_id", categoryId);
   if (error) throw error;
-  return (data ?? []) as OrderRow[];
+  // A hidden item holds no place in the printed order, just like an inactive one.
+  return ((data ?? []) as (OrderRow & { show_on_menu: boolean })[]).map((row) => ({
+    id: row.id,
+    name: row.name,
+    display_order: row.display_order,
+    is_active: row.is_active && row.show_on_menu,
+  }));
 }
 
 async function applyChanges(
@@ -179,7 +184,7 @@ async function suggestBenchmarkKey(
   return matchBenchmark(name, data?.name ?? null, benchmarks)?.key ?? null;
 }
 
-function readServes(formData: FormData): MenuItemPrice[] {
+function readServes(formData: FormData): ServeInput[] {
   const raw = formData.get("serves")?.toString();
   if (!raw) return [];
   try {
@@ -188,9 +193,12 @@ function readServes(formData: FormData): MenuItemPrice[] {
     return parsed.flatMap((row) => {
       const serve = typeof row?.serve === "string" ? row.serve.trim().toLowerCase() : "";
       const amount = Number(row?.amount);
-      if (!serve || !SERVES.includes(serve as Serve)) return [];
+      const hidden = row?.show_on_menu === false;
+      // Serves on the menu use the bar's own measures; a hidden one may keep
+      // Square's wording ("pitcher", "shot tray").
+      if (!serve || serve.length > 40 || (!hidden && !SERVES.includes(serve as Serve))) return [];
       if (!Number.isFinite(amount) || amount <= 0) return [];
-      return [{ serve, amount: Math.round(amount * 100) / 100 }];
+      return [{ serve, amount: Math.round(amount * 100) / 100, show_on_menu: !hidden }];
     });
   } catch {
     return [];
@@ -203,16 +211,17 @@ function readServes(formData: FormData): MenuItemPrice[] {
 async function writeServes(
   supabase: ServerClient,
   menuItemId: number,
-  serves: MenuItemPrice[],
+  serves: ServeInput[],
   employeeId: number | null,
   now: string,
+  options: { fullSet?: boolean } = {},
 ): Promise<void> {
   const { data, error: readError } = await supabase
     .from("menu_item_prices")
     .select("id, serve, amount, display_order, show_on_menu")
     .eq("menu_item_id", menuItemId);
   if (readError) throw readError;
-  const plan = planServeWrites((data ?? []) as StoredServe[], serves);
+  const plan = planServeWrites((data ?? []) as StoredServe[], serves, options);
 
   if (plan.deletes.length) {
     const { error } = await supabase.from("menu_item_prices").delete().in("id", plan.deletes);
@@ -250,6 +259,7 @@ export async function saveItemAction(formData: FormData) {
   const name = formData.get("name")?.toString().trim() || "";
   const price = formData.get("price")?.toString().trim() || "";
   const isActive = formData.get("is_active") !== "false";
+  const showOnMenu = formData.get("show_on_menu") !== "false";
   const benchmarkKey = formData.get("benchmark_key")?.toString().trim() || "";
 
   if (!name || !price) return { error: "Name and price are required." };
@@ -274,7 +284,7 @@ export async function saveItemAction(formData: FormData) {
     const rows = await loadItemRows(supabase, categoryId);
     const plan = planSave(rows, {
       id: id ? Number(id) : null,
-      isActive,
+      isActive: isActive && showOnMenu,
       targetPosition: readTargetPosition(formData),
     });
 
@@ -284,6 +294,7 @@ export async function saveItemAction(formData: FormData) {
       price,
       display_order: plan.position,
       is_active: isActive,
+      show_on_menu: showOnMenu,
       benchmark_key:
         benchmarkKey || (await suggestBenchmarkKey(supabase, categoryId, name, benchmarks)),
     };
@@ -312,7 +323,7 @@ export async function saveItemAction(formData: FormData) {
       savedId = inserted.id as number;
     }
 
-    await writeServes(supabase, savedId, serves, currentEmployeeId, now);
+    await writeServes(supabase, savedId, serves, currentEmployeeId, now, { fullSet: true });
     await applyChanges(supabase, "menu_items", plan.changes);
 
     revalidatePath("/settings/menu");

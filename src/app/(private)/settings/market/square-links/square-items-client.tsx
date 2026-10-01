@@ -14,7 +14,6 @@ import {
   Plus,
   RefreshCw,
   SearchX,
-  Sparkles,
   Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,10 +30,12 @@ import {
   RecordList,
   StatusPill,
 } from "@/components/admin";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatGbp } from "@/lib/price";
 import { squareItemUrl } from "@/lib/market/simulate";
 import type {
   MenuCategoryOption,
+  MenuItemOption,
   MixerOnItem,
   ServeOption,
   SquareItemRow,
@@ -86,20 +87,50 @@ function SaleLines({
   );
 }
 
-function MixerPills({ mixers }: { mixers: MixerOnItem[] }) {
+function optionPrice(price: number | null): string {
+  return price != null && price > 0 ? `+${formatGbp(price)}` : "No charge";
+}
+
+function MixerPills({ mixers, itemName }: { mixers: MixerOnItem[]; itemName: string }) {
   if (mixers.length === 0) return <span className="text-admin-muted">-</span>;
   return (
     <span className="inline-flex flex-wrap gap-1">
       {mixers.map((mixer) => (
-        <span
-          key={mixer.name}
-          title={`${mixer.name}: ${mixer.options.join(", ") || "no options"}`}
-        >
-          <StatusPill tone="neutral" showLabelOnMobile>
-            {mixer.name}
-            {mixer.price != null && mixer.price > 0 ? ` +${formatGbp(mixer.price)}` : ""}
-          </StatusPill>
-        </span>
+        <Popover key={mixer.name}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`Show the ${mixer.name} options for ${itemName}`}
+              className="inline-flex min-h-11 items-center rounded-lg border border-admin-line bg-admin-surface px-2 text-[11px] font-semibold tracking-wide whitespace-nowrap text-admin-muted transition-colors hover:border-admin-primary hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none sm:min-h-7"
+            >
+              {mixer.name}
+              {mixer.price != null && mixer.price > 0 ? ` +${formatGbp(mixer.price)}` : ""}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 rounded-2xl border-admin-line bg-admin-card p-0">
+            <p className="border-b border-admin-line px-4 py-2.5 text-[13px] font-bold text-admin-ink">
+              {mixer.name}
+              <span className="block text-[11px] font-medium text-admin-muted">
+                {mixer.options.length} {mixer.options.length === 1 ? "option" : "options"} in Square
+              </span>
+            </p>
+            {mixer.options.length === 0 ? (
+              <p className="px-4 py-3 text-[12px] text-admin-muted">This list has no options.</p>
+            ) : (
+              <ul className="m-0 max-h-72 list-none divide-y divide-admin-line/60 overflow-y-auto p-0">
+                {mixer.options.map((option) => (
+                  <li
+                    key={option.name}
+                    className="flex items-center justify-between gap-3 px-4 py-1.5 text-[12px]"
+                  >
+                    <span className="min-w-0 truncate text-admin-ink">{option.name}</span>
+                    <span className="shrink-0 text-admin-muted tabular-nums">{optionPrice(option.price)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PopoverContent>
+        </Popover>
       ))}
     </span>
   );
@@ -142,16 +173,22 @@ function ItemStatus({
   );
 }
 
+const NEW_SERVE = "new";
+
 function ServeSelect({
   row,
   serves,
+  suggestion,
   disabled,
   onChange,
+  onNew,
 }: {
   row: SquareItemRow;
   serves: ServeOption[];
+  suggestion: ServeOption | undefined;
   disabled: boolean;
   onChange: (menuItemPriceId: number | null) => void;
+  onNew: () => void;
 }) {
   const byCategory = useMemo(() => {
     const out: { name: string; serves: ServeOption[] }[] = [];
@@ -167,10 +204,17 @@ function ServeSelect({
       aria-label={`Menu serve for ${row.itemName} ${row.variationName}`}
       value={row.linkedServeId ?? ""}
       disabled={disabled}
-      onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}
-      className={cn(SELECT, "sm:max-w-72 sm:min-w-44")}
+      onChange={(event) => {
+        if (event.target.value === NEW_SERVE) onNew();
+        else onChange(event.target.value ? Number(event.target.value) : null);
+      }}
+      className={cn(
+        SELECT,
+        "min-w-0 flex-1 sm:max-w-64 sm:min-w-40",
+        suggestion && "border-dashed font-medium text-admin-muted",
+      )}
     >
-      <option value="">Not linked</option>
+      <option value="">{suggestion ? `Suggested: ${suggestion.itemName} · ${suggestion.serve}` : "Not linked"}</option>
       {byCategory.map((group) => (
         <optgroup key={group.name} label={group.name}>
           {group.serves.map((serve) => (
@@ -184,7 +228,64 @@ function ServeSelect({
           ))}
         </optgroup>
       ))}
+      {row.linkedServeId == null && row.price != null && (
+        <option value={NEW_SERVE}>New hidden serve…</option>
+      )}
     </select>
+  );
+}
+
+const ACTION = "h-11 w-26 shrink-0 px-2 text-[12px] sm:h-9";
+
+/* One action beside the serve on every unlinked row, so the rows keep one
+   height: take the suggestion, or give the variation a hidden menu serve of
+   its own. Linked rows keep the slot empty so the columns stay aligned. */
+function ServeAction({
+  row,
+  suggestion,
+  disabled,
+  onAccept,
+  onNew,
+}: {
+  row: SquareItemRow;
+  suggestion: ServeOption | undefined;
+  disabled: boolean;
+  onAccept: () => void;
+  onNew: () => void;
+}) {
+  const label = `${row.itemName} ${row.variationName}`;
+  if (row.linkedServeId != null) return <span className="hidden w-26 shrink-0 sm:block" aria-hidden="true" />;
+  if (suggestion) {
+    return (
+      <button
+        type="button"
+        onClick={onAccept}
+        disabled={disabled}
+        aria-label={`Accept ${suggestion.itemName} ${suggestion.serve} for ${label}`}
+        title={`Link to ${serveLabel(suggestion)}`}
+        className={cn(OUTLINE_BUTTON, ACTION)}
+      >
+        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+        Accept
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onNew}
+      disabled={disabled || row.price == null}
+      aria-label={`New hidden serve for ${label}`}
+      title={
+        row.price == null
+          ? "Square has no fixed price for this variation"
+          : "Add this to the menu as a hidden serve and link it"
+      }
+      className={cn(NEUTRAL_BUTTON, ACTION)}
+    >
+      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+      New serve
+    </button>
   );
 }
 
@@ -218,32 +319,6 @@ function CategorySelect({
         </option>
       ))}
     </select>
-  );
-}
-
-function Suggestion({
-  serve,
-  disabled,
-  onAccept,
-}: {
-  serve: ServeOption;
-  disabled: boolean;
-  onAccept: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 pt-1 text-[11px] text-admin-muted">
-      <Sparkles className="h-3 w-3 shrink-0 text-admin-gold" aria-hidden="true" />
-      <span className="min-w-0 truncate">Suggested: {serveLabel(serve)}</span>
-      <button
-        type="button"
-        onClick={onAccept}
-        disabled={disabled}
-        className={cn(OUTLINE_BUTTON, "h-7 shrink-0 px-2 text-[11px] max-sm:h-11")}
-      >
-        <Check className="h-3 w-3" aria-hidden="true" />
-        Accept
-      </button>
-    </div>
   );
 }
 
@@ -300,6 +375,7 @@ function matches(needle: string, row: SquareItemRow, serve: ServeOption | undefi
 export default function SquareItemsClient({
   rows,
   serves,
+  items,
   categories,
   environment,
   saleLineCounts,
@@ -308,6 +384,7 @@ export default function SquareItemsClient({
 }: {
   rows: SquareItemRow[] | null;
   serves: ServeOption[];
+  items: MenuItemOption[];
   categories: MenuCategoryOption[];
   environment: "sandbox" | "production";
   saleLineCounts: Record<string, SaleLineCount> | null;
@@ -358,12 +435,12 @@ export default function SquareItemsClient({
           : NO_CATEGORY;
       byKey.set(key, [...(byKey.get(key) ?? []), row]);
     }
-    const out: Group[] = categories.flatMap((category) => {
-      const groupRows = byKey.get(String(category.id));
-      return groupRows ? [{ key: String(category.id), name: category.name, rows: groupRows }] : [];
-    });
     const loose = byKey.get(NO_CATEGORY);
-    if (loose) out.push({ key: NO_CATEGORY, name: "No menu category", rows: loose });
+    const out: Group[] = loose ? [{ key: NO_CATEGORY, name: "No menu category", rows: loose }] : [];
+    for (const category of categories) {
+      const groupRows = byKey.get(String(category.id));
+      if (groupRows) out.push({ key: String(category.id), name: category.name, rows: groupRows });
+    }
     return out;
   }, [shown, categories, categoryName]);
 
@@ -443,35 +520,37 @@ export default function SquareItemsClient({
     router.refresh();
   }
 
-  const suggestionFor = (row: SquareItemRow) => {
-    if (row.linkedServeId != null) return null;
-    const serve = row.suggestedServeId != null ? serveById.get(row.suggestedServeId) : undefined;
+  const serveCell = (row: SquareItemRow) => {
+    const suggestion =
+      row.linkedServeId == null && row.suggestedServeId != null ? serveById.get(row.suggestedServeId) : undefined;
     return (
-      <>
-        {serve && (
-          <Suggestion serve={serve} disabled={isPending} onAccept={() => linkServe(row, serve.menuItemPriceId)} />
-        )}
-        <button
-          type="button"
-          onClick={() => setCreating(row)}
-          disabled={isPending || row.price == null}
-          aria-label={`Create hidden menu serve for ${row.itemName} ${row.variationName}`}
-          title={row.price == null ? "Square has no fixed price for this variation" : undefined}
-          className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-lg text-[11px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-7"
-        >
-          <Plus className="h-3 w-3" aria-hidden="true" />
-          Create hidden menu serve
-        </button>
-      </>
+      <div className="flex items-center gap-2">
+        <ServeSelect
+          row={row}
+          serves={serves}
+          suggestion={suggestion}
+          disabled={isPending}
+          onChange={(id) => linkServe(row, id)}
+          onNew={() => setCreating(row)}
+        />
+        <ServeAction
+          row={row}
+          suggestion={suggestion}
+          disabled={isPending}
+          onAccept={() => suggestion && linkServe(row, suggestion.menuItemPriceId)}
+          onNew={() => setCreating(row)}
+        />
+      </div>
     );
   };
 
   return (
     <div className="space-y-4">
       <CreateServeDialog
+        key={creating?.variationId ?? "closed"}
         row={creating}
         categories={categories}
-        serves={serves}
+        items={items}
         onOpenChange={(open) => {
           if (!open) setCreating(null);
         }}
@@ -642,19 +721,13 @@ export default function SquareItemsClient({
                               </p>
                               {row.mixers.length > 0 && (
                                 <div className="pt-1">
-                                  <MixerPills mixers={row.mixers} />
+                                  <MixerPills mixers={row.mixers} itemName={row.itemName} />
                                 </div>
                               )}
                             </div>
                             <ItemStatus row={row} environment={environment} />
                           </div>
-                          <ServeSelect
-                            row={row}
-                            serves={serves}
-                            disabled={isPending}
-                            onChange={(id) => linkServe(row, id)}
-                          />
-                          {suggestionFor(row)}
+                          {serveCell(row)}
                           <CategorySelect
                             row={row}
                             categories={categories}
@@ -696,8 +769,8 @@ export default function SquareItemsClient({
                       open={isOpen(group.key)}
                       onToggle={() => toggleGroup(group.key)}
                       render={(row) => (
-                        <tr key={row.variationId} className="border-b border-admin-line/60 align-top">
-                          <td className="py-1.5 pr-3 pl-4 text-[13px] sm:pl-5">
+                        <tr key={row.variationId} className="border-b border-admin-line/60 align-middle">
+                          <td className="min-w-36 py-1.5 pr-3 pl-4 text-[13px] sm:pl-5">
                             <span className="font-semibold text-admin-ink">{row.itemName}</span>
                             {row.variationName && (
                               <span className="block text-[12px] text-admin-muted">{row.variationName}</span>
@@ -708,20 +781,12 @@ export default function SquareItemsClient({
                           </td>
                           <td className="py-1.5 pr-3 text-[12px] text-admin-muted">{row.reportingCategory ?? "-"}</td>
                           <td className="py-1.5 pr-3 text-[12px]">
-                            <MixerPills mixers={row.mixers} />
+                            <MixerPills mixers={row.mixers} itemName={row.itemName} />
                           </td>
                           <td className="py-1.5 pr-3 text-right text-[13px]">
                             <SaleLines variationId={row.variationId} counts={saleLineCounts} />
                           </td>
-                          <td className="py-1.5 pr-3">
-                            <ServeSelect
-                              row={row}
-                              serves={serves}
-                              disabled={isPending}
-                              onChange={(id) => linkServe(row, id)}
-                            />
-                            {suggestionFor(row)}
-                          </td>
+                          <td className="py-1.5 pr-3">{serveCell(row)}</td>
                           <td className="py-1.5 pr-3">
                             <CategorySelect
                               row={row}

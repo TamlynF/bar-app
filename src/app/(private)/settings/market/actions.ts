@@ -1423,71 +1423,81 @@ async function linkVariation(
   return { success: true };
 }
 
-type CategoryItemRow = {
+type TargetItemRow = {
   id: number;
   name: string;
   menu_item_prices: { id: number; serve: string; display_order: number; square_variation_id: string | null }[];
 };
 
-/* For a Square variation the menu has no serve for: adds the serve, and the
-   item too when the category has none of that name, both hidden from the
-   public menu, then links the variation to it. An item of the same name keeps
-   its place on the menu and gains a hidden serve; a serve it already has is
-   linked rather than duplicated. */
-export async function createHiddenServeAction(variationId: string, categoryId: number) {
+export type HiddenServeTarget = { menuItemId: number } | { categoryId: number; name: string };
+
+/* For a Square variation the menu has no serve for: adds a serve hidden from
+   the public menu and links the variation to it. The serve goes on an item
+   staff picked (hidden or not), or on a new item, itself hidden, under the
+   name and category they gave - unless that category already has an item of
+   that name, which is used rather than duplicated. An item that already has
+   the serve gets it linked instead of a second one. */
+export async function createHiddenServeAction(variationId: string, target: HiddenServeTarget) {
   const supabase = await createClient();
-  if (!Number.isInteger(categoryId) || categoryId <= 0) return { error: "Pick a menu category first." };
 
   const { data: variation, error: variationError } = await supabase
     .from("square_catalog_variations")
-    .select("item_name, variation_name, price")
+    .select("variation_name, price")
     .eq("variation_id", variationId)
     .is("deleted_at", null)
     .maybeSingle();
   if (variationError) return { error: variationError.message };
   if (!variation) return { error: "That Square variation is no longer in the catalog copy." };
-  const { item_name: itemName, variation_name: variationName } = variation as {
-    item_name: string;
+  const { variation_name: variationName, price } = variation as {
     variation_name: string;
     price: number | string | null;
   };
-  const amount = Number((variation as { price: number | string | null }).price);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const amount = Number(price);
+  if (price == null || !Number.isFinite(amount) || amount <= 0) {
     return { error: "Square has no fixed price for this variation, so the serve has nothing to be priced from." };
   }
   const serve = hiddenServeLabel(variationName);
+  const itemColumns = "id, name, menu_item_prices(id, serve, display_order, square_variation_id)";
 
-  const { data: itemRows, error: itemsError } = await supabase
-    .from("menu_items")
-    .select("id, name, menu_item_prices(id, serve, display_order, square_variation_id)")
-    .eq("category_id", categoryId);
-  if (itemsError) return { error: itemsError.message };
-  const existing = ((itemRows ?? []) as CategoryItemRow[]).find(
-    (item) => normaliseName(item.name) === normaliseName(itemName)
-  );
+  let item: TargetItemRow | null = null;
+  let newItem: { categoryId: number; name: string } | null = null;
+  if ("menuItemId" in target) {
+    const { data, error } = await supabase.from("menu_items").select(itemColumns).eq("id", target.menuItemId).maybeSingle();
+    if (error) return { error: error.message };
+    if (!data) return { error: "That menu item no longer exists." };
+    item = data as TargetItemRow;
+  } else {
+    const name = target.name.trim();
+    if (!name) return { error: "Give the new item a name." };
+    if (!Number.isInteger(target.categoryId) || target.categoryId <= 0) return { error: "Pick a menu category first." };
+    const { data, error } = await supabase.from("menu_items").select(itemColumns).eq("category_id", target.categoryId);
+    if (error) return { error: error.message };
+    item = ((data ?? []) as TargetItemRow[]).find((row) => normaliseName(row.name) === normaliseName(name)) ?? null;
+    if (!item) newItem = { categoryId: target.categoryId, name };
+  }
 
-  const sameServe = existing?.menu_item_prices.find((price) => price.serve === serve);
-  if (sameServe) {
+  const sameServe = item?.menu_item_prices.find((row) => row.serve === serve);
+  if (item && sameServe) {
     if (sameServe.square_variation_id && sameServe.square_variation_id !== variationId) {
-      return { error: `${existing!.name} already has a ${serve} serve linked to another Square variation.` };
+      return { error: `${item.name} already has a ${serve} serve linked to another Square variation.` };
     }
     const linked = await linkVariation(supabase, variationId, sameServe.id);
     if ("error" in linked) return linked;
     revalidateMarket();
-    return { success: true, createdItem: false, createdServe: false };
+    return { success: true, itemName: item.name, createdItem: false, createdServe: false };
   }
 
   const employeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
   const audit = { created_at: now, updated_at: now, created_by: employeeId, updated_by: employeeId };
 
-  let itemId = existing?.id ?? null;
-  if (itemId == null) {
+  let itemId = item?.id ?? null;
+  if (newItem) {
     const { data: inserted, error } = await supabase
       .from("menu_items")
       .insert({
-        category_id: categoryId,
-        name: itemName,
+        category_id: newItem.categoryId,
+        name: newItem.name,
         price: formatPriceText([{ serve, amount }]),
         display_order: 0,
         is_active: true,
@@ -1499,9 +1509,10 @@ export async function createHiddenServeAction(variationId: string, categoryId: n
     if (error || !inserted) return { error: error?.message ?? "Could not create the menu item." };
     itemId = inserted.id as number;
   }
+  if (itemId == null) return { error: "Pick a menu item or name a new one." };
 
-  const nextOrder = Math.max(0, ...(existing?.menu_item_prices ?? []).map((price) => price.display_order)) + 1;
-  const { data: price, error: priceError } = await supabase
+  const nextOrder = Math.max(0, ...(item?.menu_item_prices ?? []).map((row) => row.display_order)) + 1;
+  const { data: created, error: priceError } = await supabase
     .from("menu_item_prices")
     .insert({
       menu_item_id: itemId,
@@ -1513,13 +1524,13 @@ export async function createHiddenServeAction(variationId: string, categoryId: n
     })
     .select("id")
     .single();
-  if (priceError || !price) return { error: priceError?.message ?? "Could not create the menu serve." };
+  if (priceError || !created) return { error: priceError?.message ?? "Could not create the menu serve." };
 
-  const linked = await linkVariation(supabase, variationId, price.id as number);
+  const linked = await linkVariation(supabase, variationId, created.id as number);
   if ("error" in linked) return linked;
   revalidateMarket();
   revalidatePath("/settings/menu");
-  return { success: true, createdItem: existing == null, createdServe: true };
+  return { success: true, itemName: item?.name ?? newItem!.name, createdItem: newItem != null, createdServe: true };
 }
 
 /* Picks a Square variation's menu category by hand, or with null hands it
