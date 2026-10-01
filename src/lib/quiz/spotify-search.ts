@@ -52,3 +52,63 @@ export async function mapWithLimit<T, R>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runner));
   return results;
 }
+
+export type SpotifySearchTrack = {
+  id: string;
+  name: string;
+  artists?: { name: string }[];
+  album?: { name?: string; album_type?: string };
+};
+
+/* Versions whose opening is not the studio recording's - a crowd, a count-in,
+   studio chatter, a DJ, a re-cut intro. Only rejected when the song asked for
+   does not itself carry the word, so "Live and Let Die" still matches. */
+const NON_STUDIO = /\b(live|remix|mix|demo|acoustic|unplugged|karaoke|commentary|interview|skit|session|sessions|rehearsal|take|edit|video|instrumental|cover|tribute)\b/i;
+
+const plainWords = (value: string) =>
+  value.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+function isNonStudio(track: SpotifySearchTrack, title: string): boolean {
+  const asked = plainWords(title);
+  const words = `${track.name} ${track.album?.name ?? ""}`.match(new RegExp(NON_STUDIO.source, "gi")) ?? [];
+  return words.some((word) => !asked.split(" ").includes(word.toLowerCase()));
+}
+
+/* Spotify's first hit is often a live cut or a remix of the song asked for, and
+   the quiz plays from 0:00 - so the pick is the closest studio recording. A
+   title match beats a near miss, the right artist beats a cover, and an album
+   or single beats a compilation. No studio candidate at all means no track. */
+export function pickStudioTrack<T extends SpotifySearchTrack>(
+  items: T[],
+  artist: string,
+  title: string
+): T | null {
+  const wantTitle = plainWords(title);
+  const wantArtist = plainWords(primaryArtist(artist));
+  let best: { track: T; score: number } | null = null;
+
+  for (const [index, track] of items.entries()) {
+    if (!track?.id || isNonStudio(track, title)) continue;
+    const name = plainWords(track.name).replace(/\s*remaster(ed)?\b.*$/, "").trim();
+    const artists = (track.artists ?? []).map((a) => plainWords(a.name));
+
+    let score = -index;
+    if (name === wantTitle) score += 100;
+    else if (name.startsWith(wantTitle)) score += 40;
+    if (artists.some((a) => a === wantArtist || a.includes(wantArtist) || wantArtist.includes(a))) score += 50;
+    if (track.album?.album_type === "compilation") score -= 20;
+
+    if (!best || score > best.score) best = { track, score };
+  }
+  return best?.track ?? null;
+}
+
+/* The model is asked to open intro_description with the intro's length, e.g.
+   "0:12 - rising organ line". Null when it did not. */
+export function introSeconds(description: string | null | undefined): number | null {
+  const match = (description ?? "").trim().match(/^~?(\d{1,2}):(\d{2})\b/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+export const MIN_INSTRUMENTAL_INTRO_SECONDS = 8;

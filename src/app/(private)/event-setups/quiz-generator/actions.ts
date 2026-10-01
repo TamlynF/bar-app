@@ -33,7 +33,15 @@ import { getCurrentEmployeeId } from '@/lib/current-employee'
 import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category-playlist'
 import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
 import { renderPrompt, resolvePrompt } from '@/lib/quiz/prompt-templates'
-import { mapWithLimit, spotifySearchQueries, SPOTIFY_MARKET } from '@/lib/quiz/spotify-search'
+import {
+  introSeconds,
+  mapWithLimit,
+  MIN_INSTRUMENTAL_INTRO_SECONDS,
+  pickStudioTrack,
+  spotifySearchQueries,
+  type SpotifySearchTrack,
+  SPOTIFY_MARKET,
+} from '@/lib/quiz/spotify-search'
 import { exclusionKey, withoutExcluded } from '@/lib/quiz/exclusion-key'
 
 export type QuizQuestion = {
@@ -927,12 +935,12 @@ async function searchSpotifyTrack(
   for (const query of spotifySearchQueries(artist, title)) {
     try {
       const res = await spotifyGet(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1&market=${SPOTIFY_MARKET}`,
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=${SPOTIFY_MARKET}`,
         accessToken
       )
       if (!res.ok) continue
       const data = await res.json()
-      const id = data.tracks?.items?.[0]?.id
+      const id = pickStudioTrack(data.tracks?.items ?? [], artist, title)?.id
       if (id) return id
     } catch {
       continue
@@ -1016,13 +1024,15 @@ export async function lookupSpotifyTrackAction(input: {
     const artist = (input.artist ?? '').trim()
     const query = artist ? `track:${title} artist:${artist}` : title
     const res = await spotifyGet(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1&market=${SPOTIFY_MARKET}`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10&market=${SPOTIFY_MARKET}`,
       token
     )
     if (!res.ok) return { error: 'Spotify search failed. Try again.' }
 
     const data = await res.json()
-    const track = trackDetailsFrom(data?.tracks?.items?.[0])
+    const track = trackDetailsFrom(
+      pickStudioTrack<SpotifyTrackResponse & SpotifySearchTrack>(data?.tracks?.items ?? [], artist, title) ?? undefined
+    )
     return track
       ? { track }
       : { error: 'No match on Spotify - try the full title, or paste a link.' }
@@ -1211,6 +1221,15 @@ export async function generateMusicSnippetsAction(
           error: `Nothing came back that is ${range.minYears}-${range.maxYears} years from ${chainYear}. Try again, or widen the year gap.`,
         }
       }
+    }
+
+    /* The model times each intro itself. One it admits is shorter than the rule
+       is dropped here, before Spotify is asked about it. */
+    if (!isHigherOrLower) {
+      candidates = candidates.filter((s) => {
+        const seconds = introSeconds(s.intro_description)
+        return seconds == null || seconds >= MIN_INSTRUMENTAL_INTRO_SECONDS
+      })
     }
 
     const searched: MusicSnippetCandidate[] = await mapWithLimit(
