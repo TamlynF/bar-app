@@ -14,7 +14,7 @@ const anton = Anton({
 
 const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  axes: ["wdth"],
   variable: "--font-ui",
   display: "swap",
 });

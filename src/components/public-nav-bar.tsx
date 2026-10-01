@@ -33,6 +33,7 @@ export function PublicNavBar({
   const marketState = useMarketState();
   const marketLive = marketState.status === "live";
   const onMarketPage = currentPath?.startsWith("/market") ?? false;
+  const onHome = currentPath === "/";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -161,7 +162,8 @@ export function PublicNavBar({
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
                 className={cn(
-                  "ad-installed-hidden hidden h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full transition-transform hover:scale-105 active:scale-95 sm:order-last sm:inline-flex lg:h-10 lg:w-auto lg:px-4",
+                  "ad-installed-hidden relative h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full px-0 transition-transform before:absolute before:-inset-1 hover:scale-105 active:scale-95 sm:order-last sm:inline-flex lg:h-10 lg:w-auto lg:px-4",
+                  onHome ? "inline-flex" : "hidden",
                   !solid && "ring-2 ring-canvas/60 shadow-lg shadow-black/40",
                   SOCIAL_BRANDS.instagram.solid
                 )}
