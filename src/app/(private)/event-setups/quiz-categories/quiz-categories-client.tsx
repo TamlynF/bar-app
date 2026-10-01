@@ -23,7 +23,9 @@ import {
   saveQuizCategoryAction,
   deleteQuizCategoryAction,
   QuizCategoryConfig,
+  type QuizExclusion,
 } from "./actions";
+import NeverShownCard from "./never-shown-card";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_PROMPTS,
@@ -100,9 +102,11 @@ const BLANK_DRAFT: PromptDraft = { text: "", kind: "question" };
 export default function QuizCategoriesClient({
   initialConfigs = [],
   employees = [],
+  exclusions = [],
 }: {
   initialConfigs: QuizCategoryConfig[];
   employees?: EmployeeOption[];
+  exclusions?: QuizExclusion[];
 }) {
   const sheet = useRecordSheet<QuizCategoryConfig>({
     records: initialConfigs,
@@ -522,6 +526,10 @@ export default function QuizCategoriesClient({
                 {selectedPrompt.template}
               </pre>
             </DetailCard>
+
+            <NeverShownCard
+              exclusions={exclusions.filter((e) => e.quiz_category_configs_id === selected.id)}
+            />
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>

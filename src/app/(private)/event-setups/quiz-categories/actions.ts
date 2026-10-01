@@ -169,3 +169,21 @@ export async function deleteQuizCategoryAction(id: number) {
     return { error: error instanceof Error ? error.message : "Failed to delete category." };
   }
 }
+
+export type QuizExclusion = {
+  id: number;
+  quiz_category_configs_id: number;
+  content_text: string;
+  created_at: string;
+};
+
+export async function allowQuizQuestionAgainAction(id: number) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("quiz_question_exclusions").delete().eq("id", id);
+  if (error) {
+    console.error("Error allowing a question again:", error);
+    return { error: "Could not allow that question again." };
+  }
+  revalidatePath("/event-setups/quiz-categories");
+  return { success: true };
+}

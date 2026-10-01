@@ -50,6 +50,7 @@ import {
   AlertTriangle,
   HelpCircle,
   Star,
+  EyeOff,
 } from "lucide-react";
 
 import { SiSpotify } from "react-icons/si";
@@ -84,6 +85,7 @@ import {
   saveMusicSnippetsAction,
   regeneratePictureImageAction,
   pictureTopicUsageAction,
+  excludeQuizDraftsAction,
   type QuizQuestion,
   type PictureRoundItem,
   type MusicSnippetCandidate,
@@ -105,6 +107,7 @@ import {
 } from "@/lib/quiz/generation-progress";
 import { EMPTY_ROUND_SETTINGS, type RoundSettings } from "@/lib/quiz/round-defaults";
 import { aiOrigin } from "@/lib/quiz/question-origin";
+import { neverShowByDefault } from "@/lib/quiz/exclusion-key";
 import ManualEntry from "./manual-entry";
 import {
   chainHintYears,
@@ -156,6 +159,7 @@ type ApprovedSummary = {
   hintYears?: number[];
   savedAfter: number;
   playlistSynced?: boolean;
+  hiddenCount: number;
 };
 
 interface QuizRoundSheetProps {
@@ -207,6 +211,19 @@ const draftIdentity = (d: DraftItem): string => {
 };
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+const clockNow = () => Date.now();
+
+// The React Compiler cannot compile a component whose own body holds a
+// try/catch around conditional or optional-chained code, so the handlers hand
+// their work to this instead.
+async function attempt(work: () => Promise<void>, onError: (err: unknown) => void) {
+  try {
+    await work();
+  } catch (err) {
+    onError(err);
+  }
+}
 
 // One question is picked from each batch, so a short list beats a long one.
 const HIGHER_LOWER_BATCH = 5;
@@ -313,6 +330,13 @@ export default function QuizRoundSheet({
   // Picture answers already drafted in this sitting, so a swap or a second
   // batch doesn't hand back the same subject.
   const [draftedAnswers, setDraftedAnswers] = useState<string[]>([]);
+  // Cards whose never-show switch the host moved off this round's default,
+  // keyed by what the card says so a swap or a re-sort cannot move the choice
+  // onto a different card.
+  const [neverShowFlipped, setNeverShowFlipped] = useState<Set<string>>(new Set());
+  // Cards swapped out of this batch - turned down just as surely as an
+  // unpicked one, so they follow the same default when the round is added.
+  const [swappedOut, setSwappedOut] = useState<string[]>([]);
 
   const topicRef = useRef<HTMLInputElement>(null);
   const releaseYearRef = useRef<HTMLInputElement>(null);
@@ -370,25 +394,23 @@ export default function QuizRoundSheet({
   /* A picture round is remembered by its topic, so running one the venue has
      already done is a repeat night. Checked as you type - a warning, never a
      block, since a popular topic is a fair thing to bring back. */
-  const [topicUsedBy, setTopicUsedBy] = useState<PictureTopicUse[]>([]);
+  const [topicUsage, setTopicUsage] = useState<{ query: string; uses: PictureTopicUse[] }>({
+    query: "",
+    uses: [],
+  });
+  const topicQuery = effectiveTopic.trim();
+  const checksTopic = isPicture && open && topicQuery.length >= 3;
+  const topicUsedBy = checksTopic && topicUsage.query === topicQuery ? topicUsage.uses : [];
   useEffect(() => {
-    if (!isPicture || !open) {
-      setTopicUsedBy([]);
-      return;
-    }
-    const query = effectiveTopic.trim();
-    if (query.length < 3) {
-      setTopicUsedBy([]);
-      return;
-    }
+    if (!checksTopic) return;
 
     let live = true;
     const timer = window.setTimeout(async () => {
       try {
-        const used = await pictureTopicUsageAction(query, eventId);
-        if (live) setTopicUsedBy(used);
+        const used = await pictureTopicUsageAction(topicQuery, eventId);
+        if (live) setTopicUsage({ query: topicQuery, uses: used });
       } catch {
-        if (live) setTopicUsedBy([]);
+        if (live) setTopicUsage({ query: topicQuery, uses: [] });
       }
     }, 400);
 
@@ -396,7 +418,7 @@ export default function QuizRoundSheet({
       live = false;
       window.clearTimeout(timer);
     };
-  }, [effectiveTopic, isPicture, open, eventId]);
+  }, [checksTopic, topicQuery, eventId]);
 
   // Once the round has a question the seed is settled: the next song follows on
   // from the last one saved, so the host's start year is history.
@@ -428,15 +450,11 @@ export default function QuizRoundSheet({
       : null;
   const allowedYears = yearWindows ? formatYearWindows(yearWindows) : "";
 
-  const previousIdentities = useMemo(
-    () =>
-      savedQuestions.map((q) => {
-        if (kind === "picture") return q.answer_text;
-        if (kind === "song") return q.answer_text_ext ?? q.answer_text;
-        return q.question_text;
-      }),
-    [savedQuestions, kind]
-  );
+  const previousIdentities = savedQuestions.map((q) => {
+    if (kind === "picture") return q.answer_text;
+    if (kind === "song") return q.answer_text_ext ?? q.answer_text;
+    return q.question_text;
+  });
 
   const duplicateIndices = useMemo(
     () =>
@@ -481,75 +499,86 @@ export default function QuizRoundSheet({
     setSelected(new Set());
     setPickOrder([]);
     setAutoPickShown(false);
+    setNeverShowFlipped(new Set());
+    setSwappedOut([]);
   }, []);
 
-  const requestDrafts = useCallback(
-    async (
-      count: number,
-      // Answers drafted moments ago that state has not caught up with yet, so a
-      // top-up request within the same run cannot hand the same subject back.
-      alsoExclude: string[] = []
-    ): Promise<{ items?: DraftItem[]; error?: string; withoutPicture?: number }> => {
-      if (kind === "picture") {
-        const result = await generatePictureRoundAction(
-          count,
-          effectiveTopic,
-          difficulty,
-          eventId,
-          categoryConfigId,
-          [...draftedAnswers, ...alsoExclude],
-          imageNotes
-        );
-        const items = result.items?.filter((item) => !missingPicture(item));
-        if (result.model) setDraftModel(result.model);
-        return {
-          items,
-          error: result.error,
-          withoutPicture: (result.items?.length ?? 0) - (items?.length ?? 0),
-        };
-      }
-
-      if (kind === "song") {
-        const result = await generateMusicSnippetsAction(
-          count,
-          effectiveTopic,
-          difficulty,
-          eventId,
-          categoryConfigId,
-          chainStart,
-          isHigherOrLower && Number.isFinite(pickedYear) ? pickedYear : undefined
-        );
-        if (result.model) setDraftModel(result.model);
-        return { items: result.songs, error: result.error };
-      }
-
-      const result = await generateQuizAction(
-        effectiveTopic,
-        category_name,
-        count,
-        difficulty,
-        eventId,
-        categoryConfigId
-      );
-      if (result.model) setDraftModel(result.model);
-      return { items: result.questions, error: result.error };
-    },
-    [
-      kind,
-      effectiveTopic,
-      difficulty,
-      eventId,
-      categoryConfigId,
-      category_name,
-      draftedAnswers,
-      chainStart,
-      imageNotes,
-      isHigherOrLower,
-      pickedYear,
-    ]
+  const neverShowDefault = neverShowByDefault(isHigherOrLower);
+  const isNeverShow = useCallback(
+    (identity: string) => neverShowDefault !== neverShowFlipped.has(identity),
+    [neverShowDefault, neverShowFlipped]
   );
 
-  const handleGenerate = useCallback(async () => {
+  const toggleNeverShow = useCallback((identity: string) => {
+    setNeverShowFlipped((prev) => {
+      const next = new Set(prev);
+      if (next.has(identity)) next.delete(identity);
+      else next.add(identity);
+      return next;
+    });
+  }, []);
+
+  /* A card that never got a picture says nothing about the subject, so it is
+     not held against it. */
+  const toBeHidden = useMemo(() => {
+    const unpicked = drafts
+      .filter((d, i) => !selected.has(i) && !missingPicture(d))
+      .map(draftIdentity);
+    return [...new Set([...unpicked, ...swappedOut])].filter(isNeverShow);
+  }, [drafts, selected, swappedOut, isNeverShow]);
+
+  const requestDrafts = async (
+    count: number,
+    // Answers drafted moments ago that state has not caught up with yet, so a
+    // top-up request within the same run cannot hand the same subject back.
+    alsoExclude: string[] = []
+  ): Promise<{ items?: DraftItem[]; error?: string; withoutPicture?: number }> => {
+    if (kind === "picture") {
+      const result = await generatePictureRoundAction(
+        count,
+        effectiveTopic,
+        difficulty,
+        eventId,
+        categoryConfigId,
+        [...draftedAnswers, ...alsoExclude],
+        imageNotes
+      );
+      const items = result.items?.filter((item) => !missingPicture(item));
+      if (result.model) setDraftModel(result.model);
+      return {
+        items,
+        error: result.error,
+        withoutPicture: (result.items?.length ?? 0) - (items?.length ?? 0),
+      };
+    }
+
+    if (kind === "song") {
+      const result = await generateMusicSnippetsAction(
+        count,
+        effectiveTopic,
+        difficulty,
+        eventId,
+        categoryConfigId,
+        chainStart,
+        isHigherOrLower && Number.isFinite(pickedYear) ? pickedYear : undefined
+      );
+      if (result.model) setDraftModel(result.model);
+      return { items: result.songs, error: result.error };
+    }
+
+    const result = await generateQuizAction(
+      effectiveTopic,
+      category_name,
+      count,
+      difficulty,
+      eventId,
+      categoryConfigId
+    );
+    if (result.model) setDraftModel(result.model);
+    return { items: result.questions, error: result.error };
+  };
+
+  const handleGenerate = async () => {
     if (isGenerating) return;
 
     if (isPicture && !effectiveTopic.trim()) {
@@ -574,116 +603,105 @@ export default function QuizRoundSheet({
 
     setTopicMissing(false);
     setApproved(null);
-    const startedAt = Date.now();
+    const startedAt = clockNow();
     setGenerationStartedAt(startedAt);
     setGenerationNow(startedAt);
     setToppingUp(false);
     setIsGenerating(true);
 
-    try {
-      const cap = needed > 0 ? needed : question_count;
-      const first = await requestDrafts(batchSize);
-      let items = first.items ?? [];
-      let withoutPicture = first.withoutPicture ?? 0;
+    await attempt(
+      async () => {
+        const cap = needed > 0 ? needed : question_count;
+        const first = await requestDrafts(batchSize);
+        let items = first.items ?? [];
+        let withoutPicture = first.withoutPicture ?? 0;
 
-      if (first.error || !items.length) {
-        toast.error(first.error || (withoutPicture > 0 ? "No pictures came back. Try again." : "Nothing came back. Try again."));
-        return;
-      }
-
-      /* Pictures that fail to draw leave the batch short of what the round
-         needs. Ask for the shortfall again, a bounded number of times, rather
-         than showing a set that cannot fill the round. */
-      for (let topUp = 0; kind === "picture" && items.length < cap && topUp < PICTURE_TOP_UPS; topUp++) {
-        setToppingUp(true);
-        const more = await requestDrafts(cap - items.length, items.map(draftIdentity));
-        withoutPicture += more.withoutPicture ?? 0;
-        if (more.error || !more.items?.length) break;
-        items = [...items, ...more.items];
-      }
-
-      setDrafts(items);
-      setDraftedAnswers((prev) => [...prev, ...items.map(draftIdentity)]);
-      setSetupOpen(false);
-
-      // Pre-tick exactly what the round needs, skipping anything that repeats a
-      // question already saved. Unticking one dud beats ticking nine keepers.
-      const dupes = findDuplicateIndices(
-        items.map((d) => ({ question: draftIdentity(d) })),
-        previousIdentities
-      );
-
-      /* One song at a time: the year it turns on decides what the next question
-         can be, so there is nothing to pre-tick and nothing to pick alongside
-         it. Every candidate is already a legal step against the chain year. */
-      if (isHigherOrLower) {
-        setSelected(new Set());
-        setPickOrder([]);
-        setAutoPickShown(false);
-
-        const playable = items.filter(
-          (item, index) => !dupes.has(index) && isSongDraft(item) && isValidStep((item as MusicSnippetCandidate).year, chainStart, gapRange)
-        ).length;
-        if (playable === 0) {
-          toast.info(`No song here can follow on from ${chainStart}. Try again, or widen the year gap.`);
+        if (first.error || !items.length) {
+          toast.error(first.error || (withoutPicture > 0 ? "No pictures came back. Try again." : "Nothing came back. Try again."));
+          return;
         }
-        return;
-      }
 
-      const preselect = new Set<number>();
-      for (let i = 0; i < items.length; i++) {
-        if (preselect.size >= cap) break;
-        if (dupes.has(i)) continue;
-        preselect.add(i);
-      }
-      setSelected(preselect);
-      setPickOrder([...preselect]);
-      setAutoPickShown(preselect.size > 0);
+        /* Pictures that fail to draw leave the batch short of what the round
+           needs. Ask for the shortfall again, a bounded number of times, rather
+           than showing a set that cannot fill the round. */
+        for (let topUp = 0; kind === "picture" && items.length < cap && topUp < PICTURE_TOP_UPS; topUp++) {
+          setToppingUp(true);
+          const more = await requestDrafts(cap - items.length, items.map(draftIdentity));
+          withoutPicture += more.withoutPicture ?? 0;
+          if (more.error || !more.items?.length) break;
+          items = [...items, ...more.items];
+        }
 
-      if (withoutPicture > 0 && items.length < cap) {
-        toast.warning(
-          `${plural(withoutPicture, "picture")} didn't come back, even after asking again, so the batch is ${plural(
-            cap - items.length,
-            "card"
-          )} short. Create more if you need ${cap - items.length === 1 ? "it" : "them"}.`
+        setDrafts(items);
+        setNeverShowFlipped(new Set());
+        setSwappedOut([]);
+        setDraftedAnswers((prev) => [...prev, ...items.map(draftIdentity)]);
+        setSetupOpen(false);
+
+        // Pre-tick exactly what the round needs, skipping anything that repeats a
+        // question already saved. Unticking one dud beats ticking nine keepers.
+        const dupes = findDuplicateIndices(
+          items.map((d) => ({ question: draftIdentity(d) })),
+          previousIdentities
         );
-      } else if (withoutPicture > 0) {
-        toast.info(
-          `${plural(withoutPicture, "picture")} didn't come back, so we asked for more to make up the set.`
-        );
+
+        /* One song at a time: the year it turns on decides what the next question
+           can be, so there is nothing to pre-tick and nothing to pick alongside
+           it. Every candidate is already a legal step against the chain year. */
+        if (isHigherOrLower) {
+          setSelected(new Set());
+          setPickOrder([]);
+          setAutoPickShown(false);
+
+          const playable = items.filter(
+            (item, index) => !dupes.has(index) && isSongDraft(item) && isValidStep((item as MusicSnippetCandidate).year, chainStart, gapRange)
+          ).length;
+          if (playable === 0) {
+            toast.info(`No song here can follow on from ${chainStart}. Try again, or widen the year gap.`);
+          }
+          return;
+        }
+
+        const preselect = new Set<number>();
+        for (let i = 0; i < items.length; i++) {
+          if (preselect.size >= cap) break;
+          if (dupes.has(i)) continue;
+          preselect.add(i);
+        }
+        setSelected(preselect);
+        setPickOrder([...preselect]);
+        setAutoPickShown(preselect.size > 0);
+
+        if (withoutPicture > 0 && items.length < cap) {
+          toast.warning(
+            `${plural(withoutPicture, "picture")} didn't come back, even after asking again, so the batch is ${plural(
+              cap - items.length,
+              "card"
+            )} short. Create more if you need ${cap - items.length === 1 ? "it" : "them"}.`
+          );
+        } else if (withoutPicture > 0) {
+          toast.info(
+            `${plural(withoutPicture, "picture")} didn't come back, so we asked for more to make up the set.`
+          );
+        }
+      },
+      (err) => {
+        console.error("Round generation failed:", err);
+        toast.error("Could not reach the generator.");
       }
-    } catch (err) {
-      console.error("Round generation failed:", err);
-      toast.error("Could not reach the generator.");
-    } finally {
-      setToppingUp(false);
-      setIsGenerating(false);
-    }
-  }, [
-    isGenerating,
-    isPicture,
-    isHigherOrLower,
-    rangeInvalid,
-    releaseYearReason,
-    effectiveTopic,
-    requestDrafts,
-    batchSize,
-    kind,
-    previousIdentities,
-    needed,
-    question_count,
-    chainStart,
-    gapRange,
-  ]);
+    );
+    setToppingUp(false);
+    setIsGenerating(false);
+  };
 
   // Replace one draft rather than binning the batch.
-  const handleSwap = useCallback(
-    async (index: number) => {
-      if (swappingIndex !== null) return;
-      setSwappingIndex(index);
-      setAutoPickShown(false);
+  const handleSwap = async (index: number) => {
+    if (swappingIndex !== null) return;
+    setSwappingIndex(index);
+    setAutoPickShown(false);
 
-      try {
+    await attempt(
+      async () => {
         const { items, error } = await requestDrafts(1);
         const replacement = items?.[0];
 
@@ -693,6 +711,10 @@ export default function QuizRoundSheet({
         }
 
         const replaced = drafts.map((d, i) => (i === index ? replacement : d));
+        const outgoing = drafts[index];
+        if (outgoing && !missingPicture(outgoing)) {
+          setSwappedOut((prev) => [...prev, draftIdentity(outgoing)]);
+        }
 
         // A Higher-or-Lower round is ordered by the ticking, not by the list, so
         // its pool stays put - re-sorting would shuffle cards mid-pick and
@@ -724,27 +746,26 @@ export default function QuizRoundSheet({
         }
 
         setDraftedAnswers((prev) => [...prev, draftIdentity(replacement)]);
-      } catch (err) {
+      },
+      (err) => {
         console.error(`Swapping a ${noun} failed:`, err);
         toast.error(`Could not swap that ${noun}.`);
-      } finally {
-        setSwappingIndex(null);
       }
-    },
-    [swappingIndex, requestDrafts, noun, drafts, selected, kind, isHigherOrLower]
-  );
+    );
+    setSwappingIndex(null);
+  };
 
   // Swap replaces the subject, which is the wrong tool when the picture is the
   // problem but the answer was the one you wanted. This draws that same
   // subject again.
-  const handleRetryPicture = useCallback(
-    async (index: number) => {
-      if (retryingIndex !== null) return;
-      const draft = drafts[index];
-      if (!isPictureDraft(draft)) return;
+  const handleRetryPicture = async (index: number) => {
+    if (retryingIndex !== null) return;
+    const draft = drafts[index];
+    if (!isPictureDraft(draft)) return;
 
-      setRetryingIndex(index);
-      try {
+    setRetryingIndex(index);
+    await attempt(
+      async () => {
         const { imageUrl, description } = await regeneratePictureImageAction(
           draft.answer,
           effectiveTopic,
@@ -764,15 +785,14 @@ export default function QuizRoundSheet({
         setDrafts((prev) =>
           prev.map((d, i) => (i === index ? { ...draft, imageUrl, description: description ?? draft.description } : d))
         );
-      } catch (err) {
+      },
+      (err) => {
         console.error("Picture retry failed:", err);
         toast.error("Could not create that picture.");
-      } finally {
-        setRetryingIndex(null);
       }
-    },
-    [retryingIndex, drafts, effectiveTopic, imageNotes]
-  );
+    );
+    setRetryingIndex(null);
+  };
 
   const toggleDraft = useCallback(
     (index: number) => {
@@ -829,120 +849,114 @@ export default function QuizRoundSheet({
     [selected, selectionCap, isHigherOrLower, drafts, chainStart, gapRange]
   );
 
-  const handleApprove = useCallback(async () => {
+  const handleApprove = async () => {
     if (isApproving || selected.size === 0) return;
     setIsApproving(true);
 
-    try {
-      // The chain is ordered by the ticking; everything else reads down the list.
-      const chosenIndices = isHigherOrLower ? pickOrder : [...selected].sort((a, b) => a - b);
-      const chosen = chosenIndices
-        .map((i) => drafts[i])
-        .filter((d) => Boolean(d) && !missingPicture(d));
+    await attempt(
+      async () => {
+        // The chain is ordered by the ticking; everything else reads down the list.
+        const chosenIndices = isHigherOrLower ? pickOrder : [...selected].sort((a, b) => a - b);
+        const chosen = chosenIndices
+          .map((i) => drafts[i])
+          .filter((d) => Boolean(d) && !missingPicture(d));
 
-      if (chosen.length === 0) {
-        toast.error(`Nothing to add - none of those ${noun}s are ready.`);
-        return;
-      }
+        if (chosen.length === 0) {
+          toast.error(`Nothing to add - none of those ${noun}s are ready.`);
+          return;
+        }
 
-      const chosenHintYears = chainHintYears(
-        chosen.map((d) => (isSongDraft(d) ? d.year : 0)),
-        chainStart
-      );
-
-      let playlistSynced: boolean | undefined;
-
-      if (kind === "picture") {
-        await savePictureRoundAction(
-          await uploadPictureDrafts(chosen.filter(isPictureDraft), eventId),
-          eventId,
-          category_name,
-          categoryConfigId,
-          effectiveTopic,
-          difficulty,
-          aiOrigin(draftModel ?? ""),
-          imageNotes
+        const chosenHintYears = chainHintYears(
+          chosen.map((d) => (isSongDraft(d) ? d.year : 0)),
+          chainStart
         );
-      } else if (kind === "song") {
-        const result = await saveMusicSnippetsAction(
-          chosen.filter(isSongDraft).map((s) => ({
-            artist: s.artist,
-            title: s.title,
-            year: s.year,
-            spotify_track_id: s.spotify_track_id,
-          })),
-          eventId,
-          category_name,
-          categoryConfigId,
-          effectiveTopic,
-          difficulty,
-          chainStart,
-          aiOrigin(draftModel ?? "")
-        );
-        playlistSynced = !result?.needsConnect && !!result?.ok;
-        if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
-        if (result?.skipped) {
-          toast.warning(
-            `${plural(result.skipped, "song")} did not follow on from the one before it and ${result.skipped === 1 ? "was" : "were"} left out.`
+
+        let playlistSynced: boolean | undefined;
+
+        if (kind === "picture") {
+          await savePictureRoundAction(
+            await uploadPictureDrafts(chosen.filter(isPictureDraft), eventId),
+            eventId,
+            category_name,
+            categoryConfigId,
+            effectiveTopic,
+            difficulty,
+            aiOrigin(draftModel ?? ""),
+            imageNotes
+          );
+        } else if (kind === "song") {
+          const result = await saveMusicSnippetsAction(
+            chosen.filter(isSongDraft).map((s) => ({
+              artist: s.artist,
+              title: s.title,
+              year: s.year,
+              spotify_track_id: s.spotify_track_id,
+            })),
+            eventId,
+            category_name,
+            categoryConfigId,
+            effectiveTopic,
+            difficulty,
+            chainStart,
+            aiOrigin(draftModel ?? "")
+          );
+          playlistSynced = !result?.needsConnect && !!result?.ok;
+          if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
+          if (result?.skipped) {
+            toast.warning(
+              `${plural(result.skipped, "song")} did not follow on from the one before it and ${result.skipped === 1 ? "was" : "were"} left out.`
+            );
+          }
+        } else {
+          await saveQuizToDatabase(
+            chosen
+              .filter(isQuestionDraft)
+              // saveQuizToDatabase resolves the config row by category name, so pin
+              // it to this round rather than trusting whatever the model echoed back.
+              .map((q) => ({ ...q, category: category_name })),
+            eventId,
+            effectiveTopic,
+            difficulty,
+            aiOrigin(draftModel ?? "")
           );
         }
-      } else {
-        await saveQuizToDatabase(
-          chosen
-            .filter(isQuestionDraft)
-            // saveQuizToDatabase resolves the config row by category name, so pin
-            // it to this round rather than trusting whatever the model echoed back.
-            .map((q) => ({ ...q, category: category_name })),
-          eventId,
-          effectiveTopic,
-          difficulty,
-          aiOrigin(draftModel ?? "")
-        );
+
+        let hiddenCount = 0;
+        if (toBeHidden.length) {
+          const hidden = await excludeQuizDraftsAction(categoryConfigId, eventId, toBeHidden);
+          if (hidden.ok) {
+            hiddenCount = toBeHidden.length;
+          } else {
+            toast.warning(
+              `Saved, but the ${plural(toBeHidden.length, `unpicked ${noun}`)} could not be marked never to show again.`
+            );
+          }
+        }
+
+        setApproved({
+          added: chosen,
+          hintYears: chosenHintYears,
+          savedAfter: savedCount + chosen.length,
+          playlistSynced,
+          hiddenCount,
+        });
+        resetDrafts();
+        // The next question is measured against the song just saved, so the year
+        // that was typed for this one has no bearing on it.
+        if (isHigherOrLower) setReleaseYear("");
+        setSetupOpen(true);
+        onApproved?.();
+        router.refresh();
+      },
+      (err) => {
+        console.error(`Saving the ${noun} round failed:`, err);
+        toast.error(err instanceof Error ? err.message : `Could not save those ${noun}s.`);
       }
+    );
+    setIsApproving(false);
+  };
 
-      setApproved({
-        added: chosen,
-        hintYears: chosenHintYears,
-        savedAfter: savedCount + chosen.length,
-        playlistSynced,
-      });
-      resetDrafts();
-      // The next question is measured against the song just saved, so the year
-      // that was typed for this one has no bearing on it.
-      if (isHigherOrLower) setReleaseYear("");
-      setSetupOpen(true);
-      onApproved?.();
-      router.refresh();
-    } catch (err) {
-      console.error(`Saving the ${noun} round failed:`, err);
-      toast.error(err instanceof Error ? err.message : `Could not save those ${noun}s.`);
-    } finally {
-      setIsApproving(false);
-    }
-  }, [
-    isApproving,
-    draftModel,
-    selected,
-    pickOrder,
-    isHigherOrLower,
-    chainStart,
-    drafts,
-    kind,
-    eventId,
-    category_name,
-    categoryConfigId,
-    effectiveTopic,
-    imageNotes,
-    difficulty,
-    savedCount,
-    noun,
-    resetDrafts,
-    onApproved,
-    onPlaylistUrl,
-    router,
-  ]);
-
-  const handleManualSaved = useCallback(() => {
+  const handleManualSaved = () => {
     setApproved(null);
 
     /* The round just gained a question by hand, so it has room for one fewer
@@ -966,16 +980,7 @@ export default function QuizRoundSheet({
 
     onApproved?.();
     router.refresh();
-  }, [
-    onApproved,
-    router,
-    question_count,
-    savedCount,
-    selected,
-    pickOrder,
-    category_name,
-    noun,
-  ]);
+  };
 
   const closeSheet = useCallback(() => setOpen(false), []);
 
@@ -1014,7 +1019,11 @@ export default function QuizRoundSheet({
     if (isHigherOrLower && needed > 1) {
       return `1 picked - add it, then create the next question.`;
     }
-    if (selected.size >= needed) return "Ready - this completes the round.";
+    if (selected.size >= needed) {
+      return toBeHidden.length
+        ? `Ready - this completes the round. ${plural(toBeHidden.length, `unpicked ${noun}`)} won't be suggested again.`
+        : "Ready - this completes the round.";
+    }
     if (failedPictures > 0) {
       return `${selected.size} picked - ${plural(failedPictures, "card")} still ${
         failedPictures === 1 ? "needs a picture" : "need pictures"
@@ -1023,7 +1032,9 @@ export default function QuizRoundSheet({
     return `${selected.size} picked - you can add now, ${plural(
       needed - selected.size,
       noun
-    )} will still be needed.`;
+    )} will still be needed.${
+      toBeHidden.length ? ` ${plural(toBeHidden.length, `unpicked ${noun}`)} won't be suggested again.` : ""
+    }`;
   })();
 
   const footerReady = drafts.length > 0 && selected.size > 0 && selected.size >= needed;
@@ -1287,6 +1298,14 @@ export default function QuizRoundSheet({
                               "new song"
                             )} ${approved.added.length === 1 ? "was" : "were"} added automatically.`
                           : "Songs saved. Connect Spotify to add them to the round's playlist."}
+                      </p>
+                    )}
+
+                    {approved.hiddenCount > 0 && (
+                      <p className="mx-auto mt-4 flex max-w-125 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-surface px-4 py-2.5 text-[13px] font-semibold text-admin-muted">
+                        <EyeOff className="h-4 w-4 shrink-0" />
+                        {plural(approved.hiddenCount, `turned-down ${noun}`)} won&apos;t be suggested
+                        again for {category_name}.
                       </p>
                     )}
 
@@ -1930,7 +1949,7 @@ export default function QuizRoundSheet({
                                   : pictureMissing
                                     ? "border-admin-error/40 bg-admin-error-bg/40"
                                     : "border-admin-line bg-admin-card hover:border-admin-muted/40",
-                                lockedOut && "opacity-45"
+                                lockedOut && "[&>:not([data-keep-bright])]:opacity-45"
                               )}
                             >
                               <span
@@ -2108,6 +2127,48 @@ export default function QuizRoundSheet({
                                 )}
                               </div>
                               )}
+
+                              {!isSelected && !pictureMissing && (() => {
+                                const identity = draftIdentity(d);
+                                const hidden = isNeverShow(identity);
+                                return (
+                                  <div data-keep-bright className="mt-3 flex items-center border-t border-admin-line pt-2">
+                                    <button
+                                      type="button"
+                                      role="switch"
+                                      aria-checked={hidden}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleNeverShow(identity);
+                                      }}
+                                      onKeyDown={(e) => e.stopPropagation()}
+                                      disabled={isApproving}
+                                      title={
+                                        hidden
+                                          ? `Won't be suggested again for ${category_name} once you add the round`
+                                          : `Can be suggested again for ${category_name}`
+                                      }
+                                      className="-ml-1 flex min-h-11 items-center gap-2.5 rounded-lg px-1 text-[13px] font-semibold text-admin-muted transition-colors hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+                                    >
+                                      <span
+                                        aria-hidden="true"
+                                        className={cn(
+                                          "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+                                          hidden ? "bg-admin-primary" : "bg-admin-line"
+                                        )}
+                                      >
+                                        <span
+                                          className={cn(
+                                            "absolute h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                                            hidden ? "translate-x-4.5" : "translate-x-0.5"
+                                          )}
+                                        />
+                                      </span>
+                                      {hidden ? "Never show again" : "Can show again"}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}

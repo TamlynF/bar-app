@@ -34,6 +34,7 @@ import { playlistOwnerName, type CategoryPlaylistRow } from '@/lib/quiz/category
 import { anagramBrief, scrambleAnswer, wantsAnagram } from '@/lib/quiz/anagram'
 import { renderPrompt, resolvePrompt } from '@/lib/quiz/prompt-templates'
 import { spotifySearchQueries } from '@/lib/quiz/spotify-search'
+import { exclusionKey, withoutExcluded } from '@/lib/quiz/exclusion-key'
 
 export type QuizQuestion = {
   question: string;
@@ -136,6 +137,30 @@ async function resolveOrigin(origin: QuestionOrigin, area: AiAreaKey): Promise<Q
   return aiOrigin((await aiModelFor(area)).model)
 }
 
+/* Only the most recent turn-downs are spelled out to the model, to keep the
+   prompt a sensible size; every one of them is still filtered out afterwards. */
+const EXCLUSIONS_IN_PROMPT = 200
+
+type CategoryExclusions = { texts: string[]; keys: Set<string> }
+
+async function categoryExclusions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryConfigId: number | undefined
+): Promise<CategoryExclusions> {
+  if (!categoryConfigId) return { texts: [], keys: new Set() }
+  const { data, error } = await supabase
+    .from('quiz_question_exclusions')
+    .select('content_text, content_key')
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('created_at', { ascending: false })
+  if (error) console.error('Error loading never-show questions:', error)
+  const rows = data ?? []
+  return {
+    texts: rows.slice(0, EXCLUSIONS_IN_PROMPT).map((r) => r.content_text),
+    keys: new Set(rows.map((r) => r.content_key)),
+  }
+}
+
 export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -161,7 +186,7 @@ export async function generateQuizAction(
 ): Promise<{ questions?: QuizQuestion[], model?: string, error?: string }> {
   try {
   const supabase = await createClient()
-  const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
+  const [{ data: approved }, { data: generated }, { data: config }, neverShow] = await Promise.all([
     supabase
       .from('past_quiz_questions')
       .select('question_text')
@@ -178,11 +203,13 @@ export async function generateQuizAction(
       .select('ai_prompt')
       .eq('id', categoryConfigId)
       .maybeSingle(),
+    categoryExclusions(supabase, categoryConfigId),
   ]);
 
   const combinedExclusions = [
     ...(approved?.map(q => q.question_text) ?? []),
     ...(generated?.map(g => g.content_text) ?? []),
+    ...neverShow.texts,
   ];
   const pastQuestionsList = combinedExclusions.length
     ? combinedExclusions.join(' | ')
@@ -223,7 +250,14 @@ export async function generateQuizAction(
     });
     if ('error' in ai) return { error: ai.error };
 
-    const questions = JSON.parse(ai.text) as QuizQuestion[];
+    const questions = withoutExcluded(
+      JSON.parse(ai.text) as QuizQuestion[],
+      (q) => q.question,
+      neverShow.keys
+    );
+    if (!questions.length) {
+      return { error: "Everything that came back has been marked never to show again. Try again, or try a different topic." };
+    }
 
     if (questions.length) {
       const { error: logError } = await supabase
@@ -998,7 +1032,7 @@ export async function generateMusicSnippetsAction(
 ): Promise<{ songs?: MusicSnippetCandidate[]; model?: string; error?: string }> {
   try {
     const supabase = await createClient()
-    const [{ data: approved }, { data: generated }, { data: config }, lastYear] = await Promise.all([
+    const [{ data: approved }, { data: generated }, { data: config }, lastYear, neverShow] = await Promise.all([
       supabase
         .from('past_quiz_questions')
         .select('answer_text, answer_text_ext')
@@ -1016,6 +1050,7 @@ export async function generateMusicSnippetsAction(
         .eq('id', categoryConfigId)
         .maybeSingle(),
       lastChainYear(supabase, eventId, categoryConfigId),
+      categoryExclusions(supabase, categoryConfigId),
     ])
 
     const isHigherOrLower = config?.is_higher_lower ?? false
@@ -1033,6 +1068,7 @@ export async function generateMusicSnippetsAction(
     const combinedExclusions = [
       ...(approved?.map((q) => (isHigherOrLower ? q.answer_text_ext : q.answer_text)) ?? []),
       ...(generated?.map((g) => g.content_text) ?? []),
+      ...neverShow.texts,
     ].filter((v): v is string => !!v)
     const existingList = combinedExclusions.length
       ? combinedExclusions.join(' | ')
@@ -1112,7 +1148,14 @@ export async function generateMusicSnippetsAction(
     })
     if ('error' in ai) return { error: ai.error }
 
-    const rawSongs = JSON.parse(ai.text) as { artist: string; title: string; year: number; intro_description: string }[]
+    const rawSongs = withoutExcluded(
+      JSON.parse(ai.text) as { artist: string; title: string; year: number; intro_description: string }[],
+      (s) => `${s.artist} - ${s.title}`,
+      neverShow.keys
+    )
+    if (!rawSongs.length) {
+      return { error: 'Every song that came back has been marked never to show again. Try again, or try a different topic.' }
+    }
 
     /* A Higher-or-Lower round needs years either side of the chain, so a period
        topic is only binding on a name-that-tune round. */
@@ -1824,6 +1867,7 @@ export async function generatePictureRoundAction(
     const supabase = await createClient()
     let existingAnswers: string[] = []
     let storedPrompt: string | null = null
+    const neverShow = await categoryExclusions(supabase, categoryConfigId)
     if (eventId && categoryConfigId) {
       const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
         supabase
@@ -1845,6 +1889,7 @@ export async function generatePictureRoundAction(
       existingAnswers = [
         ...(approved?.map(q => q.answer_text) ?? []),
         ...(generated?.map(g => g.content_text) ?? []),
+        ...neverShow.texts,
       ]
       storedPrompt = config?.ai_prompt ?? null
     }
@@ -1900,8 +1945,12 @@ export async function generatePictureRoundAction(
       },
     })
     if ('error' in ai) return { error: ai.error }
-    const parsed = parsePictureSubjects(ai.text)
-    if (parsed.length === 0) return { error: 'AI returned an empty response.' }
+    const allParsed = parsePictureSubjects(ai.text)
+    if (allParsed.length === 0) return { error: 'AI returned an empty response.' }
+    const parsed = withoutExcluded(allParsed, (s) => s.answer, neverShow.keys)
+    if (parsed.length === 0) {
+      return { error: 'Every subject that came back has been marked never to show again. Try again, or try a different topic.' }
+    }
     // The model picks the answers; the scramble is built here so every card is
     // a true anagram, which the model cannot be trusted with on long names.
     const subjects = wantsAnagram(notes)
@@ -2054,4 +2103,39 @@ export async function getMusicSnippetsForEventAction(
   }
 
   return (data as SavedMusicSnippet[]) || []
+}
+/* Cards the host left unpicked, or swapped out, when adding to a round. They
+   are kept per quiz category, so no quiz night in that category is offered them
+   again. A card already on the list is left as it was. */
+export async function excludeQuizDraftsAction(
+  categoryConfigId: number,
+  eventId: number,
+  contentTexts: string[]
+): Promise<{ ok: boolean; count: number }> {
+  const supabase = await createClient()
+  const byKey = new Map<string, string>()
+  for (const text of contentTexts) {
+    const trimmed = text.trim()
+    const key = exclusionKey(trimmed)
+    if (key && !byKey.has(key)) byKey.set(key, trimmed)
+  }
+  if (!byKey.size) return { ok: true, count: 0 }
+
+  const createdBy = await getCurrentEmployeeId(supabase)
+  const { error } = await supabase.from('quiz_question_exclusions').upsert(
+    [...byKey].map(([content_key, content_text]) => ({
+      quiz_category_configs_id: categoryConfigId,
+      content_text,
+      content_key,
+      source_event_id: eventId,
+      created_by: createdBy,
+    })),
+    { onConflict: 'quiz_category_configs_id,content_key', ignoreDuplicates: true }
+  )
+  if (error) {
+    console.error('Error saving never-show questions:', error)
+    return { ok: false, count: 0 }
+  }
+  revalidatePath('/event-setups/quiz-categories')
+  return { ok: true, count: byKey.size }
 }
