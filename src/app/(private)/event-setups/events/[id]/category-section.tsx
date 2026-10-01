@@ -824,21 +824,21 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       ref={sectionRef}
       data-category-section
       className={cn(
-        "overflow-hidden rounded-2xl border border-admin-muted/40 border-l-4 bg-admin-card",
+        "overflow-hidden rounded-2xl border border-admin-muted/40 border-l-4 bg-admin-card shadow-sm",
         isComplete ? "border-l-admin-success" : hasAny ? "border-l-admin-warning" : "border-l-admin-line"
       )}
     >
       {/* Four fixed rails, same order and width on every row: name + status,
           progress chip, action slot, chevron. Complete rounds fill the action
           slot with a tag rather than collapsing it. */}
-      <div className={cn("flex flex-nowrap items-center gap-0 bg-admin-surface px-2 py-2.5 sm:flex-wrap sm:gap-3 sm:px-4", open && "border-b border-admin-muted/40")}>
+      <div className={cn("flex flex-nowrap items-center gap-0 bg-admin-card px-2 py-2.5 sm:flex-wrap sm:gap-3 sm:px-4", open && "border-b border-admin-muted/40")}>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className="flex min-h-11 min-w-0 flex-1 basis-auto items-center gap-2.5 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60 sm:basis-full md:basis-auto"
+          className="flex min-h-11 min-w-0 flex-1 basis-auto items-center gap-2.5 rounded-xl px-1 text-left transition-colors hover:bg-admin-surface/60 sm:basis-full md:basis-auto"
         >
-          <RoundIcon className="h-4 w-4 shrink-0 text-admin-muted" />
+          <RoundIcon className="hidden h-4 w-4 shrink-0 text-admin-muted sm:block" />
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-[15px] font-bold tracking-tight text-admin-primary sm:truncate sm:text-base">
               {orderNo != null && <span className="inline-block w-6 shrink-0 tabular-nums">{orderNo}.</span>}
@@ -870,12 +870,12 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {count} / {question_count}
         </span>
 
-        <div className="flex w-11 flex-none items-center justify-center sm:w-auto sm:flex-1 md:w-47.5 md:flex-none">
+        <div className="flex min-w-11 flex-none items-center justify-end sm:w-auto sm:flex-1 sm:justify-center md:w-47.5 md:flex-none">
           {isComplete ? (
             <span
               title="Round complete"
               aria-label="Round complete"
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-admin-success text-white sm:h-9 sm:w-auto sm:gap-1.5 sm:bg-admin-success-bg sm:px-3 sm:text-[13px] sm:font-semibold sm:text-admin-success"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-admin-success/30 bg-admin-success-bg text-admin-success sm:w-auto sm:gap-1.5 sm:rounded-xl sm:px-3 sm:text-[13px] sm:font-semibold"
             >
               <Check className="h-4 w-4" strokeWidth={2.5} />
               <span className="hidden sm:inline">Complete</span>
@@ -885,9 +885,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
               aria-label={hasAny ? `Add ${remaining} more` : "Start round"}
               title={hasAny ? `Add ${remaining} more` : "Start round"}
-              className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
+              className="group inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" /></span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary shadow-sm transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" strokeWidth={2.5} /></span>
               <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
               <span className="hidden sm:inline">{hasAny ? `Add ${remaining} more` : "Start round"}</span>
             </Link>

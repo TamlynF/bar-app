@@ -1151,9 +1151,9 @@ export default function QuizRoundSheet({
         onClick={() => setOpen(true)}
         aria-label={hasAny ? `Add ${needed} more` : "Start round"}
         title={hasAny ? `Add ${needed} more` : "Start round"}
-        className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
+        className="group inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white sm:w-full sm:gap-1.5 sm:rounded-xl sm:bg-admin-primary sm:px-3 sm:transition-colors sm:hover:bg-admin-primary-hover"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" /></span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-admin-primary shadow-sm transition-colors group-hover:bg-admin-primary-hover sm:hidden"><Plus className="h-5 w-5 shrink-0" strokeWidth={2.5} /></span>
         <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
         <span className="hidden sm:inline">{hasAny ? `Add ${needed} more` : "Start round"}</span>
       </button>
