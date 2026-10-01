@@ -84,7 +84,7 @@ async function SquareItemsView({ supabase }: { supabase: SupabaseClient }) {
     supabase
       .from("menu_categories")
       .select(
-        "id, name, is_active, menu_items(id, name, is_active, menu_item_prices(id, serve, amount, display_order, square_variation_id))",
+        "id, name, is_active, menu_items(id, name, is_active, show_on_menu, menu_item_prices(id, serve, amount, display_order, square_variation_id, show_on_menu))",
       )
       .eq("is_active", true)
       .order("display_order", { ascending: true }),

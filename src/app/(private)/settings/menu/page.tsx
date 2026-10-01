@@ -17,7 +17,7 @@ export default async function MenuSettingsPage() {
     await Promise.all([
       supabase
         .from("menu_categories")
-        .select("*, menu_items(*, menu_item_prices(id, serve, amount, display_order))"),
+        .select("*, menu_items(*, menu_item_prices(id, serve, amount, display_order, show_on_menu))"),
       supabase
         .from("employees")
         .select("id, full_name")
@@ -27,15 +27,20 @@ export default async function MenuSettingsPage() {
 
   if (catError) console.error("Error fetching menu:", catError);
 
+  type HiddenFlag = { show_on_menu?: boolean };
   const raw = (categories || []) as unknown as MenuCategory[];
   const sorted = [...raw].sort(byDisplayOrder).map((cat) => ({
     ...cat,
-    menu_items: [...(cat.menu_items || [])].sort(byDisplayOrder).map((item) => ({
-      ...item,
-      menu_item_prices: [...(item.menu_item_prices || [])]
-        .sort((a, z) => a.display_order - z.display_order)
-        .map((p) => ({ ...p, amount: Number(p.amount) })),
-    })),
+    menu_items: (cat.menu_items || [])
+      .filter((item) => (item as HiddenFlag).show_on_menu !== false)
+      .sort(byDisplayOrder)
+      .map((item) => ({
+        ...item,
+        menu_item_prices: (item.menu_item_prices || [])
+          .filter((price) => (price as HiddenFlag).show_on_menu !== false)
+          .sort((a, z) => a.display_order - z.display_order)
+          .map((p) => ({ ...p, amount: Number(p.amount) })),
+      })),
   }));
 
   return (

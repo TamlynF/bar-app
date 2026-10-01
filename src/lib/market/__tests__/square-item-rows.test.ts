@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSquareItemRows,
+  hiddenServeLabel,
   isMixerList,
   serveOptionsFrom,
   type CatalogItemCopyRow,
@@ -47,7 +48,8 @@ const categories: ServeCategoryRow[] = [
       {
         name: "Breezer Orange",
         is_active: true,
-        menu_item_prices: [{ id: 20, serve: "each", amount: 5, display_order: 1, square_variation_id: null }],
+        show_on_menu: false,
+        menu_item_prices: [{ id: 20, serve: "each", amount: 5, display_order: 1, square_variation_id: null, show_on_menu: false }],
       },
       {
         name: "Retired",
@@ -83,7 +85,11 @@ describe("serveOptionsFrom", () => {
   it("lists active items' serves with their category", () => {
     const serves = serveOptionsFrom(categories);
     expect(serves.map((serve) => serve.menuItemPriceId)).toEqual([10, 11, 20]);
-    expect(serves[1]).toMatchObject({ amount: 7, categoryId: 1, categoryName: "Gin" });
+    expect(serves[1]).toMatchObject({ amount: 7, categoryId: 1, categoryName: "Gin", hidden: false });
+  });
+
+  it("marks serves hidden from the menu", () => {
+    expect(serveOptionsFrom(categories).find((serve) => serve.menuItemPriceId === 20)?.hidden).toBe(true);
   });
 });
 
@@ -124,5 +130,24 @@ describe("buildSquareItemRows", () => {
 
   it("sorts by item then variation", () => {
     expect(rows.map((row) => row.variationId)).toEqual(["GIN-DBL", "GIN-SGL", "BRZ-OR", "TEE"]);
+  });
+});
+
+describe("hiddenServeLabel", () => {
+  it("uses the menu's serve when Square's variation reads as one", () => {
+    expect(hiddenServeLabel("Pint")).toBe("pint");
+    expect(hiddenServeLabel("Half")).toBe("half pint");
+    expect(hiddenServeLabel("Double")).toBe("double");
+  });
+
+  it("calls Square's Regular, or no variation name, each", () => {
+    expect(hiddenServeLabel("Regular")).toBe("each");
+    expect(hiddenServeLabel("")).toBe("each");
+  });
+
+  it("keeps Square's wording for anything else", () => {
+    expect(hiddenServeLabel("Pitcher")).toBe("pitcher");
+    expect(hiddenServeLabel("Shot Tray")).toBe("shot tray");
+    expect(hiddenServeLabel("175ml")).toBe("175ml");
   });
 });

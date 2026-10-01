@@ -98,3 +98,42 @@ export function parseServes(serves: string | null | undefined): string[] {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 }
+
+export type StoredServe = {
+  id: number;
+  serve: string;
+  amount: number;
+  display_order: number;
+  show_on_menu: boolean;
+};
+
+export type ServeWritePlan = {
+  updates: { id: number; amount: number; display_order: number; show_on_menu: true }[];
+  inserts: { serve: string; amount: number; display_order: number }[];
+  deletes: number[];
+};
+
+// Matched on the serve, so a serve the editor keeps keeps its row - and with
+// it the Square link and every market board it is on. A serve hidden from the
+// menu is left alone unless the editor now lists it, which brings it back.
+export function planServeWrites(stored: StoredServe[], serves: MenuItemPrice[]): ServeWritePlan {
+  const byServe = new Map(stored.map((row) => [row.serve, row]));
+  const plan: ServeWritePlan = { updates: [], inserts: [], deletes: [] };
+  const kept = new Set<number>();
+
+  serves.forEach((serve, index) => {
+    const display_order = index + 1;
+    const row = byServe.get(serve.serve);
+    if (!row) {
+      plan.inserts.push({ serve: serve.serve, amount: serve.amount, display_order });
+      return;
+    }
+    kept.add(row.id);
+    if (Number(row.amount) !== serve.amount || row.display_order !== display_order || !row.show_on_menu) {
+      plan.updates.push({ id: row.id, amount: serve.amount, display_order, show_on_menu: true });
+    }
+  });
+
+  plan.deletes = stored.filter((row) => row.show_on_menu && !kept.has(row.id)).map((row) => row.id);
+  return plan;
+}

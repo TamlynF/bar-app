@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normaliseName } from "@/lib/menu-import";
+import { normalizeServe } from "@/lib/menu-price";
 import { sortServes } from "./event-serves";
 import { proposeMappings, splitLinks, suggestMappings, type CatalogVariation } from "./mapping";
 import { mixerListPrice } from "./mixer";
@@ -30,6 +32,7 @@ export type ServeOption = {
   categoryId: number;
   categoryName: string;
   squareVariationId: string | null;
+  hidden: boolean;
 };
 
 export type MenuCategoryOption = { id: number; name: string };
@@ -61,15 +64,28 @@ export type ServeCategoryRow = {
   menu_items: {
     name: string;
     is_active: boolean;
+    show_on_menu?: boolean;
     menu_item_prices: {
       id: number;
       serve: string;
       amount: number | string;
       display_order: number;
       square_variation_id: string | null;
+      show_on_menu?: boolean;
     }[];
   }[];
 };
+
+/* The serve a menu row created for a Square variation gets: one of the
+   menu's own serves when the variation reads as one ("Pint", "Single"),
+   "each" for Square's "Regular", otherwise Square's wording ("pitcher",
+   "shot tray"). */
+export function hiddenServeLabel(variationName: string): string {
+  const serve = normalizeServe(variationName);
+  if (serve) return serve;
+  const name = normaliseName(variationName);
+  return !name || name === "regular" ? "each" : name;
+}
 
 export function isMixerList(name: string): boolean {
   return /mixer/i.test(name);
@@ -89,6 +105,7 @@ export function serveOptionsFrom(categories: ServeCategoryRow[]): ServeOption[] 
           categoryId: Number(category.id),
           categoryName: category.name,
           squareVariationId: price.square_variation_id,
+          hidden: item.show_on_menu === false || price.show_on_menu === false,
         }))
       )
   );

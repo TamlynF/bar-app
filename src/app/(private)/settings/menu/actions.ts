@@ -18,8 +18,10 @@ import {
   formatPriceText,
   isLosslessPriceText,
   parsePriceText,
+  planServeWrites,
   type MenuItemPrice,
   type Serve,
+  type StoredServe,
 } from "@/lib/menu-price";
 import { parseJsonLoose } from "@/lib/gemini";
 import { aiReadFile } from "@/lib/ai/client";
@@ -51,7 +53,8 @@ async function loadItemRows(
   const { data, error } = await supabase
     .from("menu_items")
     .select("id, name, display_order, is_active")
-    .eq("category_id", categoryId);
+    .eq("category_id", categoryId)
+    .eq("show_on_menu", true);
   if (error) throw error;
   return (data ?? []) as OrderRow[];
 }
@@ -194,8 +197,9 @@ function readServes(formData: FormData): MenuItemPrice[] {
   }
 }
 
-// Replaced wholesale rather than diffed - a handful of rows per item, and the
-// editor always sends the full set.
+// The editor always sends the full set of serves the menu lists. Each is
+// matched to its stored row by serve rather than rewritten, so a serve that
+// stays keeps its id, its Square link and its place on every market board.
 async function writeServes(
   supabase: ServerClient,
   menuItemId: number,
@@ -203,26 +207,38 @@ async function writeServes(
   employeeId: number | null,
   now: string,
 ): Promise<void> {
-  const { error: clearError } = await supabase
+  const { data, error: readError } = await supabase
     .from("menu_item_prices")
-    .delete()
+    .select("id, serve, amount, display_order, show_on_menu")
     .eq("menu_item_id", menuItemId);
-  if (clearError) throw clearError;
-  if (!serves.length) return;
+  if (readError) throw readError;
+  const plan = planServeWrites((data ?? []) as StoredServe[], serves);
 
-  const { error } = await supabase.from("menu_item_prices").insert(
-    serves.map((s, index) => ({
-      menu_item_id: menuItemId,
-      serve: s.serve,
-      amount: s.amount,
-      display_order: index + 1,
-      created_at: now,
-      updated_at: now,
-      created_by: employeeId,
-      updated_by: employeeId,
-    })),
-  );
-  if (error) throw error;
+  if (plan.deletes.length) {
+    const { error } = await supabase.from("menu_item_prices").delete().in("id", plan.deletes);
+    if (error) throw error;
+  }
+  for (const update of plan.updates) {
+    const { id, ...fields } = update;
+    const { error } = await supabase
+      .from("menu_item_prices")
+      .update({ ...fields, updated_at: now, updated_by: employeeId })
+      .eq("id", id);
+    if (error) throw error;
+  }
+  if (plan.inserts.length) {
+    const { error } = await supabase.from("menu_item_prices").insert(
+      plan.inserts.map((insert) => ({
+        menu_item_id: menuItemId,
+        ...insert,
+        created_at: now,
+        updated_at: now,
+        created_by: employeeId,
+        updated_by: employeeId,
+      })),
+    );
+    if (error) throw error;
+  }
 }
 
 export async function saveItemAction(formData: FormData) {
@@ -414,9 +430,20 @@ const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/web
 async function loadCurrentMenu(supabase: ServerClient): Promise<CurrentCategory[]> {
   const { data, error } = await supabase
     .from("menu_categories")
-    .select("id, name, note, is_active, menu_items(id, name, price, is_active, menu_item_prices(serve, amount))");
+    .select(
+      "id, name, note, is_active, menu_items(id, name, price, is_active, show_on_menu, menu_item_prices(serve, amount, show_on_menu))"
+    );
   if (error) throw error;
-  return (data ?? []) as unknown as CurrentCategory[];
+  type Shown = { show_on_menu?: boolean };
+  return ((data ?? []) as unknown as CurrentCategory[]).map((category) => ({
+    ...category,
+    menu_items: category.menu_items
+      .filter((item) => (item as Shown).show_on_menu !== false)
+      .map((item) => ({
+        ...item,
+        menu_item_prices: item.menu_item_prices.filter((price) => (price as Shown).show_on_menu !== false),
+      })),
+  }));
 }
 
 export type ParseMenuResult =

@@ -17,6 +17,7 @@ type MenuItem = {
   price: string;
   display_order: number;
   is_active: boolean;
+  show_on_menu: boolean;
 };
 
 type MenuCategory = {
@@ -40,7 +41,7 @@ export default async function MenuPage() {
   const sorted = ((categories as MenuCategory[]) || []).map((cat) => ({
     ...cat,
     menu_items: cat.menu_items
-      .filter((i) => i.is_active)
+      .filter((i) => i.is_active && i.show_on_menu)
       .sort((a, b) => a.display_order - b.display_order),
   }));
 

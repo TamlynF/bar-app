@@ -8,6 +8,8 @@ import { squareClient } from "@/lib/square";
 import type { Square } from "square";
 import { proposeMappings, splitLinks } from "@/lib/market/mapping";
 import { syncLinkedMenuCategories } from "@/lib/market/variation-categories";
+import { hiddenServeLabel } from "@/lib/market/square-item-rows";
+import { formatPriceText } from "@/lib/menu-price";
 import {
   resolveMarketConfig,
   DEFAULT_MARKET_CONFIG,
@@ -1372,8 +1374,22 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
 /* Links a Square variation to one menu serve from the Square side, or unlinks
    it when menuItemPriceId is null. A variation feeds one serve, so any other
    serve pointing at it lets go, and the serve's previous variation is freed. */
-export async function linkVariationToServeAction(variationId: string, menuItemPriceId: number | null) {
+export async function linkVariationToServeAction(
+  variationId: string,
+  menuItemPriceId: number | null
+): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient();
+  const result = await linkVariation(supabase, variationId, menuItemPriceId);
+  if ("error" in result) return result;
+  revalidateMarket();
+  return { success: true };
+}
+
+async function linkVariation(
+  supabase: ServerClient,
+  variationId: string,
+  menuItemPriceId: number | null
+): Promise<{ error: string } | { success: true }> {
   const { data: holders, error: holdersError } = await supabase
     .from("menu_item_prices")
     .select("id")
@@ -1404,8 +1420,106 @@ export async function linkVariationToServeAction(variationId: string, menuItemPr
   }
   await syncMappingsToLiveSession(supabase, changes);
   await refreshLinkedCategories(supabase, [variationId, previousVariationId]);
-  revalidateMarket();
   return { success: true };
+}
+
+type CategoryItemRow = {
+  id: number;
+  name: string;
+  menu_item_prices: { id: number; serve: string; display_order: number; square_variation_id: string | null }[];
+};
+
+/* For a Square variation the menu has no serve for: adds the serve, and the
+   item too when the category has none of that name, both hidden from the
+   public menu, then links the variation to it. An item of the same name keeps
+   its place on the menu and gains a hidden serve; a serve it already has is
+   linked rather than duplicated. */
+export async function createHiddenServeAction(variationId: string, categoryId: number) {
+  const supabase = await createClient();
+  if (!Number.isInteger(categoryId) || categoryId <= 0) return { error: "Pick a menu category first." };
+
+  const { data: variation, error: variationError } = await supabase
+    .from("square_catalog_variations")
+    .select("item_name, variation_name, price")
+    .eq("variation_id", variationId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (variationError) return { error: variationError.message };
+  if (!variation) return { error: "That Square variation is no longer in the catalog copy." };
+  const { item_name: itemName, variation_name: variationName } = variation as {
+    item_name: string;
+    variation_name: string;
+    price: number | string | null;
+  };
+  const amount = Number((variation as { price: number | string | null }).price);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { error: "Square has no fixed price for this variation, so the serve has nothing to be priced from." };
+  }
+  const serve = hiddenServeLabel(variationName);
+
+  const { data: itemRows, error: itemsError } = await supabase
+    .from("menu_items")
+    .select("id, name, menu_item_prices(id, serve, display_order, square_variation_id)")
+    .eq("category_id", categoryId);
+  if (itemsError) return { error: itemsError.message };
+  const existing = ((itemRows ?? []) as CategoryItemRow[]).find(
+    (item) => normaliseName(item.name) === normaliseName(itemName)
+  );
+
+  const sameServe = existing?.menu_item_prices.find((price) => price.serve === serve);
+  if (sameServe) {
+    if (sameServe.square_variation_id && sameServe.square_variation_id !== variationId) {
+      return { error: `${existing!.name} already has a ${serve} serve linked to another Square variation.` };
+    }
+    const linked = await linkVariation(supabase, variationId, sameServe.id);
+    if ("error" in linked) return linked;
+    revalidateMarket();
+    return { success: true, createdItem: false, createdServe: false };
+  }
+
+  const employeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+  const audit = { created_at: now, updated_at: now, created_by: employeeId, updated_by: employeeId };
+
+  let itemId = existing?.id ?? null;
+  if (itemId == null) {
+    const { data: inserted, error } = await supabase
+      .from("menu_items")
+      .insert({
+        category_id: categoryId,
+        name: itemName,
+        price: formatPriceText([{ serve, amount }]),
+        display_order: 0,
+        is_active: true,
+        show_on_menu: false,
+        ...audit,
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) return { error: error?.message ?? "Could not create the menu item." };
+    itemId = inserted.id as number;
+  }
+
+  const nextOrder = Math.max(0, ...(existing?.menu_item_prices ?? []).map((price) => price.display_order)) + 1;
+  const { data: price, error: priceError } = await supabase
+    .from("menu_item_prices")
+    .insert({
+      menu_item_id: itemId,
+      serve,
+      amount: Math.round(amount * 100) / 100,
+      display_order: nextOrder,
+      show_on_menu: false,
+      ...audit,
+    })
+    .select("id")
+    .single();
+  if (priceError || !price) return { error: priceError?.message ?? "Could not create the menu serve." };
+
+  const linked = await linkVariation(supabase, variationId, price.id as number);
+  if ("error" in linked) return linked;
+  revalidateMarket();
+  revalidatePath("/settings/menu");
+  return { success: true, createdItem: existing == null, createdServe: true };
 }
 
 /* Picks a Square variation's menu category by hand, or with null hands it

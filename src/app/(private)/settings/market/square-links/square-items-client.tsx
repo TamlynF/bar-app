@@ -11,6 +11,7 @@ import {
   Ellipsis,
   ExternalLink,
   Loader2,
+  Plus,
   RefreshCw,
   SearchX,
   Sparkles,
@@ -47,6 +48,7 @@ import {
 } from "../actions";
 import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp, salesSyncMessage } from "../ui";
 import { saleLinesTitle, type SaleLineCount } from "./square-links-client";
+import CreateServeDialog from "./create-serve-dialog";
 
 type ItemFilter = "all" | "unlinked" | "linked" | "suggested" | "mixer";
 
@@ -174,6 +176,7 @@ function ServeSelect({
           {group.serves.map((serve) => (
             <option key={serve.menuItemPriceId} value={serve.menuItemPriceId}>
               {serveLabel(serve)}
+              {serve.hidden ? " (hidden from menu)" : ""}
               {serve.squareVariationId && serve.squareVariationId !== row.variationId
                 ? " (linked elsewhere)"
                 : ""}
@@ -319,6 +322,7 @@ export default function SquareItemsClient({
   const [filter, setFilter] = useState<ItemFilter>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [creating, setCreating] = useState<SquareItemRow | null>(null);
 
   const serveById = useMemo(() => new Map(serves.map((serve) => [serve.menuItemPriceId, serve])), [serves]);
   const categoryName = useMemo(
@@ -440,14 +444,38 @@ export default function SquareItemsClient({
   }
 
   const suggestionFor = (row: SquareItemRow) => {
+    if (row.linkedServeId != null) return null;
     const serve = row.suggestedServeId != null ? serveById.get(row.suggestedServeId) : undefined;
-    return serve ? (
-      <Suggestion serve={serve} disabled={isPending} onAccept={() => linkServe(row, serve.menuItemPriceId)} />
-    ) : null;
+    return (
+      <>
+        {serve && (
+          <Suggestion serve={serve} disabled={isPending} onAccept={() => linkServe(row, serve.menuItemPriceId)} />
+        )}
+        <button
+          type="button"
+          onClick={() => setCreating(row)}
+          disabled={isPending || row.price == null}
+          aria-label={`Create hidden menu serve for ${row.itemName} ${row.variationName}`}
+          title={row.price == null ? "Square has no fixed price for this variation" : undefined}
+          className="mt-1 inline-flex min-h-11 items-center gap-1 rounded-lg text-[11px] font-semibold text-admin-primary hover:underline disabled:opacity-50 sm:min-h-7"
+        >
+          <Plus className="h-3 w-3" aria-hidden="true" />
+          Create hidden menu serve
+        </button>
+      </>
+    );
   };
 
   return (
     <div className="space-y-4">
+      <CreateServeDialog
+        row={creating}
+        categories={categories}
+        serves={serves}
+        onOpenChange={(open) => {
+          if (!open) setCreating(null);
+        }}
+      />
       {rows === null && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-admin-error/30 bg-admin-error-bg px-4 py-3 text-[13px] sm:px-5">
           <p className="text-admin-ink">

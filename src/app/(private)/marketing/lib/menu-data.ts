@@ -9,8 +9,9 @@ type MenuItemRow = {
   name: string;
   price: string;
   is_active: boolean;
+  show_on_menu: boolean;
   benchmark_key: string | null;
-  menu_item_prices?: { serve: string; amount: number; display_order: number }[];
+  menu_item_prices?: { serve: string; amount: number; display_order: number; show_on_menu: boolean }[];
 };
 
 type MenuCategoryRow = {
@@ -20,7 +21,7 @@ type MenuCategoryRow = {
 };
 
 export const MENU_ITEM_SELECT =
-  "name, mixer_surcharge, menu_items(id, name, price, is_active, benchmark_key, menu_item_prices(serve, amount, display_order))";
+  "name, mixer_surcharge, menu_items(id, name, price, is_active, show_on_menu, benchmark_key, menu_item_prices(serve, amount, display_order, show_on_menu))";
 
 // An unseeded or unreachable table falls back to the rounds the comparison has
 // always had, so a missing row never blanks the price page.
@@ -42,7 +43,7 @@ export async function readMenuItems(supabase: ServerClient): Promise<MenuItemLit
   const items: MenuItemLite[] = [];
   ((data as MenuCategoryRow[] | null) ?? []).forEach((cat) => {
     (cat.menu_items ?? [])
-      .filter((it) => it.is_active)
+      .filter((it) => it.is_active && it.show_on_menu)
       .forEach((it) =>
         items.push({
           id: it.id,
@@ -51,7 +52,8 @@ export async function readMenuItems(supabase: ServerClient): Promise<MenuItemLit
           category: cat.name,
           mixer_surcharge: cat.mixer_surcharge ?? null,
           benchmark_key: it.benchmark_key,
-          prices: [...(it.menu_item_prices ?? [])]
+          prices: (it.menu_item_prices ?? [])
+            .filter((p) => p.show_on_menu)
             .sort((a, z) => a.display_order - z.display_order)
             .map((p) => ({ serve: p.serve, amount: Number(p.amount) })),
         }),
