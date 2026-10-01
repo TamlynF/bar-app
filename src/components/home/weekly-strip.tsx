@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ArrowCta } from "@/components/ui/arrow-cta";
+import { VENUE_OFFERINGS } from "@/lib/venue-offerings";
 import { WEEKLY_NIGHTS } from "@/lib/weekly-nights";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +17,29 @@ export function WeeklyStrip({ className }: { className?: string }) {
       >
         What’s on
       </h2>
-      <ol className="grid grid-cols-3 gap-2 lg:hidden">
+      <ul className="flex flex-col divide-y divide-hairline border-y border-hairline sm:hidden">
+        {VENUE_OFFERINGS.map((offering) => (
+          <li key={offering.key}>
+            <Link
+              href={offering.href}
+              className="group flex min-h-11 items-center gap-4 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+            >
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <span className="text-pill font-bold tracking-wide text-gold uppercase">{offering.when}</span>
+                <h3 className="font-black text-h3 leading-none tracking-tighter text-balance text-ink uppercase transition-colors group-hover:text-gold">
+                  {offering.title}
+                </h3>
+                <p className="text-meta text-ink-2">{offering.detail}</p>
+              </div>
+              <ArrowRight
+                className="size-5 shrink-0 text-gold transition-transform motion-safe:group-hover:translate-x-1"
+                aria-hidden="true"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <ol className="hidden grid-cols-3 gap-2 sm:grid lg:hidden">
         {WEEKLY_NIGHTS.map((night) => {
           const lead = night.bookHref != null;
           return (
