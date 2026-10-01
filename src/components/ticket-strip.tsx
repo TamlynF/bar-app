@@ -39,7 +39,7 @@ export function TicketStrip({
 
   return (
     <section
-      aria-labelledby="next-up-heading"
+      aria-labelledby="ticket-strip-heading"
       className="hidden scroll-mt-24 overflow-x-clip px-6 pt-2 md:block lg:px-10"
     >
       <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-4">
@@ -48,7 +48,7 @@ export function TicketStrip({
             {rangeLabel ? `The schedule · ${rangeLabel}` : "The schedule"}
           </span>
           <h2
-            id="next-up-heading"
+            id="ticket-strip-heading"
             className="m-0 font-black text-4xl leading-[0.95] tracking-tighter text-ink uppercase"
           >
             Next up

@@ -14,19 +14,24 @@ import { cn } from "@/lib/utils";
 export function NextUpTicket({
   event,
   today,
+  headingId,
   className,
 }: {
   event: SerializedEvent;
   today: Date;
+  headingId: string;
   className?: string;
 }) {
   const date = parseDate(event.date);
   const entry = entryText(event);
 
   return (
-    <section aria-labelledby="next-up-heading" className={cn("flex flex-col gap-2.5", className)}>
-      <div className="flex items-baseline justify-between">
-        <h2 id="next-up-heading" className="text-eyebrow font-semibold text-gold">
+    <section aria-labelledby={headingId} className={cn("flex flex-col gap-2.5", className)}>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <h2
+          id={headingId}
+          className="font-black text-h2 tracking-tighter text-balance text-ink uppercase sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
+        >
           Next up on the stage
         </h2>
         <span className="text-pill font-bold tracking-wide text-ink-2 uppercase">{countdownLabel(event.date, today)}</span>

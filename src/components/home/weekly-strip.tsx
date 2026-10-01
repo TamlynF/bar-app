@@ -8,8 +8,11 @@ import { cn } from "@/lib/utils";
 export function WeeklyStrip({ className }: { className?: string }) {
   return (
     <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-3", className)}>
-      <h2 id="weekly-heading" className="text-eyebrow font-semibold text-gold">
-        How every week goes
+      <h2
+        id="weekly-heading"
+        className="font-black text-h2 tracking-tighter text-balance text-ink uppercase sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
+      >
+        What’s on
       </h2>
       <ol className="grid grid-cols-3 gap-2 lg:hidden">
         {WEEKLY_NIGHTS.map((night) => {

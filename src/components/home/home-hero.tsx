@@ -65,13 +65,18 @@ export function HomeHero({ featured, today }: { featured: SerializedEvent | null
           </div>
 
           {featured && (
-            <NextUpTicket event={featured} today={today} className="hidden self-center lg:col-span-4 lg:col-start-9 lg:flex" />
+            <NextUpTicket
+              event={featured}
+              today={today}
+              headingId="next-up-heading-wide"
+              className="hidden self-center lg:col-span-4 lg:col-start-9 lg:flex"
+            />
           )}
         </div>
 
         <div className="flex flex-col gap-8 px-4 pt-2 pb-8 sm:px-6 lg:px-10 lg:pt-4 lg:pb-12">
           <WeeklyStrip />
-          {featured && <NextUpTicket event={featured} today={today} className="lg:hidden" />}
+          {featured && <NextUpTicket event={featured} today={today} headingId="next-up-heading" className="lg:hidden" />}
         </div>
       </div>
     </section>
