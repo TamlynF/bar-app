@@ -9,14 +9,15 @@ import { refreshStockTracking } from "./square-stock-tracking";
    Run when a market opens, when the sandbox catalog is seeded and when
    Square's catalog webhook fires. When Square cannot be reached the copy is
    left as it was; with requireSquare (the webhook, so Square retries) that is
-   an error, otherwise the session is set from the last copy. */
+   an error, otherwise the session is set from the last copy. catalogFresh
+   skips the copy when the caller has just refreshed it. */
 export async function refreshSessionFromSquare(
   supabase: SupabaseClient,
   sessionId: number,
-  options: { requireSquare: boolean }
+  options: { requireSquare: boolean; catalogFresh?: boolean }
 ): Promise<{ catalogError: string | null }> {
-  const catalog = await syncSquareCatalog(createAdminClient());
-  const catalogError = catalog.status === "error" ? catalog.error : null;
+  const catalog = options.catalogFresh ? null : await syncSquareCatalog(createAdminClient());
+  const catalogError = catalog?.status === "error" ? catalog.error : null;
   if (catalogError) {
     if (options.requireSquare) throw new Error(`Square catalog refresh failed: ${catalogError}`);
     console.error("[market] catalog refresh failed, using the last copy:", catalogError);

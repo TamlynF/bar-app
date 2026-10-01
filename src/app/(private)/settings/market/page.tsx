@@ -224,7 +224,7 @@ export default async function MarketSettingsPage({
     .from("market_instruments")
     .select("session_id, market_sessions!inner(status, ended_at, started_at)")
     .not("square_synced_price", "is", null)
-    .not("square_original_price", "is", null)
+    .or("square_original_price.not.is.null,square_original_pricing_type.not.is.null")
     .order("started_at", { referencedTable: "market_sessions", ascending: false });
   let tillRestore: TillRestoreSummary | null = null;
   if (staleRows && staleRows.length > 0) {
@@ -234,7 +234,7 @@ export default async function MarketSettingsPage({
       : first.market_sessions;
     tillRestore = {
       sessionId: first.session_id,
-      status: joined?.status === "live" ? "live" : "ended",
+      status: joined?.status === "live" || joined?.status === "closing" ? "live" : "ended",
       endedAt: joined?.ended_at ?? null,
       count: staleRows.filter((row) => row.session_id === first.session_id).length,
     };

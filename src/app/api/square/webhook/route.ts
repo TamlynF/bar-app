@@ -10,6 +10,12 @@ import { getContactEmail } from "@/lib/company-info";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-confirmation";
 import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
+import { catalogCopiedWithin } from "@/lib/square-catalog-sync";
+
+/* Every market price push fires this webhook too, so a live market would
+   otherwise re-copy the whole catalog after each re-rank, competing with its
+   own next write. One refresh per window is plenty for staff edits. */
+const CATALOG_REFRESH_WINDOW_MS = 3 * 60 * 1000;
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -74,7 +80,9 @@ export async function POST(req: NextRequest) {
     }
     try {
       const { data: live } = await admin.from("market_sessions").select("id").eq("status", "live").maybeSingle();
-      if (live) await refreshSessionFromSquare(admin, live.id as number, { requireSquare: true });
+      if (live && !(await catalogCopiedWithin(admin, CATALOG_REFRESH_WINDOW_MS))) {
+        await refreshSessionFromSquare(admin, live.id as number, { requireSquare: true });
+      }
     } catch (err) {
       console.error("[market] catalog refresh failed:", err);
     }

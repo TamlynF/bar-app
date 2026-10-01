@@ -3,6 +3,7 @@ import type { Square } from "square";
 import { squareClient } from "@/lib/square";
 import { isStockTrackedAt } from "@/lib/market/square-stock-tracking";
 import { syncLinkedMenuCategories } from "@/lib/market/variation-categories";
+import { marketOriginalPrices } from "@/lib/market/square-price-sync";
 
 /* The nightly copy of the Square catalog into square_catalog_variations,
    one row per item variation. The menu links to Square by variation id; this
@@ -312,6 +313,23 @@ async function writeSyncState(supabase: SupabaseClient, now: Date, fields: Recor
   if (error) console.error("[square-catalog-sync] state write failed:", error);
 }
 
+/* While a market trades, Square holds tonight's market prices for its
+   drinks. The copy keeps the price Square had before the market instead, so
+   pages and the next market's base price never mistake a market price for
+   the menu price. */
+async function keepMenuPrices(supabase: SupabaseClient, rows: CatalogVariationRow[]) {
+  let originals: Map<string, number | null>;
+  try {
+    originals = await marketOriginalPrices(supabase);
+  } catch (err) {
+    console.error("[square-catalog-sync] could not read market original prices:", err);
+    return;
+  }
+  for (const row of rows) {
+    if (originals.has(row.variation_id)) row.price = originals.get(row.variation_id) ?? null;
+  }
+}
+
 export async function syncSquareCatalog(supabase: SupabaseClient, now: Date = new Date()): Promise<CatalogSyncResult> {
   const locationId = process.env.SQUARE_LOCATION_ID;
   if (!locationId) return { status: "error", error: "SQUARE_LOCATION_ID not set" };
@@ -327,6 +345,7 @@ export async function syncSquareCatalog(supabase: SupabaseClient, now: Date = ne
     ]);
     const rows = catalogToVariationRows(objects, locationId, syncedAt, { locationNames, stockByVariation });
     if (rows.length === 0) throw new Error("Square returned no catalog items, so the copy was left as it was.");
+    await keepMenuPrices(supabase, rows);
 
     const removed = await upsertAndRetire(supabase, "square_catalog_variations", "variation_id", rows, syncedAt);
     const modifierLists = catalogToModifierListRows(objects, syncedAt);
@@ -348,4 +367,11 @@ export async function syncSquareCatalog(supabase: SupabaseClient, now: Date = ne
     await writeSyncState(supabase, now, { catalog_status: "error", catalog_error: message });
     return { status: "error", error: message };
   }
+}
+
+/* True when the catalog copy was refreshed within the last ms. */
+export async function catalogCopiedWithin(supabase: SupabaseClient, ms: number, now: Date = new Date()): Promise<boolean> {
+  const { data } = await supabase.from("square_sync_state").select("catalog_synced_at").eq("id", 1).maybeSingle();
+  const at = data?.catalog_synced_at ? new Date(data.catalog_synced_at as string).getTime() : null;
+  return at != null && now.getTime() - at < ms;
 }

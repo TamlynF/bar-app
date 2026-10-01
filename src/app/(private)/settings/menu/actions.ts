@@ -33,7 +33,7 @@ import {
   type CurrentCategory,
   type MenuChange,
 } from "@/lib/menu-import";
-import { LIVE_MARKET_MENU_MESSAGE, menuItemIsTrading } from "@/lib/market/live-guard";
+import { LIVE_MARKET_MENU_MESSAGE, menuItemIsTrading, tradingServeIds } from "@/lib/market/live-guard";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 type OrderedTable = "menu_categories" | "menu_items";
@@ -533,6 +533,14 @@ export async function parseMenuUploadAction(formData: FormData): Promise<ParseMe
 /* The diff is recomputed here from the stored parse rather than trusted from the
    browser, so a tick can only ever apply the change it was shown against the
    menu as it stands now. Nothing in this path deletes a row. */
+/* Menu items with a serve trading on the live market. */
+async function tradingMenuItemIds(supabase: ServerClient): Promise<Set<number>> {
+  const serveIds = await tradingServeIds(supabase);
+  if (serveIds.size === 0) return new Set();
+  const { data } = await supabase.from("menu_item_prices").select("menu_item_id").in("id", [...serveIds]);
+  return new Set((data ?? []).map((row) => row.menu_item_id as number));
+}
+
 export async function applyMenuImportAction(
   importId: number,
   selectedKeys: string[],
@@ -557,6 +565,10 @@ export async function applyMenuImportAction(
     );
     if (!changes.length) {
       return { error: "Those changes are no longer pending - the menu has moved on." };
+    }
+    const tradingItems = await tradingMenuItemIds(supabase);
+    if (changes.some((change) => change.itemId != null && tradingItems.has(change.itemId))) {
+      return { error: LIVE_MARKET_MENU_MESSAGE };
     }
 
     const currentEmployeeId = await getCurrentEmployeeId(supabase);

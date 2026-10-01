@@ -734,7 +734,23 @@ export function LiveFloorCard({
         "Trading stops, the board shows closed, and every linked drink goes back to its normal price on the till.",
       confirmLabel: "Close market",
     });
-    if (confirmed) run(endMarketAction, "Market closed - till prices restored.");
+    if (!confirmed) return;
+    startTransition(async () => {
+      const result = await endMarketAction();
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      const changed = "changedInSquare" in result ? (result.changedInSquare ?? []) : [];
+      if (changed.length > 0) {
+        toast.warning(
+          `Market closed. ${changed.length} ${changed.length === 1 ? "drink was" : "drinks were"} changed in Square during the night and kept as Square has ${changed.length === 1 ? "it" : "them"}: ${changed.join(", ")}.`
+        );
+      } else {
+        toast.success("Market closed - till prices restored.");
+      }
+      router.refresh();
+    });
   }
 
   const canQueueCrash = warmedUp;

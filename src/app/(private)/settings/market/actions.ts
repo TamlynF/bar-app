@@ -20,7 +20,12 @@ import {
 import { eventConfig, type StockMarketEventRow } from "@/lib/market/stock-market-events";
 import { sessionTicksFor } from "@/lib/market/normal-units";
 import { shouldRerank } from "@/lib/market/tier-engine";
-import { LIVE_MARKET_MENU_MESSAGE, liveMarketSessionId } from "@/lib/market/live-guard";
+import {
+  LIVE_MARKET_LINK_MESSAGE,
+  LIVE_MARKET_MENU_MESSAGE,
+  liveMarketSessionId,
+  tradingServeIds,
+} from "@/lib/market/live-guard";
 import {
   recalculateNormalUnits,
   resolveNormalsForOpen,
@@ -226,6 +231,33 @@ async function tradeableServes(
   });
 }
 
+/* A market must not open while Square still holds an earlier market's
+   prices: its base prices and the snapshot it restores to would both be
+   last night's closing prices. Returns the reason, or null when clear. */
+async function unrestoredTillPrices(supabase: ServerClient): Promise<string | null> {
+  const { data: closing } = await supabase
+    .from("market_sessions")
+    .select("id")
+    .eq("status", "closing")
+    .limit(1)
+    .maybeSingle();
+  if (closing) {
+    return "The last market did not finish closing. End it from the control panel so its till prices are put back first.";
+  }
+  const { count, error } = await supabase
+    .from("market_instruments")
+    .select("id", { count: "exact", head: true })
+    .not("square_synced_price", "is", null)
+    .or("square_original_price.not.is.null,square_original_pricing_type.not.is.null");
+  if (error) {
+    console.error("[market] unrestored till price check failed:", error);
+    return null;
+  }
+  return count
+    ? `Square still has market prices on ${count} ${count === 1 ? "drink" : "drinks"} from an earlier market. Use Restore till prices first.`
+    : null;
+}
+
 async function openSession(
   supabase: ServerClient,
   options: {
@@ -243,6 +275,13 @@ async function openSession(
     .eq("status", "live")
     .maybeSingle();
   if (existing) return { error: "A market is already live - close it before opening another." };
+  const blocked = await unrestoredTillPrices(supabase);
+  if (blocked) return { error: blocked };
+  try {
+    await refreshCatalogCopy();
+  } catch (err) {
+    console.error("[market] catalog refresh before opening failed, using the last copy:", err);
+  }
 
   const serves = await tradeableServes(supabase, options.menuItemPriceIds);
   if ("error" in serves) return { error: serves.error };
@@ -324,7 +363,7 @@ async function openSession(
   }
 
   try {
-    await refreshSessionFromSquare(supabase, session.id, { requireSquare: false });
+    await refreshSessionFromSquare(supabase, session.id, { requireSquare: false, catalogFresh: true });
   } catch (err) {
     console.error("[market] could not set mixer prices and stock tracking:", err);
   }
@@ -1049,23 +1088,47 @@ export async function endMarketAction() {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("market_sessions")
-    .select("id, stock_market_event_id")
-    .eq("status", "live")
+    .select("id, stock_market_event_id, status")
+    .in("status", ["live", "closing"])
+    .order("started_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (!session) return { error: "No live market to end." };
 
-  /* Put the till back first. The market stays live if this fails, so the
+  /* Closing first stops new ticks (they only claim a live market) and turns
+     away a tick already past its claim right before it writes to Square, so
+     no market price can land after the restore below. */
+  if (session.status === "live") {
+    const { data: claimed, error: claimError } = await supabase
+      .from("market_sessions")
+      .update({ status: "closing" })
+      .eq("id", session.id)
+      .eq("status", "live")
+      .select("id");
+    if (claimError) return { error: claimError.message };
+    if (!claimed || claimed.length === 0) return { error: "The market changed while closing. Refresh and try again." };
+  }
+
+  /* Put the till back. The market goes back to live if this fails, so the
      control panel keeps showing the restore button rather than silently
-     leaving Saturday-night prices on the menu. */
+     leaving Saturday-night prices on the menu. A second pass a moment later
+     catches a price a tick sent just before closing began. */
   let restored = 0;
+  let changedInSquare: string[] = [];
   try {
-    const restore = await restoreSquarePrices(supabase, session.id);
-    if (restore.errors.length > 0) {
-      return { error: `Till prices were NOT restored: ${restore.errors[0].message}` };
+    for (const pass of [1, 2]) {
+      if (pass === 2) await new Promise((resolve) => setTimeout(resolve, CLOSE_SETTLE_MS));
+      const restore = await restoreSquarePrices(supabase, session.id);
+      if (restore.errors.length > 0) {
+        await reopenAfterFailedClose(supabase, session.id);
+        return { error: `Till prices were NOT restored: ${restore.errors[0].message}` };
+      }
+      restored += restore.written;
+      if (pass === 1) changedInSquare = restore.changedInSquare;
     }
-    restored = restore.written;
   } catch (err) {
     console.error("[market] restore failed:", err);
+    await reopenAfterFailedClose(supabase, session.id);
     return { error: "Could not reach Square to restore the till prices. Try again." };
   }
 
@@ -1077,8 +1140,24 @@ export async function endMarketAction() {
     .eq("id", session.id);
   if (error) return { error: error.message };
   await clearOneNightNormals(supabase, session.stock_market_event_id as number | null);
+  try {
+    await refreshCatalogCopy();
+  } catch (err) {
+    console.error("[market] catalog refresh after closing failed:", err);
+  }
   revalidateMarket();
-  return { success: true, restored, swept };
+  return { success: true, restored, swept, changedInSquare };
+}
+
+const CLOSE_SETTLE_MS = 1500;
+
+async function reopenAfterFailedClose(supabase: ServerClient, sessionId: number) {
+  const { error } = await supabase
+    .from("market_sessions")
+    .update({ status: "live" })
+    .eq("id", sessionId)
+    .eq("status", "closing");
+  if (error) console.error("[market] could not put the market back to live after a failed close:", error);
 }
 
 /* A normal units override is for the night it was set for unless "keep for
@@ -1136,7 +1215,8 @@ export async function restoreTillPricesAction(sessionId?: number) {
     const { data: live } = await supabase
       .from("market_sessions")
       .select("id")
-      .eq("status", "live")
+      .in("status", ["live", "closing"])
+      .limit(1)
       .maybeSingle();
     targetId = live?.id ?? null;
   }
@@ -1145,7 +1225,7 @@ export async function restoreTillPricesAction(sessionId?: number) {
       .from("market_instruments")
       .select("session_id, market_sessions!inner(started_at)")
       .not("square_synced_price", "is", null)
-      .not("square_original_price", "is", null)
+      .or("square_original_price.not.is.null,square_original_pricing_type.not.is.null")
       .order("started_at", { referencedTable: "market_sessions", ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1156,6 +1236,11 @@ export async function restoreTillPricesAction(sessionId?: number) {
   try {
     const restore = await restoreSquarePrices(supabase, targetId);
     if (restore.errors.length > 0) return { error: restore.errors[0].message };
+    await supabase
+      .from("market_sessions")
+      .update({ status: "ended", ended_at: new Date().toISOString() })
+      .eq("id", targetId)
+      .eq("status", "closing");
     revalidateMarket();
     return { success: true, restored: restore.written };
   } catch (err) {
@@ -1315,25 +1400,6 @@ export async function setStockOverrideAction(instrumentId: number, value: string
 /* Mappings snapshot into market_instruments when a session opens, so a link
    saved mid-session has to be pushed onto the live instruments too or the
    drink would trade demand-blind until the next market night. */
-async function syncMappingsToLiveSession(
-  supabase: ServerClient,
-  byPriceId: Map<number, string | null>
-) {
-  const { data: session } = await supabase
-    .from("market_sessions")
-    .select("id")
-    .eq("status", "live")
-    .maybeSingle();
-  if (!session) return;
-  for (const [menuItemPriceId, variationId] of byPriceId) {
-    await supabase
-      .from("market_instruments")
-      .update({ square_variation_id: variationId })
-      .eq("session_id", session.id)
-      .eq("menu_item_price_id", menuItemPriceId);
-  }
-}
-
 /* Refreshes the catalog copy from Square, then lists its modifier lists,
    for the mixer card's reload. */
 export async function loadModifierListsAction() {
@@ -1445,7 +1511,12 @@ export async function autoMatchMappingsAction() {
       squareVariationId: price.square_variation_id,
     }))
   );
-  const { targets, taken } = splitLinks(serves, new Set(variations.map((variation) => variation.variationId)));
+  const { targets: allTargets, taken } = splitLinks(
+    serves,
+    new Set(variations.map((variation) => variation.variationId))
+  );
+  const trading = await tradingServeIds(supabase);
+  const targets = allTargets.filter((target) => !trading.has(target.menuItemPriceId));
 
   const proposals = proposeMappings(variations, targets, taken);
   for (const [menuItemPriceId, variationId] of proposals) {
@@ -1455,7 +1526,6 @@ export async function autoMatchMappingsAction() {
       .eq("id", menuItemPriceId);
     if (error) return { error: error.message };
   }
-  await syncMappingsToLiveSession(supabase, new Map(proposals));
   await refreshLinkedCategories(supabase);
 
   revalidateMarket();
@@ -1464,6 +1534,7 @@ export async function autoMatchMappingsAction() {
 
 export async function saveMappingAction(menuItemPriceId: number, variationId: string | null) {
   const supabase = await createClient();
+  if ((await tradingServeIds(supabase)).has(menuItemPriceId)) return { error: LIVE_MARKET_LINK_MESSAGE };
   const { data: before } = await supabase
     .from("menu_item_prices")
     .select("square_variation_id")
@@ -1474,7 +1545,6 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
     .update({ square_variation_id: variationId })
     .eq("id", menuItemPriceId);
   if (error) return { error: error.message };
-  await syncMappingsToLiveSession(supabase, new Map([[menuItemPriceId, variationId]]));
   await refreshLinkedCategories(supabase, [
     (before as { square_variation_id: string | null } | null)?.square_variation_id ?? null,
     variationId,
@@ -1525,12 +1595,13 @@ async function linkVariation(
     if (holder.id !== menuItemPriceId) changes.set(holder.id, null);
   }
   if (menuItemPriceId != null) changes.set(menuItemPriceId, variationId);
+  const trading = await tradingServeIds(supabase);
+  if ([...changes.keys()].some((id) => trading.has(id))) return { error: LIVE_MARKET_LINK_MESSAGE };
 
   for (const [id, value] of changes) {
     const { error } = await supabase.from("menu_item_prices").update({ square_variation_id: value }).eq("id", id);
     if (error) return { error: error.message };
   }
-  await syncMappingsToLiveSession(supabase, changes);
   await refreshLinkedCategories(supabase, [variationId, previousVariationId]);
   return { success: true };
 }
@@ -1743,7 +1814,6 @@ export async function pushMenuToSquareAction() {
         .eq("id", menuItemPriceId);
       if (error) return { error: error.message };
     }
-    await syncMappingsToLiveSession(supabase, new Map(variationIds));
 
     await refreshCatalogCopy();
     revalidateMarket();
