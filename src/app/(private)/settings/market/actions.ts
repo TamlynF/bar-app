@@ -47,6 +47,7 @@ import {
 import {
   captureSquareOriginalPrices,
   restoreSquarePrices,
+  syncMarketPricesToSquare,
 } from "@/lib/market/square-price-sync";
 import {
   buildCatalogUpsertPlan,
@@ -2010,8 +2011,20 @@ export async function setInstrumentPriceAction(instrumentId: number, price: numb
     .eq("id", instrument.id);
   if (error) return { error: error.message };
 
+  /* A linked drink shows the till price on the board, so the new price goes
+     to Square now rather than waiting for the next tick. */
+  let tillWarning: string | null = null;
+  try {
+    const sync = await syncMarketPricesToSquare(supabase, session.id);
+    if (sync.errors.length > 0) tillWarning = `Square did not take the new price: ${sync.errors[0].message}`;
+    else if (sync.retryLater) tillWarning = "Square is busy, so the till and board pick up the new price on the next tick.";
+  } catch (err) {
+    console.error("[market] manual price push failed:", err);
+    tillWarning = "Could not reach Square, so the till and board pick up the new price on the next tick.";
+  }
+
   revalidateMarket();
-  return { success: true, price: currentPrice };
+  return { success: true, price: currentPrice, tillWarning };
 }
 
 /* ─── Simulated sales ────────────────────────────────────────────────────────

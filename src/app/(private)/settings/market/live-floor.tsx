@@ -793,7 +793,16 @@ export function LiveFloorCard({
     }
     const { instrumentId } = priceEdit;
     setPriceEdit(null);
-    run(() => setInstrumentPriceAction(instrumentId, price), "Price set - it shows on the board from the next tick.");
+    startTransition(async () => {
+      const result = await setInstrumentPriceAction(instrumentId, price);
+      if ("error" in result && result.error) {
+        toast.error(result.error);
+        return;
+      }
+      if ("tillWarning" in result && result.tillWarning) toast.warning(`Price set. ${result.tillWarning}`);
+      else toast.success("Price set - it is on the board and the till now.");
+      router.refresh();
+    });
   }
 
   async function handleCrashDrink(instrument: InstrumentSummary) {
