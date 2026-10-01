@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { WEEKDAY_NAMES } from "@/lib/market/normal-units";
-import { saveEventNormalUnitsAction } from "../actions";
+import { saveEventNormalUnitsAction, saveEventNormalUnitsKeepAction } from "../actions";
+import { Switch } from "./switch-field";
 
 export type NormalUnitsRowView = {
   menuItemPriceId: number;
@@ -13,6 +15,8 @@ export type NormalUnitsRowView = {
   serve: string;
   linked: boolean;
   override: number | null;
+  /* Whether the override outlives the next market night. */
+  keep: boolean;
   byWeekday: { weekday: number; unitsAvg: number; nightsSampled: number }[];
 };
 
@@ -166,6 +170,7 @@ export function NormalUnitsOverrideInput({
   row: NormalUnitsRowView;
   className?: string;
 }) {
+  const router = useRouter();
   const [value, setValue] = useState(row.override?.toString() ?? "");
   const [isPending, startTransition] = useTransition();
 
@@ -176,8 +181,12 @@ export function NormalUnitsOverrideInput({
     if (next === row.override || (next === null && row.override === null)) return;
     startTransition(async () => {
       const result = await saveEventNormalUnitsAction(eventId, row.menuItemPriceId, next);
-      if ("error" in result) toast.error(result.error);
-      else toast.success(next === null ? "Using Square history." : "Override saved.");
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(next === null ? "Using Square history." : "Override saved.");
+      router.refresh();
     });
   }
 
@@ -199,6 +208,47 @@ export function NormalUnitsOverrideInput({
         "h-9 w-20 rounded-lg border border-admin-line bg-admin-card px-2 text-right text-[13px] font-semibold text-admin-ink tabular-nums outline-none focus:border-admin-primary disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         className
       )}
+    />
+  );
+}
+
+/* The board's "keep for future nights" switch for a drink's normal units
+   override, saved as soon as it flips. A drink on auto has nothing to keep. */
+export function NormalUnitsKeepSwitch({
+  eventId,
+  row,
+  className,
+}: {
+  eventId: number;
+  row: NormalUnitsRowView;
+  className?: string;
+}) {
+  const router = useRouter();
+  const [keep, setKeep] = useState(row.keep);
+  const [isPending, startTransition] = useTransition();
+  if (row.override == null) return <span className="text-admin-muted">-</span>;
+
+  function change(next: boolean) {
+    setKeep(next);
+    startTransition(async () => {
+      const result = await saveEventNormalUnitsKeepAction(eventId, row.menuItemPriceId, next);
+      if ("error" in result) {
+        setKeep(!next);
+        toast.error(result.error);
+        return;
+      }
+      toast.success(next ? "Override kept for future nights." : "Override goes back to auto after the next night.");
+      router.refresh();
+    });
+  }
+
+  return (
+    <Switch
+      checked={keep}
+      onChange={change}
+      disabled={isPending}
+      label={`Keep the normal units override for ${row.name} ${row.serve} for future nights`}
+      className={className}
     />
   );
 }

@@ -34,12 +34,13 @@ type EventRow = StockMarketEventRow & {
         menu_item_price_id: number;
         normal_units_per_night?: number | string | null;
         normal_units_keep?: boolean | null;
+        display_name?: string | null;
       } & DrinkOverrideRow)[]
     | null;
 };
 
 const EVENT_SELECT =
-  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night, normal_units_keep)";
+  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night, normal_units_keep, display_name)";
 
 type CategoryJoin = {
   id: number;
@@ -174,6 +175,7 @@ export default async function StockMarketEventPage({
           basePriceFromSquare: false,
           normalUnitsOverride: null,
           normalUnitsKeep: false,
+          displayName: item.name,
           audit: {
             createdAt: serve.created_at ?? null,
             createdBy: serve.created_by != null ? (employeeName.get(serve.created_by) ?? null) : null,
@@ -228,6 +230,7 @@ export default async function StockMarketEventPage({
       ...drink,
       normalUnitsOverride: optionalNumber(eventItem?.normal_units_per_night),
       normalUnitsKeep: Boolean(eventItem?.normal_units_keep),
+      displayName: eventItem?.display_name?.trim() || drink.name,
       basePrice,
       basePriceFromSquare: basePrice != null && basePrice === squarePrice,
       ...(drink.squareVariationId ? { stockTracked: !untrackedSet.has(drink.squareVariationId) } : {}),
@@ -295,6 +298,7 @@ export default async function StockMarketEventPage({
         serve: drink.serve,
         linked: drink.linked,
         override: overrideByPrice.get(drink.id) ?? null,
+        keep: drink.normalUnitsOverride != null && drink.normalUnitsKeep,
         byWeekday: normalsByPrice.get(drink.id) ?? [],
       })),
   };

@@ -25,11 +25,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FilterChip,
   ListSearchInput,
-  RecordList,
   StatusPill,
 } from "@/components/admin";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatGbp } from "@/lib/price";
 import { squareItemUrl } from "@/lib/market/simulate";
 import type {
@@ -50,6 +49,15 @@ import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp, salesSyncMessage } from ".
 import { saleLinesTitle, type SaleLineCount } from "./square-links-client";
 import CreateServeDialog from "./create-serve-dialog";
 import ModifierListPopover from "../modifier-list-popover";
+import {
+  CATEGORY_TOGGLE,
+  CATEGORY_TOGGLE_NOTE,
+  FilterPill,
+  FiltersButton,
+  HEADER_BUTTON,
+  HEADER_PRIMARY_BUTTON,
+  StatTile,
+} from "./link-list-parts";
 
 type ItemFilter = "all" | "unlinked" | "linked" | "suggested" | "mixer";
 
@@ -290,6 +298,19 @@ function CategorySelect({
   );
 }
 
+type ArchiveFilter = "current" | "archived" | "all";
+
+const ARCHIVE_OPTIONS: { key: ArchiveFilter; label: string }[] = [
+  { key: "current", label: "In use" },
+  { key: "archived", label: "Archived only" },
+  { key: "all", label: "In use and archived" },
+];
+
+function inArchiveView(row: SquareItemRow, archive: ArchiveFilter) {
+  if (archive === "all") return true;
+  return archive === "archived" ? row.archived : !row.archived;
+}
+
 function GroupToggle({
   group,
   open,
@@ -308,7 +329,7 @@ function GroupToggle({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "flex min-h-11 w-full items-center gap-2 bg-admin-surface text-left text-[11px] font-semibold tracking-wide text-admin-muted uppercase transition-colors hover:bg-admin-line/40 sm:min-h-9",
+        CATEGORY_TOGGLE,
         className,
       )}
     >
@@ -317,7 +338,7 @@ function GroupToggle({
         aria-hidden="true"
       />
       <span className="min-w-0 truncate">{group.name}</span>
-      <span className="font-medium tracking-normal normal-case">
+      <span className={CATEGORY_TOGGLE_NOTE}>
         {group.rows.length} {group.rows.length === 1 ? "variation" : "variations"} · {linked} linked
       </span>
     </button>
@@ -365,7 +386,8 @@ export default function SquareItemsClient({
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ItemFilter>("all");
-  const [showArchived, setShowArchived] = useState(false);
+  const [archive, setArchive] = useState<ArchiveFilter>("current");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [creating, setCreating] = useState<SquareItemRow | null>(null);
 
@@ -375,14 +397,54 @@ export default function SquareItemsClient({
     [categories],
   );
   const allRows = useMemo(() => rows ?? [], [rows]);
-  const live = allRows.filter((row) => showArchived || !row.archived);
+  const live = allRows.filter((row) => inArchiveView(row, archive));
   const linkedCount = live.filter((row) => row.linkedServeId != null).length;
   const suggestedCount = live.filter((row) => row.suggestedServeId != null).length;
+  const mixerCount = live.filter((row) => row.mixers.length > 0).length;
+  const linkedPct = live.length ? Math.round((linkedCount / live.length) * 100) : 0;
+  const unlinkedCount = live.length - linkedCount;
+  const stats: {
+    key: ItemFilter;
+    label: string;
+    value: number;
+    note: string;
+    tone?: "warning";
+    progress?: number;
+  }[] = [
+    { key: "all", label: "Variations", value: live.length, note: "In the Square catalog" },
+    {
+      key: "linked",
+      label: "Linked",
+      value: linkedCount,
+      note: `${linkedPct}% linked to a menu serve`,
+      progress: linkedPct,
+    },
+    {
+      key: "unlinked",
+      label: "Not linked",
+      value: unlinkedCount,
+      note: unlinkedCount === 0 ? "Everything is linked" : "No menu serve yet",
+      tone: unlinkedCount > 0 ? "warning" : undefined,
+    },
+    {
+      key: "suggested",
+      label: "Suggested",
+      value: suggestedCount,
+      note: suggestedCount ? "Ready to accept" : "No suggestions",
+    },
+    { key: "mixer", label: "Has mixer", value: mixerCount, note: "Carry a mixer modifier list" },
+  ];
+  const activeStat = stats.find((stat) => stat.key === filter) ?? stats[0];
+  const filtered = filter !== "all" || archive !== "current";
+  const clearFilters = () => {
+    setFilter("all");
+    setArchive("current");
+  };
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return allRows.filter((row) => {
-      if (!showArchived && row.archived) return false;
+      if (!inArchiveView(row, archive)) return false;
       const category = row.menuCategoryId != null ? (categoryName.get(row.menuCategoryId) ?? "") : "";
       const serve = row.linkedServeId != null ? serveById.get(row.linkedServeId) : undefined;
       if (!matches(needle, row, serve, category)) return false;
@@ -392,7 +454,7 @@ export default function SquareItemsClient({
       if (filter === "mixer") return row.mixers.length > 0;
       return true;
     });
-  }, [allRows, query, filter, showArchived, categoryName, serveById]);
+  }, [allRows, query, filter, archive, categoryName, serveById]);
 
   const groups = useMemo(() => {
     const byKey = new Map<string, SquareItemRow[]>();
@@ -540,114 +602,202 @@ export default function SquareItemsClient({
         </div>
       )}
 
-      <RecordList
-        variant="panel"
-        title="Square items"
-        count={shown.length}
-        subtitle={`${linkedCount} of ${live.length} variations linked${suggestedCount ? ` · ${suggestedCount} suggested` : ""} · sales synced ${salesSyncedAt ? formatStamp(salesSyncedAt) : "never"} · catalog copied ${catalogSyncedAt ? formatStamp(catalogSyncedAt) : "never"}`}
-        collapsible={false}
-        activeFilterCount={(filter === "all" ? 0 : 1) + (showArchived ? 1 : 0)}
-        toolbar={
-          <ListSearchInput
-            value={query}
-            onChange={setQuery}
-            label="Search Square items"
-            placeholder="Search items, drinks or categories"
-          />
-        }
-        filters={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
-              All
-            </FilterChip>
-            <FilterChip active={filter === "unlinked"} onClick={() => setFilter("unlinked")}>
-              Not linked
-            </FilterChip>
-            <FilterChip active={filter === "linked"} onClick={() => setFilter("linked")}>
-              Linked
-            </FilterChip>
-            <FilterChip active={filter === "suggested"} onClick={() => setFilter("suggested")}>
-              Suggested
-            </FilterChip>
-            <FilterChip active={filter === "mixer"} onClick={() => setFilter("mixer")}>
-              Has mixer
-            </FilterChip>
-            <FilterChip active={showArchived} onClick={() => setShowArchived((value) => !value)}>
-              Show archived
-            </FilterChip>
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent className="max-w-[min(24rem,calc(100%-2rem))] gap-0 rounded-3xl border-2 border-admin-line bg-admin-surface p-5">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-base font-bold text-admin-ink">Filter Square items</DialogTitle>
+            <DialogDescription className="text-[12px] text-admin-muted">
+              Narrow the list by link status or archived items.
+            </DialogDescription>
+          </DialogHeader>
+          <h3 className="mt-4 text-[12px] font-semibold text-admin-muted">Link status</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {stats.map((stat) => (
+              <FilterPill
+                key={stat.key}
+                active={filter === stat.key}
+                onClick={() => {
+                  setFilter(stat.key);
+                  setFiltersOpen(false);
+                }}
+              >
+                {stat.label}
+                <span
+                  className={cn(
+                    "font-bold tabular-nums",
+                    stat.tone === "warning" ? "text-admin-warning" : "text-admin-ink",
+                  )}
+                >
+                  {stat.value.toLocaleString("en-GB")}
+                </span>
+              </FilterPill>
+            ))}
           </div>
-        }
-        actions={
-          <>
-            <div className="hidden items-center gap-1.5 sm:flex">
+          <h3 className="mt-4 text-[12px] font-semibold text-admin-muted">Square items</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ARCHIVE_OPTIONS.map((option) => (
+              <FilterPill
+                key={option.key}
+                active={archive === option.key}
+                onClick={() => {
+                  setArchive(option.key);
+                  setFiltersOpen(false);
+                }}
+              >
+                {option.label}
+              </FilterPill>
+            ))}
+          </div>
+          {filtered && (
+            <button
+              type="button"
+              onClick={() => {
+                clearFilters();
+                setFiltersOpen(false);
+              }}
+              className="mt-4 min-h-11 self-start text-[13px] font-semibold text-admin-primary hover:underline"
+            >
+              Clear filters
+            </button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-card shadow-sm">
+        <div className="space-y-3 border-b border-admin-line bg-admin-card px-4 py-3.5 sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[15px] font-bold text-admin-ink">Square items</h2>
+              <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-admin-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                  Catalog copied {catalogSyncedAt ? formatStamp(catalogSyncedAt) : "never"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Download className="h-3 w-3" aria-hidden="true" />
+                  Sales synced {salesSyncedAt ? formatStamp(salesSyncedAt) : "never"}
+                </span>
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 onClick={handleSyncSales}
                 disabled={isSyncing}
-                className={cn(NEUTRAL_BUTTON, "hidden h-8 px-3 text-[11px] whitespace-nowrap 2xl:flex")}
+                className={cn(HEADER_BUTTON, "hidden sm:flex")}
               >
-                <Download className={cn("h-3.5 w-3.5", isSyncing && "animate-pulse")} aria-hidden="true" />
-                Sync sales from Square
+                <Download className={cn("h-4 w-4", isSyncing && "animate-pulse")} aria-hidden="true" />
+                Sync sales
               </button>
               <button
                 type="button"
                 onClick={handleAutoMatch}
                 disabled={isPending || rows === null}
-                className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}
+                className={cn(HEADER_PRIMARY_BUTTON, "hidden sm:flex")}
               >
                 {isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Wand2 className="h-4 w-4" aria-hidden="true" />
                 )}
                 Auto-map
               </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="More Square actions"
+                    title="More Square actions"
+                    className={cn(HEADER_BUTTON, "w-11 px-0 sm:w-9")}
+                  >
+                    <Ellipsis className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem disabled={isSyncing} onSelect={handleSyncSales} className="min-h-11 sm:hidden">
+                    <Download className="h-4 w-4" />
+                    Sync sales from Square
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={isPending || rows === null}
+                    onSelect={handleAutoMatch}
+                    className="min-h-11 sm:hidden"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    Auto-map
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={loadingCatalog} onSelect={refreshCatalog} className="min-h-11">
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh catalog from Square
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={searching || groups.length === 0}
+                    onSelect={toggleAllGroups}
+                    className="min-h-11"
+                  >
+                    {allCollapsed ? <ChevronsUpDown className="h-4 w-4" /> : <ChevronsDownUp className="h-4 w-4" />}
+                    {allCollapsed ? "Expand all categories" : "Collapse all categories"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          </div>
+
+          <div className="hidden gap-2 sm:grid sm:grid-cols-5">
+            {stats.map((stat) => (
+              <StatTile
+                key={stat.key}
+                label={stat.label}
+                value={stat.value}
+                note={stat.note}
+                tone={stat.tone}
+                progress={stat.progress}
+                active={filter === stat.key}
+                onClick={() => setFilter(stat.key)}
+              />
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 sm:w-96 sm:shrink-0">
+              <div className="min-w-0 flex-1">
+                <ListSearchInput
+                  value={query}
+                  onChange={setQuery}
+                  label="Search Square items"
+                  placeholder="Search items, drinks or categories"
+                />
+              </div>
+              <FiltersButton
+                filtered={filtered}
+                label={`Filter Square items${filtered ? `, showing ${activeStat.label}` : ""}`}
+                onClick={() => setFiltersOpen(true)}
+              />
+            </div>
+            <label className="hidden min-h-9 cursor-pointer items-center gap-2 text-[13px] font-semibold text-admin-ink sm:inline-flex">
+              <input
+                type="checkbox"
+                checked={archive !== "current"}
+                onChange={(event) => setArchive(event.target.checked ? "all" : "current")}
+                className="h-4 w-4 cursor-pointer accent-admin-primary"
+              />
+              Include archived
+            </label>
+            <p className={cn("text-[12px] text-admin-muted sm:ml-auto sm:block", !filtered && "hidden")}>
+              Showing <span className="font-semibold text-admin-ink tabular-nums">{shown.length}</span> of{" "}
+              <span className="tabular-nums">{allRows.length}</span>
+              {filtered && (
                 <button
                   type="button"
-                  aria-label="More Square actions"
-                  title="More Square actions"
-                  className={cn(NEUTRAL_BUTTON, "h-9 w-9 px-0 sm:h-8 sm:w-8")}
+                  onClick={clearFilters}
+                  className="ml-2 font-semibold text-admin-primary hover:underline"
                 >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Ellipsis className="h-4 w-4" aria-hidden="true" />
-                  )}
+                  Clear filters
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled={isSyncing} onSelect={handleSyncSales} className="min-h-11 2xl:hidden">
-                  <Download className="h-4 w-4" />
-                  Sync sales from Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isPending || rows === null}
-                  onSelect={handleAutoMatch}
-                  className="min-h-11 sm:hidden"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  Auto-map
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={loadingCatalog} onSelect={refreshCatalog} className="min-h-11">
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh catalog from Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={searching || groups.length === 0}
-                  onSelect={toggleAllGroups}
-                  className="min-h-11"
-                >
-                  {allCollapsed ? <ChevronsUpDown className="h-4 w-4" /> : <ChevronsDownUp className="h-4 w-4" />}
-                  {allCollapsed ? "Expand all categories" : "Collapse all categories"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
-      >
+              )}
+            </p>
+          </div>
+        </div>
         {shown.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
             <SearchX className="h-6 w-6 text-admin-muted" aria-hidden="true" />
@@ -666,7 +816,7 @@ export default function SquareItemsClient({
                     className="px-3"
                   />
                   {isOpen(group.key) && (
-                    <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
+                    <ul className="m-0 list-none divide-y divide-admin-muted/30 p-0">
                       {group.rows.map((row) => (
                         <li key={row.variationId} className="space-y-2 px-3 py-2.5">
                           <div className="flex items-start justify-between gap-2">
@@ -775,7 +925,7 @@ export default function SquareItemsClient({
             </div>
           </>
         )}
-      </RecordList>
+      </section>
     </div>
   );
 }

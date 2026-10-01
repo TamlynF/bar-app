@@ -10,17 +10,20 @@ const TABS: { view: SquareLinksView; label: string }[] = [
 
 export default function SquareLinksTabs({ view }: { view: SquareLinksView }) {
   return (
-    <nav aria-label="Square links views" className="flex gap-1">
+    <nav
+      aria-label="Square links views"
+      className="inline-flex rounded-xl border border-admin-line bg-admin-surface p-1"
+    >
       {TABS.map((tab) => (
         <Link
           key={tab.view}
           href={`/settings/market/square-links?view=${tab.view}`}
           aria-current={view === tab.view ? "page" : undefined}
           className={cn(
-            "inline-flex min-h-11 items-center rounded-lg px-3 text-[13px] font-semibold transition-colors sm:min-h-9",
+            "inline-flex min-h-10 items-center rounded-lg px-4 text-[13px] font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none sm:min-h-8",
             view === tab.view
-              ? "bg-admin-primary-soft text-admin-primary"
-              : "text-admin-muted hover:bg-admin-surface hover:text-admin-primary",
+              ? "bg-admin-card text-admin-primary shadow-[0_1px_3px_rgba(0,0,0,0.12)] ring-1 ring-admin-primary/25"
+              : "text-admin-muted hover:text-admin-primary",
           )}
         >
           {tab.label}

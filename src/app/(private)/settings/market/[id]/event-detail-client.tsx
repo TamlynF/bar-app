@@ -18,7 +18,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { NormalUnitsCell, NormalUnitsOverrideInput, type NormalUnitsView } from "./normal-units-card";
+import {
+  NormalUnitsCell,
+  NormalUnitsKeepSwitch,
+  NormalUnitsOverrideInput,
+  type NormalUnitsView,
+} from "./normal-units-card";
 import { ReadyToOpenChecklist } from "./ready-to-open";
 import { SheetRow, SheetSection } from "./sheet-section";
 import { SwitchDisplay, SwitchField } from "./switch-field";
@@ -88,6 +93,9 @@ export type EventDrink = {
      history figure; normalUnitsKeep keeps it after the next market night. */
   normalUnitsOverride: number | null;
   normalUnitsKeep: boolean;
+  /* The name it trades under on this event; the menu item's name unless
+     changed on the drink sheet. */
+  displayName: string;
   /* Who created and last changed the serve behind this drink. */
   audit: { createdAt: string | null; createdBy: string | null; updatedAt: string | null; updatedBy: string | null };
   linked: boolean;
@@ -457,6 +465,19 @@ function OverrideFields({
   return (
     <>
       <DetailCard className="divide-y divide-admin-line/50">
+        {drink && (
+          <FormRow label="Display name" dense>
+            <input
+              type="text"
+              name="display_name"
+              maxLength={80}
+              aria-label="Display name on this event"
+              placeholder={drink.name}
+              defaultValue={drink.displayName}
+              className={FIELD_INPUT}
+            />
+          </FormRow>
+        )}
         {OVERRIDE_FIELDS.map((field) => (
           <FormRow key={field.key} label={field.label} dense>
             <input
@@ -797,7 +818,7 @@ export default function EventDetailClient({
   const shownDrinks = useMemo(
     () =>
       drinks.filter((drink) =>
-        matches(needle, drink.name, drink.categoryName, drink.serve),
+        matches(needle, drink.displayName, drink.name, drink.categoryName, drink.serve),
       ),
     [drinks, needle],
   );
@@ -1173,7 +1194,10 @@ export default function EventDetailClient({
                           >
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[13px] font-semibold text-admin-ink">
-                                {drink.name}
+                                {drink.displayName}
+                                {drink.displayName !== drink.name && (
+                                  <span className="ml-1.5 text-[11px] font-medium text-admin-muted">{drink.name}</span>
+                                )}
                                 {!drink.isActive && (
                                   <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(inactive)</span>
                                 )}
@@ -1226,17 +1250,29 @@ export default function EventDetailClient({
                                     <span className="mb-0.5 block text-[10px] font-semibold">Normal per night</span>
                                     <NormalUnitsCell row={normals} weekdays={normalUnits.weekdays} />
                                   </span>
-                                  <label className="block shrink-0">
-                                    <span className="mb-0.5 block text-right text-[10px] font-semibold text-admin-muted">
-                                      Override
-                                    </span>
-                                    <NormalUnitsOverrideInput
-                                      key={normals.override ?? "auto"}
-                                      eventId={event.id}
-                                      row={normals}
-                                      className="h-11"
-                                    />
-                                  </label>
+                                  <div className="flex shrink-0 items-end gap-3">
+                                    <label className="block">
+                                      <span className="mb-0.5 block text-right text-[10px] font-semibold text-admin-muted">
+                                        Normal override
+                                      </span>
+                                      <NormalUnitsOverrideInput
+                                        key={normals.override ?? "auto"}
+                                        eventId={event.id}
+                                        row={normals}
+                                        className="h-11"
+                                      />
+                                    </label>
+                                    {normals.override != null && (
+                                      <div onClick={(e) => e.stopPropagation()}>
+                                        <span className="mb-0.5 block text-[10px] font-semibold text-admin-muted">Keep</span>
+                                        <NormalUnitsKeepSwitch
+                                          key={`${normals.override}-${normals.keep}`}
+                                          eventId={event.id}
+                                          row={normals}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
                               {!isLive && hasDraftValue(draft) && (
@@ -1272,8 +1308,17 @@ export default function EventDetailClient({
                     >
                       Normal / night
                     </th>
-                    <th className="py-2 pr-3 text-center" title="Replaces the Square history figure; blank uses history">
-                      Override
+                    <th
+                      className="py-2 pr-3 text-center"
+                      title="Replaces the normal units a night worked out from Square history; blank uses history"
+                    >
+                      Normal override
+                    </th>
+                    <th
+                      className="py-2 pr-3 text-center"
+                      title="Keep the normal override for future market nights; otherwise it goes back to auto after the next one"
+                    >
+                      Keep
                     </th>
                     <th className="py-2 pr-3 text-right">Base</th>
                     <th className="py-2 pr-3 text-center">Opening</th>
@@ -1290,7 +1335,7 @@ export default function EventDetailClient({
                   {groups.map((group) => (
                     <Fragment key={group.name}>
                       <tr>
-                        <td colSpan={11} className="p-0">
+                        <td colSpan={12} className="p-0">
                           <GroupToggle
                             group={group}
                             open={isGroupOpen(group.name)}
@@ -1310,7 +1355,10 @@ export default function EventDetailClient({
                             className="cursor-pointer border-b border-admin-line/60 hover:bg-admin-surface/60"
                           >
                             <td className="py-1.5 pr-3 text-[13px] font-semibold text-admin-ink">
-                              {drink.name}
+                              {drink.displayName}
+                              {drink.displayName !== drink.name && (
+                                <span className="block text-[11px] font-medium text-admin-muted">{drink.name}</span>
+                              )}
                               {!drink.isActive && (
                                 <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(inactive)</span>
                               )}
@@ -1339,6 +1387,16 @@ export default function EventDetailClient({
                                   eventId={event.id}
                                   row={normals}
                                   className="mx-auto"
+                                />
+                              )}
+                            </td>
+                            <td className="py-1.5 pr-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              {normals && (
+                                <NormalUnitsKeepSwitch
+                                  key={`${normals.override ?? "auto"}-${normals.keep}`}
+                                  eventId={event.id}
+                                  row={normals}
+                                  className="mx-auto justify-center"
                                 />
                               )}
                             </td>
@@ -1565,7 +1623,18 @@ export default function EventDetailClient({
               open={sectionOpen.pricing}
               onToggle={() => toggleSection("pricing")}
             >
-                {OVERRIDE_FIELDS.map((field) => {
+                <SheetRow
+                label="Display name"
+                value={
+                  <span>
+                    {selectedDrink.displayName}
+                    {selectedDrink.displayName === selectedDrink.name && (
+                      <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(menu name)</span>
+                    )}
+                  </span>
+                }
+              />
+              {OVERRIDE_FIELDS.map((field) => {
                   const overridden = selectedDrink.overrides[field.key] != null;
                   return (
                     <SheetRow

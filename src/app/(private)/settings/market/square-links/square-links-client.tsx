@@ -29,12 +29,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  FilterChip,
-  ListSearchInput,
-  RecordList,
-  StatusPill,
-} from "@/components/admin";
+import { ListSearchInput, StatusPill } from "@/components/admin";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatGbp } from "@/lib/price";
 import { squareItemUrl } from "@/lib/market/simulate";
 import type { CatalogVariation } from "@/lib/market/mapping";
@@ -46,12 +42,21 @@ import {
   saveMappingAction,
   syncSquareSalesAction,
 } from "../actions";
-import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp, salesSyncMessage } from "../ui";
+import { NEUTRAL_BUTTON, formatStamp, salesSyncMessage } from "../ui";
 import type { MixerChoice } from "@/lib/market/mixer";
 import type { ModifierListOption } from "@/lib/market/square-mixers";
 import MixerModifierCard from "./mixer-modifier-card";
+import {
+  CATEGORY_TOGGLE,
+  CATEGORY_TOGGLE_NOTE,
+  FilterPill,
+  FiltersButton,
+  HEADER_BUTTON,
+  HEADER_PRIMARY_BUTTON,
+  StatTile,
+} from "./link-list-parts";
 
-type LinkFilter = "all" | "unlinked" | "board" | "event";
+type LinkFilter = "all" | "linked" | "unlinked" | "board" | "event";
 
 export type SaleLineCount = {
   lines: number;
@@ -128,7 +133,7 @@ function CategoryToggle({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "flex min-h-11 w-full items-center gap-2 bg-admin-surface text-left text-[11px] font-semibold tracking-wide text-admin-muted uppercase transition-colors hover:bg-admin-line/40 sm:min-h-9",
+        CATEGORY_TOGGLE,
         className,
       )}
     >
@@ -140,8 +145,8 @@ function CategoryToggle({
         aria-hidden="true"
       />
       <span className="min-w-0 truncate">{group.name}</span>
-      <span className="font-medium tracking-normal normal-case">
-        {linked} of {group.rows.length} linked
+      <span className={CATEGORY_TOGGLE_NOTE}>
+        {group.rows.length} {group.rows.length === 1 ? "serve" : "serves"} · {linked} linked
       </span>
     </button>
   );
@@ -343,18 +348,53 @@ export default function SquareLinksClient({
   const [filter, setFilter] = useState<LinkFilter>(
     focusEvent ? "event" : "all",
   );
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const linkedCount = rows.filter((row) => row.squareVariationId).length;
   const onBoard = rows.filter((row) => row.onEvents.length > 0);
   const unlinkedOnBoard = onBoard.filter(
     (row) => !row.squareVariationId,
   ).length;
+  const unlinkedCount = rows.length - linkedCount;
+  const linkedPct = rows.length ? Math.round((linkedCount / rows.length) * 100) : 0;
+  const onFocusEvent = focusEvent ? rows.filter((row) => row.onEvents.includes(focusEvent.name)).length : 0;
+  const stats: {
+    key: LinkFilter;
+    label: string;
+    value: number;
+    note: string;
+    tone?: "warning";
+    progress?: number;
+  }[] = [
+    { key: "all", label: "Serves", value: rows.length, note: "Every serve on the menu" },
+    {
+      key: "linked",
+      label: "Linked",
+      value: linkedCount,
+      note: `${linkedPct}% linked to a Square variation`,
+      progress: linkedPct,
+    },
+    {
+      key: "unlinked",
+      label: "Not linked",
+      value: unlinkedCount,
+      note: unlinkedCount === 0 ? "Everything is linked" : "No Square variation yet",
+      tone: unlinkedCount > 0 ? "warning" : undefined,
+    },
+    { key: "board", label: "On the board", value: onBoard.length, note: "On at least one market night" },
+    ...(focusEvent
+      ? [{ key: "event" as const, label: `On ${focusEvent.name}`, value: onFocusEvent, note: `On ${focusEvent.name}` }]
+      : []),
+  ];
+  const activeStat = stats.find((stat) => stat.key === filter) ?? stats[0];
+  const filtered = filter !== "all";
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return rows.filter((row) => {
       if (!matches(needle, row)) return false;
       if (filter === "unlinked") return !row.squareVariationId;
+      if (filter === "linked") return Boolean(row.squareVariationId);
       if (filter === "board") return row.onEvents.length > 0;
       if (filter === "event")
         return focusEvent != null && row.onEvents.includes(focusEvent.name);
@@ -532,79 +572,75 @@ export default function SquareLinksClient({
 
       <MixerModifierCard choice={mixerChoice} lists={modifierLists} />
 
-      <RecordList
-        variant="panel"
-        title="Square links"
-        count={shown.length}
-        subtitle={`${linkedCount} of ${rows.length} serves linked · sales synced ${salesSyncedAt ? formatStamp(salesSyncedAt) : "never"} · catalog copied ${catalogSyncedAt ? formatStamp(catalogSyncedAt) : "never"}`}
-        collapsible={false}
-        activeFilterCount={filter === "all" ? 0 : 1}
-        toolbar={
-          <ListSearchInput
-            value={query}
-            onChange={setQuery}
-            label="Search serves"
-            placeholder="Search by drink, category, serve or event"
-          />
-        }
-        filters={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <FilterChip
-              active={filter === "all"}
-              onClick={() => setFilter("all")}
-            >
-              All
-            </FilterChip>
-            <FilterChip
-              active={filter === "unlinked"}
-              onClick={() => setFilter("unlinked")}
-            >
-              Not linked
-            </FilterChip>
-            <FilterChip
-              active={filter === "board"}
-              onClick={() => setFilter("board")}
-            >
-              On the board
-            </FilterChip>
-            {focusEvent && (
-              <FilterChip
-                active={filter === "event"}
-                onClick={() => setFilter("event")}
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent className="max-w-[min(24rem,calc(100%-2rem))] gap-0 rounded-3xl border-2 border-admin-line bg-admin-surface p-5">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-base font-bold text-admin-ink">Filter menu serves</DialogTitle>
+            <DialogDescription className="text-[12px] text-admin-muted">
+              Pick one to show just those serves.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {stats.map((stat) => (
+              <FilterPill
+                key={stat.key}
+                active={filter === stat.key}
+                onClick={() => {
+                  setFilter(stat.key);
+                  setFiltersOpen(false);
+                }}
               >
-                On {focusEvent.name}
-              </FilterChip>
-            )}
+                {stat.label}
+                <span
+                  className={cn(
+                    "font-bold tabular-nums",
+                    stat.tone === "warning" ? "text-admin-warning" : "text-admin-ink",
+                  )}
+                >
+                  {stat.value.toLocaleString("en-GB")}
+                </span>
+              </FilterPill>
+            ))}
           </div>
-        }
-        actions={
-          <>
-            <div className="hidden items-center gap-1.5 sm:flex">
+        </DialogContent>
+      </Dialog>
+
+      <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-card shadow-sm">
+        <div className="space-y-3 border-b border-admin-line bg-admin-card px-4 py-3.5 sm:px-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[15px] font-bold text-admin-ink">Menu serves</h2>
+              <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-admin-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                  Catalog copied {catalogSyncedAt ? formatStamp(catalogSyncedAt) : "never"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Download className="h-3 w-3" aria-hidden="true" />
+                  Sales synced {salesSyncedAt ? formatStamp(salesSyncedAt) : "never"}
+                </span>
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
                 onClick={handleSyncSales}
                 disabled={isSyncing}
-                className={cn(NEUTRAL_BUTTON, "hidden h-8 px-3 text-[11px] whitespace-nowrap 2xl:flex")}
+                className={cn(HEADER_BUTTON, "hidden 2xl:flex")}
               >
-                <Download
-                  className={cn("h-3.5 w-3.5", isSyncing && "animate-pulse")}
-                  aria-hidden="true"
-                />
-                Sync sales from Square
+                <Download className={cn("h-4 w-4", isSyncing && "animate-pulse")} aria-hidden="true" />
+                Sync sales
               </button>
               <button
                 type="button"
                 onClick={handleAutoMatch}
                 disabled={isPending}
-                className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}
+                className={cn(HEADER_PRIMARY_BUTTON, "hidden sm:flex")}
               >
                 {isPending ? (
-                  <Loader2
-                    className="h-3.5 w-3.5 animate-spin"
-                    aria-hidden="true"
-                  />
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Wand2 className="h-4 w-4" aria-hidden="true" />
                 )}
                 Auto-match
               </button>
@@ -612,89 +648,98 @@ export default function SquareLinksClient({
                 type="button"
                 onClick={handlePushToSquare}
                 disabled={isPending}
-                className={cn(OUTLINE_BUTTON, "h-8 px-3 text-[11px]")}
+                className={cn(HEADER_BUTTON, "hidden lg:flex")}
               >
-                {isPending ? (
-                  <Loader2
-                    className="h-3.5 w-3.5 animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
+                <Upload className="h-4 w-4" aria-hidden="true" />
                 Send menu to Square
               </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="More Square actions"
+                    title="More Square actions"
+                    className={cn(HEADER_BUTTON, "w-11 px-0 sm:w-9")}
+                  >
+                    <Ellipsis className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem disabled={isSyncing} onSelect={handleSyncSales} className="min-h-11 2xl:hidden">
+                    <Download className="h-4 w-4" />
+                    Sync sales from Square
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={isPending} onSelect={handleAutoMatch} className="min-h-11 sm:hidden">
+                    <Wand2 className="h-4 w-4" />
+                    Auto-match serves
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={isPending} onSelect={handlePushToSquare} className="min-h-11 lg:hidden">
+                    <Upload className="h-4 w-4" />
+                    Send menu to Square
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={loadingCatalog} onSelect={retryCatalog} className="min-h-11">
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh catalog from Square
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={searching || groups.length === 0}
+                    onSelect={toggleAllGroups}
+                    className="min-h-11"
+                  >
+                    {allCollapsed ? <ChevronsUpDown className="h-4 w-4" /> : <ChevronsDownUp className="h-4 w-4" />}
+                    {allCollapsed ? "Expand all categories" : "Collapse all categories"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+          </div>
+
+          <div className={cn("hidden gap-2 sm:grid", stats.length > 4 ? "sm:grid-cols-5" : "sm:grid-cols-4")}>
+            {stats.map((stat) => (
+              <StatTile
+                key={stat.key}
+                label={stat.label}
+                value={stat.value}
+                note={stat.note}
+                tone={stat.tone}
+                progress={stat.progress}
+                active={filter === stat.key}
+                onClick={() => setFilter(stat.key)}
+              />
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 sm:w-96 sm:shrink-0">
+              <div className="min-w-0 flex-1">
+                <ListSearchInput
+                  value={query}
+                  onChange={setQuery}
+                  label="Search serves"
+                  placeholder="Search by drink, category, serve or event"
+                />
+              </div>
+              <FiltersButton
+                filtered={filtered}
+                label={`Filter menu serves${filtered ? `, showing ${activeStat.label}` : ""}`}
+                onClick={() => setFiltersOpen(true)}
+              />
+            </div>
+            <p className={cn("text-[12px] text-admin-muted sm:ml-auto sm:block", !filtered && "hidden")}>
+              Showing <span className="font-semibold text-admin-ink tabular-nums">{shown.length}</span> of{" "}
+              <span className="tabular-nums">{rows.length}</span>
+              {filtered && (
                 <button
                   type="button"
-                  aria-label="More Square actions"
-                  title="More Square actions"
-                  className={cn(NEUTRAL_BUTTON, "h-9 w-9 px-0 sm:h-8 sm:w-8")}
+                  onClick={() => setFilter("all")}
+                  className="ml-2 font-semibold text-admin-primary hover:underline"
                 >
-                  {isPending ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Ellipsis className="h-4 w-4" aria-hidden="true" />
-                  )}
+                  Clear filter
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem
-                  disabled={isSyncing}
-                  onSelect={handleSyncSales}
-                  className="min-h-11 2xl:hidden"
-                >
-                  <Download className="h-4 w-4" />
-                  Sync sales from Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isPending}
-                  onSelect={handleAutoMatch}
-                  className="min-h-11 sm:hidden"
-                >
-                  <Wand2 className="h-4 w-4" />
-                  Auto-match serves
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isPending}
-                  onSelect={handlePushToSquare}
-                  className="min-h-11 sm:hidden"
-                >
-                  <Upload className="h-4 w-4" />
-                  Send menu to Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={loadingCatalog}
-                  onSelect={retryCatalog}
-                  className="min-h-11"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Refresh catalog from Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={searching || groups.length === 0}
-                  onSelect={toggleAllGroups}
-                  className="min-h-11"
-                >
-                  {allCollapsed ? (
-                    <ChevronsUpDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronsDownUp className="h-4 w-4" />
-                  )}
-                  {allCollapsed
-                    ? "Expand all categories"
-                    : "Collapse all categories"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
-      >
+              )}
+            </p>
+          </div>
+        </div>
         {shown.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
             <SearchX className="h-6 w-6 text-admin-muted" aria-hidden="true" />
@@ -717,7 +762,7 @@ export default function SquareLinksClient({
                     className="px-3"
                   />
                   {isOpen(group.name) && (
-                    <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
+                    <ul className="m-0 list-none divide-y divide-admin-muted/30 p-0">
                       {group.rows.map((row) => (
                         <li
                           key={row.menuItemPriceId}
@@ -813,7 +858,7 @@ export default function SquareLinksClient({
             </div>
           </>
         )}
-      </RecordList>
+      </section>
     </div>
   );
 }

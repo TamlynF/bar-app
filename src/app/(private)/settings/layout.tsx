@@ -22,7 +22,7 @@ export default function SettingsLayout({
       wide ? "max-w-none" : "max-w-7xl",
       isSettingsRoot ? "min-h-screen pt-4" : "h-full min-h-0 pt-0",
     )}>
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <main className={cn(
           "relative min-h-0 flex-1",
           isSettingsRoot && "min-h-125",

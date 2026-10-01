@@ -232,6 +232,7 @@ async function openSession(
     config: MarketConfig;
     menuItemPriceIds: number[];
     overridesByPrice: Map<number, DrinkOverrides>;
+    displayNames?: Map<number, string>;
     stockMarketEventId: number;
     normals?: ResolvedNormals;
   }
@@ -277,7 +278,7 @@ async function openSession(
       session_id: session.id,
       menu_item_price_id: serve.id,
       menu_item_id: serve.menuItemId,
-      display_name: serve.name,
+      display_name: options.displayNames?.get(serve.id) ?? serve.name,
       serve: serve.serve,
       base_price: opening,
       opening_price: opening,
@@ -462,7 +463,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
   }
   const { error: itemsError } = await supabase
     .from("stock_market_event_items")
-    .upsert(serves.map((serve) => eventItemLink(eventId, serve)), {
+    .upsert(serves.map((serve) => ({ ...eventItemLink(eventId, serve), display_name: serve.name })), {
       onConflict: "event_id,menu_item_price_id",
       ignoreDuplicates: true,
     });
@@ -514,7 +515,7 @@ export async function openStockMarketEventAction(id: number) {
   const { data: event, error } = await supabase
     .from("stock_market_events")
     .select(
-      "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night)"
+      "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night, display_name)"
     )
     .eq("id", id)
     .eq("is_active", true)
@@ -524,7 +525,11 @@ export async function openStockMarketEventAction(id: number) {
 
   const row = event as StockMarketEventRow & {
     stock_market_event_items:
-      | ({ menu_item_price_id: number; normal_units_per_night?: number | string | null } & DrinkOverrideRow)[]
+      | ({
+          menu_item_price_id: number;
+          normal_units_per_night?: number | string | null;
+          display_name?: string | null;
+        } & DrinkOverrideRow)[]
       | null;
   };
   const items = row.stock_market_event_items ?? [];
@@ -546,6 +551,9 @@ export async function openStockMarketEventAction(id: number) {
     config,
     menuItemPriceIds,
     overridesByPrice: new Map(items.map((item) => [item.menu_item_price_id, overridesFromRow(item)])),
+    displayNames: new Map(
+      items.flatMap((item) => (item.display_name?.trim() ? [[item.menu_item_price_id, item.display_name.trim()] as const] : []))
+    ),
     stockMarketEventId: row.id,
     normals,
   });
@@ -624,7 +632,7 @@ export async function addEventDrinksAction(eventId: number, menuItemPriceIds: nu
 
   const { error } = await supabase
     .from("stock_market_event_items")
-    .upsert(serves.map((serve) => eventItemLink(eventId, serve)), {
+    .upsert(serves.map((serve) => ({ ...eventItemLink(eventId, serve), display_name: serve.name })), {
       onConflict: "event_id,menu_item_price_id",
       ignoreDuplicates: true,
     });
@@ -711,6 +719,14 @@ const drinkOverridesSchema = z
     { message: "Min price must not be above max price.", path: ["minPrice"] }
   );
 
+/* The drink sheet's display name, blank meaning the menu item's own name.
+   Undefined when the form did not carry it. */
+function readDisplayName(formData: FormData, fallback: string): string | undefined {
+  if (!formData.has("display_name")) return undefined;
+  const value = formData.get("display_name")?.toString().trim().slice(0, 80) ?? "";
+  return value || fallback;
+}
+
 type NormalUnitsFields = { normal_units_per_night: number | null; normal_units_keep: boolean };
 
 /* The drink sheet's normal units a night override and its "keep for future
@@ -746,13 +762,19 @@ function readDrinkOverrides(formData: FormData): DrinkOverrides | { error: strin
 async function serveOwner(
   supabase: ServerClient,
   menuItemPriceId: number
-): Promise<{ id: number; menuItemId: number } | null> {
+): Promise<{ id: number; menuItemId: number; name: string } | null> {
   const { data } = await supabase
     .from("menu_item_prices")
-    .select("id, menu_item_id")
+    .select("id, menu_item_id, menu_items(name)")
     .eq("id", menuItemPriceId)
     .maybeSingle();
-  return data ? { id: data.id as number, menuItemId: data.menu_item_id as number } : null;
+  if (!data) return null;
+  const item = Array.isArray(data.menu_items) ? data.menu_items[0] : data.menu_items;
+  return {
+    id: data.id as number,
+    menuItemId: data.menu_item_id as number,
+    name: (item as { name: string } | null)?.name ?? "",
+  };
 }
 
 async function writeDrinkOverrides(
@@ -760,15 +782,42 @@ async function writeDrinkOverrides(
   eventId: number,
   serve: { id: number; menuItemId: number },
   overrides: DrinkOverrides,
-  normalUnits?: NormalUnitsFields
+  normalUnits?: NormalUnitsFields,
+  displayName?: string
 ): Promise<{ error: string } | null> {
   const { error } = await supabase
     .from("stock_market_event_items")
     .upsert(
-      { ...eventItemLink(eventId, serve), ...overridesToRow(overrides), ...normalUnits },
+      {
+        ...eventItemLink(eventId, serve),
+        ...overridesToRow(overrides),
+        ...normalUnits,
+        ...(displayName !== undefined ? { display_name: displayName } : {}),
+      },
       { onConflict: "event_id,menu_item_price_id" }
     );
-  return error ? { error: error.message } : null;
+  if (error) return { error: error.message };
+  if (displayName !== undefined) await renameLiveInstrument(supabase, eventId, serve.id, displayName);
+  return null;
+}
+
+/* A display name changed while this event's market is live goes straight to
+   its instrument, so the trading floor, big screen and phone page follow at
+   the next refresh. Never blocks the save. */
+async function renameLiveInstrument(supabase: ServerClient, eventId: number, menuItemPriceId: number, name: string) {
+  const { data: session } = await supabase
+    .from("market_sessions")
+    .select("id")
+    .eq("status", "live")
+    .eq("stock_market_event_id", eventId)
+    .maybeSingle();
+  if (!session) return;
+  const { error } = await supabase
+    .from("market_instruments")
+    .update({ display_name: name })
+    .eq("session_id", session.id)
+    .eq("menu_item_price_id", menuItemPriceId);
+  if (error) console.error("[market] could not rename the live drink:", error);
 }
 
 /* "Served with a mixer" lives on the menu serve so every event, the board
@@ -813,7 +862,14 @@ export async function saveEventDrinkPricingAction(formData: FormData) {
   const serve = await serveOwner(supabase, menuItemPriceId);
   if (!serve) return { error: "That serve is no longer on the menu." };
 
-  const writeError = await writeDrinkOverrides(supabase, eventId, serve, overrides, normalUnits);
+  const writeError = await writeDrinkOverrides(
+    supabase,
+    eventId,
+    serve,
+    overrides,
+    normalUnits,
+    readDisplayName(formData, serve.name)
+  );
   if (writeError) return writeError;
   const mixerError = await saveServeMixer(supabase, menuItemPriceId, formData);
   if (mixerError) return mixerError;
@@ -901,7 +957,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
       eventId,
       { id: savedPrice.id as number, menuItemId: id },
       overrides,
-      normalUnits
+      normalUnits,
+      readDisplayName(formData, name)
     );
     if (overrideError) return overrideError;
     const mixerError = await saveServeMixer(supabase, savedPrice.id as number, formData);
@@ -952,6 +1009,7 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
     ...eventItemLink(eventId, { id: insertedPrice.id as number, menuItemId: inserted.id }),
     ...overridesToRow(overrides),
     ...normalUnits,
+    display_name: readDisplayName(formData, name) ?? name,
   });
   if (linkError) return { error: linkError.message };
   const mixerError = await saveServeMixer(supabase, insertedPrice.id as number, formData);
@@ -1783,6 +1841,24 @@ export async function saveEventNormalUnitsAction(eventId: number, menuItemPriceI
     .eq("event_id", eventId)
     .eq("menu_item_price_id", menuItemPriceId);
   if (error) return { error: error.message };
+  revalidateMarket();
+  return { success: true };
+}
+
+/* Whether a drink's normal units override outlives the next market night.
+   Only an override can be kept; on auto there is nothing to keep. */
+export async function saveEventNormalUnitsKeepAction(eventId: number, menuItemPriceId: number, keep: boolean) {
+  const supabase = await createClient();
+  if (!Number.isInteger(eventId) || eventId <= 0) return { error: "Missing event." };
+  const { data, error } = await supabase
+    .from("stock_market_event_items")
+    .update({ normal_units_keep: keep })
+    .eq("event_id", eventId)
+    .eq("menu_item_price_id", menuItemPriceId)
+    .not("normal_units_per_night", "is", null)
+    .select("menu_item_price_id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "Set a normal units override before keeping it." };
   revalidateMarket();
   return { success: true };
 }
