@@ -80,8 +80,9 @@ export function NormalUnitsOverrideInput({
   const [value, setValue] = useState(row.override?.toString() ?? "");
   const [isPending, startTransition] = useTransition();
 
-  function commit() {
-    const trimmed = value.trim();
+  function commit(raw: string) {
+    setValue(raw);
+    const trimmed = raw.trim();
     const next = trimmed === "" ? null : Number(trimmed);
     if (next === row.override || (next === null && row.override === null)) return;
     startTransition(async () => {
@@ -99,7 +100,7 @@ export function NormalUnitsOverrideInput({
       step={1}
       value={value}
       onChange={(e) => setValue(e.target.value)}
-      onBlur={commit}
+      onBlur={(e) => commit(e.currentTarget.value)}
       onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       disabled={isPending}
       aria-label={`Override normal units per night for ${row.name} ${row.serve}`}

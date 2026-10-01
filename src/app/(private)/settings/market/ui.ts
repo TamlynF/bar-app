@@ -1,4 +1,22 @@
-export const CARD = "rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5";
+export type SalesSyncSummary = {
+  ordersSynced: number;
+  linesSynced: number;
+  catalogVariations: number | null;
+  catalogError: string | null;
+};
+
+/* The toast after a manual Square sync, which refreshes the sales history and
+   the catalog copy together. A catalog failure is reported alongside, never
+   instead of, the sales that did sync. */
+export function salesSyncMessage(result: SalesSyncSummary): { text: string; catalogFailed: boolean } {
+  const sales = `Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square`;
+  if (result.catalogError) {
+    return { text: `${sales}, but the catalog refresh failed: ${result.catalogError}`, catalogFailed: true };
+  }
+  return { text: `${sales} and refreshed ${result.catalogVariations ?? 0} catalog variation(s).`, catalogFailed: false };
+}
+
+export const CARD ="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5";
 export const PRIMARY_BUTTON =
   "flex h-11 items-center justify-center gap-1.5 rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover disabled:cursor-not-allowed disabled:opacity-50 sm:h-9";
 export const OUTLINE_BUTTON =

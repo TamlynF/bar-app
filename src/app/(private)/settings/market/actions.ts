@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
@@ -25,6 +25,8 @@ import {
   type ResolvedNormals,
 } from "@/lib/market/normal-units-server";
 import { syncSquareSales } from "@/lib/square-sync";
+import { syncSquareCatalog } from "@/lib/square-catalog-sync";
+import { readCatalogCopy, readModifierListOptions } from "@/lib/market/catalog-copy";
 import {
   EMPTY_OVERRIDES,
   optionalNumber,
@@ -55,16 +57,10 @@ import {
   SIM_MAX_SQUARE_ROUND_SALES,
   squareItemUrl,
 } from "@/lib/market/simulate";
-import { SQUARE_ITEM_MAP_TAG } from "@/lib/market/square-item-links";
-import {
-  fetchModifierListOptions,
-  mixerModifierIdsByVariation,
-  pickMixerModifier,
-  refreshSessionMixers,
-} from "@/lib/market/square-mixers";
+import { mixerModifierIdsByVariation, pickMixerModifier, refreshSessionMixers } from "@/lib/market/square-mixers";
+import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
 import { pushAlcoholFlagsToSquare } from "@/lib/market/square-alcohol";
 import { salesSyncHealth, type SalesSyncHealth, type SalesSyncState } from "@/lib/market/sales-sync-health";
-import { refreshStockTracking } from "@/lib/market/square-stock-tracking";
 import {
   addInventory,
   assertSandbox,
@@ -87,11 +83,13 @@ function revalidateMarket() {
   for (const path of MARKET_PATHS) revalidatePath(path);
 }
 
-/* Only for the four things that change which items exist or which variation a
-   drink points at. The map is cached for an hour precisely so ordinary ticks
-   do not re-read the catalog, so this must not go in revalidateMarket. */
-function revalidateSquareItemMap() {
-  updateTag(SQUARE_ITEM_MAP_TAG);
+/* After an action that creates or deletes Square items, so the catalog copy
+   the admin pages read (dropdowns, dashboard links, tracking, mixers) shows
+   them without waiting for the nightly sync. A failure only leaves the copy
+   as it was. */
+async function refreshCatalogCopy() {
+  const result = await syncSquareCatalog(createAdminClient());
+  if (result.status === "error") console.error("[market] catalog copy refresh failed:", result.error);
 }
 
 const configSchema = z.object({
@@ -309,14 +307,9 @@ async function openSession(
   }
 
   try {
-    await refreshSessionMixers(supabase, session.id, { requireSquare: false });
+    await refreshSessionFromSquare(supabase, session.id, { requireSquare: false });
   } catch (err) {
-    console.error("[market] could not set mixer prices:", err);
-  }
-  try {
-    await refreshStockTracking(supabase, session.id, { requireSquare: false });
-  } catch (err) {
-    console.error("[market] could not read stock tracking:", err);
+    console.error("[market] could not set mixer prices and stock tracking:", err);
   }
 
   return { success: true, count: instrumentRows.length };
@@ -762,7 +755,7 @@ async function saveServeMixer(supabase: ServerClient, menuItemPriceId: number, f
     .maybeSingle();
   if (live) {
     try {
-      await refreshSessionMixers(supabase, live.session_id as number, { requireSquare: false });
+      await refreshSessionMixers(supabase, live.session_id as number);
     } catch (err) {
       console.error("[market] could not refresh mixer prices:", err);
     }
@@ -945,7 +938,7 @@ export async function updateConfigAction(formData: FormData) {
   if (error) return { error: error.message };
   if (live) {
     try {
-      await refreshSessionMixers(supabase, live.id as number, { requireSquare: false });
+      await refreshSessionMixers(supabase, live.id as number);
     } catch (err) {
       console.error("[market] could not refresh mixer prices:", err);
     }
@@ -1010,7 +1003,7 @@ async function sweepSeededItems(supabase: ServerClient, sessionId: number): Prom
       .from("market_instruments")
       .update({ sandbox_item_id: null })
       .eq("session_id", sessionId);
-    revalidateSquareItemMap();
+    await refreshCatalogCopy();
     return deleted;
   } catch (err) {
     console.error("[market] sandbox item sweep failed:", err);
@@ -1228,12 +1221,21 @@ async function syncMappingsToLiveSession(
   }
 }
 
+/* Refreshes the catalog copy from Square, then lists its modifier lists,
+   for the mixer card's reload. */
 export async function loadModifierListsAction() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to reload the modifier lists." };
+  const refreshed = await syncSquareCatalog(createAdminClient());
+  if (refreshed.status === "error") return { error: `Could not copy the Square catalog: ${refreshed.error}` };
   try {
-    return { lists: await fetchModifierListOptions() };
+    return { lists: await readModifierListOptions(supabase) };
   } catch (err) {
-    console.error("[market] modifier list fetch failed:", err);
-    return { error: "Could not reach Square to list the modifier lists." };
+    console.error("[market] modifier list read failed:", err);
+    return { error: "Could not read the modifier lists." };
   }
 }
 
@@ -1247,13 +1249,13 @@ export async function saveMixerChoiceAction(choice: { mode: "auto" | "list" | "o
   if (choice.mode === "list") {
     if (!choice.listId) return { error: "Pick the modifier list the till uses for mixers." };
     try {
-      const lists = await fetchModifierListOptions();
+      const lists = await readModifierListOptions(supabase);
       const list = lists.find((option) => option.id === choice.listId);
       if (!list) return { error: "That modifier list is no longer in Square." };
       listName = list.name;
     } catch (err) {
-      console.error("[market] modifier list fetch failed:", err);
-      return { error: "Could not reach Square to check that modifier list." };
+      console.error("[market] modifier list read failed:", err);
+      return { error: "Could not check that modifier list." };
     }
   }
 
@@ -1273,7 +1275,7 @@ export async function saveMixerChoiceAction(choice: { mode: "auto" | "list" | "o
   const { data: live } = await supabase.from("market_sessions").select("id").eq("status", "live").maybeSingle();
   if (live) {
     try {
-      await refreshSessionMixers(supabase, live.id as number, { requireSquare: false });
+      await refreshSessionMixers(supabase, live.id as number);
     } catch (err) {
       console.error("[market] could not refresh mixer prices:", err);
     }
@@ -1283,13 +1285,16 @@ export async function saveMixerChoiceAction(choice: { mode: "auto" | "list" | "o
 }
 
 export async function loadCatalogVariationsAction() {
-  try {
-    const variations = await fetchCatalogVariations();
-    return { variations };
-  } catch (err) {
-    console.error("[market] catalog fetch failed:", err);
-    return { error: "Could not reach the Square catalog. Check the Square configuration." };
-  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to refresh the catalog." };
+  const result = await syncSquareCatalog(createAdminClient());
+  if (result.status === "error") return { error: `Could not copy the Square catalog: ${result.error}` };
+  const copy = await readCatalogCopy(supabase);
+  revalidateMarket();
+  return { variations: copy?.variations ?? [] };
 }
 
 export async function autoMatchMappingsAction() {
@@ -1331,7 +1336,6 @@ export async function autoMatchMappingsAction() {
   }
   await syncMappingsToLiveSession(supabase, new Map(proposals));
 
-  revalidateSquareItemMap();
   revalidateMarket();
   return { success: true, matched: proposals.size, unmatched: targets.length - proposals.size };
 }
@@ -1344,7 +1348,6 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
     .eq("id", menuItemPriceId);
   if (error) return { error: error.message };
   await syncMappingsToLiveSession(supabase, new Map([[menuItemPriceId, variationId]]));
-  revalidateSquareItemMap();
   revalidateMarket();
   return { success: true };
 }
@@ -1473,7 +1476,7 @@ export async function pushMenuToSquareAction() {
     }
     await syncMappingsToLiveSession(supabase, new Map(variationIds));
 
-    revalidateSquareItemMap();
+    await refreshCatalogCopy();
     revalidateMarket();
     return {
       success: true,
@@ -1544,10 +1547,17 @@ export async function syncSquareSalesAction() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Sign in to sync sales." };
-  const result = await syncSquareSales(createAdminClient());
-  if (result.status === "error") return { error: result.error ?? "Could not sync sales from Square." };
+  const admin = createAdminClient();
+  const [catalog, result] = await Promise.all([syncSquareCatalog(admin), syncSquareSales(admin)]);
   revalidateMarket();
-  return { success: true, ordersSynced: result.ordersSynced, linesSynced: result.linesSynced };
+  if (result.status === "error") return { error: result.error ?? "Could not sync sales from Square." };
+  return {
+    success: true,
+    ordersSynced: result.ordersSynced,
+    linesSynced: result.linesSynced,
+    catalogVariations: catalog.status === "ok" ? catalog.variations : null,
+    catalogError: catalog.status === "error" ? catalog.error : null,
+  };
 }
 
 export async function saveEventNormalUnitsAction(eventId: number, menuItemPriceId: number, value: number | null) {
@@ -1896,7 +1906,6 @@ export async function seedSandboxCatalogAction(stockQty: number, mode: SeedMode 
   try {
     const result = await seedSandboxCatalog(supabase, session.id, qty, mode);
     if ("error" in result) return result;
-    revalidateSquareItemMap();
     revalidateMarket();
     return { success: true, ...result, stockQty: qty };
   } catch (err) {

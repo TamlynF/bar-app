@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncSquareSales } from "@/lib/square-sync";
+import { syncSquareCatalog } from "@/lib/square-catalog-sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -18,9 +19,10 @@ async function run(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const supabase = createAdminClient();
+  const catalog = await syncSquareCatalog(supabase);
   const result = await syncSquareSales(supabase);
-  const status = result.status === "ok" ? 200 : 500;
-  return NextResponse.json(result, { status });
+  const status = result.status === "ok" && catalog.status === "ok" ? 200 : 500;
+  return NextResponse.json({ ...result, catalog }, { status });
 }
 
 export async function GET(req: NextRequest) {

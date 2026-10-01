@@ -6,7 +6,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import type { SalesSyncHealth } from "@/lib/market/sales-sync-health";
 import { salesSyncStatusAction, syncSquareSalesAction } from "./actions";
-import { formatStamp } from "./ui";
+import { formatStamp, salesSyncMessage } from "./ui";
 
 type SyncChoice = "sync" | "skip";
 
@@ -101,16 +101,16 @@ export function useSalesSyncCheck() {
 
     const toastId = toast.loading("Syncing sales from Square…");
     const result = await syncSquareSalesAction();
-    if ("error" in result && result.error) {
+    if ("error" in result) {
       toast.error(`Sync failed again: ${result.error}. The market was not opened - try again, or open without syncing.`, {
         id: toastId,
       });
       return false;
     }
-    toast.success(
-      `Sales synced - ${"ordersSynced" in result ? result.ordersSynced : 0} orders. Opening the market…`,
-      { id: toastId }
-    );
+    const message = salesSyncMessage(result);
+    const text = `${message.text} Opening the market…`;
+    if (message.catalogFailed) toast.warning(text, { id: toastId });
+    else toast.success(text, { id: toastId });
     return true;
   }
 

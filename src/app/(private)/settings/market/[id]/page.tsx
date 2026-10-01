@@ -168,7 +168,7 @@ export default async function StockMarketEventPage({
       supabase,
       serveOptionsFromCategories((categoryRows ?? []) as ServeCategoryRow[]).filter((serve) => !inEvent.has(serve.id)),
     ),
-    untrackedVariationIds(unpricedDrinks.map((drink) => drink.squareVariationId)),
+    untrackedVariationIds(supabase, unpricedDrinks.map((drink) => drink.squareVariationId)),
   ]);
   const untrackedSet = new Set(untracked);
   const drinks: EventDrink[] = mixedDrinks.map((drink) =>

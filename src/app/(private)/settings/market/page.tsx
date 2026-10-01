@@ -4,7 +4,7 @@ import { crashActiveAt, crashQueuedAt } from "@/lib/market/tick";
 import { optionalNumber } from "@/lib/market/drink-overrides";
 import { sumPendingUnits, type SimSaleRow } from "@/lib/market/simulate";
 import { squareSimEnvironment } from "@/lib/market/square-sandbox";
-import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
+import { readItemIds } from "@/lib/market/catalog-copy";
 import { serveOptionsFromCategories, type ServeOption } from "@/lib/market/event-serves";
 import { withSquareMixers } from "@/lib/market/square-mixers";
 import { eventReadiness, type EventReadiness } from "@/lib/market/event-readiness";
@@ -190,15 +190,21 @@ export default async function MarketSettingsPage({
       squareItemId: null,
     }));
 
-    /* One cached pass over the catalog turns every mapped drink into a real
-       anchor into the Square dashboard; a miss falls back to resolving the
-       item on click. */
+    /* The catalog copy turns every mapped drink into a real anchor into the
+       Square dashboard; a drink linked since the last copy falls back to
+       resolving the item on click. */
     if (instruments.some((instrument) => instrument.mapped)) {
-      const itemIds = await squareItemIdsByVariation();
+      const variationByInstrument = new Map(
+        (instrumentRows ?? []).map((row) => [row.id as number, row.square_variation_id as string | null])
+      );
+      const itemIds = await readItemIds(
+        supabase,
+        [...variationByInstrument.values()].filter((id): id is string => Boolean(id))
+      ).catch((err) => {
+        console.error("[market] catalog copy item lookup failed:", err);
+        return new Map<string, string>();
+      });
       if (itemIds.size > 0) {
-        const variationByInstrument = new Map(
-          (instrumentRows ?? []).map((row) => [row.id as number, row.square_variation_id as string | null])
-        );
         instruments = instruments.map((instrument) => {
           const variationId = variationByInstrument.get(instrument.id);
           return {

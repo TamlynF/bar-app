@@ -9,8 +9,7 @@ import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-confirmation";
-import { refreshSessionMixers } from "@/lib/market/square-mixers";
-import { refreshStockTracking } from "@/lib/market/square-stock-tracking";
+import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -75,16 +74,7 @@ export async function POST(req: NextRequest) {
     }
     try {
       const { data: live } = await admin.from("market_sessions").select("id").eq("status", "live").maybeSingle();
-      if (live) {
-        await Promise.allSettled([
-          refreshSessionMixers(admin, live.id as number, { requireSquare: true }),
-          refreshStockTracking(admin, live.id as number, { requireSquare: true }),
-        ]).then((outcomes) =>
-          outcomes.forEach((outcome) => {
-            if (outcome.status === "rejected") console.error("[market] catalog refresh failed:", outcome.reason);
-          })
-        );
-      }
+      if (live) await refreshSessionFromSquare(admin, live.id as number, { requireSquare: true });
     } catch (err) {
       console.error("[market] catalog refresh failed:", err);
     }

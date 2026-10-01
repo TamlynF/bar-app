@@ -20,7 +20,7 @@ import { ReadyToOpenChecklist } from "./ready-to-open";
 import { MarketNightsMenu, type EventSession } from "./market-nights-menu";
 import { useSalesSyncCheck } from "../use-sales-sync-check";
 import type { EventReadiness } from "@/lib/market/event-readiness";
-import { FIELD_INPUT, OUTLINE_BUTTON, PRIMARY_BUTTON, formatStamp } from "../ui";
+import { FIELD_INPUT, OUTLINE_BUTTON, PRIMARY_BUTTON, formatStamp, salesSyncMessage } from "../ui";
 import { cn } from "@/lib/utils";
 import {
   DetailCard,
@@ -703,7 +703,9 @@ export default function EventDetailClient({
         toast.error(result.error);
         return;
       }
-      toast.success(`Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square.`);
+      const message = salesSyncMessage(result);
+      if (message.catalogFailed) toast.warning(message.text);
+      else toast.success(message.text);
       if (normalUnits.weekdays.length > 0) handleReadNormals();
       else router.refresh();
     });

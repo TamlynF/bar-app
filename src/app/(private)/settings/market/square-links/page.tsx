@@ -3,15 +3,11 @@ import {
   buildMappingRows,
   type MappingCategoryRow,
 } from "@/lib/market/mapping-rows";
-import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
-import { squareItemIdsByVariation } from "@/lib/market/square-item-links";
-import type { CatalogVariation } from "@/lib/market/mapping";
+import { readCatalogCopy, readModifierListOptions } from "@/lib/market/catalog-copy";
 import {
-  fetchModifierListOptions,
   readMixerChoice,
   type ModifierListOption,
 } from "@/lib/market/square-mixers";
-import { untrackedVariationIds } from "@/lib/market/square-stock-tracking";
 import SquareLinksClient, { type SaleLineCount } from "./square-links-client";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +38,6 @@ export default async function SquareLinksPage({
     { data: categoryRows },
     { data: eventRows },
     catalog,
-    itemIdMap,
     mixerChoice,
     modifierLists,
     { data: lineCountRows, error: lineCountError },
@@ -60,21 +55,12 @@ export default async function SquareLinksPage({
       .select("id, name, stock_market_event_items(menu_item_price_id)")
       .eq("is_active", true)
       .order("name", { ascending: true }),
-    /* The catalog is the page's content, so it loads with the page; a
-       Square outage degrades to a retry button rather than a broken route. */
-    fetchCatalogVariations().then(
-      (variations): CatalogVariation[] | null => variations,
-      (err) => {
-        console.error("[market] catalog fetch failed:", err);
-        return null;
-      },
-    ),
-    squareItemIdsByVariation(),
+    readCatalogCopy(supabase),
     readMixerChoice(supabase),
-    fetchModifierListOptions().then(
+    readModifierListOptions(supabase).then(
       (lists): ModifierListOption[] | null => lists,
       (err) => {
-        console.error("[market] modifier list fetch failed:", err);
+        console.error("[market] modifier list read failed:", err);
         return null;
       },
     ),
@@ -83,7 +69,7 @@ export default async function SquareLinksPage({
       .select("variation_id, line_count, units, first_night, last_night"),
     supabase
       .from("square_sync_state")
-      .select("last_synced_at")
+      .select("last_synced_at, catalog_synced_at")
       .eq("id", 1)
       .maybeSingle(),
   ]);
@@ -113,9 +99,6 @@ export default async function SquareLinksPage({
     (categoryRows ?? []) as MappingCategoryRow[],
     events,
   );
-  const untracked = await untrackedVariationIds(
-    rows.map((row) => row.squareVariationId),
-  );
 
   const eventId = event && /^\d+$/.test(event) ? Number(event) : null;
   const focusEvent = events.find((row) => row.id === eventId) ?? null;
@@ -123,21 +106,25 @@ export default async function SquareLinksPage({
   return (
     <SquareLinksClient
       rows={rows}
-      variations={catalog}
+      variations={catalog?.variations ?? null}
       focusEvent={focusEvent}
-      itemIds={Object.fromEntries(itemIdMap)}
+      itemIds={catalog?.itemIdByVariation ?? {}}
       environment={
         process.env.SQUARE_ENVIRONMENT === "production"
           ? "production"
           : "sandbox"
       }
-      untrackedVariationIds={untracked}
+      untrackedVariationIds={catalog?.untrackedVariationIds ?? []}
       mixerChoice={mixerChoice}
       modifierLists={modifierLists}
       saleLineCounts={lineCountError ? null : saleLineCounts}
       salesSyncedAt={
         (syncState as { last_synced_at: string | null } | null)
           ?.last_synced_at ?? null
+      }
+      catalogSyncedAt={
+        (syncState as { catalog_synced_at: string | null } | null)
+          ?.catalog_synced_at ?? null
       }
     />
   );

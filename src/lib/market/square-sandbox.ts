@@ -3,8 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Square } from "square";
 import { squareClient } from "@/lib/square";
 import type { SeedMode } from "./types";
-import { isStockTrackedAt, refreshStockTracking } from "./square-stock-tracking";
-import { readMixerChoice, refreshSessionMixers } from "./square-mixers";
+import { isStockTrackedAt } from "./square-stock-tracking";
+import { readMixerChoice } from "./square-mixers";
+import { refreshSessionFromSquare } from "./session-square-refresh";
 import { isMixerList, type MixerChoice } from "./mixer";
 import { resolveMarketConfig } from "./types";
 
@@ -311,8 +312,7 @@ export async function seedSandboxCatalog(
     .from("market_sessions")
     .update({ sandbox_seeded_at: new Date().toISOString() })
     .eq("id", sessionId);
-  await refreshStockTracking(supabase, sessionId, { requireSquare: false });
-  await refreshSessionMixers(supabase, sessionId, { requireSquare: false });
+  await refreshSessionFromSquare(supabase, sessionId, { requireSquare: false });
 
   return {
     seeded: variationIds.length,

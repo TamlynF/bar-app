@@ -48,7 +48,7 @@ import {
   saveMappingAction,
   syncSquareSalesAction,
 } from "../actions";
-import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp } from "../ui";
+import { NEUTRAL_BUTTON, OUTLINE_BUTTON, formatStamp, salesSyncMessage } from "../ui";
 import type { MixerChoice } from "@/lib/market/mixer";
 import type { ModifierListOption } from "@/lib/market/square-mixers";
 import MixerModifierCard from "./mixer-modifier-card";
@@ -289,7 +289,7 @@ function LinkStatus({
 
 export default function SquareLinksClient({
   rows,
-  variations: initialVariations,
+  variations,
   focusEvent,
   itemIds,
   environment,
@@ -298,10 +298,12 @@ export default function SquareLinksClient({
   modifierLists,
   saleLineCounts,
   salesSyncedAt,
+  catalogSyncedAt,
 }: {
   rows: MappingRow[];
   saleLineCounts: Record<string, SaleLineCount> | null;
   salesSyncedAt: string | null;
+  catalogSyncedAt: string | null;
   untrackedVariationIds: string[];
   variations: CatalogVariation[] | null;
   focusEvent: { id: number; name: string } | null;
@@ -337,9 +339,6 @@ export default function SquareLinksClient({
       }
       onToggle={() => toggleRevealed(row.menuItemPriceId)}
     />
-  );
-  const [variations, setVariations] = useState<CatalogVariation[] | null>(
-    initialVariations,
   );
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [query, setQuery] = useState("");
@@ -398,9 +397,9 @@ export default function SquareLinksClient({
         toast.error(result.error);
         return;
       }
-      toast.success(
-        `Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square.`,
-      );
+      const message = salesSyncMessage(result);
+      if (message.catalogFailed) toast.warning(message.text);
+      else toast.success(message.text);
       router.refresh();
     });
   }
@@ -428,7 +427,8 @@ export default function SquareLinksClient({
       toast.error(result.error);
       return;
     }
-    setVariations(result.variations ?? []);
+    toast.success(`Catalog copied from Square - ${result.variations?.length ?? 0} variations.`);
+    router.refresh();
   }
 
   async function handlePushToSquare() {
@@ -448,7 +448,6 @@ export default function SquareLinksClient({
       toast.success(
         `Square catalog updated - ${result?.created ?? 0} items created, ${result?.linked ?? 0} serves linked${result?.skipped ? `, ${result.skipped} already existed` : ""}.`,
       );
-      await retryCatalog();
       router.refresh();
     });
   }
@@ -543,10 +542,10 @@ export default function SquareLinksClient({
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-admin-error/30 bg-admin-error-bg px-4 py-3 text-[13px] sm:px-5">
           <p className="text-admin-ink">
             <span className="font-semibold">
-              Could not reach the Square catalog.
+              The Square catalog has not been copied yet.
             </span>{" "}
             <span className="text-admin-muted">
-              Links are shown but cannot be changed until it loads.
+              Links are shown but cannot be changed until it is. The nightly sync copies it, or copy it now.
             </span>
           </p>
           <button
@@ -560,7 +559,7 @@ export default function SquareLinksClient({
             ) : (
               <RefreshCw className="h-4 w-4" aria-hidden="true" />
             )}
-            Retry
+            Copy from Square
           </button>
         </div>
       )}
@@ -571,7 +570,7 @@ export default function SquareLinksClient({
         variant="panel"
         title="Square links"
         count={shown.length}
-        subtitle={`${linkedCount} of ${rows.length} serves linked · sales synced ${salesSyncedAt ? formatStamp(salesSyncedAt) : "never"}`}
+        subtitle={`${linkedCount} of ${rows.length} serves linked · sales synced ${salesSyncedAt ? formatStamp(salesSyncedAt) : "never"} · catalog copied ${catalogSyncedAt ? formatStamp(catalogSyncedAt) : "never"}`}
         collapsible={false}
         activeFilterCount={filter === "all" ? 0 : 1}
         toolbar={
@@ -713,6 +712,14 @@ export default function SquareLinksClient({
                 >
                   <Wine className="h-4 w-4" />
                   Update alcohol in Square
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={loadingCatalog}
+                  onSelect={retryCatalog}
+                  className="min-h-11"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh catalog from Square
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={searching || groups.length === 0}
