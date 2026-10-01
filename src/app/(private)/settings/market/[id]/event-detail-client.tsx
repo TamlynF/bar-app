@@ -7,6 +7,9 @@ import {
   CandlestickChart,
   ChevronDown,
   ChevronRight,
+  CircleCheck,
+  CircleX,
+  ExternalLink,
   Loader2,
   Plus,
   RotateCcw,
@@ -17,6 +20,12 @@ import {
 import { toast } from "sonner";
 import { NormalUnitsCell, NormalUnitsOverrideInput, type NormalUnitsView } from "./normal-units-card";
 import { ReadyToOpenChecklist } from "./ready-to-open";
+import { SheetRow, SheetSection } from "./sheet-section";
+import { SwitchDisplay, SwitchField } from "./switch-field";
+import SquareHistoryRows from "./square-history";
+import ModifierListPopover from "../modifier-list-popover";
+import { squareItemUrl } from "@/lib/market/simulate";
+import type { SquareVariationDetail } from "@/lib/market/square-variation-details";
 import { MarketNightsMenu, type EventSession } from "./market-nights-menu";
 import { useSalesSyncCheck } from "../use-sales-sync-check";
 import type { EventReadiness } from "@/lib/market/event-readiness";
@@ -24,7 +33,6 @@ import { FIELD_INPUT, OUTLINE_BUTTON, PRIMARY_BUTTON, formatStamp, salesSyncMess
 import { cn } from "@/lib/utils";
 import {
   DetailCard,
-  DetailCell,
   ErrorBox,
   FormRow,
   ListSearchInput,
@@ -70,7 +78,18 @@ export type EventDrink = {
   nightOnly: boolean;
   serve: string;
   serveOrder: number;
+  /* The menu's own price for the serve. */
+  menuPrice: number | null;
+  /* What the serve trades from: Square's price for the linked variation, or
+     the menu price when Square has none. */
   basePrice: number | null;
+  basePriceFromSquare: boolean;
+  /* The event's normal units a night for this drink, null for the Square
+     history figure; normalUnitsKeep keeps it after the next market night. */
+  normalUnitsOverride: number | null;
+  normalUnitsKeep: boolean;
+  /* Who created and last changed the serve behind this drink. */
+  audit: { createdAt: string | null; createdBy: string | null; updatedAt: string | null; updatedBy: string | null };
   linked: boolean;
   squareVariationId: string | null;
   withMixer: boolean;
@@ -153,6 +172,149 @@ function groupByCategory(drinks: EventDrink[]): DrinkGroup[] {
     else groups.push({ name, drinks: [drink] });
   }
   return groups;
+}
+
+function SquareLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title="Open in the Square dashboard"
+      className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold break-all text-admin-primary underline-offset-2 hover:underline"
+    >
+      {children}
+      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+    </a>
+  );
+}
+
+function formatMoney(amount: number, currency: string | null): string {
+  if (!currency) return formatGbp(amount);
+  try {
+    return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
+  } catch {
+    return `${formatGbp(amount)} ${currency}`;
+  }
+}
+
+function NameAndId({ name, id, href }: { name: string; id: string; href: string }) {
+  return (
+    <span className="inline-flex flex-wrap items-center justify-end gap-x-1.5">
+      <span>{name || "-"}</span>
+      <span className="text-admin-muted" aria-hidden="true">
+        -
+      </span>
+      <SquareLink href={href}>{id}</SquareLink>
+    </span>
+  );
+}
+
+/* Square's side of a linked serve, as the catalog copy last saw it. */
+function SquareItemRows({
+  detail,
+  environment,
+}: {
+  detail: SquareVariationDetail;
+  environment: "sandbox" | "production";
+}) {
+  const href = squareItemUrl(environment, detail.itemId);
+  const quantity =
+    detail.stockQuantity == null ? "-" : `${detail.stockQuantity}${detail.soldBy ? ` ${detail.soldBy}` : ""}`;
+  const itemDefault = detail.stockTracking === "stock_count";
+  return (
+    <>
+      <SheetRow label="Item" value={<NameAndId name={detail.itemName} id={detail.itemId} href={href} />} />
+      <SheetRow label="Variation" value={<NameAndId name={detail.variationName} id={detail.variationId} href={href} />} />
+      <SheetRow
+        label="Price"
+        value={
+          <span className="tabular-nums">
+            {detail.price == null ? "-" : formatMoney(detail.price, detail.currency)}
+          </span>
+        }
+      />
+      <SheetRow label="Reporting category" value={detail.reportingCategoryName ?? "-"} />
+      {detail.modifierLists.length > 0 && (
+        <SheetRow
+          label="Modifier lists"
+          value={
+            <span className="inline-flex flex-wrap justify-end gap-1">
+              {detail.modifierLists.map((list) => (
+                <ModifierListPopover
+                  key={list.id}
+                  name={list.name}
+                  options={list.options}
+                  label={`Show the ${list.name} options`}
+                />
+              ))}
+            </span>
+          }
+        />
+      )}
+      <SheetRow
+        label="Stock tracking"
+        value={
+          <span className="inline-flex flex-col items-end">
+            {detail.inventoryTrackingLocation ? "Counted at the venue" : "Not counted"}
+            {itemDefault !== detail.inventoryTrackingLocation && (
+              <span className="text-[11px] font-medium text-admin-muted">
+                Venue setting overrides the item default ({itemDefault ? "counted" : "not counted"})
+              </span>
+            )}
+          </span>
+        }
+      />
+      <SheetRow label="Stock quantity" value={<span className="tabular-nums">{quantity}</span>} />
+      <SheetRow
+        label="Status"
+        value={
+          <span className="inline-flex items-center gap-1.5">
+            {detail.status}
+            <span className="h-1 w-1 rounded-full bg-admin-muted" aria-hidden="true" />
+            <span className="font-medium text-admin-muted">{detail.statusExt}</span>
+          </span>
+        }
+      />
+      <SheetRow label="Synced at" value={formatStamp(detail.syncedAt)} />
+      {detail.deletedAt && (
+        <SheetRow label="Deleted at" value={`${formatStamp(detail.deletedAt)} - no longer in Square`} tone="error" />
+      )}
+    </>
+  );
+}
+
+function GroupToggle({
+  group,
+  open,
+  onToggle,
+  className,
+}: {
+  group: DrinkGroup;
+  open: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className={cn(
+        "flex min-h-11 w-full items-center gap-2 bg-admin-surface text-left text-[11px] font-semibold tracking-wide text-admin-muted uppercase transition-colors hover:bg-admin-line/40 sm:min-h-8",
+        className,
+      )}
+    >
+      <ChevronDown
+        className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200", !open && "-rotate-90")}
+        aria-hidden="true"
+      />
+      <span className="min-w-0 truncate">{group.name}</span>
+      <span className="font-medium tracking-normal normal-case">
+        {group.drinks.length} {group.drinks.length === 1 ? "drink" : "drinks"}
+      </span>
+    </button>
+  );
 }
 
 function PriceInput({
@@ -272,7 +434,7 @@ function drinkSettings(
   if (drink.basePrice == null) return null;
   return {
     effective: effectiveDrinkSettings(drink.basePrice, config, drink.overrides),
-    defaults: defaultDrinkSettings(drink.basePrice, config),
+    defaults: defaultDrinkSettings(drink.overrides.openingPrice ?? drink.basePrice, config),
   };
 }
 
@@ -288,8 +450,10 @@ function OverrideFields({
   mixer: number | null;
 }) {
   const isPrice = (key: OverrideField["key"]) => PRICE_KEYS.includes(key as PriceKey);
-  const defaults =
-    basePrice != null ? defaultDrinkSettings(basePrice, config) : null;
+  const opening = drink?.overrides.openingPrice ?? basePrice;
+  const [normalUnits, setNormalUnits] = useState(drink?.normalUnitsOverride?.toString() ?? "");
+  const [keepNormals, setKeepNormals] = useState(drink?.normalUnitsOverride != null && drink.normalUnitsKeep);
+  const defaults = opening != null ? defaultDrinkSettings(opening, config) : null;
   return (
     <>
       <DetailCard className="divide-y divide-admin-line/50">
@@ -316,9 +480,40 @@ function OverrideFields({
           </FormRow>
         ))}
       </DetailCard>
+      {drink && (
+        <DetailCard className="divide-y divide-admin-line/50">
+          <input type="hidden" name="normal_units_field" value="1" />
+          <FormRow label="Normal / night override" dense>
+            <input
+              type="number"
+              name="normal_units_per_night"
+              min="0.1"
+              step="0.1"
+              aria-label="Normal units a night override"
+              placeholder="auto"
+              value={normalUnits}
+              onChange={(event) => {
+                setNormalUnits(event.target.value);
+                if (event.target.value.trim() === "") setKeepNormals(false);
+              }}
+              className={FIELD_INPUT}
+            />
+          </FormRow>
+          <FormRow label="Keep for future nights" dense>
+            <SwitchField
+              name="normal_units_keep"
+              checked={keepNormals}
+              onChange={setKeepNormals}
+              disabled={normalUnits.trim() === ""}
+              label="Keep the normal units override for future nights"
+            />
+          </FormRow>
+        </DetailCard>
+      )}
       <p className="px-1 text-[11px] text-admin-muted">
         Leave a field blank to use the event setting. Opening price defaults to
-        the base price.{" "}
+        the base price. A normal units override goes back to auto after the next
+        market night unless Keep for future nights is ticked.{" "}
         {mixer != null &&
           `Prices here include the ${formatGbp(mixer)} mixer, as guests pay them; only the spirit part moves. `}
         Alert threshold is a fraction, so 0.05 alerts on a 5% move. Changes
@@ -375,6 +570,7 @@ function DrinkForm({
   onSubmit: (formData: FormData) => void;
 }) {
   const [amount, setAmount] = useState(drink?.basePrice ?? null);
+  const [servedWithMixer, setServedWithMixer] = useState(drink?.withMixer ?? false);
   return (
     <form
       id="event-drink-form"
@@ -417,7 +613,7 @@ function DrinkForm({
                 min="0.05"
                 step="0.05"
                 aria-label="Base price"
-                defaultValue={drink?.basePrice ?? ""}
+                defaultValue={drink?.menuPrice ?? ""}
                 onChange={(event) => {
                   const next = Number(event.target.value);
                   setAmount(Number.isFinite(next) && next > 0 ? next : null);
@@ -434,17 +630,13 @@ function DrinkForm({
       )}
       <DetailCard>
         <FormRow label="Served with a mixer" dense>
-          <span className="flex flex-1 items-center justify-end">
-            <input type="hidden" name="with_mixer_field" value="1" />
-            <input
-              type="checkbox"
-              name="with_mixer"
-              value="on"
-              aria-label="Always sold with a mixer"
-              defaultChecked={drink?.withMixer ?? false}
-              className="h-4 w-4 cursor-pointer accent-admin-primary"
-            />
-          </span>
+          <input type="hidden" name="with_mixer_field" value="1" />
+          <SwitchField
+            name="with_mixer"
+            checked={servedWithMixer}
+            onChange={setServedWithMixer}
+            label="Always sold with a mixer"
+          />
         </FormRow>
         <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
           Tick this for a spirit the till always rings with a mixer that Square does not already mark. Drinks that
@@ -572,6 +764,8 @@ export default function EventDetailClient({
   anyLive,
   readiness,
   normalUnits,
+  squareDetails,
+  environment,
 }: {
   event: StockMarketEventSummary;
   drinks: EventDrink[];
@@ -581,6 +775,8 @@ export default function EventDetailClient({
   anyLive: boolean;
   readiness: EventReadiness;
   normalUnits: NormalUnitsView;
+  squareDetails: Record<string, SquareVariationDetail>;
+  environment: "sandbox" | "production";
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -606,6 +802,15 @@ export default function EventDetailClient({
     [drinks, needle],
   );
   const groups = useMemo(() => groupByCategory(shownDrinks), [shownDrinks]);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const isGroupOpen = (name: string) => needle.length > 0 || !collapsed.has(name);
+  const toggleGroup = (name: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
   const normalsById = useMemo(
     () => new Map(normalUnits.rows.map((row) => [row.menuItemPriceId, row])),
     [normalUnits.rows]
@@ -772,11 +977,13 @@ export default function EventDetailClient({
     drinkMode === "add"
       ? "New tonight-only drink"
       : drinkMode === "edit"
-        ? selectedDrink?.nightOnly
-          ? "Edit drink"
-          : "Edit pricing"
-        : "Drink";
+        ? "Edit Drink"
+        : "View Drink";
   const selectedMixer = selectedDrink ? serveMixerPrice(selectedDrink, event.config.mixerPrice) : null;
+  const selectedSquare = selectedDrink?.squareVariationId ? squareDetails[selectedDrink.squareVariationId] : undefined;
+  const [sectionOpen, setSectionOpen] = useState({ menu: true, history: true, square: true, pricing: true });
+  const toggleSection = (key: keyof typeof sectionOpen) =>
+    setSectionOpen((current) => ({ ...current, [key]: !current[key] }));
   const selectedSettings = selectedDrink
     ? drinkSettings(selectedDrink, event.config)
     : null;
@@ -937,9 +1144,13 @@ export default function EventDetailClient({
             <ul className="m-0 list-none p-0 sm:hidden">
               {groups.map((group) => (
                 <li key={group.name} className="mt-3 first:mt-0">
-                  <p className="mb-1 rounded-lg bg-admin-surface px-2.5 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-                    {group.name}
-                  </p>
+                  <GroupToggle
+                    group={group}
+                    open={isGroupOpen(group.name)}
+                    onToggle={() => toggleGroup(group.name)}
+                    className="mb-1 rounded-lg px-2.5"
+                  />
+                  {isGroupOpen(group.name) && (
                   <ul className="m-0 list-none divide-y divide-admin-line/60 p-0">
                     {group.drinks.map((drink) => {
                       const settings = drinkSettings(drink, event.config);
@@ -1044,6 +1255,7 @@ export default function EventDetailClient({
                       );
                     })}
                   </ul>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1078,14 +1290,16 @@ export default function EventDetailClient({
                   {groups.map((group) => (
                     <Fragment key={group.name}>
                       <tr>
-                        <td
-                          colSpan={11}
-                          className="bg-admin-surface px-2 py-1.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"
-                        >
-                          {group.name}
+                        <td colSpan={11} className="p-0">
+                          <GroupToggle
+                            group={group}
+                            open={isGroupOpen(group.name)}
+                            onToggle={() => toggleGroup(group.name)}
+                            className="px-2"
+                          />
                         </td>
                       </tr>
-                      {group.drinks.map((drink) => {
+                      {isGroupOpen(group.name) && group.drinks.map((drink) => {
                         const settings = drinkSettings(drink, event.config);
                         const draft = draftFor(drink);
                         const normals = normalsById.get(drink.id);
@@ -1196,8 +1410,24 @@ export default function EventDetailClient({
         open={drinkSheet.open}
         onClose={drinkSheet.close}
         mode={drinkMode}
+        size={drinkShowForm ? "default" : "wide"}
         navigate={drinkSheet.navigateAcross(shownDrinks)}
         title={drinkTitle}
+        systemInfo={
+          selectedDrink
+            ? {
+                createdAt: selectedDrink.audit.createdAt,
+                createdBy: selectedDrink.audit.createdBy,
+                updatedAt: selectedDrink.audit.updatedAt,
+                updatedBy: selectedDrink.audit.updatedBy,
+                rows: [
+                  { label: "Menu item ID", value: selectedDrink.menuItemId },
+                  { label: "Event ID", value: event.id },
+                  { label: "Square variation ID", value: selectedDrink.squareVariationId ?? "-" },
+                ],
+              }
+            : undefined
+        }
         recordId={selectedDrink?.id}
         formId="event-drink-form"
         isPending={drinkSheet.isPending}
@@ -1224,98 +1454,172 @@ export default function EventDetailClient({
       >
         {!drinkShowForm && selectedDrink && (
           <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-            <DetailCard>
-              <DetailCell dense label="Name" value={selectedDrink.name} />
-              <DetailCell
-                dense
-                label="Category"
-                value={selectedDrink.categoryName}
-              />
-              <DetailCell
-                dense
-                label="Serve"
-                value={
-                  serveMixerPrice(selectedDrink, event.config.mixerPrice) != null
-                    ? `${selectedDrink.serve} + mixer`
-                    : selectedDrink.serve
-                }
-              />
-              <DetailCell
-                dense
-                label="Base price"
-                value={
-                  selectedDrink.basePrice == null ? (
-                    "-"
-                  ) : (
-                    <span className="tabular-nums">
-                      {formatGbp(withMixer(selectedDrink.basePrice, selectedMixer))}
-                      {selectedMixer != null && (
+            <div className="grid gap-4 sm:gap-5 lg:grid-cols-2 lg:items-start">
+              <div className="space-y-4 sm:space-y-5">
+              <SheetSection title="Menu item" open={sectionOpen.menu} onToggle={() => toggleSection("menu")}>
+                <SheetRow label="Name" value={selectedDrink.name} />
+                <SheetRow
+                  label="Category"
+                  value={selectedDrink.categoryName}
+                />
+                <SheetRow
+                  label="Serve"
+                  value={
+                    serveMixerPrice(selectedDrink, event.config.mixerPrice) != null
+                      ? `${selectedDrink.serve} + mixer`
+                      : selectedDrink.serve
+                  }
+                />
+                <SheetRow
+                  label="Price"
+                  value={
+                    selectedDrink.menuPrice == null ? (
+                      "-"
+                    ) : (
+                      <span className="tabular-nums">
+                        {formatGbp(selectedDrink.menuPrice)}
+                        <span className="ml-1.5 text-[11px] font-medium text-admin-muted">(menu)</span>
+                      </span>
+                    )
+                  }
+                />
+                <SheetRow
+                  label="Base price"
+                  value={
+                    selectedDrink.basePrice == null ? (
+                      "-"
+                    ) : (
+                      <span className="tabular-nums">
+                        {formatGbp(withMixer(selectedDrink.basePrice, selectedMixer))}
                         <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
-                          ({formatGbp(selectedDrink.basePrice)} + {formatGbp(selectedMixer)} mixer
-                          {selectedDrink.squareMixerPrice != null ? " from Square" : ""})
+                          {selectedMixer != null
+                            ? `(${formatGbp(selectedDrink.basePrice)}${selectedDrink.basePriceFromSquare ? " from Square" : " menu"} + ${formatGbp(selectedMixer)} mixer${selectedDrink.squareMixerPrice != null ? " from Square" : ""})`
+                            : selectedDrink.basePriceFromSquare
+                              ? "(from Square)"
+                              : "(menu)"}
                         </span>
-                      )}
-                    </span>
-                  )
-                }
-              />
-              <DetailCell
-                dense
-                label="Square"
-                value={
-                  selectedDrink.linked ? (
-                    <>
-                      Linked
-                      {selectedDrink.squareVariationId && (
-                        <span className="block text-[11px] font-normal break-all text-admin-muted">
-                          {selectedDrink.squareVariationId}
+                      </span>
+                    )
+                  }
+                />
+                <SheetRow
+                  label="Square"
+                  value={
+                    selectedDrink.linked ? (
+                      <span className="inline-flex flex-col items-end gap-0.5">
+                        <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5">
+                          <span className="inline-flex items-center gap-1 text-admin-success">
+                            <CircleCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                            Linked
+                          </span>
+                          {selectedDrink.squareVariationId &&
+                            (selectedSquare ? (
+                              <SquareLink href={squareItemUrl(environment, selectedSquare.itemId)}>
+                                {selectedDrink.squareVariationId}
+                              </SquareLink>
+                            ) : (
+                              <span className="font-mono text-[11px] font-normal break-all text-admin-muted">
+                                {selectedDrink.squareVariationId}
+                              </span>
+                            ))}
                         </span>
-                      )}
-                      {selectedDrink.stockTracked === false && (
-                        <span className="block text-[11px] font-normal text-admin-muted">
-                          Stock not tracked in Square - mark it sold out on the trading floor when it runs out.
-                        </span>
-                      )}
-                    </>
+                        {selectedDrink.stockTracked === false && (
+                          <span className="text-[11px] font-normal text-admin-muted">
+                            Stock not tracked in Square - mark it sold out on the trading floor when it runs out.
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-admin-error">
+                        <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+                        Not linked
+                      </span>
+                    )
+                  }
+                />
+              </SheetSection>
+              <SheetSection title="Square history" open={sectionOpen.history} onToggle={() => toggleSection("history")}>
+                <SquareHistoryRows
+                  key={selectedDrink.id}
+                  variationId={selectedDrink.squareVariationId}
+                  normals={normalsById.get(selectedDrink.id)}
+                  weekdays={normalUnits.weekdays}
+                />
+              </SheetSection>
+              </div>
+              {selectedDrink.squareVariationId && (
+                <SheetSection title="Square item" open={sectionOpen.square} onToggle={() => toggleSection("square")}>
+                  {selectedSquare ? (
+                    <SquareItemRows detail={selectedSquare} environment={environment} />
                   ) : (
-                    "Not linked"
+                    <p className="px-4 py-3 text-[12px] text-admin-muted sm:px-5">
+                      This variation is not in the copy of the Square catalog yet. Refresh the catalog on Square links
+                      to see it here.
+                    </p>
+                  )}
+                </SheetSection>
+              )}
+            </div>
+            <SheetSection
+              title="Pricing on this event"
+              open={sectionOpen.pricing}
+              onToggle={() => toggleSection("pricing")}
+            >
+                {OVERRIDE_FIELDS.map((field) => {
+                  const overridden = selectedDrink.overrides[field.key] != null;
+                  return (
+                    <SheetRow
+                      key={field.key}
+                      label={field.label}
+                      value={
+                        selectedSettings ? (
+                          <span className="tabular-nums">
+                            {field.format(
+                              PRICE_KEYS.includes(field.key as PriceKey)
+                                ? withMixer(selectedSettings.effective[field.key], selectedMixer)
+                                : selectedSettings.effective[field.key]
+                            )}
+                            {!overridden && (
+                              <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
+                                (event setting)
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          "-"
+                        )
+                      }
+                    />
+                  );
+                })}
+              <SheetRow
+                label="Normal / night override"
+                value={
+                  selectedDrink.normalUnitsOverride != null ? (
+                    <span className="tabular-nums">{selectedDrink.normalUnitsOverride} a night</span>
+                  ) : (
+                    <span className="font-medium text-admin-muted">Auto (Square history)</span>
                   )
                 }
               />
-            </DetailCard>
-            <h4 className="px-1 text-[12px] font-semibold text-admin-ink">
-              Pricing on this event
-            </h4>
-            <DetailCard>
-              {OVERRIDE_FIELDS.map((field) => {
-                const overridden = selectedDrink.overrides[field.key] != null;
-                return (
-                  <DetailCell
-                    key={field.key}
-                    dense
-                    label={field.label}
-                    value={
-                      selectedSettings ? (
-                        <span className="tabular-nums">
-                          {field.format(
-                            PRICE_KEYS.includes(field.key as PriceKey)
-                              ? withMixer(selectedSettings.effective[field.key], selectedMixer)
-                              : selectedSettings.effective[field.key]
-                          )}
-                          {!overridden && (
-                            <span className="ml-1.5 text-[11px] font-medium text-admin-muted">
-                              (event setting)
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        "-"
-                      )
-                    }
-                  />
-                );
-              })}
-            </DetailCard>
+              <SheetRow
+                label="Keep for future nights"
+                value={
+                  <span className="inline-flex items-center gap-2">
+                    {selectedDrink.normalUnitsOverride != null && !selectedDrink.normalUnitsKeep && (
+                      <span className="text-[11px] font-medium text-admin-muted">
+                        Back to auto after the next market night
+                      </span>
+                    )}
+                    <SwitchDisplay
+                      on={selectedDrink.normalUnitsOverride != null && selectedDrink.normalUnitsKeep}
+                      disabled={selectedDrink.normalUnitsOverride == null}
+                      label="Keep for future nights"
+                    />
+                  </span>
+                }
+              />
+            </SheetSection>
             {!selectedDrink.nightOnly && (
               <p className="px-1 text-[11px] text-admin-muted">
                 This is a menu drink. Change its name, serves or base price on{" "}

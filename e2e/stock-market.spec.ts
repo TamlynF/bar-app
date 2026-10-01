@@ -243,6 +243,14 @@ test.describe("stock market", () => {
     await expect(
       page.getByRole("spinbutton", { name: `Override normal units per night for ${names.drink} single` })
     ).toHaveValue("12");
+
+    const category = page.getByRole("button", { name: new RegExp(names.category) }).filter({ visible: true });
+    await expect(category).toHaveAttribute("aria-expanded", "true");
+    await category.click();
+    await expect(category).toHaveAttribute("aria-expanded", "false");
+    await expect(visible(page, names.drink)).toHaveCount(0);
+    await category.click();
+    await expect(visible(page, names.drink)).toBeVisible();
   });
 
   test("Square links lists the drink and its category opens and closes", async ({ page }) => {

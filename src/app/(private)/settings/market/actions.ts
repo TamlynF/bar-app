@@ -9,6 +9,7 @@ import type { Square } from "square";
 import { proposeMappings, splitLinks } from "@/lib/market/mapping";
 import { syncLinkedMenuCategories } from "@/lib/market/variation-categories";
 import { hiddenServeLabel } from "@/lib/market/square-item-rows";
+import { summariseSaleLines, type SaleLineRow, type SalesHistory } from "@/lib/market/sales-history";
 import { formatPriceText } from "@/lib/menu-price";
 import {
   resolveMarketConfig,
@@ -28,12 +29,13 @@ import {
 } from "@/lib/market/normal-units-server";
 import { syncSquareSales } from "@/lib/square-sync";
 import { syncSquareCatalog } from "@/lib/square-catalog-sync";
-import { readCatalogCopy, readModifierListOptions } from "@/lib/market/catalog-copy";
+import { readCatalogCopy, readModifierListOptions, readSquarePrices } from "@/lib/market/catalog-copy";
 import {
   EMPTY_OVERRIDES,
   optionalNumber,
   overridesFromRow,
   overridesToRow,
+  tradingBasePrice,
   type DrinkOverrideRow,
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
@@ -197,16 +199,27 @@ async function tradeableServes(
     .select("id, menu_item_id, serve, amount, square_variation_id, menu_items(id, name, is_active)")
     .in("id", menuItemPriceIds);
   if (error) return { error: error.message };
-  return ((data ?? []) as ServeRow[]).flatMap((row) => {
+  const rows = (data ?? []) as ServeRow[];
+  let squarePrices = new Map<string, number>();
+  try {
+    squarePrices = await readSquarePrices(supabase, rows.map((row) => row.square_variation_id));
+  } catch (err) {
+    console.error("[market] Square price read failed, trading from menu prices:", err);
+  }
+  return rows.flatMap((row) => {
     const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
-    if (!item || !item.is_active || !(Number(row.amount) > 0)) return [];
+    const amount = tradingBasePrice(
+      Number(row.amount),
+      row.square_variation_id ? (squarePrices.get(row.square_variation_id) ?? null) : null
+    );
+    if (!item || !item.is_active || amount == null) return [];
     return [
       {
         id: row.id,
         menuItemId: row.menu_item_id,
         name: item.name,
         serve: row.serve,
-        amount: Number(row.amount),
+        amount,
         squareVariationId: row.square_variation_id,
       },
     ];
@@ -258,13 +271,15 @@ async function openSession(
   const instrumentRows = serves.map((serve) => {
     const overrides = options.overridesByPrice.get(serve.id) ?? EMPTY_OVERRIDES;
     const opening = overrides.openingPrice ?? serve.amount;
+    /* The board trades from the opening price: tier moves and the default
+       min, max and crash prices all scale from the instrument's base. */
     return {
       session_id: session.id,
       menu_item_price_id: serve.id,
       menu_item_id: serve.menuItemId,
       display_name: serve.name,
       serve: serve.serve,
-      base_price: serve.amount,
+      base_price: opening,
       opening_price: opening,
       current_price: opening,
       last_notified_price: opening,
@@ -696,6 +711,23 @@ const drinkOverridesSchema = z
     { message: "Min price must not be above max price.", path: ["minPrice"] }
   );
 
+type NormalUnitsFields = { normal_units_per_night: number | null; normal_units_keep: boolean };
+
+/* The drink sheet's normal units a night override and its "keep for future
+   nights" tick. Undefined when the form did not carry them. */
+function readNormalUnitsFields(formData: FormData): NormalUnitsFields | undefined | { error: string } {
+  if (!formData.has("normal_units_field")) return undefined;
+  const raw = formData.get("normal_units_per_night")?.toString().trim() ?? "";
+  const value = raw === "" ? null : Number(raw);
+  if (value !== null && (!Number.isFinite(value) || value <= 0)) {
+    return { error: "Normal units must be a positive number, or blank to use Square history." };
+  }
+  return {
+    normal_units_per_night: value,
+    normal_units_keep: value !== null && formData.get("normal_units_keep") === "on",
+  };
+}
+
 function readDrinkOverrides(formData: FormData): DrinkOverrides | { error: string } {
   const parsed = drinkOverridesSchema.safeParse({
     openingPrice: formData.get("opening_price"),
@@ -727,12 +759,13 @@ async function writeDrinkOverrides(
   supabase: ServerClient,
   eventId: number,
   serve: { id: number; menuItemId: number },
-  overrides: DrinkOverrides
+  overrides: DrinkOverrides,
+  normalUnits?: NormalUnitsFields
 ): Promise<{ error: string } | null> {
   const { error } = await supabase
     .from("stock_market_event_items")
     .upsert(
-      { ...eventItemLink(eventId, serve), ...overridesToRow(overrides) },
+      { ...eventItemLink(eventId, serve), ...overridesToRow(overrides), ...normalUnits },
       { onConflict: "event_id,menu_item_price_id" }
     );
   return error ? { error: error.message } : null;
@@ -774,11 +807,13 @@ export async function saveEventDrinkPricingAction(formData: FormData) {
 
   const overrides = readDrinkOverrides(formData);
   if ("error" in overrides) return overrides;
+  const normalUnits = readNormalUnitsFields(formData);
+  if (normalUnits && "error" in normalUnits) return normalUnits;
 
   const serve = await serveOwner(supabase, menuItemPriceId);
   if (!serve) return { error: "That serve is no longer on the menu." };
 
-  const writeError = await writeDrinkOverrides(supabase, eventId, serve, overrides);
+  const writeError = await writeDrinkOverrides(supabase, eventId, serve, overrides, normalUnits);
   if (writeError) return writeError;
   const mixerError = await saveServeMixer(supabase, menuItemPriceId, formData);
   if (mixerError) return mixerError;
@@ -803,6 +838,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
   const { name, serve, amount } = parsed.data;
   const overrides = readDrinkOverrides(formData);
   if ("error" in overrides) return overrides;
+  const normalUnits = readNormalUnitsFields(formData);
+  if (normalUnits && "error" in normalUnits) return normalUnits;
   const idRaw = formData.get("id")?.toString();
   const id = idRaw ? Number(idRaw) : null;
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
@@ -863,7 +900,8 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
       supabase,
       eventId,
       { id: savedPrice.id as number, menuItemId: id },
-      overrides
+      overrides,
+      normalUnits
     );
     if (overrideError) return overrideError;
     const mixerError = await saveServeMixer(supabase, savedPrice.id as number, formData);
@@ -913,6 +951,7 @@ export async function saveNightOnlyDrinkAction(formData: FormData) {
   const { error: linkError } = await supabase.from("stock_market_event_items").insert({
     ...eventItemLink(eventId, { id: insertedPrice.id as number, menuItemId: inserted.id }),
     ...overridesToRow(overrides),
+    ...normalUnits,
   });
   if (linkError) return { error: linkError.message };
   const mixerError = await saveServeMixer(supabase, insertedPrice.id as number, formData);
@@ -952,7 +991,7 @@ export async function endMarketAction() {
   const supabase = await createClient();
   const { data: session } = await supabase
     .from("market_sessions")
-    .select("id")
+    .select("id, stock_market_event_id")
     .eq("status", "live")
     .maybeSingle();
   if (!session) return { error: "No live market to end." };
@@ -979,8 +1018,23 @@ export async function endMarketAction() {
     .update({ status: "ended", ended_at: new Date().toISOString() })
     .eq("id", session.id);
   if (error) return { error: error.message };
+  await clearOneNightNormals(supabase, session.stock_market_event_id as number | null);
   revalidateMarket();
   return { success: true, restored, swept };
+}
+
+/* A normal units override is for the night it was set for unless "keep for
+   future nights" is ticked, so the event's drinks go back to the Square
+   history figure once the market closes. Never blocks the close. */
+async function clearOneNightNormals(supabase: ServerClient, eventId: number | null) {
+  if (eventId == null) return;
+  const { error } = await supabase
+    .from("stock_market_event_items")
+    .update({ normal_units_per_night: null })
+    .eq("event_id", eventId)
+    .eq("normal_units_keep", false)
+    .not("normal_units_per_night", "is", null);
+  if (error) console.error("[market] could not clear one-night normal units:", error);
 }
 
 /* Temporary sandbox items only ever exist for the market that seeded them, so
@@ -1725,7 +1779,7 @@ export async function saveEventNormalUnitsAction(eventId: number, menuItemPriceI
   }
   const { error } = await supabase
     .from("stock_market_event_items")
-    .update({ normal_units_per_night: value })
+    .update(value === null ? { normal_units_per_night: null, normal_units_keep: false } : { normal_units_per_night: value })
     .eq("event_id", eventId)
     .eq("menu_item_price_id", menuItemPriceId);
   if (error) return { error: error.message };
@@ -2247,4 +2301,29 @@ export async function instrumentTickBreakdownAction(
     reranked: shouldRerank(row.tick_no as number, warmedUpTick, config.rerankEveryTicks),
   }));
   return { rows };
+}
+
+const HISTORY_PAGE = 1000;
+
+/* Every synced Square order line for one variation, rolled up for the drink
+   sheet's Square history. */
+export async function squareSalesHistoryAction(
+  variationId: string
+): Promise<{ history: SalesHistory } | { error: string }> {
+  const supabase = await createClient();
+  const lines: SaleLineRow[] = [];
+  for (let from = 0; ; from += HISTORY_PAGE) {
+    const { data, error } = await supabase
+      .from("square_sale_lines")
+      .select("square_order_id, quantity, trading_night, modifiers")
+      .eq("variation_id", variationId)
+      .order("trading_night", { ascending: false })
+      .order("square_order_id", { ascending: true })
+      .order("line_uid", { ascending: true })
+      .range(from, from + HISTORY_PAGE - 1);
+    if (error) return { error: error.message };
+    lines.push(...((data ?? []) as SaleLineRow[]));
+    if (!data || data.length < HISTORY_PAGE) break;
+  }
+  return { history: summariseSaleLines(lines) };
 }

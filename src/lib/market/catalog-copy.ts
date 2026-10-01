@@ -194,3 +194,24 @@ export async function readModifierListOptions(supabase: SupabaseClient): Promise
   ]);
   return modifierListOptionsFromRows(lists, variations);
 }
+
+/* Square's fixed price for each variation the copy still holds; variations
+   with variable pricing, or gone from Square, are left out. */
+export async function readSquarePrices(supabase: SupabaseClient, variationIds: (string | null)[]): Promise<Map<string, number>> {
+  const ids = [...new Set(variationIds.filter((id): id is string => Boolean(id)))];
+  const prices = new Map<string, number>();
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    const { data, error } = await supabase
+      .from("square_catalog_variations")
+      .select("variation_id, price")
+      .is("deleted_at", null)
+      .not("price", "is", null)
+      .in("variation_id", ids.slice(i, i + ID_CHUNK));
+    if (error) throw error;
+    for (const row of (data ?? []) as { variation_id: string; price: number | string }[]) {
+      const price = Number(row.price);
+      if (Number.isFinite(price) && price > 0) prices.set(row.variation_id, price);
+    }
+  }
+  return prices;
+}

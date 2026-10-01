@@ -306,6 +306,7 @@ export function RecordSheet({
   navigate,
   openHref,
   layout = "sheet",
+  size = "default",
   emptyState,
   children,
 }: {
@@ -344,6 +345,8 @@ export function RecordSheet({
   // "split" keeps the bottom sheet on phones and tablets but shows the record
   // beside the list from 1280px up.
   layout?: "sheet" | "split";
+  // "wide" gives a record shown in two columns the room for them on desktop.
+  size?: "default" | "wide";
   emptyState?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -510,10 +513,13 @@ export function RecordSheet({
       : `${word} record`;
   };
 
+  const stepPrev = () => void step("prev");
+  const stepNext = () => void step("next");
+
   const arrow = (direction: "prev" | "next", className: string) => (
     <button
       type="button"
-      onClick={() => void step(direction)}
+      onClick={direction === "prev" ? stepPrev : stepNext}
       disabled={direction === "prev" ? !navigate?.onPrev : !navigate?.onNext}
       aria-label={`${direction === "prev" ? "Previous" : "Next"} record`}
       title={stepLabel(direction)}
@@ -756,11 +762,14 @@ export function RecordSheet({
         side="bottom"
         showCloseButton={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
+        className={cn(
+          `flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
           bg-admin-surface p-0 shadow-2xl outline-none
           sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:h-auto
-          sm:max-h-[92vh] sm:w-180 sm:max-w-[calc(100vw-9rem)] sm:-translate-x-1/2
-          sm:rounded-4xl sm:border-2 sm:border-admin-line"
+          sm:max-h-[92vh] sm:max-w-[calc(100vw-9rem)] sm:-translate-x-1/2
+          sm:rounded-4xl sm:border-2 sm:border-admin-line`,
+          size === "wide" ? "sm:w-280" : "sm:w-180",
+        )}
       >
         {panel}
         {canStep && edgeArrows}

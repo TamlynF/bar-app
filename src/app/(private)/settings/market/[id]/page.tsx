@@ -7,11 +7,13 @@ import {
 } from "@/lib/market/stock-market-events";
 import { withSquareMixers } from "@/lib/market/square-mixers";
 import { untrackedVariationIds } from "@/lib/market/square-stock-tracking";
+import { readSquareVariationDetails, type SquareVariationDetail } from "@/lib/market/square-variation-details";
 import { serveOptionsFromCategories, type ServeCategoryRow } from "@/lib/market/event-serves";
 import {
   EMPTY_OVERRIDES,
   optionalNumber,
   overridesFromRow,
+  tradingBasePrice,
   type DrinkOverrideRow,
   type DrinkOverrides,
 } from "@/lib/market/drink-overrides";
@@ -28,12 +30,16 @@ export const dynamic = "force-dynamic";
 
 type EventRow = StockMarketEventRow & {
   stock_market_event_items:
-    | ({ menu_item_price_id: number; normal_units_per_night?: number | string | null } & DrinkOverrideRow)[]
+    | ({
+        menu_item_price_id: number;
+        normal_units_per_night?: number | string | null;
+        normal_units_keep?: boolean | null;
+      } & DrinkOverrideRow)[]
     | null;
 };
 
 const EVENT_SELECT =
-  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night)";
+  "*, stock_market_event_items(menu_item_price_id, opening_price, min_price, max_price, crash_price, low_stock_at, alert_threshold, normal_units_per_night, normal_units_keep)";
 
 type CategoryJoin = {
   id: number;
@@ -58,6 +64,10 @@ type EventServeRow = {
   display_order: number;
   square_variation_id: string | null;
   with_mixer: boolean | null;
+  created_at?: string | null;
+  created_by?: number | null;
+  updated_at?: string | null;
+  updated_by?: number | null;
   menu_items: ItemJoin | ItemJoin[];
 };
 
@@ -119,6 +129,23 @@ export default async function StockMarketEventPage({
 
   const isLive = liveRow?.stock_market_event_id === id;
 
+  const employeeIds = [
+    ...new Set(
+      ((serveRows ?? []) as EventServeRow[]).flatMap((serve) =>
+        [serve.created_by, serve.updated_by].filter((employeeId): employeeId is number => employeeId != null),
+      ),
+    ),
+  ];
+  const { data: employeeRows } = employeeIds.length
+    ? await supabase.from("employees").select("id, full_name").in("id", employeeIds)
+    : { data: [] as { id: number; full_name: string | null }[] };
+  const employeeName = new Map(
+    ((employeeRows ?? []) as { id: number; full_name: string | null }[]).map((employee) => [
+      employee.id,
+      employee.full_name ?? `Staff #${employee.id}`,
+    ]),
+  );
+
   const unpricedDrinks: EventDrink[] = ((serveRows ?? []) as EventServeRow[])
     .flatMap((serve) => {
       const item = Array.isArray(serve.menu_items) ? serve.menu_items[0] : serve.menu_items;
@@ -142,7 +169,17 @@ export default async function StockMarketEventPage({
           nightOnly: Boolean(category?.market_only),
           serve: serve.serve,
           serveOrder: serve.display_order,
+          menuPrice: amount > 0 ? amount : null,
           basePrice: amount > 0 ? amount : null,
+          basePriceFromSquare: false,
+          normalUnitsOverride: null,
+          normalUnitsKeep: false,
+          audit: {
+            createdAt: serve.created_at ?? null,
+            createdBy: serve.created_by != null ? (employeeName.get(serve.created_by) ?? null) : null,
+            updatedAt: serve.updated_at ?? null,
+            updatedBy: serve.updated_by != null ? (employeeName.get(serve.updated_by) ?? null) : null,
+          },
           linked: Boolean(serve.square_variation_id),
           squareVariationId: serve.square_variation_id ?? null,
           withMixer: Boolean(serve.with_mixer),
@@ -162,18 +199,40 @@ export default async function StockMarketEventPage({
     );
 
   const inEvent = new Set(menuItemPriceIds);
-  const [mixedDrinks, menuServes, untracked] = await Promise.all([
+  const [mixedDrinks, menuServes, untracked, squareDetails] = await Promise.all([
     withSquareMixers(supabase, unpricedDrinks),
     withSquareMixers(
       supabase,
       serveOptionsFromCategories((categoryRows ?? []) as ServeCategoryRow[]).filter((serve) => !inEvent.has(serve.id)),
     ),
     untrackedVariationIds(supabase, unpricedDrinks.map((drink) => drink.squareVariationId)),
+    readSquareVariationDetails(
+      supabase,
+      unpricedDrinks.map((drink) => drink.squareVariationId),
+    ).catch((err): Record<string, SquareVariationDetail> => {
+      console.error("[market] Square variation details read failed:", err);
+      return {};
+    }),
   ]);
   const untrackedSet = new Set(untracked);
-  const drinks: EventDrink[] = mixedDrinks.map((drink) =>
-    drink.squareVariationId ? { ...drink, stockTracked: !untrackedSet.has(drink.squareVariationId) } : drink,
-  );
+  const squarePriceOf = (variationId: string | null) => {
+    const detail = variationId ? squareDetails[variationId] : undefined;
+    return detail && !detail.deletedAt ? detail.price : null;
+  };
+  const eventItemByPrice = new Map((row.stock_market_event_items ?? []).map((item) => [item.menu_item_price_id, item]));
+  const drinks: EventDrink[] = mixedDrinks.map((drink) => {
+    const squarePrice = squarePriceOf(drink.squareVariationId);
+    const basePrice = tradingBasePrice(drink.menuPrice, squarePrice);
+    const eventItem = eventItemByPrice.get(drink.id);
+    return {
+      ...drink,
+      normalUnitsOverride: optionalNumber(eventItem?.normal_units_per_night),
+      normalUnitsKeep: Boolean(eventItem?.normal_units_keep),
+      basePrice,
+      basePriceFromSquare: basePrice != null && basePrice === squarePrice,
+      ...(drink.squareVariationId ? { stockTracked: !untrackedSet.has(drink.squareVariationId) } : {}),
+    };
+  });
   const available: AvailableDrink[] = menuServes
     .map((serve) => ({
       id: serve.id,
@@ -260,6 +319,8 @@ export default async function StockMarketEventPage({
         anyLive={Boolean(liveRow)}
         readiness={readiness}
         normalUnits={normalUnits}
+        squareDetails={squareDetails}
+        environment={process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox"}
       />
     </>
   );

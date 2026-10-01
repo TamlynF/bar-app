@@ -67,6 +67,15 @@ function money(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+/* The price a serve trades from: Square's price for its linked variation,
+   or the menu price when Square has none. Null when neither is set. */
+export function tradingBasePrice(menuPrice: number | null, squarePrice: number | null): number | null {
+  if (squarePrice != null && squarePrice > 0) return squarePrice;
+  return menuPrice != null && menuPrice > 0 ? menuPrice : null;
+}
+
+/* The opening price is the override when there is one, else the base price;
+   the event's min, max and crash percentages apply to it. */
 export function defaultDrinkSettings(
   basePrice: number,
   config: MarketConfig
@@ -86,9 +95,9 @@ export function effectiveDrinkSettings(
   config: MarketConfig,
   overrides: DrinkOverrides
 ): EffectiveDrinkSettings {
-  const defaults = defaultDrinkSettings(basePrice, config);
+  const defaults = defaultDrinkSettings(overrides.openingPrice ?? basePrice, config);
   return {
-    openingPrice: overrides.openingPrice ?? defaults.openingPrice,
+    openingPrice: defaults.openingPrice,
     minPrice: overrides.minPrice ?? defaults.minPrice,
     maxPrice: overrides.maxPrice ?? defaults.maxPrice,
     crashPrice: overrides.crashPrice ?? defaults.crashPrice,
