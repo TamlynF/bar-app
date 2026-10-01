@@ -6,8 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { squareClient } from "@/lib/square";
 import type { Square } from "square";
-import { proposeMappings, type CatalogVariation } from "@/lib/market/mapping";
-import { fetchCatalogVariations } from "@/lib/market/catalog-variations";
+import { proposeMappings } from "@/lib/market/mapping";
 import {
   resolveMarketConfig,
   DEFAULT_MARKET_CONFIG,
@@ -1306,13 +1305,11 @@ export async function autoMatchMappingsAction() {
     .eq("is_active", true);
   if (itemsError) return { error: itemsError.message };
 
-  let variations: CatalogVariation[];
-  try {
-    variations = await fetchCatalogVariations();
-  } catch (err) {
-    console.error("[market] catalog fetch failed:", err);
-    return { error: "Could not reach the Square catalog. Check the Square configuration." };
+  const copy = await readCatalogCopy(supabase);
+  if (!copy) {
+    return { error: "The Square catalog has not been copied yet. Refresh the catalog from Square, then auto-match." };
   }
+  const variations = copy.variations;
 
   const targets = ((items ?? []) as { id: number; name: string; menu_item_prices: PriceRow[] }[])
     .flatMap((item) =>
