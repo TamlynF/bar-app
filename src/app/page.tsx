@@ -25,7 +25,7 @@ import {
   PUBLIC_EVENT_SELECT,
   type EventRow,
 } from "@/lib/events-display";
-import { format } from "date-fns";
+import { endOfMonth, format } from "date-fns";
 
 export const revalidate = 300;
 
@@ -75,6 +75,8 @@ async function HomeContent() {
     .slice(0, SCHEDULE_EVENTS);
 
   const featured = events[0] ?? null;
+  const monthEndStr = format(endOfMonth(today), "yyyy-MM-dd");
+  const monthEvents = events.filter((e) => e.date <= monthEndStr);
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
     (s) => (!s.start_date || s.start_date <= todayStr) && (!s.end_date || s.end_date >= todayStr)
   );
@@ -92,7 +94,7 @@ async function HomeContent() {
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>
-          <ComingUpMonths events={events} />
+          <ComingUpMonths events={monthEvents} monthLabel={format(today, "MMMM")} />
         </Reveal>
         <Reveal index={1}>
           <DealsStrip specials={specials} />

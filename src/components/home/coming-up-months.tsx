@@ -17,28 +17,36 @@ function meta(e: SerializedEvent) {
   return [e.subType, e.startTimeLabel].filter(Boolean).join(" · ");
 }
 
-/* Dated one-off nights grouped under month labels. Events on the same date
-   share one card and one date tile, stacked in time order, so a Saturday
-   with a band and a late set reads as one night. */
-export function ComingUpMonths({ events, className }: { events: SerializedEvent[]; className?: string }) {
+/* This month's one-off nights. Events on the same date share one card and
+   one date tile, stacked in time order, so a Saturday with a band and a late
+   set reads as one night. */
+export function ComingUpMonths({
+  events,
+  monthLabel,
+  className,
+}: {
+  events: SerializedEvent[];
+  monthLabel: string;
+  className?: string;
+}) {
   const months = groupSchedule(events);
 
   return (
     <section id="whats-on" className={cn("scroll-mt-24", className)}>
-      <SectionHeading eyebrow="Dated nights" title="Coming up" action={{ href: "/whats-on", label: "All dates" }} actionOnMobile={false} />
+      <SectionHeading
+        title={`This month (${monthLabel})`}
+        action={{ href: "/whats-on", label: "What’s on" }}
+        actionOnMobile={false}
+      />
 
       {months.length === 0 ? (
         <p className="border border-dashed border-hairline px-6 py-10 text-center text-body text-ink-2">
-          Nothing dated yet beyond the weekly nights - follow us for announcements.
+          Nothing else dated this month beyond the weekly nights - follow us for announcements.
         </p>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {months.map((month, mi) => (
-            <div key={month.key} className={cn("flex flex-col gap-2.5", mi > 0 && "mt-3")}>
-              <div className="flex items-center gap-3">
-                <h3 className="text-pill font-bold tracking-wide text-gold uppercase">{month.label}</h3>
-                <span className="h-px flex-1 bg-hairline" aria-hidden="true" />
-              </div>
+          {months.map((month) => (
+            <div key={month.key} className="flex flex-col gap-2.5">
               {month.days.map((day) => {
                 const multi = day.events.length > 1;
                 return (
@@ -96,7 +104,7 @@ export function ComingUpMonths({ events, className }: { events: SerializedEvent[
       )}
 
       <ArrowCta href="/whats-on" variant="goldOutline" className="mt-4 w-full sm:hidden">
-        All dates
+        What’s on
       </ArrowCta>
     </section>
   );

@@ -38,7 +38,7 @@ export function NextUpTicket({
       </div>
 
       <div className="border-2 border-ink bg-canvas-2">
-        <div className="relative aspect-square w-full bg-canvas sm:aspect-[4/3] lg:aspect-square">
+        <div className="relative aspect-3/2 w-full bg-canvas sm:aspect-4/3 lg:aspect-square">
           {event.imageUrl ? (
             <Image src={event.imageUrl} alt="" fill sizes="(min-width: 1024px) 420px, 100vw" className="object-cover" />
           ) : (
@@ -72,12 +72,6 @@ export function NextUpTicket({
                 <li className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                   Doors {event.startTimeLabel}
-                </li>
-              )}
-              {event.tagline && (
-                <li className="flex items-center gap-1.5">
-                  <Music2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  {event.tagline}
                 </li>
               )}
               {event.isBookable && (

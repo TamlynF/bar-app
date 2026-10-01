@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatClock,
+  describeBarStatus,
   describeOpenState,
   shortLocation,
   type OpeningHours,
@@ -87,6 +88,53 @@ describe("describeOpenState", () => {
     expect(
       describeOpenState({ monday: { open: "15:00" } }, at("2026-07-23T20:00:00Z"))
     ).toBeNull();
+  });
+});
+
+describe("describeBarStatus", () => {
+  it("says when the bar closes while it is open", () => {
+    expect(describeBarStatus(HOURS, at("2026-07-23T20:00:00Z"))).toEqual({
+      isOpen: true,
+      label: "Open until 10pm",
+      shortLabel: "Open til 10pm",
+    });
+  });
+
+  it("keeps the closing time after midnight on an overnight session", () => {
+    expect(describeBarStatus(HOURS, at("2026-07-24T23:30:00Z"))).toEqual({
+      isOpen: true,
+      label: "Open until 1am",
+      shortLabel: "Open til 1am",
+    });
+  });
+
+  it("gives today's opening time before the bar opens", () => {
+    expect(describeBarStatus(HOURS, at("2026-07-23T10:00:00Z"))).toEqual({
+      isOpen: false,
+      label: "Open today from 7pm",
+      shortLabel: "Opens 7pm",
+    });
+  });
+
+  it("names the next open day in full once today is done", () => {
+    expect(describeBarStatus(HOURS, at("2026-07-23T21:30:00Z"))).toEqual({
+      isOpen: false,
+      label: "Open Friday at 3pm",
+      shortLabel: "Opens Fri 3pm",
+    });
+  });
+
+  it("skips closed days when looking ahead", () => {
+    expect(describeBarStatus(HOURS, at("2026-07-27T12:00:00Z"))).toEqual({
+      isOpen: false,
+      label: "Open Thursday at 7pm",
+      shortLabel: "Opens Thu 7pm",
+    });
+  });
+
+  it("returns null when there are no usable hours", () => {
+    expect(describeBarStatus({}, at("2026-07-23T20:00:00Z"))).toBeNull();
+    expect(describeBarStatus(null, at("2026-07-23T20:00:00Z"))).toBeNull();
   });
 });
 

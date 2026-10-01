@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { format, endOfMonth, addMonths } from "date-fns";
+import { format, endOfMonth } from "date-fns";
 import { Calendar } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
@@ -27,15 +27,14 @@ export default async function WhatsOnPage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  const nextMonthEnd = endOfMonth(addMonths(today, 1));
-  const nextMonthEndStr = format(nextMonthEnd, "yyyy-MM-dd");
+  const monthEndStr = format(endOfMonth(today), "yyyy-MM-dd");
 
   const { data: rawEvents } = await supabase
     .from("events")
     .select(PUBLIC_EVENT_SELECT)
     .eq(BOOKED_BAND_FILTER, "booked")
     .gte("date", todayStr)
-    .lte("date", nextMonthEndStr)
+    .lte("date", monthEndStr)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(100);
@@ -94,8 +93,6 @@ export default async function WhatsOnPage() {
     label,
     color,
   }));
-
-  const thisMonthLabel = format(today, "MMMM");
 
   return (
     <main className="relative isolate min-h-dvh w-full overflow-x-clip bg-canvas pb-32 text-ink-2 sm:pb-24 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">

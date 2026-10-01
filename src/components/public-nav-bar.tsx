@@ -7,11 +7,10 @@ import { Menu as MenuIcon, X } from "lucide-react";
 import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
+import type { BarStatus } from "@/lib/opening-hours";
 import { useMarketState } from "@/hooks/use-market-live";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 import { MarketTicker } from "@/components/market-ticker";
-
-export type TopBarStatus = { tone: "live" | "open"; label: string };
 
 export function PublicNavBar({
   currentPath,
@@ -26,7 +25,7 @@ export function PublicNavBar({
   ticker?: boolean;
   instagramUrl: string | null;
   instagramHandle?: string | null;
-  status?: TopBarStatus | null;
+  status?: BarStatus | null;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -108,7 +107,7 @@ export function PublicNavBar({
             </Link>
             {status && (
               <Link
-                href="/#tonight"
+                href="/contact"
                 onClick={() => setMenuOpen(false)}
                 className={cn(
                   "inline-flex h-8 min-w-0 items-center gap-2 rounded-full border border-gold/50 py-1 pr-3 pl-2.5 backdrop-blur-md transition-colors active:bg-gold/15 sm:hidden",
@@ -116,12 +115,11 @@ export function PublicNavBar({
                 )}
               >
                 <span
-                  className={cn("ad-live-dot h-2 w-2 shrink-0 rounded-full", status.tone === "live" ? "bg-neon" : "bg-gold")}
+                  className={cn("h-2 w-2 shrink-0 rounded-full", status.isOpen ? "bg-gold" : "border border-gold")}
                   aria-hidden="true"
                 />
-                <span className={cn("truncate text-eyebrow font-semibold leading-none", status.tone === "live" ? "text-ink" : "text-gold")}>
-                  {status.label}
-                </span>
+                <span className="truncate text-eyebrow font-semibold leading-none text-gold max-[374px]:hidden">{status.label}</span>
+                <span className="truncate text-eyebrow font-semibold leading-none text-gold min-[375px]:hidden">{status.shortLabel}</span>
               </Link>
             )}
           </div>

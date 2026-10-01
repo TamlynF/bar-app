@@ -28,7 +28,7 @@ export function SectionHeading({
   id,
   actionOnMobile = true,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   action?: { href: string; label: string };
   id?: string;
@@ -41,9 +41,11 @@ export function SectionHeading({
       className="mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
     >
       <div className="min-w-0 max-w-full">
-        <span className="mb-2 block text-eyebrow font-semibold text-[#FDCC4B]">
-          {eyebrow}
-        </span>
+        {eyebrow && (
+          <span className="mb-2 block text-eyebrow font-semibold text-[#FDCC4B]">
+            {eyebrow}
+          </span>
+        )}
         <h2 className="font-black text-[clamp(1.5rem,4.5vw,2.25rem)] leading-[0.95] tracking-tighter text-ink uppercase">
           {title}
         </h2>

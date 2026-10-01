@@ -17,6 +17,7 @@ const DAY_KEYS = [
 ] as const;
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const DAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
 const VENUE_TIME_ZONE = "Europe/London";
 
@@ -63,37 +64,69 @@ function sessionFor(hours: OpeningHours, dayIndex: number) {
   return { open, close, isOvernight: close <= open };
 }
 
-export function describeOpenState(
-  hours: OpeningHours | null | undefined,
-  now: Date
-): OpenState | null {
+type SessionState =
+  | { kind: "open"; close: number }
+  | { kind: "later-today"; open: number }
+  | { kind: "later-day"; dayIndex: number; open: number };
+
+function sessionState(hours: OpeningHours | null | undefined, now: Date): SessionState | null {
   if (!hours) return null;
   const { dayIndex, minutes } = venueNow(now);
 
   const yesterday = sessionFor(hours, dayIndex - 1);
   if (yesterday?.isOvernight && minutes < yesterday.close) {
-    return { isOpen: true, label: `Open now · til ${formatClock(yesterday.close)}` };
+    return { kind: "open", close: yesterday.close };
   }
 
   const today = sessionFor(hours, dayIndex);
   if (today) {
     const closesAt = today.isOvernight ? today.close + 1440 : today.close;
-    if (minutes >= today.open && minutes < closesAt) {
-      return { isOpen: true, label: `Open now · til ${formatClock(today.close)}` };
-    }
-    if (minutes < today.open) {
-      return { isOpen: false, label: `Opens ${formatClock(today.open)}` };
-    }
+    if (minutes >= today.open && minutes < closesAt) return { kind: "open", close: today.close };
+    if (minutes < today.open) return { kind: "later-today", open: today.open };
   }
 
   for (let ahead = 1; ahead <= 7; ahead++) {
     const next = sessionFor(hours, dayIndex + ahead);
-    if (!next) continue;
-    const label = DAY_SHORT[(dayIndex + ahead) % 7];
-    return { isOpen: false, label: `Opens ${label} ${formatClock(next.open)}` };
+    if (next) return { kind: "later-day", dayIndex: (dayIndex + ahead) % 7, open: next.open };
   }
 
   return null;
+}
+
+export function describeOpenState(
+  hours: OpeningHours | null | undefined,
+  now: Date
+): OpenState | null {
+  const state = sessionState(hours, now);
+  if (!state) return null;
+  if (state.kind === "open") return { isOpen: true, label: `Open now · til ${formatClock(state.close)}` };
+  if (state.kind === "later-today") return { isOpen: false, label: `Opens ${formatClock(state.open)}` };
+  return { isOpen: false, label: `Opens ${DAY_SHORT[state.dayIndex]} ${formatClock(state.open)}` };
+}
+
+export type BarStatus = OpenState & { shortLabel: string };
+
+/* The top-bar pill: "Open until 2am", "Open today from 7pm" or
+   "Open Thursday at 7pm", with a short form for the narrowest phones. */
+export function describeBarStatus(
+  hours: OpeningHours | null | undefined,
+  now: Date
+): BarStatus | null {
+  const state = sessionState(hours, now);
+  if (!state) return null;
+  if (state.kind === "open") {
+    const close = formatClock(state.close);
+    return { isOpen: true, label: `Open until ${close}`, shortLabel: `Open til ${close}` };
+  }
+  const open = formatClock(state.open);
+  if (state.kind === "later-today") {
+    return { isOpen: false, label: `Open today from ${open}`, shortLabel: `Opens ${open}` };
+  }
+  return {
+    isOpen: false,
+    label: `Open ${DAY_LONG[state.dayIndex]} at ${open}`,
+    shortLabel: `Opens ${DAY_SHORT[state.dayIndex]} ${open}`,
+  };
 }
 
 const UK_POSTCODE = /\s+[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
