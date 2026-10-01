@@ -122,7 +122,7 @@ describe("catalogToVariationRows", () => {
     expect(rows[0]).toMatchObject({
       inventory_tracking: true,
       inventory_tracking_location: false,
-      stock_tracking: "stock_count",
+      stock_tracking: "not_tracked",
     });
     expect(rows[1]).toMatchObject({
       inventory_tracking: true,

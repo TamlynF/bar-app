@@ -187,7 +187,7 @@ export function catalogToVariationRows(
         is_alcoholic: Boolean(data.isAlcoholic),
         inventory_tracking: Boolean(v?.trackInventory),
         inventory_tracking_location: trackedHere,
-        stock_tracking: v?.trackInventory ? "stock_count" : "not_tracked",
+        stock_tracking: trackedHere ? "stock_count" : "not_tracked",
         stock_quantity: stockQuantity,
         sold_by: soldBy,
         sold_out_at: soldOutIds.map((id) => extras.locationNames.get(id) ?? id),

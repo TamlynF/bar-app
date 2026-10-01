@@ -43,9 +43,16 @@ export function formatStamp(iso: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Europe/London",
   });
 }
 
 export function formatShortStamp(iso: string): string {
-  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/London",
+  });
 }
