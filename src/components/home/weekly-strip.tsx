@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ArrowCta } from "@/components/ui/arrow-cta";
-import { VENUE_OFFERINGS } from "@/lib/venue-offerings";
+import { PRIVATE_HIRE_HREF, WEEKLY_LISTINGS } from "@/lib/venue-offerings";
 import { WEEKLY_NIGHTS } from "@/lib/weekly-nights";
 import { cn } from "@/lib/utils";
 
@@ -11,30 +11,39 @@ import { cn } from "@/lib/utils";
 export function WeeklyStrip({ className }: { className?: string }) {
   return (
     <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-3", className)}>
-      <h2
-        id="weekly-heading"
-        className="font-black text-h2 tracking-tighter text-balance text-ink uppercase sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
-      >
-        What’s on
-      </h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2
+          id="weekly-heading"
+          className="font-black text-h2 tracking-tighter text-ink uppercase sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
+        >
+          <span className="sm:hidden">Every week</span>
+          <span className="hidden sm:inline">What’s on</span>
+        </h2>
+        <Link
+          href={PRIVATE_HIRE_HREF}
+          className="group -mr-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 px-1 text-meta font-medium text-ink-2 transition-colors hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:hidden"
+        >
+          Private hire
+          <ArrowRight
+            className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
       <ul className="flex flex-col divide-y divide-hairline border-y border-hairline sm:hidden">
-        {VENUE_OFFERINGS.map((offering) => (
-          <li key={offering.key}>
+        {WEEKLY_LISTINGS.map((listing) => (
+          <li key={listing.key}>
             <Link
-              href={offering.href}
-              className="group flex min-h-11 items-center gap-4 py-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              href={listing.href}
+              className="group grid min-h-14 grid-cols-[3.5rem_1fr_auto] items-center gap-3 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             >
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="text-pill font-bold tracking-wide text-gold uppercase">{offering.when}</span>
-                <h3 className="font-black text-h3 leading-none tracking-tighter text-balance text-ink uppercase transition-colors group-hover:text-gold">
-                  {offering.title}
-                </h3>
-                <p className="text-meta text-ink-2">{offering.detail}</p>
-              </div>
-              <ArrowRight
-                className="size-5 shrink-0 text-gold transition-transform motion-safe:group-hover:translate-x-1"
-                aria-hidden="true"
-              />
+              <span className="font-semibold font-stretch-condensed text-h3 leading-none text-ink-2 uppercase">
+                {listing.day}
+              </span>
+              <span className="font-black text-btn tracking-wide text-ink uppercase transition-colors group-hover:text-gold">
+                {listing.title}
+              </span>
+              <span className="text-meta text-ink-2 tabular-nums">{listing.time}</span>
             </Link>
           </li>
         ))}

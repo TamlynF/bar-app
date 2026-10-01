@@ -31,7 +31,6 @@
 //              also syncs the round's Spotify playlist)
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -58,23 +57,8 @@ import { SiSpotify } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { NoSpotifyTrack, SpotifyPlayer } from "@/components/spotify-player";
+import { DfSpinner } from "@/components/df-spinner";
 import { cn } from "@/lib/utils";
-
-function DfSpinner({ className }: { className?: string }) {
-  return (
-    <Image
-      src="/df-mark.jpg"
-      alt=""
-      aria-hidden="true"
-      width={96}
-      height={96}
-      className={cn(
-        "animate-spin rounded-full object-cover animation-duration-[1.6s]",
-        className
-      )}
-    />
-  );
-}
 
 import {
   generateQuizAction,

@@ -1,4 +1,4 @@
-import { VinylSpinner } from "@/components/vinyl-spinner";
+import { DfSpinner } from "@/components/df-spinner";
 import { cn } from "@/lib/utils";
 
 function Block({ className }: { className?: string }) {
@@ -10,7 +10,7 @@ function Block({ className }: { className?: string }) {
 }
 
 /* Streaming fallback for the home page: the poster, ticker line and a row
-   of cards blocked out with a shimmer, and a record spinning where the act
+   of cards blocked out with a shimmer, and the DF mark spinning where the act
    will be. */
 export function HomeSkeleton() {
   return (
@@ -19,7 +19,7 @@ export function HomeSkeleton() {
         <div className="relative h-[clamp(27rem,66svh,38rem)] overflow-hidden rounded-2xl bg-white/6 md:h-205">
           <span className="ad-shimmer pointer-events-none absolute inset-0 opacity-25" aria-hidden="true" />
           <div className="absolute inset-0 flex items-center justify-center">
-            <VinylSpinner />
+            <DfSpinner label="Loading" className="h-16 w-16" />
           </div>
           <div className="absolute right-3 bottom-4 left-3 flex flex-col gap-2.5 md:right-auto md:bottom-16 md:left-10 md:w-[60%]">
             <Block className="h-6 w-28 rounded-full" />
