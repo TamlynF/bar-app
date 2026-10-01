@@ -1936,6 +1936,31 @@ export default function QuizRoundSheet({
                               Swap
                             </button>
                           );
+                          const redrawButton = !isSelected && picture && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetryPicture(i);
+                              }}
+                              disabled={
+                                isApproving || retryingIndex !== null || swappingIndex !== null
+                              }
+                              title={
+                                pictureMissing
+                                  ? "Try this picture again, same answer"
+                                  : "Draw a different picture of the same answer"
+                              }
+                              className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-primary bg-white px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
+                            >
+                              {isRetrying ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                              ) : (
+                                <ImageIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              )}
+                              {pictureMissing ? "Retry picture" : "Redraw"}
+                            </button>
+                          );
 
                           return (
                             <div
@@ -2040,7 +2065,7 @@ export default function QuizRoundSheet({
                                       <span className="tabular-nums">{song.year}</span>
                                     </dd>
                                   </dl>
-                                  {swapInTopRow && swapButton}
+                                  {swapInTopRow && <span className="hidden sm:block">{swapButton}</span>}
                                 </div>
                               ) : (
                                 <p className="text-sm leading-relaxed font-semibold text-admin-ink">
@@ -2108,44 +2133,31 @@ export default function QuizRoundSheet({
                                 </span>
 
                                 {!isSelected && (
-                                  <span className="flex shrink-0 items-center gap-2">
-                                    {isPictureDraft(d) && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRetryPicture(i);
-                                        }}
-                                        disabled={
-                                          isApproving || retryingIndex !== null || swappingIndex !== null
-                                        }
-                                        title={
-                                          pictureMissing
-                                            ? "Try this picture again, same answer"
-                                            : "Draw a different picture of the same answer"
-                                        }
-                                        className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-primary bg-white px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
-                                      >
-                                        {isRetrying ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
-                                        ) : (
-                                          <ImageIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                        )}
-                                        {pictureMissing ? "Retry picture" : "Redraw"}
-                                      </button>
-                                    )}
-
+                                  <span className="hidden shrink-0 items-center gap-2 sm:flex">
+                                    {redrawButton}
                                     {swapButton}
                                   </span>
                                 )}
                               </div>
                               )}
 
-                              {!isSelected && !pictureMissing && (() => {
+                              {!isSelected && (() => {
                                 const identity = draftIdentity(d);
                                 const hidden = isNeverShow(identity);
+                                /* On a phone the card's actions share this row with
+                                   the switch, so each card ends in one tidy line
+                                   rather than two half-empty ones. A card whose
+                                   picture failed has no switch - just its actions,
+                                   and nothing at all on a wider screen. */
                                 return (
-                                  <div data-keep-bright className="mt-3 flex items-center border-t border-admin-line pt-2">
+                                  <div
+                                    data-keep-bright
+                                    className={cn(
+                                      "mt-3 flex items-center justify-between gap-2 border-t border-admin-line pt-2",
+                                      pictureMissing && "sm:hidden"
+                                    )}
+                                  >
+                                    {pictureMissing ? <span /> : (
                                     <button
                                       type="button"
                                       role="switch"
@@ -2177,8 +2189,13 @@ export default function QuizRoundSheet({
                                           )}
                                         />
                                       </span>
-                                      {hidden ? "Never show again" : "Can show again"}
+                                      {hidden ? "Hide forever" : "Can show again"}
                                     </button>
+                                    )}
+                                    <span className="flex shrink-0 items-center gap-2 sm:hidden">
+                                      {redrawButton}
+                                      {swapButton}
+                                    </span>
                                   </div>
                                 );
                               })()}
