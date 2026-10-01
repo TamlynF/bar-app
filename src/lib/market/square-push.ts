@@ -8,7 +8,6 @@ export type MenuPushItem = {
   menuItemId: number;
   name: string;
   categoryName: string;
-  isAlcoholic: boolean;
   prices: MenuPushPrice[];
 };
 
@@ -35,8 +34,7 @@ function pence(amount: number): bigint {
    "#var-<menu_item_price_id>" so the response's idMappings hand back exactly
    which Square variation belongs to which serve row. Items are created as
    "Prepared food and beverage" (FOOD_AND_BEV), the type Square expects for
-   a bar, because the API cannot change an item's type once it exists, and
-   carry the menu category's alcohol tick as Square's is_alcoholic. */
+   a bar, because the API cannot change an item's type once it exists. */
 export function buildCatalogUpsertPlan(
   items: MenuPushItem[],
   existing: ExistingCatalog,
@@ -97,7 +95,6 @@ export function buildCatalogUpsertPlan(
       itemData: {
         name: item.name,
         productType: "FOOD_AND_BEV",
-        isAlcoholic: item.isAlcoholic,
         ...(categoryId
           ? {
               categories: [{ id: categoryId }],

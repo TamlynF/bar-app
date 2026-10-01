@@ -102,7 +102,6 @@ type SeedRow = {
   opening_price: number | string;
   sandbox_item_id: string | null;
   menu_variation_id: string | null;
-  is_alcoholic?: boolean;
   mixer_price?: number | string | null;
 };
 
@@ -154,24 +153,18 @@ export async function seedSandboxCatalog(
   const { data, error } = await supabase
     .from("market_instruments")
     .select(
-      "*, menu_item_prices(square_variation_id), menu_items(menu_categories(*))"
+      "*, menu_item_prices(square_variation_id)"
     )
     .eq("session_id", sessionId);
   if (error) return { error: error.message };
   const rows = (data ?? []).map((raw) => {
-    type CategoryJoin = { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null;
-    type ItemJoin = { menu_categories: CategoryJoin } | { menu_categories: CategoryJoin }[] | null;
     const row = raw as Omit<SeedRow, "menu_variation_id"> & {
       menu_item_prices: { square_variation_id: string | null } | { square_variation_id: string | null }[] | null;
-      menu_items: ItemJoin;
     };
     const price = Array.isArray(row.menu_item_prices) ? row.menu_item_prices[0] : row.menu_item_prices;
-    const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
-    const category = Array.isArray(item?.menu_categories) ? item.menu_categories[0] : item?.menu_categories;
     return {
       ...row,
       menu_variation_id: price?.square_variation_id ?? null,
-      is_alcoholic: Boolean(category?.is_alcoholic),
     } as SeedRow;
   });
   if (rows.length === 0) return { error: "No drinks on the live market to seed." };
@@ -196,7 +189,6 @@ export async function seedSandboxCatalog(
         itemData: {
           name: row.display_name,
           productType: "FOOD_AND_BEV",
-          isAlcoholic: Boolean(row.is_alcoholic),
           ...(demoCategoryId
             ? {
                 categories: [{ id: demoCategoryId }],

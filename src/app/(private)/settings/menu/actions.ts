@@ -108,7 +108,6 @@ export async function saveCategoryAction(formData: FormData) {
       name,
       note: formData.get("note")?.toString() || null,
       mixer_surcharge: readMixerSurcharge(formData),
-      is_alcoholic: formData.get("is_alcoholic") === "on",
       display_order: plan.position,
       is_active: isActive,
     };

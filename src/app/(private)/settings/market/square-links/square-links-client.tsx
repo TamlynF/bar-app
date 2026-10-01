@@ -19,7 +19,6 @@ import {
   SearchX,
   Upload,
   Wand2,
-  Wine,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -43,7 +42,6 @@ import type { MappingRow } from "@/lib/market/mapping-rows";
 import {
   autoMatchMappingsAction,
   loadCatalogVariationsAction,
-  pushAlcoholToSquareAction,
   pushMenuToSquareAction,
   saveMappingAction,
   syncSquareSalesAction,
@@ -452,38 +450,6 @@ export default function SquareLinksClient({
     });
   }
 
-  async function handlePushAlcohol() {
-    const confirmed = await confirm({
-      title: "Update alcohol in Square?",
-      description:
-        "Sets Square's alcohol setting on every linked item from its menu category's Alcoholic tick. Only items whose setting differs are changed; names, prices, modifiers and stock are sent back exactly as Square has them.",
-      confirmLabel: "Update Square",
-    });
-    if (!confirmed) return;
-    startTransition(async () => {
-      const result = await pushAlcoholToSquareAction();
-      if (!result || "error" in result) {
-        toast.error(result?.error ?? "Could not update Square.");
-        return;
-      }
-      const notes = [
-        result.alreadyRight ? `${result.alreadyRight} already right` : "",
-        result.conflicts
-          ? `${result.conflicts} skipped (serves in categories that disagree)`
-          : "",
-        result.missing ? `${result.missing} links no longer in Square` : "",
-      ].filter(Boolean);
-      const summary = `${result.updated} Square ${result.updated === 1 ? "item" : "items"} updated${notes.length ? ` · ${notes.join(" · ")}` : ""}.`;
-      if (result.failed.length > 0) {
-        toast.error(
-          `${summary} ${result.failed.length} failed: ${result.failed[0].message}`,
-        );
-      } else {
-        toast.success(summary);
-      }
-    });
-  }
-
   function handleAutoMatch() {
     startTransition(async () => {
       const result = await autoMatchMappingsAction();
@@ -704,14 +670,6 @@ export default function SquareLinksClient({
                 >
                   <Upload className="h-4 w-4" />
                   Send menu to Square
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  disabled={isPending}
-                  onSelect={handlePushAlcohol}
-                  className="min-h-11"
-                >
-                  <Wine className="h-4 w-4" />
-                  Update alcohol in Square
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   disabled={loadingCatalog}

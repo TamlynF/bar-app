@@ -58,7 +58,6 @@ import {
 } from "@/lib/market/simulate";
 import { mixerModifierIdsByVariation, pickMixerModifier, refreshSessionMixers } from "@/lib/market/square-mixers";
 import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
-import { pushAlcoholFlagsToSquare } from "@/lib/market/square-alcohol";
 import { salesSyncHealth, type SalesSyncHealth, type SalesSyncState } from "@/lib/market/sales-sync-health";
 import {
   addInventory,
@@ -1352,7 +1351,7 @@ export async function saveMappingAction(menuItemPriceId: number, variationId: st
 type PushItemRow = {
   id: number;
   name: string;
-  menu_categories: { name: string; is_alcoholic: boolean | null } | { name: string; is_alcoholic: boolean | null }[] | null;
+  menu_categories: { name: string } | { name: string }[] | null;
   menu_item_prices: PriceRow[];
 };
 
@@ -1371,47 +1370,6 @@ async function fetchExistingCatalog(): Promise<ExistingCatalog> {
   return { itemNames, categoryIdsByName };
 }
 
-type AlcoholServeRow = {
-  square_variation_id: string | null;
-  menu_items:
-    | { menu_categories: { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null }
-    | { menu_categories: { is_alcoholic: boolean | null } | { is_alcoholic: boolean | null }[] | null }[]
-    | null;
-};
-
-/* Copies each menu category's Alcoholic tick onto the Square items its
-   linked serves belong to. Refused while a market is live because Square
-   makes it re-send every variation's price along with the item. */
-export async function pushAlcoholToSquareAction() {
-  const supabase = await createClient();
-  if ((await liveMarketSessionId(supabase)) != null) return { error: LIVE_MARKET_MENU_MESSAGE };
-
-  const { data, error } = await supabase
-    .from("menu_item_prices")
-    .select("square_variation_id, menu_items(menu_categories(is_alcoholic))")
-    .not("square_variation_id", "is", null);
-  if (error) return { error: error.message };
-
-  const serves = ((data ?? []) as AlcoholServeRow[]).flatMap((row) => {
-    if (!row.square_variation_id) return [];
-    const item = Array.isArray(row.menu_items) ? row.menu_items[0] : row.menu_items;
-    const category = Array.isArray(item?.menu_categories) ? item.menu_categories[0] : item?.menu_categories;
-    return [{ variationId: row.square_variation_id, isAlcoholic: Boolean(category?.is_alcoholic) }];
-  });
-  if (serves.length === 0) return { error: "No serves are linked to Square yet." };
-
-  try {
-    const result = await pushAlcoholFlagsToSquare(serves, `alcohol-${randomUUID()}`);
-    if (result.failed.length > 0) {
-      console.error("[market] alcohol push failures:", result.failed);
-    }
-    return { success: true, ...result };
-  } catch (err) {
-    console.error("[market] alcohol push failed:", err);
-    return { error: err instanceof Error ? err.message : "Could not update Square." };
-  }
-}
-
 export async function pushMenuToSquareAction() {
   const supabase = await createClient();
   if ((await liveMarketSessionId(supabase)) != null) return { error: LIVE_MARKET_MENU_MESSAGE };
@@ -1419,7 +1377,7 @@ export async function pushMenuToSquareAction() {
   const { data: items, error: itemsError } = await supabase
     .from("menu_items")
     .select(
-      "id, name, menu_categories(name, is_alcoholic), menu_item_prices(id, serve, amount, display_order, square_variation_id)"
+      "id, name, menu_categories(name), menu_item_prices(id, serve, amount, display_order, square_variation_id)"
     )
     .eq("is_active", true);
   if (itemsError) return { error: itemsError.message };
@@ -1432,7 +1390,6 @@ export async function pushMenuToSquareAction() {
       menuItemId: item.id,
       name: item.name,
       categoryName: category?.name ?? "",
-      isAlcoholic: Boolean(category?.is_alcoholic),
       prices: [...item.menu_item_prices]
         .sort((a, b) => a.display_order - b.display_order || a.id - b.id)
         .map((price) => ({

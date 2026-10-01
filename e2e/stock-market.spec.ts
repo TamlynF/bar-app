@@ -26,7 +26,7 @@ async function createFixture(suffix: string): Promise<Fixture> {
     event: `E2E Market ${suffix}`,
   };
   const category = await must(
-    admin.from("menu_categories").insert({ name: names.category, display_order: 900, is_alcoholic: true }).select("id").single()
+    admin.from("menu_categories").insert({ name: names.category, display_order: 900 }).select("id").single()
   );
   const item = await must(
     admin.from("menu_items").insert({ category_id: category.id, name: names.drink, price: "5.00" }).select("id").single()
