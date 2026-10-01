@@ -9,11 +9,11 @@ import { HomeSkeleton } from "@/components/home-skeleton";
 import { GrainOverlay } from "@/components/ui/grain-overlay";
 import { Reveal } from "@/components/animations/reveal";
 import { MarqueeTicker } from "@/components/marquee-ticker";
-import { HomeMarketTicker } from "@/components/home-market-ticker";
 import { HomeHero } from "@/components/home/home-hero";
 import { ComingUpMonths } from "@/components/home/coming-up-months";
 import { DealsStrip } from "@/components/home/deals-strip";
 import { MerchGrid } from "@/components/home/merch-grid";
+import { GalleryStrip, type GalleryStripRow } from "@/components/home/gallery-strip";
 import { HomeFindUs } from "@/components/home/home-find-us";
 import type { SpecialRow } from "@/components/specials-section";
 import type { MerchandiseRow } from "@/components/merchandise-section";
@@ -30,6 +30,7 @@ import { endOfMonth, format } from "date-fns";
 export const revalidate = 300;
 
 const SCHEDULE_EVENTS = 12;
+const GALLERY_TILES = 6;
 
 /* Weekly nights (quiz, karaoke) are shown in the hero's weekly strip, so the
    dated schedule only carries one-off nights. */
@@ -40,7 +41,7 @@ async function HomeContent() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, info] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawGallery }, info] =
     await Promise.all([
       supabase
         .from("events")
@@ -62,6 +63,13 @@ async function HomeContent() {
         .eq("is_active", true)
         .order("display_order", { ascending: true })
         .limit(8),
+      supabase
+        .from("gallery_images")
+        .select("id, title, image_url")
+        .eq("is_active", true)
+        .eq("media_type", "image")
+        .order("display_order", { ascending: true })
+        .limit(GALLERY_TILES),
       getCompanyInfo(),
     ]);
 
@@ -81,16 +89,16 @@ async function HomeContent() {
     (s) => (!s.start_date || s.start_date <= todayStr) && (!s.end_date || s.end_date >= todayStr)
   );
   const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
+  const gallery = (rawGallery ?? []) as GalleryStripRow[];
   const tickerItems = taglineItems(info?.tagline);
   const hasMap = Boolean(process.env.GOOGLE_MAPS_API_KEY && info?.address);
 
   return (
     <>
-      <PublicNav currentPath="/" ticker={false} />
+      <PublicNav currentPath="/" ticker />
       <MarqueeTicker items={tickerItems} />
 
       <HomeHero featured={featured} today={today} />
-      <HomeMarketTicker />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>
@@ -100,15 +108,18 @@ async function HomeContent() {
           <DealsStrip specials={specials} />
         </Reveal>
         <Reveal index={2}>
-          <MerchGrid items={merchandise} />
+          <GalleryStrip images={gallery} />
         </Reveal>
         <Reveal index={3}>
+          <MerchGrid items={merchandise} />
+        </Reveal>
+        <Reveal index={4}>
           <HomeFindUs info={info} hasMap={hasMap} />
         </Reveal>
       </div>
 
       <div className="mx-auto mt-12 w-full max-w-400 px-4 sm:px-6 lg:mt-16 lg:px-10">
-        <PublicFooter info={info} />
+        <PublicFooter />
       </div>
       <RevealOnScroll />
     </>

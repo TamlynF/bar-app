@@ -11,7 +11,6 @@ import { MarketSection } from "@/components/market-section";
 import { PosterHero } from "@/components/poster-hero";
 import { DateSleeves } from "@/components/home/date-sleeves";
 import { LaterTonightStrip } from "@/components/later-tonight-strip";
-import { HomeMarketTicker } from "@/components/home-market-ticker";
 import { SpecialsBand } from "@/components/specials-band";
 import { FloorStrip } from "@/components/floor-strip";
 import { HomeGallery, type HomeGalleryItem } from "@/components/home-gallery";
@@ -118,7 +117,6 @@ async function HomeContent() {
             doors={doors}
             openTonight={openTonight}
           />
-          <HomeMarketTicker />
           <LaterTonightStrip
             events={nightEvents.slice(1)}
             isTonight={isTonight}
@@ -134,7 +132,6 @@ async function HomeContent() {
         </section>
       )}
 
-      {nightEvents.length === 0 && <HomeMarketTicker />}
 
       <div className="mx-auto w-full max-w-400">
         <DateSleeves events={later.slice(0, CAROUSEL_EVENTS)} />

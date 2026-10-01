@@ -152,7 +152,7 @@ This app has two faces and they look intentionally different. **Don't mix them.*
 - Dark theme: `#26300D` (deep olive) background, `#FDCC4B` (gold) accent
 - "Gritty bar" aesthetic - see `STYLE_GUIDE.md` for the full palette and rules
 - Mobile-first; design at 375px width and scale up
-- Bottom-sheet style nav at the top is acceptable; no persistent bottom nav on public pages
+- Phones get a four-slot bottom bar (`MobileBottomBar`: Home, Book, Menu, Contact) that hides on scroll-down and **no hamburger drawer**; everything else is reached from a home-page section (Gallery via `GalleryStrip`, What's On via the hero/Coming Up, the market via the live ticker) - see `STYLE_GUIDE.md`
 - Big, confident typography; lots of uppercase tracking; serif or bold display vibes welcome
 - Real photography over illustration
 

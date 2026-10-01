@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Menu as MenuIcon, X } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { SiInstagram } from "react-icons/si";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import { cn } from "@/lib/utils";
@@ -15,24 +15,22 @@ import { MarketTicker } from "@/components/market-ticker";
 export function PublicNavBar({
   currentPath,
   overlay = false,
-  ticker = true,
+  ticker = false,
   instagramUrl,
-  instagramHandle = null,
   status = null,
 }: {
   currentPath?: string;
   overlay?: boolean;
   ticker?: boolean;
   instagramUrl: string | null;
-  instagramHandle?: string | null;
   status?: BarStatus | null;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const marketState = useMarketState();
   const marketLive = marketState.status === "live";
+  const marketCrash = marketLive && Boolean(marketState.crashActive);
   const onMarketPage = currentPath?.startsWith("/market") ?? false;
-  const onHome = currentPath === "/";
+  const marketPill = marketLive && !onMarketPage;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -41,7 +39,7 @@ export function PublicNavBar({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const solid = scrolled || menuOpen;
+  const solid = scrolled;
 
   const primaryLinks = [
     { href: "/whats-on", label: "What's On" },
@@ -51,7 +49,6 @@ export function PublicNavBar({
     { href: "/contact", label: "Contact" },
   ];
 
-  const drawerLinks = primaryLinks.filter((l) => l.href === "/gallery" || l.href === "/contact");
 
   return (
     <>
@@ -72,7 +69,6 @@ export function PublicNavBar({
             <Link
               href="/"
               className="inline-flex w-fit shrink-0 flex-col items-start gap-1"
-              onClick={() => setMenuOpen(false)}
               aria-label="Don Fenticas - home"
             >
               <Image
@@ -108,18 +104,14 @@ export function PublicNavBar({
             {status && (
               <Link
                 href="/contact"
-                onClick={() => setMenuOpen(false)}
+                aria-label={`${status.label} - opening hours`}
                 className={cn(
-                  "inline-flex h-8 min-w-0 items-center gap-2 rounded-full border border-gold/50 py-1 pr-3 pl-2.5 backdrop-blur-md transition-colors active:bg-gold/15 sm:hidden",
-                  solid ? "bg-gold/10" : "bg-canvas/70 shadow-md shadow-black/40"
+                  "inline-flex min-h-11 min-w-0 items-center text-eyebrow font-semibold leading-none text-ink transition-opacity active:opacity-70 sm:hidden",
+                  !solid && "drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]"
                 )}
               >
-                <span
-                  className={cn("h-2 w-2 shrink-0 rounded-full", status.isOpen ? "bg-gold" : "border border-gold")}
-                  aria-hidden="true"
-                />
-                <span className="truncate text-eyebrow font-semibold leading-none text-gold max-[374px]:hidden">{status.label}</span>
-                <span className="truncate text-eyebrow font-semibold leading-none text-gold min-[375px]:hidden">{status.shortLabel}</span>
+                <span className="truncate max-[374px]:hidden">{status.label}</span>
+                <span className="truncate min-[375px]:hidden">{status.shortLabel}</span>
               </Link>
             )}
           </div>
@@ -153,6 +145,28 @@ export function PublicNavBar({
           </div>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-5 lg:gap-7">
+            {marketPill && (
+              <Link
+                href="/market"
+                aria-label={marketCrash ? "Drinks exchange crash - see live prices" : "Drinks exchange is open - see live prices"}
+                className={cn(
+                  "ad-market-live relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-95 sm:hidden",
+                  marketCrash
+                    ? "border-[#FF6B35]/60 bg-[#FF6B35]/15 text-[#FF6B35]"
+                    : "border-gold/50 bg-gold/10 text-gold",
+                  !solid && "shadow-md shadow-black/40 backdrop-blur-md"
+                )}
+              >
+                <TrendingUp className="h-4 w-4" aria-hidden="true" />
+                <span
+                  className={cn(
+                    "ad-live-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-canvas",
+                    marketCrash ? "bg-white" : "bg-[#E6392E]"
+                  )}
+                  aria-hidden="true"
+                />
+              </Link>
+            )}
             {instagramUrl && (
               <a
                 href={instagramUrl}
@@ -160,8 +174,8 @@ export function PublicNavBar({
                 rel="noopener noreferrer"
                 aria-label="Follow us on Instagram"
                 className={cn(
-                  "ad-installed-hidden relative h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full px-0 transition-transform before:absolute before:-inset-1 hover:scale-105 active:scale-95 sm:order-last sm:inline-flex lg:h-10 lg:w-auto lg:px-4",
-                  onHome ? "inline-flex" : "hidden",
+                  "relative h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full px-0 transition-transform before:absolute before:-inset-1 hover:scale-105 active:scale-95 sm:order-last sm:inline-flex lg:h-10 lg:w-auto lg:px-4",
+                  "inline-flex",
                   !solid && "ring-2 ring-canvas/60 shadow-lg shadow-black/40",
                   SOCIAL_BRANDS.instagram.solid
                 )}
@@ -180,87 +194,19 @@ export function PublicNavBar({
               Book
             </Link>
 
-            <button
-              type="button"
-              aria-label={menuOpen ? "Close menu" : marketLive ? "Open menu (drinks market is open)" : "Open menu"}
-              aria-expanded={menuOpen}
-              aria-controls="public-nav-drawer"
-              onClick={() => setMenuOpen((o) => !o)}
-              className={cn(
-                "relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-canvas-2 hover:text-ink active:scale-95 sm:hidden",
-                solid
-                  ? "text-ink-2"
-                  : "text-ink drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
-              )}
-            >
-              {menuOpen ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
-              {marketLive && !menuOpen && (
-                <span
-                  className="ad-live-dot absolute top-2 right-2 h-2 w-2 rounded-full bg-[#E6392E] ring-2 ring-canvas"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
           </div>
         </div>
 
-        {menuOpen && (
-          <div
-            id="public-nav-drawer"
-            className="animate-in border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl duration-200 fade-in slide-in-from-top-2 sm:hidden"
-          >
-            <div className="mx-auto flex w-full max-w-400 flex-col px-4 py-3">
-              {drawerLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={cn(
-                    "relative flex items-center justify-between rounded-xl px-3 py-3 text-body font-semibold transition-colors",
-                    currentPath === link.href
-                      ? "bg-canvas-2 text-[#FDCC4B]"
-                      : "text-stone-400 hover:bg-canvas-2 hover:text-ink"
-                  )}
-                >
-                  {link.label}
-                  {marketLive && link.href === "/market" && (
-                    <span className="relative inline-flex items-center gap-2 rounded-full bg-[#FDCC4B]/15 px-2.5 py-1 text-eyebrow font-semibold text-[#FDCC4B] ring-1 ring-[#FDCC4B]/40">
-                      <span className="ad-live-dot h-1.5 w-1.5 rounded-full bg-[#E6392E]" aria-hidden="true" />
-                      Open now
-                    </span>
-                  )}
-                </Link>
-              ))}
-              {instagramUrl && (
-                <a
-                  href={instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMenuOpen(false)}
-                  className="mt-2 flex min-h-13 items-center gap-3 rounded-xl border-t border-white/10 px-3 pt-3 text-stone-400 transition-colors hover:text-ink active:bg-canvas-2"
-                >
-                  <span className={cn("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full", SOCIAL_BRANDS.instagram.solid)}>
-                    <SiInstagram className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-body font-semibold">Follow us</span>
-                    {instagramHandle && <span className="block truncate text-xs text-ink-2 normal-case">{instagramHandle}</span>}
-                  </span>
-                </a>
-              )}
-            </div>
-          </div>
-        )}
       </nav>
 
       {!overlay && <div className="h-12 sm:h-16" aria-hidden="true" />}
 
-      {/* Overlay pages run their hero under the nav; pull the hero back up by
-          the nav height so the strip only costs its own 44px. The home page
-          opts out and places the ticker under its poster instead. */}
-      {ticker && !onMarketPage && <MarketTicker state={marketState} className={overlay ? "mt-12 -mb-12" : undefined} />}
+      {/* Home only: the deal strip under the top bar. Overlay pages would run
+          their hero under the nav; pull the hero back up by the nav height so
+          the strip only costs its own 44px. */}
+      {ticker && <MarketTicker state={marketState} className={overlay ? "mt-12 -mb-12" : undefined} />}
 
-      <MobileBottomBar currentPath={currentPath} marketLive={marketLive} />
+      <MobileBottomBar currentPath={currentPath} />
     </>
   );
 }

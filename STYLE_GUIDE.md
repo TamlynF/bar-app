@@ -58,28 +58,28 @@ The nav spans the **full screen width** at every breakpoint - no `max-w-*` conta
 **Required composition - desktop (`sm:` and up):**
 - Logo on the left (small, links home)
 - Primary destinations (`What's On`, `Menu`, `Gallery`, `Contact`) - text links, centred
-- `Staff Login` icon, then the gold `Book` CTA pill, far right
+- The gold `Book` CTA pill, far right (no `Staff Login` link anywhere on the public site)
 - No hamburger
 
 **Required composition - mobile (below `sm:`):**
-- Logo on the left; on the right the round Instagram icon then the hamburger - **nothing else in the bar**. The icon is the bar's own Follow action: it lives in brand chrome, never on the event poster (a Follow inside the hero reads as following the act). It hides on the installed app below `sm` (`.ad-installed-hidden`), where the bottom bar carries Follow.
-- The drawer opens with the gold `Book` CTA as a full-width pill at the top, then `Home`, the primary destinations, and `Staff Login` last
+- The small DF mark on the left (36px, links home), then the opening status as plain eyebrow text in `text-ink` (not gold - the bar already has gold in the chip and the strip, and the status is information rather than brand) - not a pill, no dot: it is information, not a button, though it taps through to the hours on `/contact`. On the right, the round exchange chip (live dot badge) while a drinks market trades, then the round Instagram icon, on **every** public page - the bar is brand chrome and must not change shape between pages. **Nothing else in the bar, and no hamburger.** The only dot in the bar is the chip's live badge. The icon is the bar's own Follow action: it lives in brand chrome, never on the event poster (a Follow inside the hero reads as following the act).
+- There is no drawer. Phones navigate with the bottom bar (`Home`, `Book`, `Menu`, `Contact`) and the home page carries the rest: `What's On` from the hero and the Coming Up section, the Market from the live ticker strip, and `Gallery` from the `GalleryStrip` section (`src/components/home/gallery-strip.tsx`, real photos from `gallery_images`, every tile links to `/gallery`). `Staff Login` has no public link - staff go to `/login` directly
 - The second Follow is the gradient pill on the home page's "From the floor" section, where the Instagram photos earn it. Don't add a third.
 
-Mobile deliberately trades the always-visible Book pill for a clean two-element bar (the Bongo's Bingo pattern). Book stays the first and most prominent thing in the drawer, so it is never more than two taps away, and the home hero carries its own Book CTA above the fold.
+Mobile deliberately keeps the top bar to the logo and (on home) the Follow icon. Book lives in the bottom bar, so it is never more than one tap away, and the home hero carries its own Book CTA above the fold.
 
-**The rule for what goes where:** on desktop, primary = visible, secondary = nowhere else to hide, so everything is inline. On mobile everything except the logo lives in the drawer, ordered by intent: CTA first, destinations next, `Staff Login` last (it's used by 2 people, not customers).
+**The rule for what goes where:** on desktop, primary = visible, secondary = nowhere else to hide, so everything is inline. On mobile the bottom bar holds the four task destinations and the home page is the index for everything else - a destination that isn't in the bar must have a section on home with a `SectionAction` into it. `Staff Login` has no public link at all - staff go to `/login` directly (it's used by 2 people, not customers).
 
 **Nav link type sizing:** `text-xs` (12px) `font-bold uppercase tracking-wide` from `sm:`, stepping to `text-sm` (14px) at `lg:` where the full-width bar has room. Drawer links are `text-sm`. Don't go below `text-xs` in the bar or below `10px` anywhere.
 
-**Bottom bar on public pages: installed app only.** Browser visitors never get one - it competes with the Book CTA and eats the bottom of a 375px screen. When the site is running from the Home Screen (`display-mode: standalone` - the `.ad-installed-only` utility, since Tailwind won't stack the `standalone:` variant with `max-sm:`) there is no browser chrome and people flip between sections all evening, so `MobileBottomBar` shows below `sm` with exactly four slots:
+**Bottom bar on public pages: four slots, phones only.** Below `sm`, `MobileBottomBar` sits at the bottom of every public page (browser and installed app alike) with exactly four slots, each a destination a guest reaches for while at the bar:
 
-1. `Tonight` - jumps to the home hero (the most common question)
+1. `Home` - What's On and tonight's act
 2. `Book` - the primary CTA
-3. `Menu` - **replaced by `Market` with the live dot while a drinks market trades**
-4. `Follow` - Instagram (the bar's channel)
+3. `Menu` - the thing people pull out at the bar, one-handed
+4. `Contact` - where are you, are you open
 
-It slides away on scroll-down and returns on scroll-up. Don't add a fifth slot (labels would drop under 10px) and don't swap `Follow` or `Tonight` for the market - `Menu` is the slot that gives way, because the market page carries the prices people would have gone to the menu for. 
+It slides away on scroll-down and returns on scroll-up or near the top. The active slot is gold with the `Waveform` underneath. Don't add a fifth slot (labels wrap or drop under 11px at 375px) and don't put the drinks market in the bar: a tab must always lead somewhere useful, and the market is closed most nights. `Gallery` is browse-when-bored content and is reached from the `GalleryStrip` section on home and the footer's Explore list. The market's live signal on phones is the exchange chip in the top bar: a 36px round gold-outline button (same form as the Instagram icon beside it) with a trending-up icon and a pulsing red live dot badged on its corner, orange with a white dot during a crash, on every public page except the market itself. No text - on the home page the deal strip underneath carries the words. Never a nav slot.
 
 **Motion kit on the public surface.** Shared pieces live in `src/lib/motion.ts` and `src/components/{ui,animations,home}`: `Reveal` (opacity, 24px rise, 1deg tilt and 6px blur resolving on scroll, staggered by `index`), `floatingVariant(seed)` + `.ad-float` (a 2-5px drift over 5-10s, seeded so no two cards move in step), `Waveform` (breathing bars for eyebrows, the active bottom-nav slot and the now-playing card), `FanOutCards` (a stack that fans into a hand of records on scroll-in), `GrainOverlay` (film grain under 5% opacity), `NowPlaying` (tonight's act as a record with a clock-driven progress bar) and `ArrowCta` (the shadcn Button's `gold` variant with lift, 97% press and an arrow that travels on its own). Everything is transform or opacity, honours reduced motion, and never runs on the admin surface. Framer Motion is still not a dependency; ask before adding it.
 
@@ -87,7 +87,7 @@ It slides away on scroll-down and returns on scroll-up. Don't add a fifth slot (
 
 **Gig cards are records on a shelf: the vinyl peek.** Event poster cards on the home page (the phone Next Up carousel and the desktop ticket strip) are wrapped in `VinylPeek` (`src/components/vinyl-peek.tsx`): the poster is the sleeve, and a CSS-drawn black vinyl with a label in the event colour sits behind it. On hover, keyboard focus, a tap, or once as the card scrolls into view on touch screens, the disc slides out 20px and turns 15 degrees over 550ms on `cubic-bezier(0.22, 1, 0.36, 1)`, the sleeve lifts 3px with a deeper shadow and a faint gold glow, and the disc spins very slowly while out. Everything that moves is a transform; reduced motion disables the transitions. Keep sleeves at `rounded-xl` or larger and leave the disc's side of the card unclipped so it can peek.
 
-**Live market signal on phones in the browser: the ticker strip.** While a market trades, `MarketTicker` renders a full-width strip directly under the top bar on every public page except the market pages (the home page is the exception: `HomeMarketTicker` renders a one-line LED-style ticker directly under the poster hero with the five best deals rolling past in crisp tube text (paused under a finger), and an "Expand" toggle that opens a compact panel with their rolling prices and the way into the market - the poster keeps one primary action and nothing else competes with it) - live dot, "Market open", the best deal with its price rolling, and a chevron; a tap opens the market-at-a-glance sheet. It is the phone echo of the big-screen ticker and sits in nav chrome so it reads as the bar's status, never the act's. Hidden from `sm` up (the nav's Market pill takes over) and on the installed app (the bottom bar's Market slot takes over). There is no floating market button any more - don't bring one back.
+**Live market signal on phones in the browser: the ticker strip.** While a market trades, `MarketTicker` renders a full-width strip directly under the top bar on the home page only (`PublicNav ticker`), above the tagline marquee, so it is the first band on the screen; every other public page relies on the top-bar chip alone - a two-line stacked label (live dot + `Drinks Exchange` in gold over `Live deal`, `Crash on` or `Open now` in muted ink), a hairline divider, the best deal's full name with its price rolling and the drop, and a chevron; a tap opens the market-at-a-glance sheet. The strip names the exchange and the kind of line it is; the top-bar chip's dot is the only other "live" signal, and the two must not repeat each other in words. The drink name gets the flexible width and may wrap to a second line rather than truncate; the price and drop never shrink. It is the phone echo of the big-screen ticker and sits in nav chrome so it reads as the bar's status, never the act's. Hidden from `sm` up (the nav's Market pill takes over); it shows in the installed app too, since the bottom bar has no market slot. There is no floating market button and no LED deals ticker under the home hero any more - don't bring either back; the strip plus the top-bar pill are the only two signals.
 
 ### Admin portal → sidebar + mobile bottom nav
 
@@ -174,7 +174,7 @@ Rules:
 ### Mobile-first rules (375px width is the design target)
 
 - The home page must show "what's on tonight / this week" above the fold without scrolling past the hero.
-- Nav stays ≤ 5 items. On mobile the bar is logo + hamburger only; everything else is in the drawer.
+- Nav stays ≤ 5 items. On mobile the top bar is the logo (plus the Follow icon on home) and the bottom bar holds four slots; there is no drawer.
 - All tappable elements ≥ 44px on the shorter side (Tailwind `h-11` or `h-12`).
 - Horizontal-scroll rows (events, gallery) need `snap-x snap-mandatory` and `no-scrollbar`.
 - Sticky elements: only one at a time. Either the top nav OR a bottom CTA bar - never both.

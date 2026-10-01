@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Bell, BellOff, BellRing, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { ArrowCta } from "@/components/ui/arrow-cta";
 import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
 import { detectInstallPlatform } from "@/lib/pwa-install";
@@ -461,6 +462,9 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
           <p className="max-w-xs text-sm text-stone-400">
             The trading floor opens on market nights. Check the schedule and come thirsty.
           </p>
+          <ArrowCta href="/whats-on" variant="goldOutline" size="sm" className="mt-2 rounded-full">
+            See what&apos;s on
+          </ArrowCta>
         </div>
         {footer}
       </div>

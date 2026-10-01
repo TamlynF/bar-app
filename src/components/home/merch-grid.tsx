@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { Shirt, Store } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import { ArrowCta } from "@/components/ui/arrow-cta";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import type { MerchandiseRow } from "@/components/merchandise-section";
 import { formatGBP } from "@/lib/events-display";
@@ -43,7 +42,7 @@ export function MerchGrid({ items, className }: { items: MerchandiseRow[]; class
 
   return (
     <section id="merch" aria-labelledby="merch-heading" className={cn("scroll-mt-24", className)}>
-      <SectionHeading eyebrow="Take a little noise home" title="DF merch" id="merch-heading" action={{ href: "/market", label: "Market" }} actionOnMobile={false} />
+      <SectionHeading eyebrow="Take a little noise home" title="DF merch" id="merch-heading" />
 
       <Carousel opts={{ align: "start", containScroll: "trimSnaps" }} className="-mx-4 md:hidden">
         <CarouselContent viewportClassName="px-4" className="-ml-2.5">
@@ -76,10 +75,6 @@ export function MerchGrid({ items, className }: { items: MerchandiseRow[]; class
         <Store className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
         Sold at the bar. No online checkout, just ask at the counter.
       </p>
-
-      <ArrowCta href="/market" variant="goldOutline" className="mt-4 w-full sm:hidden">
-        Market
-      </ArrowCta>
     </section>
   );
 }
