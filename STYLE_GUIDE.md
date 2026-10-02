@@ -151,7 +151,7 @@ Sizes come from role tokens in `src/app/globals.css` (`@theme`), not from `text-
 | Button and link label | `text-btn` | 14 → 15px | `font-semibold` (hero CTA `font-bold`), sentence case |
 | Nav link | `text-nav` | 13 → 14px | `font-semibold`, sentence case |
 | Meta - subtitles, captions, counts, addresses, hours | `text-meta` | 13 → 14px | regular or `font-semibold`, sentence case |
-| Eyebrow / section label | `text-eyebrow` | 12 → 15px | `font-semibold`, sentence case, usually `text-gold` |
+| Eyebrow / section label | `text-eyebrow` | 16 → 17px | `font-semibold`, sentence case, usually `text-gold` |
 | Stamp - date abbreviation, sticker, status pill, price pill | `text-pill` | 11px | `font-bold tracking-wide uppercase` |
 | Legal / footnote | `text-xs` | 12px | regular |
 

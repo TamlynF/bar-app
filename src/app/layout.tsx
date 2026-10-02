@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Anton, Archivo, Archivo_Black } from "next/font/google";
+import { Anton, Archivo, Archivo_Black, Pirata_One } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import ServiceWorkerRegister from "@/components/service-worker-register";
@@ -23,6 +23,13 @@ const archivoBlack = Archivo_Black({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-black",
+  display: "swap",
+});
+
+const pirataOne = Pirata_One({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-pirata",
   display: "swap",
 });
 
@@ -96,7 +103,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-surface="dark"
-      className={`${anton.variable} ${archivo.variable} ${archivoBlack.variable}`}
+      className={`${anton.variable} ${archivo.variable} ${archivoBlack.variable} ${pirataOne.variable}`}
       suppressHydrationWarning
     >
       <body

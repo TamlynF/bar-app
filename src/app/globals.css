@@ -181,13 +181,14 @@
   --font-display: var(--font-display); /* Anton        */
   --font-ui: var(--font-ui); /* Archivo      */
   --font-black: var(--font-black); /* Archivo Black */
+  --font-pirata: var(--font-pirata); /* Pirata One   */
   --font-board-display: var(--font-board-display);
   --font-board-mono: var(--font-board-mono);
 
   /* Public type scale by role. Fluid between a 375px phone and a 1280px
      desktop so every device gets the same proportions. text-h2 26→40px,
      text-h3 22→28px, text-body 14→16px, text-btn 14→15px, text-meta
-     13→14px, text-eyebrow 12→15px, text-pill 11px, text-nav 13→14px. */
+     13→14px, text-eyebrow 16→17px, text-pill 11px, text-nav 13→14px. */
   --text-h2: clamp(1.625rem, 1.25rem + 1.6vw, 2.5rem);
   --text-h2--line-height: 0.95;
   --text-h3: clamp(1.375rem, 1.2rem + 0.75vw, 1.75rem);
@@ -198,7 +199,7 @@
   --text-btn--line-height: 1.2;
   --text-meta: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
   --text-meta--line-height: 1.4;
-  --text-eyebrow: clamp(0.75rem, 0.68rem + 0.33vw, 0.9375rem);
+  --text-eyebrow: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
   --text-eyebrow--line-height: 1.2;
   --text-pill: 0.6875rem;
   --text-pill--line-height: 1.2;
@@ -943,6 +944,25 @@ html:has([data-admin-shell]) body {
 .ad-spin {
   animation: ad-spin 1.6s linear infinite;
 }
+/* Full turn on the Y axis for the 3D wordmark, tilted slightly toward the
+   viewer so the extruded edge stays visible as it comes round. Each half
+   turn eases in and out, so it lingers face-on and sweeps quickly through
+   side-on, where a flat cut-out logo stops reading as solid. */
+@keyframes ad-turn {
+  0% {
+    transform: rotateX(6deg) rotateY(0deg);
+  }
+  50% {
+    transform: rotateX(6deg) rotateY(180deg);
+  }
+  100% {
+    transform: rotateX(6deg) rotateY(360deg);
+  }
+}
+.ad-turn {
+  transform: rotateX(6deg) rotateY(-14deg);
+  animation: ad-turn 18s cubic-bezier(0.7, 0, 0.3, 1) infinite;
+}
 [data-reveal] {
   transition:
     opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1500,6 +1520,7 @@ html:has([data-admin-shell]) body {
   .ad-market-live,
   .ad-shimmer,
   .ad-odometer,
+  .ad-turn,
   .ad-pulse-cta > a {
     animation: none;
   }

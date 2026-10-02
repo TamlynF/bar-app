@@ -7,11 +7,9 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import type { MerchandiseRow } from "@/components/merchandise-section";
 import { formatGBP } from "@/lib/events-display";
 import { cn } from "@/lib/utils";
+import { carouselArrowClass } from "@/components/home/carousel-arrows";
 
 const MAX_ITEMS = 8;
-
-const arrowClass =
-  "static size-11 translate-y-0 border-white/15 bg-canvas-2 text-ink shadow-none hover:border-gold/60 hover:bg-canvas-2 hover:text-gold disabled:opacity-30 [&_svg]:size-4";
 
 function MerchCard({ item }: { item: MerchandiseRow }) {
   return (
@@ -57,8 +55,8 @@ export function MerchGrid({ items, className }: { items: MerchandiseRow[]; class
             {goods.length} {goods.length === 1 ? "item" : "items"}
           </span>
           <div className="flex items-center gap-2">
-            <CarouselPrevious className={arrowClass} />
-            <CarouselNext className={arrowClass} />
+            <CarouselPrevious className={carouselArrowClass} />
+            <CarouselNext className={carouselArrowClass} />
           </div>
         </div>
       </Carousel>

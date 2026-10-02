@@ -98,7 +98,7 @@ async function HomeContent() {
       <PublicNav currentPath="/" ticker />
       <MarqueeTicker items={tickerItems} />
 
-      <HomeHero featured={featured} today={today} />
+      <HomeHero featured={featured} today={today} hours={info?.opening_hours} />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>

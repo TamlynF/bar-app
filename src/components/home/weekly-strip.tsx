@@ -1,14 +1,25 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { ArrowCta } from "@/components/ui/arrow-cta";
-import { PRIVATE_HIRE_HREF, WEEKLY_LISTINGS } from "@/lib/venue-offerings";
+import { WEEKLY_LISTINGS, type WeeklyListing } from "@/lib/venue-offerings";
+import { formatClock, toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import { WEEKLY_NIGHTS } from "@/lib/weekly-nights";
 import { cn } from "@/lib/utils";
+
+const LISTING_COLOR: Record<WeeklyListing["key"], string> = {
+  quiz: "text-[#5ED6F0]",
+  karaoke: "text-[#FF8A80]",
+  live: "text-gold",
+};
 
 /* The three nights that happen every week without fail. They are not
    events in the schedule, so they never move or sell out; the quiz tile
    carries the one booking link. */
-export function WeeklyStrip({ className }: { className?: string }) {
+function closingTime(listing: WeeklyListing, hours: OpeningHours | null | undefined) {
+  const close = toMinutes(hours?.[listing.dayKey]?.close);
+  return close == null ? null : formatClock(close);
+}
+
+export function WeeklyStrip({ hours, className }: { hours?: OpeningHours | null; className?: string }) {
   return (
     <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-3", className)}>
       <div className="flex items-center justify-between gap-3">
@@ -19,31 +30,30 @@ export function WeeklyStrip({ className }: { className?: string }) {
           <span className="sm:hidden">Every week</span>
           <span className="hidden sm:inline">What’s on</span>
         </h2>
-        <Link
-          href={PRIVATE_HIRE_HREF}
-          className="group -mr-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 px-1 text-meta font-medium text-ink-2 transition-colors hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold sm:hidden"
-        >
-          Private hire
-          <ArrowRight
-            className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </Link>
       </div>
-      <ul className="flex flex-col divide-y divide-hairline border-y border-hairline sm:hidden">
+      <ul className="grid grid-cols-[auto_1fr_auto_auto_auto] divide-y divide-hairline border-y border-hairline sm:hidden">
         {WEEKLY_LISTINGS.map((listing) => (
-          <li key={listing.key}>
+          <li key={listing.key} className="col-span-5 grid grid-cols-subgrid">
             <Link
               href={listing.href}
-              className="group grid min-h-14 grid-cols-[3.5rem_1fr_auto] items-center gap-3 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              className="group col-span-5 grid min-h-14 grid-cols-subgrid items-center gap-x-1 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             >
-              <span className="font-semibold font-stretch-condensed text-h3 leading-none text-ink-2 uppercase">
-                {listing.day}
-              </span>
-              <span className="font-black text-btn tracking-wide text-ink uppercase transition-colors group-hover:text-gold">
+              <span className="pr-2 font-pirata text-h2 leading-none text-ink">{listing.day}</span>
+              <span
+                className={cn(
+                  "pr-1 font-pirata text-h2 leading-none transition-opacity group-hover:opacity-80",
+                  LISTING_COLOR[listing.key]
+                )}
+              >
                 {listing.title}
               </span>
-              <span className="text-meta text-ink-2 tabular-nums">{listing.time}</span>
+              <span className="text-right text-meta whitespace-nowrap text-ink-2 tabular-nums">{listing.time}</span>
+              <span className="text-meta text-ink-2" aria-hidden={!closingTime(listing, hours)}>
+                {closingTime(listing, hours) ? "–" : ""}
+              </span>
+              <span className="text-right text-meta whitespace-nowrap text-ink-2 tabular-nums">
+                {closingTime(listing, hours)}
+              </span>
             </Link>
           </li>
         ))}

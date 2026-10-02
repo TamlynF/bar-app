@@ -1,9 +1,10 @@
 import Image from "next/image";
 import { ArrowCta } from "@/components/ui/arrow-cta";
-import { CompanyWordmark } from "@/components/company-wordmark";
+import { ExtrudedWordmark } from "@/components/extruded-wordmark";
 import { NextUpTicket } from "@/components/home/next-up-ticket";
 import { WeeklyStrip } from "@/components/home/weekly-strip";
 import type { SerializedEvent } from "@/lib/events-display";
+import type { OpeningHours } from "@/lib/opening-hours";
 
 /* First screen of the home page: a photo of the room with the statement over
    it, the weekly rhythm directly beneath, and the next dated night as a
@@ -11,7 +12,15 @@ import type { SerializedEvent } from "@/lib/events-display";
    phones. Everything a first-time visitor needs is above the fold. */
 const BACKDROP = "/backdrop.jpeg";
 
-export function HomeHero({ featured, today }: { featured: SerializedEvent | null; today: Date }) {
+export function HomeHero({
+  featured,
+  today,
+  hours,
+}: {
+  featured: SerializedEvent | null;
+  today: Date;
+  hours?: OpeningHours | null;
+}) {
   return (
     <section aria-labelledby="home-heading" className="relative isolate w-full">
       <Image
@@ -29,9 +38,9 @@ export function HomeHero({ featured, today }: { featured: SerializedEvent | null
           <div className="flex flex-col justify-end gap-3 lg:col-span-7 lg:gap-5">
             <hgroup className="@container flex flex-col gap-3 sm:hidden">
               <h1 translate="no">
-                <CompanyWordmark priority className="w-full" />
+                <ExtrudedWordmark priority />
               </h1>
-              <p className="text-justify text-[7.6cqw] leading-none font-semibold font-stretch-condensed tracking-wide whitespace-nowrap text-ink uppercase [text-align-last:justify]">
+              <p className="text-justify text-[7.6cqw] leading-none font-semibold font-stretch-condensed tracking-wide whitespace-nowrap text-ink uppercase [text-align-last:justify] [text-shadow:1px_1px_0_#5a6b26,2px_2px_0_#4a5a1e,3px_3px_0_#3c4a18,4px_4px_10px_rgb(0_0_0/0.6)]">
                 Hinckley’s live music venue
               </p>
             </hgroup>
@@ -75,7 +84,7 @@ export function HomeHero({ featured, today }: { featured: SerializedEvent | null
         </div>
 
         <div className="flex flex-col gap-12 px-4 pt-12 pb-8 sm:gap-8 sm:px-6 sm:pt-2 lg:px-10 lg:pt-4 lg:pb-12">
-          <WeeklyStrip />
+          <WeeklyStrip hours={hours} />
           {featured && <NextUpTicket event={featured} today={today} headingId="next-up-heading" className="lg:hidden" />}
         </div>
       </div>

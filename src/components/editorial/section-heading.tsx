@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { ArrowCta } from "@/components/ui/arrow-cta";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +23,44 @@ export function SectionAction({
   );
 }
 
+/* The phone form of a section action when it sits beside the title: cream
+   text and an arrow, so it reads as a link rather than as another gold
+   label next to the eyebrow. */
+export function SectionTextAction({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group inline-flex min-h-11 shrink-0 items-center text-btn font-semibold text-ink transition-colors hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold",
+        className
+      )}
+    >
+      <span className="inline-flex items-center gap-1.5">
+        {children}
+        <ArrowRight
+          className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
+  );
+}
+
 export function SectionHeading({
   eyebrow,
   title,
   action,
   id,
   actionOnMobile = true,
+  actionInline = false,
 }: {
   eyebrow?: string;
   title: string;
@@ -34,11 +68,16 @@ export function SectionHeading({
   id?: string;
   /* false = the section renders its own action below the content on phones */
   actionOnMobile?: boolean;
+  /* true = on phones the action sits beside the title as a text link */
+  actionInline?: boolean;
 }) {
   return (
     <div
       id={id}
-      className="mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
+      className={cn(
+        "mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4",
+        actionInline && "flex-row items-end justify-between"
+      )}
     >
       <div className="min-w-0 max-w-full">
         {eyebrow && (
@@ -50,8 +89,16 @@ export function SectionHeading({
           {title}
         </h2>
       </div>
+      {action && actionInline && (
+        <SectionTextAction href={action.href} className="-mb-3 sm:hidden">
+          {action.label}
+        </SectionTextAction>
+      )}
       {action && (
-        <SectionAction href={action.href} className={cn("shrink-0", !actionOnMobile && "hidden sm:inline-flex")}>
+        <SectionAction
+          href={action.href}
+          className={cn("shrink-0", (!actionOnMobile || actionInline) && "hidden sm:inline-flex")}
+        >
           {action.label}
         </SectionAction>
       )}
