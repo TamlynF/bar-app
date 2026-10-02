@@ -118,6 +118,8 @@ SUPABASE_SERVICE_ROLE_KEY                # Admin client only, never NEXT_PUBLIC_
 RESEND_API_KEY
 EMAIL_FROM                               # Resend sender, RFC 5322 e.g. 'Don Fenticas <admin@…>' - domain must be verified in Resend
 ADMIN_EMAIL                              # Where internal staff notifications land
+EMAIL_REPLY_DOMAIN                       # Subdomain with its MX on Resend inbound (e.g. reply.bookingsdonfenticas.co.uk); band emails reply-to band-<id>@ / act-<id>@ it. Unset = replies go to EMAIL_FROM
+RESEND_WEBHOOK_SECRET                    # Signing secret of the Resend `email.received` webhook → /api/resend/inbound
 NEXT_PUBLIC_GEMINI_API_KEY
 NEXT_PUBLIC_SITE_URL                     # e.g. https://bar-app-tau.vercel.app
 SQUARE_ACCESS_TOKEN
@@ -270,6 +272,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `merchandise` | Branded goods shown on the homepage - display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
 | `promo_content` | Social-style promo cards on the homepage |
 | `menu_categories` / `menu_items` | Public menu |
+| `email_messages` | Email correspondence with music acts, both directions. Every band email is sent through `sendCorrespondenceEmail` (`src/lib/email/correspondence-data.ts`), which sets the reply-to and logs the row; replies arrive via the Resend inbound webhook and are matched by reply-to address, then In-Reply-To, then sender email. Linked to `band_booking_requests` and `music_acts`; attachments are copied to the private `email-attachments` bucket. Bodies are shown as plain text only - inbound HTML is never rendered |
 | `company_information` | Address, socials, opening hours, capacity |
 | `market_push_subscriptions` | Web Push endpoints from the public Market Night page - one row per phone, `watched_instrument_ids` empty = alert on every drop. Written only via the admin client from `src/app/(public)/market/actions.ts`; sent to after each tick by `src/lib/market/push-alerts.ts`, dead endpoints (404/410) self-delete |
 | `square_sales` / `square_sale_lines` | Square orders pulled nightly by `/api/square/sync` (Vercel cron, watermark in `square_sync_state`): one row per order for the dashboard's venue sales, one row per line item for the market's normal sales. `trading_night` is the London date rolled back a day before 06:00, so a 01:45 sale belongs to the night before |

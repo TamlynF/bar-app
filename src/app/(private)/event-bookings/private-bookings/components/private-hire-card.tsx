@@ -562,10 +562,12 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const [pendingStage, setPendingStage] = useState<PrivateStage | null>(null);
   const [clashes, setClashes] = useState<ClashEvent[]>([]);
   const [slotFlash, setSlotFlash] = useState(false);
+  const [confirmAttempted, setConfirmAttempted] = useState(false);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
+  const slotRowRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
   const noteDraft = useRef("");
 
@@ -617,12 +619,13 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
   const slotWarning =
     needsDate && needsTime
-      ? "A date and time must be set to confirm this booking."
+      ? "Set a date and time to confirm this booking."
       : needsDate
-        ? "A date must be set to confirm this booking."
+        ? "Set a date to confirm this booking."
         : needsTime
-          ? "A start and end time must be set to confirm this booking."
+          ? "Set a start and end time to confirm this booking."
           : undefined;
+  const showSlotWarning = confirmAttempted && !!slotWarning;
 
   const clashCheckReady = !(isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime);
   const visibleClashes = clashCheckReady ? clashes : [];
@@ -712,7 +715,9 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   }
 
   function revealSlot() {
+    setConfirmAttempted(true);
     setSlotFlash(true);
+    slotRowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     window.setTimeout(() => setSlotFlash(false), 1200);
     if (!selectedDate) setDatePickerOpen(true);
     else startTimeRef.current?.focus();
@@ -1301,6 +1306,135 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     </div>
                   )}
 
+                  <div
+                    ref={slotRowRef}
+                    className={cn(
+                      "scroll-mt-4 border-b border-[#D8D5C8] px-4 py-2 transition-colors last:border-0 sm:px-5",
+                      hasClashes ? "bg-red-50" : showSlotWarning && "bg-amber-50",
+                      slotFlash && "ring-2 ring-amber-400/70 ring-inset"
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                        Selected Date &amp; Time
+                      </span>
+                      {editable ? (
+                        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                disabled={!editable}
+                                className={cn(
+                                  "flex min-w-40 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30 disabled:cursor-not-allowed disabled:opacity-60",
+                                  !selectedDate && showSlotWarning
+                                    ? "border-amber-300"
+                                    : slotIsSet
+                                      ? "border-[#34451F]"
+                                      : "border-[#D8D5C8]"
+                                )}
+                              >
+                                {selectedDate
+                                  ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
+                                  : "Pick a date"}
+                                <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
+                                onSelect={(d) => {
+                                  if (d) applyDate(format(d, "yyyy-MM-dd"));
+                                  setDatePickerOpen(false);
+                                }}
+                                autoFocus
+                              />
+                              {selectedDate && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    applyDate("");
+                                    setDatePickerOpen(false);
+                                  }}
+                                  className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Clear date
+                                </button>
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                          <div
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
+                              (!selectedStartTime || !selectedEndTime) && showSlotWarning
+                                ? "border-amber-300"
+                                : slotIsSet
+                                  ? "border-[#34451F]"
+                                  : "border-[#D8D5C8]"
+                            )}
+                          >
+                            <input
+                              ref={startTimeRef}
+                              type="time"
+                              aria-label="Selected start time"
+                              disabled={!editable}
+                              value={selectedStartTime}
+                              onChange={(e) => {
+                                setSelectedStartTime(e.target.value);
+                                setClashes([]);
+                              }}
+                              className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
+                            />
+                            <span className="text-xs text-[#5E6654]/50">-</span>
+                            <input
+                              type="time"
+                              aria-label="Selected end time"
+                              disabled={!editable}
+                              value={selectedEndTime}
+                              onChange={(e) => {
+                                setSelectedEndTime(e.target.value);
+                                setClashes([]);
+                              }}
+                              className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
+                            />
+                            {editable && (selectedStartTime || selectedEndTime) && (
+                              <button
+                                type="button"
+                                onClick={() => applyTimes("", "")}
+                                aria-label="Clear selected times"
+                                title="Clear times"
+                                className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="min-w-0 truncate text-right text-[13px] font-semibold text-[#20231A]">
+                          {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "-"}
+                          {selectedStartTime && ` · ${selectedStartTime}–${selectedEndTime || "?"}`}
+                        </span>
+                      )}
+                    </div>
+                    {editable &&
+                      slotWarning &&
+                      (showSlotWarning ? (
+                        <FieldMessage warning={slotWarning} />
+                      ) : (
+                        <p className="mt-1.5 text-right text-[11px] leading-snug text-[#5E6654]">
+                          Optional for now - needed before this booking can be confirmed.
+                        </p>
+                      ))}
+                    {visibleClashes.length > 0 && (
+                      <div className="mt-2">
+                        <ClashList clashes={visibleClashes} />
+                      </div>
+                    )}
+                  </div>
+
                   {bookingNote && (
                     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
@@ -1365,129 +1499,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                <div
-                  className={cn(
-                    "space-y-2 rounded-2xl border-2 p-3 shadow-lg transition-all",
-                    "sm:w-3/5",
-                    hasClashes
-                      ? "border-red-300 bg-red-50"
-                      : slotWarning
-                        ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
-                        : slotIsSet
-                          ? "border-[#34451F]/30 bg-[#F4F1E8] shadow-[#34451F]/25"
-                          : "border-[#34451F]/25 bg-[#F4F1E8]",
-                    slotFlash && "ring-2 ring-amber-400/70"
-                  )}
-                >
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <span
-                      className={cn(
-                        "flex shrink-0 flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
-                        slotIsSet ? "text-[#34451F]" : "text-[#34451F]"
-                      )}
-                    >
-                      Selected Date &amp; Time
-                    </span>
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            disabled={!editable}
-                            className={cn(
-                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30 disabled:cursor-not-allowed disabled:opacity-60",
-                              !selectedDate && slotWarning
-                                ? "border-amber-300"
-                                : slotIsSet
-                                  ? "border-[#34451F]"
-                                  : "border-[#D8D5C8]"
-                            )}
-                          >
-                            {selectedDate
-                              ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
-                              : "Pick a date"}
-                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
-                            onSelect={(d) => {
-                              if (d) applyDate(format(d, "yyyy-MM-dd"));
-                              setDatePickerOpen(false);
-                            }}
-                            autoFocus
-                          />
-                          {selectedDate && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                applyDate("");
-                                setDatePickerOpen(false);
-                              }}
-                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              Clear date
-                            </button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
-                      <div
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
-                          (!selectedStartTime || !selectedEndTime) && slotWarning
-                            ? "border-amber-300"
-                            : slotIsSet
-                              ? "border-[#34451F]"
-                              : "border-[#D8D5C8]"
-                        )}
-                      >
-                        <input
-                          ref={startTimeRef}
-                          type="time"
-                          aria-label="Selected start time"
-                          disabled={!editable}
-                          value={selectedStartTime}
-                          onChange={(e) => {
-                            setSelectedStartTime(e.target.value);
-                            setClashes([]);
-                          }}
-                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
-                        />
-                        <span className="text-xs text-[#5E6654]/50">-</span>
-                        <input
-                          type="time"
-                          aria-label="Selected end time"
-                          disabled={!editable}
-                          value={selectedEndTime}
-                          onChange={(e) => {
-                            setSelectedEndTime(e.target.value);
-                            setClashes([]);
-                          }}
-                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
-                        />
-                        {editable && (selectedStartTime || selectedEndTime) && (
-                          <button
-                            type="button"
-                            onClick={() => applyTimes("", "")}
-                            aria-label="Clear selected times"
-                            title="Clear times"
-                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {slotWarning && <FieldMessage warning={slotWarning} />}
-                  {visibleClashes.length > 0 && <ClashList clashes={visibleClashes} />}
-                </div>
-
-                <div className="flex items-center justify-end gap-2 sm:flex-1">
+              <div className="flex items-center justify-end gap-2">
                   {!hasChanges ? (
                     <button
                       type="button"
@@ -1522,7 +1534,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       </button>
                     </>
                   )}
-                </div>
               </div>
 
               {error && <p className="text-xs font-bold text-red-500">{error}</p>}

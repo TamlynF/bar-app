@@ -18,6 +18,12 @@ export default async function MusicBookingsPage({
   const supabase = await createClient();
 
   const maxVideoBytesPromise = getVideoUploadLimitBytes();
+  const unreadPromise = supabase
+    .from("email_messages")
+    .select("band_booking_request_id")
+    .eq("direction", "inbound")
+    .is("read_at", null)
+    .not("band_booking_request_id", "is", null);
   const { data: requests, error } = await supabase
     .from("band_booking_requests")
     .select(
@@ -30,7 +36,17 @@ export default async function MusicBookingsPage({
 
   if (error) console.error("Music bookings fetch error:", error);
 
-  const items = (requests ?? []) as unknown as BandRequest[];
+  const { data: unreadRows } = await unreadPromise;
+  const unreadByRequest = new Map<string, number>();
+  for (const r of unreadRows ?? []) {
+    const id = r.band_booking_request_id as string;
+    unreadByRequest.set(id, (unreadByRequest.get(id) ?? 0) + 1);
+  }
+
+  const items = ((requests ?? []) as unknown as BandRequest[]).map((r) => ({
+    ...r,
+    unread_emails: unreadByRequest.get(r.id) ?? 0,
+  }));
   const maxVideoBytes = await maxVideoBytesPromise;
 
   return (

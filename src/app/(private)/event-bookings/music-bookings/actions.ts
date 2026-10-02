@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
-import { EMAIL_FROM } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
@@ -18,6 +17,7 @@ import {
 import { renderTemplate } from "@/lib/email/resolve";
 import { bandCard, bandLayout, bandNote } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import {
   upsertContactByEmail,
   upsertMusicActFromBand,
@@ -252,6 +252,8 @@ export async function rescheduleConfirmedBooking(
   }
 
   const emailError = await sendBandEmail(supabase, "rescheduled", {
+    requestId: id,
+    sentBy: empId,
     name: record.booker_name,
     email: record.email,
     groupName: record.group_name,
@@ -378,6 +380,8 @@ export async function updateBandStatus(
   let emailError: string | null = null;
   if (status === "offered" || status === "booked" || status === "declined") {
     emailError = await sendBandEmail(supabase, status, {
+      requestId: id,
+      sentBy: empId,
       name: record.booker_name,
       email: record.email,
       groupName: record.group_name,
@@ -417,6 +421,8 @@ async function sendBandEmail(
   supabase: Awaited<ReturnType<typeof createClient>>,
   kind: BandEmailKind,
   p: {
+    requestId: string;
+    sentBy: number | null;
     name: string;
     email: string;
     groupName: string | null;
@@ -460,16 +466,14 @@ async function sendBandEmail(
     tailHtml: kind === "offered" ? "" : note,
   });
 
-  const { data, error } = await resend.emails.send({
-    from: EMAIL_FROM,
+  const { error } = await sendCorrespondenceEmail({
+    resend,
+    links: { bandRequestId: p.requestId },
     to: p.email,
     subject: e.subject,
     html,
+    kind,
+    sentBy: p.sentBy,
   });
-  if (error) {
-    console.error(`[band ${kind} email] Resend failed:`, JSON.stringify(error));
-    return error.message ?? "Email failed to send.";
-  }
-  console.log(`[band ${kind} email] sent:`, data?.id, "→", p.email);
-  return null;
+  return error;
 }

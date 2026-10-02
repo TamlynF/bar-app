@@ -35,6 +35,7 @@ import { randomId } from "@/lib/random-id";
 import { showFirstFrame } from "@/lib/video-preview";
 import type { MusicActRow, SocialLinks } from "@/lib/music-acts";
 import MusicActNotesPopover, { MusicActNotesPanel } from "./music-act-notes-popover";
+import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
 import {
   saveMusicActAction,
   deleteMusicActAction,
@@ -170,12 +171,14 @@ function telHref(phone?: string | null): string | null {
 export default function MusicActsClient({
   initialActs = [],
   counts = {},
+  unreadEmails = {},
   typeOptions = [],
   employees = [],
   maxVideoBytes,
 }: {
   initialActs: MusicActWithContact[];
   counts: Record<string, ActCounts>;
+  unreadEmails?: Record<string, number>;
   typeOptions: string[];
   employees?: EmployeeOption[];
   maxVideoBytes: number;
@@ -493,6 +496,18 @@ export default function MusicActsClient({
                   }
                   actions={
                     <>
+                      {(unreadEmails[act.id] ?? 0) > 0 && (
+                        <span
+                          className="relative flex h-11 w-11 shrink-0 items-center justify-center sm:h-9 sm:w-9"
+                          title={`${unreadEmails[act.id]} new email${unreadEmails[act.id] === 1 ? "" : "s"} from ${act.group_name}`}
+                        >
+                          <Mail className="h-4 w-4 text-admin-warning" aria-hidden="true" />
+                          <span className="absolute top-1 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-admin-warning px-1 text-[11px] leading-none font-semibold text-white tabular-nums">
+                            {unreadEmails[act.id]}
+                          </span>
+                          <span className="sr-only">{unreadEmails[act.id]} new emails</span>
+                        </span>
+                      )}
                       <FavoriteButton
                         active={act.is_favorite}
                         disabled={recordPending}
@@ -833,6 +848,19 @@ export default function MusicActsClient({
                 ))}
               </div>
             )}
+
+            <DetailCard>
+              <div className="flex items-center gap-2 border-b border-admin-line bg-admin-surface px-4 py-2.5">
+                <Mail className="h-4 w-4 text-admin-muted" aria-hidden="true" />
+                <h3 className="text-[13px] font-bold text-admin-ink">Correspondence</h3>
+                {(unreadEmails[selected.id] ?? 0) > 0 && (
+                  <StatusPill tone="warning" showLabelOnMobile>
+                    {unreadEmails[selected.id]} new
+                  </StatusPill>
+                )}
+              </div>
+              <CorrespondencePanel key={selected.id} musicActId={selected.id} />
+            </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>

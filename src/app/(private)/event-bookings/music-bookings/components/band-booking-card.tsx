@@ -49,6 +49,7 @@ import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
 import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
+import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -90,6 +91,7 @@ interface LinkedEvent {
 
 export interface BandRequest {
   id: string;
+  unread_emails?: number;
   group_name: string | null;
   type: string | null;
   genre: string | null;
@@ -769,7 +771,9 @@ export function BandBookingCard({
   const [error, setError] = useState<string | null>(null);
   const [pendingStage, setPendingStage] = useState<BandStatus | null>(null);
   const [slotFlash, setSlotFlash] = useState(false);
+  const [bookAttempted, setBookAttempted] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
+  const slotRowRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
   const noteDraft = useRef("");
 
@@ -840,12 +844,13 @@ export function BandBookingCard({
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
   const slotWarning =
     needsDate && needsTime
-      ? "A date and time must be set to book this act."
+      ? "Set a date and time to book this act."
       : needsDate
-        ? "A date must be set to book this act."
+        ? "Set a date to book this act."
         : needsTime
-          ? "A start and end time must be set to book this act."
+          ? "Set a start and end time to book this act."
           : undefined;
+  const showSlotWarning = bookAttempted && !!slotWarning;
 
   const isDeclined = status === "declined";
   const declineReason = adminNotes.trim();
@@ -869,6 +874,7 @@ export function BandBookingCard({
     .filter((v) => Boolean(v.url));
   const dates = (request.preferred_dates ?? []).filter(Boolean);
   const bandNoteList = request.band_notes_list ?? [];
+  const unreadEmails = request.unread_emails ?? 0;
   const hasFee = (request.payment_amount ?? 0) > 0;
 
   const amountNum = paymentAmount === "" ? 0 : Number(paymentAmount) || 0;
@@ -1110,7 +1116,9 @@ export function BandBookingCard({
   }
 
   function revealSlot() {
+    setBookAttempted(true);
     setSlotFlash(true);
+    slotRowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     window.setTimeout(() => setSlotFlash(false), 1200);
     if (!selectedDate) setDatePickerOpen(true);
     else startTimeRef.current?.focus();
@@ -1523,6 +1531,18 @@ export function BandBookingCard({
                     )}
               </span>
 
+              {unreadEmails > 0 && (
+                <span
+                  className="relative ml-auto flex shrink-0 items-center"
+                  title={`${unreadEmails} new email${unreadEmails === 1 ? "" : "s"} from the band`}
+                >
+                  <Mail className="h-4 w-4 text-[#9A5B00]" aria-hidden="true" />
+                  <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#9A5B00] px-1 text-[9px] font-bold text-white tabular-nums ring-2 ring-white">
+                    {unreadEmails}
+                  </span>
+                  <span className="sr-only">{unreadEmails} new emails from the band</span>
+                </span>
+              )}
               <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
                 <button
                   type="button"
@@ -1931,6 +1951,128 @@ export function BandBookingCard({
                   );
                 })()}
 
+                <div
+                  ref={slotRowRef}
+                  className={cn(
+                    "scroll-mt-4 border-b border-[#D8D5C8] px-4 py-2 transition-colors last:border-0 sm:px-5",
+                    hasClashes ? "bg-red-50" : showSlotWarning && "bg-amber-50",
+                    slotFlash && "ring-2 ring-amber-400/70 ring-inset"
+                  )}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                      Date &amp; Time
+                    </span>
+                    {editable ? (
+                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className={cn(
+                                "flex min-w-40 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30",
+                                !selectedDate && showSlotWarning
+                                  ? "border-amber-300"
+                                  : slotIsSet
+                                    ? "border-[#34451F]"
+                                    : "border-[#D8D5C8]"
+                              )}
+                            >
+                              {selectedDate
+                                ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
+                                : "Pick a date"}
+                              <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
+                              onSelect={(d) => {
+                                if (d) applyDate(format(d, "yyyy-MM-dd"));
+                                setDatePickerOpen(false);
+                              }}
+                              autoFocus
+                            />
+                            {selectedDate && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  applyDate("");
+                                  setDatePickerOpen(false);
+                                }}
+                                className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Clear date
+                              </button>
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                        <div
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
+                            (!selectedStartTime || !selectedEndTime) && showSlotWarning
+                              ? "border-amber-300"
+                              : slotIsSet
+                                ? "border-[#34451F]"
+                                : "border-[#D8D5C8]"
+                          )}
+                        >
+                          <input
+                            ref={startTimeRef}
+                            type="time"
+                            aria-label="Performance start time"
+                            value={selectedStartTime}
+                            onChange={(e) => applyStart(e.target.value)}
+                            className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
+                          />
+                          <span className="text-xs text-[#5E6654]/50">-</span>
+                          <input
+                            type="time"
+                            aria-label="Performance end time"
+                            value={selectedEndTime}
+                            onChange={(e) => {
+                              setSelectedEndTime(e.target.value);
+                              setClashes([]);
+                            }}
+                            className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
+                          />
+                          {(selectedStartTime || selectedEndTime) && (
+                            <button
+                              type="button"
+                              onClick={() => applyStart("")}
+                              aria-label="Clear performance times"
+                              title="Clear times"
+                              className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="min-w-0 truncate text-right text-[13px] font-semibold text-[#20231A]">
+                        {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "-"}
+                        {selectedStartTime && ` · ${selectedStartTime}–${selectedEndTime || "?"}`}
+                      </span>
+                    )}
+                  </div>
+                  {editable &&
+                    slotWarning &&
+                    (showSlotWarning ? (
+                      <FieldMessage warning={slotWarning} />
+                    ) : (
+                      <p className="mt-1.5 text-right text-[11px] leading-snug text-[#5E6654]">
+                        Optional for now - needed before this act can be booked.
+                      </p>
+                    ))}
+                  {visibleClashes.length > 0 && (
+                    <div className="mt-2">
+                      <ClashList clashes={visibleClashes} />
+                    </div>
+                  )}
+                </div>
 
                 {bookingNote && (
                   <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
@@ -2216,7 +2358,19 @@ export function BandBookingCard({
                 </Section>
               )}
 
-
+              <Section
+                title="Correspondence"
+                headerRight={
+                  unreadEmails > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                      <Mail className="h-3 w-3" aria-hidden="true" />
+                      {unreadEmails} new
+                    </span>
+                  ) : undefined
+                }
+              >
+                <CorrespondencePanel bandRequestId={request.id} editable={editable} />
+              </Section>
               </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
@@ -2381,123 +2535,7 @@ export function BandBookingCard({
 
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                  <div
-                    className={cn(
-                      "space-y-2 rounded-2xl border-2 p-3 shadow-lg transition-all",
-                      "sm:w-3/5",
-                      hasClashes
-                        ? "border-red-300 bg-red-50"
-                        : slotWarning
-                          ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
-                          : slotIsSet
-                            ? "border-[#34451F]/30 bg-[#F4F1E8] shadow-[#34451F]/25"
-                            : "border-[#34451F]/25 bg-[#F4F1E8]",
-                      slotFlash && "ring-2 ring-amber-400/70"
-                    )}
-                  >
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <span
-                      className={cn(
-                        "flex shrink-0 flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
-                        slotIsSet ? "text-[#34451F]" : "text-[#34451F]"
-                      )}
-                    >
-                      Selected Date &amp; Time
-                    </span>
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className={cn(
-                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30",
-                              !selectedDate && slotWarning
-                                ? "border-amber-300"
-                                : slotIsSet
-                                  ? "border-[#34451F]"
-                                  : "border-[#D8D5C8]"
-                            )}
-                          >
-                            {selectedDate
-                              ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
-                              : "Pick a date"}
-                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
-                            onSelect={(d) => {
-                              if (d) applyDate(format(d, "yyyy-MM-dd"));
-                              setDatePickerOpen(false);
-                            }}
-                            autoFocus
-                          />
-                          {selectedDate && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                applyDate("");
-                                setDatePickerOpen(false);
-                              }}
-                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              Clear date
-                            </button>
-                          )}
-                        </PopoverContent>
-                      </Popover>
-                      <div
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
-                          (!selectedStartTime || !selectedEndTime) && slotWarning
-                            ? "border-amber-300"
-                            : slotIsSet
-                              ? "border-[#34451F]"
-                              : "border-[#D8D5C8]"
-                        )}
-                      >
-                        <input
-                          ref={startTimeRef}
-                          type="time"
-                          aria-label="Performance start time"
-                          value={selectedStartTime}
-                          onChange={(e) => applyStart(e.target.value)}
-                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
-                        />
-                        <span className="text-xs text-[#5E6654]/50">-</span>
-                        <input
-                          type="time"
-                          aria-label="Performance end time"
-                          value={selectedEndTime}
-                          onChange={(e) => {
-                            setSelectedEndTime(e.target.value);
-                            setClashes([]);
-                          }}
-                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
-                        />
-                        {(selectedStartTime || selectedEndTime) && (
-                          <button
-                            type="button"
-                            onClick={() => applyStart("")}
-                            aria-label="Clear performance times"
-                            title="Clear times"
-                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    </div>
-                    {slotWarning && <FieldMessage warning={slotWarning} />}
-                    {visibleClashes.length > 0 && <ClashList clashes={visibleClashes} />}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 sm:flex-1">
+                <div className="flex items-center justify-end gap-2">
                     {!hasChanges ? (
                       <button
                         type="button"
@@ -2538,7 +2576,6 @@ export function BandBookingCard({
                         </button>
                       </>
                     )}
-                  </div>
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}

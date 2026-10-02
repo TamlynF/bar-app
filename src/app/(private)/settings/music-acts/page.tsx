@@ -7,7 +7,14 @@ export const dynamic = "force-dynamic";
 export default async function MusicActsPage() {
   const supabase = await createClient();
 
-  const [{ data: acts, error }, { data: bookings }, { data: subtypes }, { data: employees }, maxVideoBytes] =
+  const [
+    { data: acts, error },
+    { data: bookings },
+    { data: subtypes },
+    { data: employees },
+    maxVideoBytes,
+    { data: unreadRows },
+  ] =
     await Promise.all([
       supabase
         .from("music_acts")
@@ -25,6 +32,12 @@ export default async function MusicActsPage() {
         .order("name", { ascending: true }),
       supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
       getVideoUploadLimitBytes(),
+      supabase
+        .from("email_messages")
+        .select("music_act_id")
+        .eq("direction", "inbound")
+        .is("read_at", null)
+        .not("music_act_id", "is", null),
     ]);
 
   if (error) console.error("Error fetching music acts:", error);
@@ -42,6 +55,12 @@ export default async function MusicActsPage() {
     else if (date) c.upcoming += 1;
   }
 
+  const unreadEmails: Record<string, number> = {};
+  for (const r of unreadRows ?? []) {
+    const id = r.music_act_id as string;
+    unreadEmails[id] = (unreadEmails[id] ?? 0) + 1;
+  }
+
   const typeOptions = (subtypes ?? [])
     .map((s) => (s.name as string | null)?.trim())
     .filter((n): n is string => !!n);
@@ -50,6 +69,7 @@ export default async function MusicActsPage() {
     <MusicActsClient
       initialActs={(acts as MusicActWithContact[]) || []}
       counts={counts}
+      unreadEmails={unreadEmails}
       typeOptions={typeOptions}
       employees={employees ?? []}
       maxVideoBytes={maxVideoBytes}

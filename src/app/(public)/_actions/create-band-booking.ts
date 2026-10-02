@@ -9,6 +9,7 @@ import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -118,24 +119,26 @@ export async function createBandBooking(data: BandBookingData) {
   }
 
   await Promise.allSettled([
-    sendBookerEmail(supabase, data.booker_name, data.email),
+    sendBookerEmail(supabase, record.id, data.booker_name, data.email),
     sendAdminEmail(supabase, data, record.id),
   ]);
 
   return { success: true, id: record.id };
 }
 
-async function sendBookerEmail(supabase: ServerClient, name: string, email: string) {
+async function sendBookerEmail(supabase: ServerClient, requestId: string, name: string, email: string) {
   const slots = await renderTemplate(supabase, "band.application.customer", {
     customerName: name,
   });
   if (!slots) return;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
+  await sendCorrespondenceEmail({
+    resend,
+    links: { bandRequestId: requestId },
     to: email,
     subject: slots.subject,
     html: plainLayout({ slots }),
+    kind: "application",
   });
 }
 
