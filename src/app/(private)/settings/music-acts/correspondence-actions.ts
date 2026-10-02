@@ -8,7 +8,8 @@ import { EMAIL_REPLY_DOMAIN } from "@/lib/email";
 import {
   bareAddress,
   correspondenceColumn,
-  plainReplyHtml,
+  htmlToPlainText,
+  replyHtml,
   replySubject,
   type CorrespondenceFilter,
   type CorrespondenceMessage,
@@ -29,6 +30,8 @@ export type CorrespondenceThread = {
 };
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const MAX_REPLY_FILES = 5;
+const MAX_REPLY_BYTES = 9 * 1024 * 1024;
 
 function revalidateCorrespondence() {
   revalidatePath("/event-bookings/music-bookings");
@@ -94,10 +97,15 @@ export async function markCorrespondenceRead(filter: CorrespondenceFilter): Prom
 
 export async function sendCorrespondenceReply(
   filter: CorrespondenceFilter,
-  body: string
+  form: FormData
 ): Promise<{ error: string | null; thread?: CorrespondenceThread }> {
-  const text = body.trim();
-  if (!text) return { error: "Write a message first." };
+  const rawHtml = String(form.get("html") ?? "").trim();
+  const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!htmlToPlainText(rawHtml).trim() && files.length === 0) return { error: "Write a message first." };
+  if (files.length > MAX_REPLY_FILES) return { error: `Attach up to ${MAX_REPLY_FILES} files.` };
+  if (files.reduce((sum, f) => sum + f.size, 0) > MAX_REPLY_BYTES) {
+    return { error: "Attachments must be under 9 MB in total." };
+  }
 
   const supabase = await createClient();
   const [recipient, inbound, lastSubject, sentBy] = await Promise.all([
@@ -113,10 +121,17 @@ export async function sendCorrespondenceReply(
     links: filter,
     to: recipient,
     subject: replySubject(inbound?.subject ?? lastSubject ?? ""),
-    html: plainReplyHtml(text),
+    html: replyHtml(rawHtml),
     kind: "message",
     sentBy,
     inReplyTo: inbound?.messageId ?? null,
+    attachments: await Promise.all(
+      files.map(async (f) => ({
+        filename: f.name,
+        content: Buffer.from(await f.arrayBuffer()),
+        contentType: f.type || "application/octet-stream",
+      }))
+    ),
   });
   if (error) return { error };
 

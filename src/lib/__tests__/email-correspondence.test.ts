@@ -6,6 +6,7 @@ import {
   idRangeForRef,
   parseCorrespondenceAddress,
   plainReplyHtml,
+  replyHtml,
   replySubject,
   safeAttachmentName,
   senderDisplayName,
@@ -122,6 +123,25 @@ describe("plainReplyHtml", () => {
     const html = plainReplyHtml("Hi <b>Hens</b>\nline two\n\nThanks");
     expect(html).toContain("Hi &lt;b&gt;Hens&lt;/b&gt;<br>line two</p>");
     expect(html).toContain(">Thanks</p>");
+  });
+});
+
+describe("replyHtml", () => {
+  it("keeps editor formatting and drops anything else", () => {
+    const html = replyHtml(
+      '<p>Hi <strong>Hens</strong></p><ul><li>one</li></ul><img src="x" onerror="alert(1)"><script>alert(1)</script>'
+    );
+    expect(html).toContain("<p>Hi <strong>Hens</strong></p><ul><li>one</li></ul>");
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("onerror");
+  });
+
+  it("keeps only http(s) and mailto links", () => {
+    expect(replyHtml('<a href="https://donfenticas.co.uk" class="x">site</a>')).toContain(
+      '<a href="https://donfenticas.co.uk" target="_blank" rel="noopener noreferrer">site</a>'
+    );
+    expect(replyHtml('<a href="javascript:alert(1)">x</a>')).toContain("<a>x</a>");
   });
 });
 

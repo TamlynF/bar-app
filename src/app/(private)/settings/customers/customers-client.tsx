@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Plus,
   Users,
@@ -23,7 +23,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { COUNTRY_CODES } from "@/lib/country-codes";
 import { saveContactAction, deleteContactAction } from "./actions";
-import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 import {
   activityTotal,
   emptyActivity,
@@ -532,6 +532,14 @@ export default function CustomersClient({
   const [query, setQuery] = useState("");
   const [birthday, setBirthday] = useState("");
   const [optIn, setOptIn] = useState(false);
+  const [emailCount, setEmailCount] = useState<{ id: number; count: number } | null>(null);
+  const selectedId = selected?.id;
+  const handleEmailCount = useCallback(
+    (count: number) => {
+      if (selectedId != null) setEmailCount({ id: selectedId, count });
+    },
+    [selectedId],
+  );
 
   const employeeById = useMemo(
     () => new Map(employees.map((e) => [e.id, e.full_name ?? "-"] as const)),
@@ -857,13 +865,19 @@ export default function CustomersClient({
                   <Mail className="h-3.5 w-3.5" />
                   Correspondence
                 </span>
+                <MessageCountPill count={emailCount?.id === selected.id ? emailCount.count : null} />
                 {(unreadEmails[selected.id] ?? 0) > 0 && (
                   <StatusPill tone="warning" showLabelOnMobile>
                     {unreadEmails[selected.id]} new
                   </StatusPill>
                 )}
               </div>
-              <CorrespondencePanel key={selected.id} contactId={selected.id} />
+              <CorrespondencePanel
+                key={selected.id}
+                contactId={selected.id}
+                counterpartName={selected.full_name ?? undefined}
+                onCountChange={handleEmailCount}
+              />
             </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}

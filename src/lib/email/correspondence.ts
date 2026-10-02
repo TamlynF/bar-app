@@ -51,6 +51,7 @@ export type CorrespondenceMessage = {
   toAddresses: string[];
   subject: string;
   textBody: string;
+  htmlBody: string | null;
   attachments: (EmailAttachment & { url: string | null })[];
   readAt: string | null;
   sentByName: string | null;
@@ -180,6 +181,25 @@ export function plainReplyHtml(body: string): string {
     .map((p) => `<p style="margin:0 0 14px 0;line-height:1.55;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
   return `<div style="font-family:sans-serif;max-width:600px;color:#1f2937;font-size:14px;">${paragraphs}</div>`;
+}
+
+const REPLY_ALLOWED_TAGS = new Set(["p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "a", "blockquote"]);
+
+/* Staff replies come from the editor as a small HTML subset. Anything outside
+   it is dropped and links keep only an http(s)/mailto href, so a reply can't
+   carry markup the editor never produces. */
+export function replyHtml(editorHtml: string): string {
+  const cleaned = editorHtml.replace(/<\/?([a-z0-9]+)([^>]*)>/gi, (tag, name: string, attrs: string) => {
+    const lower = name.toLowerCase();
+    if (!REPLY_ALLOWED_TAGS.has(lower)) return "";
+    if (tag.startsWith("</")) return `</${lower}>`;
+    if (lower === "a") {
+      const href = attrs.match(/href\s*=\s*"([^"]*)"/i)?.[1] ?? "";
+      return /^(https?:|mailto:)/i.test(href) ? `<a href="${href}" target="_blank" rel="noopener noreferrer">` : "<a>";
+    }
+    return `<${lower}>`;
+  });
+  return `<div style="font-family:sans-serif;max-width:600px;color:#1f2937;font-size:14px;line-height:1.55;">${cleaned}</div>`;
 }
 
 export function safeAttachmentName(name: string | null | undefined, fallback: string): string {

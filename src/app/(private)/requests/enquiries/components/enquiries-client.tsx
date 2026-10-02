@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { replyToEnquiry, closeEnquiry } from "../actions";
-import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 
 export type Enquiry = {
   id: string;
@@ -93,6 +93,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [replyText, setReplyText] = useState("");
+  const [emailCount, setEmailCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const status = normStatus(enquiry.status);
@@ -248,6 +249,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
             <div className="space-y-2">
               <p className="flex items-center gap-2 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                 Correspondence
+                <MessageCountPill count={emailCount} />
                 {unreadEmails > 0 && (
                   <span className="rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold tracking-normal text-white normal-case">
                     {unreadEmails} new
@@ -255,7 +257,12 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
                 )}
               </p>
               <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-                <CorrespondencePanel enquiryId={enquiry.id} editable={status === "responded"} />
+                <CorrespondencePanel
+                  enquiryId={enquiry.id}
+                  editable={status === "responded"}
+                  counterpartName={enquiry.full_name}
+                  onCountChange={setEmailCount}
+                />
               </div>
             </div>
 

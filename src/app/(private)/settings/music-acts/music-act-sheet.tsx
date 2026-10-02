@@ -40,7 +40,7 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
-import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 import { InternalNotesPanel, type InternalNote } from "@/components/admin/internal-notes-panel";
 import type { RecordSheetNavigate } from "@/components/admin/record-sheet";
 import { VideoFacade } from "@/components/video-facade";
@@ -619,6 +619,8 @@ export function MusicActSheet({
   const shortRef = act ? act.id.slice(0, 8).toUpperCase() : null;
   const title = form.group_name.trim() || act?.group_name || "New music act";
 
+  const [emailCount, setEmailCount] = useState<number | null>(null);
+
   const notesCards = (
     <div data-internal-notes className="scroll-mt-4">
       <InternalNotesPanel
@@ -824,9 +826,9 @@ export function MusicActSheet({
             </p>
           )}
           {bodyReady ? (
-            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-              <div className="min-w-0 space-y-4 sm:space-y-5">
+            <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
                 <Section
+                  className="min-w-0"
                   title="Act details"
                   headerRight={
                     counts && counts.upcoming > 0 ? (
@@ -931,9 +933,10 @@ export function MusicActSheet({
                   </div>
                 </Section>
 
-                <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
+                <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
 
                 <Section
+                  className="min-w-0"
                   title="Act media"
                   headerRight={<span className={SUBTLE_PILL}>{videos.length}/{MAX_VIDEOS} videos</span>}
                   hint={
@@ -1125,26 +1128,7 @@ export function MusicActSheet({
                   </div>
                 </Section>
 
-                {act && (
-                  <Section
-                    title="Correspondence"
-                    headerRight={
-                      unreadEmails > 0 ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
-                          <Mail className="h-3 w-3" aria-hidden="true" />
-                          {unreadEmails} new
-                        </span>
-                      ) : undefined
-                    }
-                  >
-                    <CorrespondencePanel musicActId={act.id} />
-                  </Section>
-                )}
-              </div>
-
               <div className="min-w-0 space-y-4 sm:space-y-5">
-                <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
-
                 <Section title="Contact">
                   <TextRow
                     label="Name"
@@ -1222,6 +1206,26 @@ export function MusicActSheet({
                   </Section>
                 )}
               </div>
+
+                {act && (
+                  <Section
+                    className="min-w-0 lg:col-span-2"
+                    title="Correspondence"
+                    headerRight={
+                      <span className="flex items-center gap-1.5">
+                        <MessageCountPill count={emailCount} />
+                        {unreadEmails > 0 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                            <Mail className="h-3 w-3" aria-hidden="true" />
+                            {unreadEmails} new
+                          </span>
+                        ) : null}
+                      </span>
+                    }
+                  >
+                    <CorrespondencePanel musicActId={act.id} counterpartName={act.group_name} onCountChange={setEmailCount} />
+                  </Section>
+                )}
             </div>
           ) : (
             <div className="flex justify-center py-16" aria-busy="true">

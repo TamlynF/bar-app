@@ -20,6 +20,8 @@ import {
 } from "./correspondence";
 
 export const EMAIL_ATTACHMENTS_BUCKET = "email-attachments";
+
+export type OutboundAttachment = { filename: string; content: Buffer; contentType: string };
 const SIGNED_URL_SECONDS = 60 * 60;
 
 type Links = {
@@ -101,6 +103,7 @@ export async function sendCorrespondenceEmail(p: {
   sentBy?: number | null;
   inReplyTo?: string | null;
   fallbackReplyTo?: string | null;
+  attachments?: OutboundAttachment[];
 }): Promise<{ error: string | null }> {
   const target = replyTarget(p.links);
   const replyAddress = target ? correspondenceReplyAddress(target, EMAIL_REPLY_DOMAIN) : null;
@@ -118,6 +121,9 @@ export async function sendCorrespondenceEmail(p: {
     ...(replyTo ? { replyTo } : {}),
     ...(bcc ? { bcc } : {}),
     ...(headers ? { headers } : {}),
+    ...(p.attachments?.length
+      ? { attachments: p.attachments.map((a) => ({ filename: a.filename, content: a.content })) }
+      : {}),
   });
   if (error) {
     console.error(`[correspondence ${p.kind}] Resend failed:`, JSON.stringify(error));
@@ -133,6 +139,17 @@ export async function sendCorrespondenceEmail(p: {
       .eq("id", p.links.bandRequestId)
       .maybeSingle();
     musicActId = (req?.music_acts_id as string | null) ?? null;
+  }
+
+  const stored: EmailAttachment[] = [];
+  for (const [i, a] of (p.attachments ?? []).entries()) {
+    const name = safeAttachmentName(a.filename, `attachment-${i + 1}`);
+    const path = `outbound/${data?.id ?? crypto.randomUUID()}/${i + 1}-${name}`;
+    const { error: upErr } = await admin.storage
+      .from(EMAIL_ATTACHMENTS_BUCKET)
+      .upload(path, a.content, { contentType: a.contentType, upsert: true });
+    if (upErr) console.error(`[correspondence ${p.kind}] attachment upload failed:`, upErr.message);
+    else stored.push({ name, path, size: a.content.byteLength, contentType: a.contentType });
   }
 
   const { error: logError } = await admin.from("email_messages").insert({
@@ -151,6 +168,7 @@ export async function sendCorrespondenceEmail(p: {
     resend_email_id: data?.id ?? null,
     in_reply_to: p.inReplyTo ?? null,
     sent_by: p.sentBy ?? null,
+    attachments: stored,
   });
   if (logError) console.error(`[correspondence ${p.kind}] log failed:`, logError.code, logError.message);
 
@@ -165,6 +183,7 @@ type MessageRow = {
   to_addresses: string[] | null;
   subject: string;
   text_body: string;
+  html_body: string | null;
   attachments: EmailAttachment[] | null;
   read_at: string | null;
   band_booking_request_id: string | null;
@@ -190,7 +209,7 @@ export async function loadCorrespondence(
   let query = supabase
     .from("email_messages")
     .select(
-      "id, direction, kind, from_address, to_addresses, subject, text_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
+      "id, direction, kind, from_address, to_addresses, subject, text_body, html_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
     )
     .order("created_at", { ascending: true });
   query = query.eq(...correspondenceColumn(filter));
@@ -221,6 +240,7 @@ export async function loadCorrespondence(
       toAddresses: r.to_addresses ?? [],
       subject: r.subject,
       textBody: r.text_body,
+      htmlBody: r.html_body ?? null,
       attachments: (r.attachments ?? []).map((a) => ({ ...a, url: urls.get(a.path) ?? null })),
       readAt: r.read_at,
       sentByName: sender?.full_name ?? null,

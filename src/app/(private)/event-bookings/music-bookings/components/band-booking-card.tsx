@@ -65,7 +65,7 @@ import { randomId } from "@/lib/random-id";
 import { attempt } from "@/lib/attempt";
 import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
-import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 import { BookingNoteWidget, InternalNotesPanel } from "@/components/admin/internal-notes-panel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -1563,6 +1563,8 @@ export function BandBookingCard({
     visible?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
+  const [emailCount, setEmailCount] = useState<number | null>(null);
+
   const notesCards = (
     <>
       {bookingNote && (
@@ -2319,9 +2321,9 @@ export function BandBookingCard({
 
               <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
 
-              <div className="min-w-0 space-y-4 sm:space-y-5">
               {(showSocials || sheetVideos.length > 0) && (
                 <Section
+                  className="min-w-0"
                   title="Act Media"
                   hint={
                     editable ? (
@@ -2573,6 +2575,7 @@ export function BandBookingCard({
                 </Section>
               )}
 
+              <div className="min-w-0 space-y-4 sm:space-y-5">
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
                 {showContactDetails && (
@@ -2729,18 +2732,26 @@ export function BandBookingCard({
               </div>
 
               <Section
-                className="min-w-0"
+                className="min-w-0 lg:col-span-2"
                 title="Correspondence"
                 headerRight={
-                  unreadEmails > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
-                      <Mail className="h-3 w-3" aria-hidden="true" />
-                      {unreadEmails} new
-                    </span>
-                  ) : undefined
+                  <span className="flex items-center gap-1.5">
+                    <MessageCountPill count={emailCount} />
+                    {unreadEmails > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                        <Mail className="h-3 w-3" aria-hidden="true" />
+                        {unreadEmails} new
+                      </span>
+                    ) : null}
+                  </span>
                 }
               >
-                <CorrespondencePanel bandRequestId={request.id} editable={editable} />
+                <CorrespondencePanel
+                  bandRequestId={request.id}
+                  editable={editable}
+                  counterpartName={request.group_name || request.booker_name}
+                  onCountChange={setEmailCount}
+                />
               </Section>
             </div>
             ) : (

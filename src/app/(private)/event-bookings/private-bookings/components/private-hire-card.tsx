@@ -49,7 +49,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
-import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 import { BookingNoteWidget, InternalNotesPanel, type InternalNote } from "@/components/admin/internal-notes-panel";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -1132,6 +1132,8 @@ export function PrivateHireCard({
     visible?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
+  const [emailCount, setEmailCount] = useState<number | null>(null);
+
   const notesCards = (
     <>
       {bookingNote && (
@@ -1701,9 +1703,8 @@ export function PrivateHireCard({
                   </div>
                 </Section>
 
-                <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
-
               <div className="min-w-0 space-y-4 sm:space-y-5">
+                {notesCards}
                 <Section title="Contact">
                   <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
                   <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
@@ -1729,18 +1730,26 @@ export function PrivateHireCard({
               </div>
 
                 <Section
-                  className="min-w-0"
+                  className="min-w-0 lg:col-span-2"
                   title="Correspondence"
                   headerRight={
-                    (request.unread_emails ?? 0) > 0 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
-                        <Mail className="h-3 w-3" aria-hidden="true" />
-                        {request.unread_emails} new
-                      </span>
-                    ) : undefined
+                    <span className="flex items-center gap-1.5">
+                      <MessageCountPill count={emailCount} />
+                      {(request.unread_emails ?? 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                          <Mail className="h-3 w-3" aria-hidden="true" />
+                          {request.unread_emails} new
+                        </span>
+                      ) : null}
+                    </span>
                   }
                 >
-                  <CorrespondencePanel privateHireRequestId={request.id} editable={editable} />
+                  <CorrespondencePanel
+                    privateHireRequestId={request.id}
+                    editable={editable}
+                    counterpartName={request.full_name}
+                    onCountChange={setEmailCount}
+                  />
                 </Section>
             </div>
             ) : (
