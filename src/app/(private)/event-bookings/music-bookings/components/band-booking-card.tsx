@@ -2046,9 +2046,9 @@ export function BandBookingCard({
               </p>
             )}
             {bodyReady ? (
-            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-              <div className="min-w-0 space-y-4 sm:space-y-5">
+            <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
               <Section
+                className="min-w-0"
                 title="Event Details"
                 headerRight={
                   showEventBadge ? (
@@ -2317,8 +2317,9 @@ export function BandBookingCard({
                 </div>
               </Section>
 
-              <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
+              <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
 
+              <div className="min-w-0 space-y-4 sm:space-y-5">
               {(showSocials || sheetVideos.length > 0) && (
                 <Section
                   title="Act Media"
@@ -2727,9 +2728,8 @@ export function BandBookingCard({
               )}
               </div>
 
-              <div className="min-w-0 space-y-4 sm:space-y-5">
-              <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
               <Section
+                className="min-w-0"
                 title="Correspondence"
                 headerRight={
                   unreadEmails > 0 ? (
@@ -2742,8 +2742,6 @@ export function BandBookingCard({
               >
                 <CorrespondencePanel bandRequestId={request.id} editable={editable} />
               </Section>
-
-              </div>
             </div>
             ) : (
               <div className="flex justify-center py-16" aria-busy="true">

@@ -99,7 +99,10 @@ export interface PrivateHireRequest {
   linked_event?: LinkedEvent | LinkedEvent[] | null;
 }
 
-type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & { event_types_id: number };
+type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & {
+  event_types_id: number;
+  event_types?: { name: string } | { name: string }[] | null;
+};
 
 type PrivateStage = "pending" | "confirmed" | "cancelled";
 
@@ -740,16 +743,19 @@ export function PrivateHireCard({
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const typeId = currentSub?.event_types_id != null ? String(currentSub.event_types_id) : "";
+  const joinedTypeName = unwrapSubtype(currentSub?.event_types)?.name;
 
   const [options, setOptions] = useState<PrivateEventOptions | null>(null);
   useEffect(() => {
     if (!open || options) return;
     getPrivateEventOptions().then(setOptions).catch(() => {});
   }, [open, options]);
+  const onlyType = options?.types.length === 1 ? options.types[0] : undefined;
+  const typeId =
+    currentSub?.event_types_id != null ? String(currentSub.event_types_id) : onlyType ? String(onlyType.id) : "";
   const subtypeOptions = (options?.subtypes ?? []).filter((s) => !typeId || String(s.event_types_id) === typeId);
 
-  const typeName = toTitleCase(options?.types.find((t) => String(t.id) === typeId)?.name);
+  const typeName = toTitleCase(options?.types.find((t) => String(t.id) === typeId)?.name ?? joinedTypeName);
   const subtypeName =
     toTitleCase(subtypeOptions.find((s) => String(s.id) === subtypeId)?.name ?? currentSub?.name);
 
@@ -1447,9 +1453,9 @@ export function PrivateHireCard({
               </p>
             )}
             {bodyReady ? (
-            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-              <div className="min-w-0 space-y-4 sm:space-y-5">
+            <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
                 <Section
+                  className="min-w-0"
                   title="Event Details"
                   headerRight={
                     showEventBadge ? (
@@ -1695,8 +1701,9 @@ export function PrivateHireCard({
                   </div>
                 </Section>
 
-                <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
+                <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
 
+              <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section title="Contact">
                   <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
                   <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
@@ -1721,9 +1728,8 @@ export function PrivateHireCard({
                 )}
               </div>
 
-              <div className="min-w-0 space-y-4 sm:space-y-5">
-                <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
                 <Section
+                  className="min-w-0"
                   title="Correspondence"
                   headerRight={
                     (request.unread_emails ?? 0) > 0 ? (
@@ -1736,7 +1742,6 @@ export function PrivateHireCard({
                 >
                   <CorrespondencePanel privateHireRequestId={request.id} editable={editable} />
                 </Section>
-              </div>
             </div>
             ) : (
               <div className="flex justify-center py-16" aria-busy="true">

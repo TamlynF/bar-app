@@ -25,7 +25,7 @@ export default async function PrivateBookingsPage({
 
   const { data: requests, error } = await supabase
     .from("private_hire_requests")
-    .select("*, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id ), updated_by_employee:employees!private_hire_requests_updated_by_fkey ( full_name ), linked_event:events!private_hire_requests_event_id_fkey ( is_active, date, start_time, end_time ), internal_notes:private_hire_notes ( id, body, created_at, author:employees!private_hire_notes_created_by_fkey ( full_name ) )")
+    .select("*, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id, event_types ( name ) ), updated_by_employee:employees!private_hire_requests_updated_by_fkey ( full_name ), linked_event:events!private_hire_requests_event_id_fkey ( is_active, date, start_time, end_time ), internal_notes:private_hire_notes ( id, body, created_at, author:employees!private_hire_notes_created_by_fkey ( full_name ) )")
     .order("created_at", { ascending: false })
     .order("created_at", { referencedTable: "private_hire_notes", ascending: true });
 
