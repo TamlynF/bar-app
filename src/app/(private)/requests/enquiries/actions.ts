@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
-import { EMAIL_FROM } from "@/lib/email";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import { getContactEmail } from "@/lib/company-info";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
@@ -73,12 +73,15 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
       `<p style="margin:0 0 8px;font-size:12px;color:#6b7280;font-weight:bold;">Your original message:</p>` +
       `<p style="margin:0;font-size:13px;color:#6b7280;white-space:pre-wrap;">${escapeHtml(record.message)}</p>`;
 
-    await resend.emails.send({
-      from: EMAIL_FROM,
+    await sendCorrespondenceEmail({
+      resend,
+      links: { enquiryId: id },
       to: record.email,
-      replyTo: await getContactEmail(),
       subject: slots.subject,
       html: plainLayout({ slots, bodyHtml, panelHtml }),
+      kind: "message",
+      sentBy: empId,
+      fallbackReplyTo: await getContactEmail(),
     });
   }
 

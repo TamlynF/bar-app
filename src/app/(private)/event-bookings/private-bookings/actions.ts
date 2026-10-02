@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
-import { EMAIL_FROM } from "@/lib/email";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planPrivateEventSync } from "@/lib/private-event-sync";
@@ -236,7 +236,7 @@ export async function updatePrivateHireStatus(
   }
 
   if (status !== "pending") {
-    await sendOutcomeEmail(supabase, record.full_name, record.email, status, adminNotes);
+    await sendOutcomeEmail(supabase, id, empId, record.full_name, record.email, status, adminNotes);
   }
 
   revalidatePath("/event-bookings/private-bookings");
@@ -257,6 +257,8 @@ export async function privateHireEmailSlotsAction(
 
 async function sendOutcomeEmail(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  requestId: string,
+  sentBy: number | null,
   name: string,
   email: string,
   status: "confirmed" | "cancelled",
@@ -267,10 +269,13 @@ async function sendOutcomeEmail(
   });
   if (!slots) return;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
+  await sendCorrespondenceEmail({
+    resend,
+    links: { privateHireRequestId: requestId },
     to: email,
     subject: slots.subject,
     html: plainLayout({ slots, bodyHtml: plainNote(escapeHtml(notes?.trim() || "")) }),
+    kind: status,
+    sentBy,
   });
 }

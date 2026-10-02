@@ -40,6 +40,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
+import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -62,6 +63,7 @@ interface LinkedEvent {
 
 export interface PrivateHireRequest {
   id: string;
+  unread_emails?: number;
   full_name: string;
   email: string;
   phone_no: string | null;
@@ -1045,6 +1047,18 @@ export function PrivateHireCard({
                       </span>
                     )}
               </span>
+              {(request.unread_emails ?? 0) > 0 && (
+                <span
+                  className="relative ml-auto flex shrink-0 items-center"
+                  title={`${request.unread_emails} new email${request.unread_emails === 1 ? "" : "s"} from the enquirer`}
+                >
+                  <Mail className="h-4 w-4 text-[#9A5B00]" aria-hidden="true" />
+                  <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#9A5B00] px-1 text-[9px] font-bold text-white tabular-nums ring-2 ring-white">
+                    {request.unread_emails}
+                  </span>
+                  <span className="sr-only">{request.unread_emails} new emails from the enquirer</span>
+                </span>
+              )}
               <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold opacity-60">
                 <Users className="h-3 w-3" />
                 {request.guest_count}
@@ -1493,6 +1507,20 @@ export function PrivateHireCard({
                     </div>
                   </Section>
                 )}
+
+                <Section
+                  title="Correspondence"
+                  headerRight={
+                    (request.unread_emails ?? 0) > 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                        <Mail className="h-3 w-3" aria-hidden="true" />
+                        {request.unread_emails} new
+                      </span>
+                    ) : undefined
+                  }
+                >
+                  <CorrespondencePanel privateHireRequestId={request.id} editable={editable} />
+                </Section>
               </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">

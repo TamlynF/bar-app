@@ -11,7 +11,10 @@ import {
   htmlToPlainText,
   parseCorrespondenceAddress,
   safeAttachmentName,
+  correspondenceColumn,
+  type CorrespondenceFilter,
   type CorrespondenceMessage,
+  type CorrespondenceSource,
   type CorrespondenceTarget,
   type EmailAttachment,
 } from "./correspondence";
@@ -19,15 +22,73 @@ import {
 export const EMAIL_ATTACHMENTS_BUCKET = "email-attachments";
 const SIGNED_URL_SECONDS = 60 * 60;
 
-type Links = { bandRequestId?: string | null; musicActId?: string | null };
+type Links = {
+  bandRequestId?: string | null;
+  musicActId?: string | null;
+  privateHireRequestId?: string | null;
+  enquiryId?: string | null;
+  contactId?: number | null;
+};
+
+type ResolvedLinks = {
+  bandRequestId: string | null;
+  musicActId: string | null;
+  privateHireRequestId: string | null;
+  enquiryId: string | null;
+  contactId: number | null;
+};
+
+const NO_LINKS: ResolvedLinks = {
+  bandRequestId: null,
+  musicActId: null,
+  privateHireRequestId: null,
+  enquiryId: null,
+  contactId: null,
+};
 
 function replyTarget(links: Links): CorrespondenceTarget | null {
   if (links.bandRequestId) return { kind: "band", id: links.bandRequestId };
+  if (links.privateHireRequestId) return { kind: "hire", id: links.privateHireRequestId };
+  if (links.enquiryId) return { kind: "enq", id: links.enquiryId };
   if (links.musicActId) return { kind: "act", id: links.musicActId };
+  if (links.contactId) return { kind: "cust", id: String(links.contactId) };
   return null;
 }
 
-/* Sends an email to a band and records it in the thread, with a blind copy to
+function escapeLike(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+async function contactIdFromRow(admin: SupabaseClient, table: string, id: string | null | undefined) {
+  if (!id) return null;
+  const { data } = await admin.from(table).select("contact_id").eq("id", id).maybeSingle();
+  return (data?.contact_id as number | null | undefined) ?? null;
+}
+
+/* Every email is filed under the customer it was with, so their record shows
+   one thread whatever each email was about. The linked request knows its
+   customer; failing that, the other party's address is matched to a contact. */
+async function resolveContactId(admin: SupabaseClient, links: Links, otherParty: string): Promise<number | null> {
+  if (links.contactId) return links.contactId;
+  const fromRequest =
+    (await contactIdFromRow(admin, "band_booking_requests", links.bandRequestId)) ??
+    (await contactIdFromRow(admin, "private_hire_requests", links.privateHireRequestId)) ??
+    (await contactIdFromRow(admin, "music_acts", links.musicActId));
+  if (fromRequest) return fromRequest;
+  const email = bareAddress(otherParty);
+  if (!email) return null;
+  const { data } = await admin
+    .from("contacts")
+    .select("id")
+    .ilike("email", escapeLike(email))
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (data?.id as number | undefined) ?? null;
+}
+
+/* Sends an email to a customer - a band, a private hire or an enquiry - and
+   records it in the thread, with a blind copy to
    the staff inbox so the outgoing side is in webmail too. Logging failures are
    reported but never stop the email, which has already gone. */
 export async function sendCorrespondenceEmail(p: {
@@ -39,10 +100,13 @@ export async function sendCorrespondenceEmail(p: {
   kind: string;
   sentBy?: number | null;
   inReplyTo?: string | null;
+  fallbackReplyTo?: string | null;
 }): Promise<{ error: string | null }> {
   const target = replyTarget(p.links);
   const replyAddress = target ? correspondenceReplyAddress(target, EMAIL_REPLY_DOMAIN) : null;
-  const replyTo = replyAddress ? withDisplayName(replyAddress, senderDisplayName(EMAIL_FROM)) : null;
+  const replyTo = replyAddress
+    ? withDisplayName(replyAddress, senderDisplayName(EMAIL_FROM))
+    : (p.fallbackReplyTo ?? null);
   const headers = p.inReplyTo ? { "In-Reply-To": p.inReplyTo, References: p.inReplyTo } : undefined;
   const bcc = ADMIN_EMAIL && bareAddress(ADMIN_EMAIL) !== bareAddress(p.to) ? ADMIN_EMAIL : null;
 
@@ -74,6 +138,9 @@ export async function sendCorrespondenceEmail(p: {
   const { error: logError } = await admin.from("email_messages").insert({
     band_booking_request_id: p.links.bandRequestId ?? null,
     music_act_id: musicActId,
+    private_hire_request_id: p.links.privateHireRequestId ?? null,
+    enquiry_id: p.links.enquiryId ?? null,
+    contact_id: await resolveContactId(admin, { ...p.links, musicActId }, p.to),
     direction: "outbound",
     kind: p.kind,
     from_address: bareAddress(EMAIL_FROM),
@@ -101,24 +168,32 @@ type MessageRow = {
   attachments: EmailAttachment[] | null;
   read_at: string | null;
   band_booking_request_id: string | null;
+  private_hire_request_id: string | null;
+  enquiry_id: string | null;
+  music_act_id: string | null;
   created_at: string;
   sender: { full_name: string | null } | { full_name: string | null }[] | null;
 };
 
+function sourceOf(r: MessageRow): CorrespondenceSource {
+  if (r.band_booking_request_id) return "band";
+  if (r.private_hire_request_id) return "hire";
+  if (r.enquiry_id) return "enquiry";
+  if (r.music_act_id) return "act";
+  return "customer";
+}
+
 export async function loadCorrespondence(
   supabase: SupabaseClient,
-  filter: { bandRequestId: string } | { musicActId: string }
+  filter: CorrespondenceFilter
 ): Promise<CorrespondenceMessage[]> {
   let query = supabase
     .from("email_messages")
     .select(
-      "id, direction, kind, from_address, to_addresses, subject, text_body, attachments, read_at, band_booking_request_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
+      "id, direction, kind, from_address, to_addresses, subject, text_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
     )
     .order("created_at", { ascending: true });
-  query =
-    "bandRequestId" in filter
-      ? query.eq("band_booking_request_id", filter.bandRequestId)
-      : query.eq("music_act_id", filter.musicActId);
+  query = query.eq(...correspondenceColumn(filter));
 
   const { data, error } = await query;
   if (error) {
@@ -150,6 +225,7 @@ export async function loadCorrespondence(
       readAt: r.read_at,
       sentByName: sender?.full_name ?? null,
       bandRequestId: r.band_booking_request_id,
+      source: sourceOf(r),
       createdAt: r.created_at,
     };
   });
@@ -159,7 +235,7 @@ export async function loadCorrespondence(
    Message-ID keep the band's mail app threading the conversation. */
 export async function latestInbound(
   supabase: SupabaseClient,
-  filter: { bandRequestId: string } | { musicActId: string }
+  filter: CorrespondenceFilter
 ): Promise<{ subject: string; messageId: string | null; fromAddress: string } | null> {
   let query = supabase
     .from("email_messages")
@@ -167,10 +243,7 @@ export async function latestInbound(
     .eq("direction", "inbound")
     .order("created_at", { ascending: false })
     .limit(1);
-  query =
-    "bandRequestId" in filter
-      ? query.eq("band_booking_request_id", filter.bandRequestId)
-      : query.eq("music_act_id", filter.musicActId);
+  query = query.eq(...correspondenceColumn(filter));
   const { data } = await query.maybeSingle();
   if (!data) return null;
   return {
@@ -182,19 +255,44 @@ export async function latestInbound(
 
 export async function latestSubject(
   supabase: SupabaseClient,
-  filter: { bandRequestId: string } | { musicActId: string }
+  filter: CorrespondenceFilter
 ): Promise<string | null> {
   let query = supabase
     .from("email_messages")
     .select("subject")
     .order("created_at", { ascending: false })
     .limit(1);
-  query =
-    "bandRequestId" in filter
-      ? query.eq("band_booking_request_id", filter.bandRequestId)
-      : query.eq("music_act_id", filter.musicActId);
+  query = query.eq(...correspondenceColumn(filter));
   const { data } = await query.maybeSingle();
   return (data?.subject as string | undefined) ?? null;
+}
+
+async function latestInRange(admin: SupabaseClient, table: string, select: string, ref: string) {
+  const [lo, hi] = idRangeForRef(ref);
+  const { data } = await admin
+    .from(table)
+    .select(select)
+    .gte("id", lo)
+    .lte("id", hi)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as Record<string, unknown> | null;
+}
+
+async function latestByEmail(admin: SupabaseClient, table: string, select: string, email: string) {
+  const { data } = await admin
+    .from(table)
+    .select(select)
+    .ilike("email", escapeLike(email))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as Record<string, unknown> | null;
+}
+
+function bandLinks(row: Record<string, unknown>): ResolvedLinks {
+  return { ...NO_LINKS, bandRequestId: row.id as string, musicActId: (row.music_acts_id as string | null) ?? null };
 }
 
 async function resolveInboundLinks(
@@ -202,38 +300,34 @@ async function resolveInboundLinks(
   recipients: string[],
   fromAddress: string,
   inReplyTo: string | null
-): Promise<{ bandRequestId: string | null; musicActId: string | null }> {
+): Promise<ResolvedLinks> {
   const target = parseCorrespondenceAddress(recipients, EMAIL_REPLY_DOMAIN);
 
   if (target?.kind === "band") {
-    const [lo, hi] = idRangeForRef(target.ref);
-    const { data } = await admin
-      .from("band_booking_requests")
-      .select("id, music_acts_id")
-      .gte("id", lo)
-      .lte("id", hi)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data) return { bandRequestId: data.id as string, musicActId: (data.music_acts_id as string | null) ?? null };
+    const row = await latestInRange(admin, "band_booking_requests", "id, music_acts_id", target.ref);
+    if (row) return bandLinks(row);
+  }
+  if (target?.kind === "hire") {
+    const row = await latestInRange(admin, "private_hire_requests", "id", target.ref);
+    if (row) return { ...NO_LINKS, privateHireRequestId: row.id as string };
+  }
+  if (target?.kind === "enq") {
+    const row = await latestInRange(admin, "enquiries", "id", target.ref);
+    if (row) return { ...NO_LINKS, enquiryId: row.id as string };
   }
   if (target?.kind === "act") {
-    const [lo, hi] = idRangeForRef(target.ref);
-    const { data } = await admin
-      .from("music_acts")
-      .select("id")
-      .gte("id", lo)
-      .lte("id", hi)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data) return { bandRequestId: null, musicActId: data.id as string };
+    const row = await latestInRange(admin, "music_acts", "id", target.ref);
+    if (row) return { ...NO_LINKS, musicActId: row.id as string };
+  }
+  if (target?.kind === "cust") {
+    const { data } = await admin.from("contacts").select("id").eq("id", Number(target.ref)).maybeSingle();
+    if (data) return { ...NO_LINKS, contactId: data.id as number };
   }
 
   if (inReplyTo) {
     const { data } = await admin
       .from("email_messages")
-      .select("band_booking_request_id, music_act_id")
+      .select("band_booking_request_id, music_act_id, private_hire_request_id, enquiry_id, contact_id")
       .eq("message_id", inReplyTo)
       .limit(1)
       .maybeSingle();
@@ -241,20 +335,26 @@ async function resolveInboundLinks(
       return {
         bandRequestId: (data.band_booking_request_id as string | null) ?? null,
         musicActId: (data.music_act_id as string | null) ?? null,
+        privateHireRequestId: (data.private_hire_request_id as string | null) ?? null,
+        enquiryId: (data.enquiry_id as string | null) ?? null,
+        contactId: (data.contact_id as number | null) ?? null,
       };
     }
   }
 
-  const { data: latest } = await admin
-    .from("band_booking_requests")
-    .select("id, music_acts_id")
-    .ilike("email", bareAddress(fromAddress).replace(/[%_\\]/g, "\\$&"))
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (latest) return { bandRequestId: latest.id as string, musicActId: (latest.music_acts_id as string | null) ?? null };
+  const sender = bareAddress(fromAddress);
+  const [band, hire, enquiry] = await Promise.all([
+    latestByEmail(admin, "band_booking_requests", "id, music_acts_id, created_at", sender),
+    latestByEmail(admin, "private_hire_requests", "id, created_at", sender),
+    latestByEmail(admin, "enquiries", "id, created_at", sender),
+  ]);
+  const candidates: { at: string; links: ResolvedLinks }[] = [];
+  if (band) candidates.push({ at: String(band.created_at), links: bandLinks(band) });
+  if (hire) candidates.push({ at: String(hire.created_at), links: { ...NO_LINKS, privateHireRequestId: hire.id as string } });
+  if (enquiry) candidates.push({ at: String(enquiry.created_at), links: { ...NO_LINKS, enquiryId: enquiry.id as string } });
+  candidates.sort((a, b) => b.at.localeCompare(a.at));
 
-  return { bandRequestId: null, musicActId: null };
+  return candidates[0]?.links ?? NO_LINKS;
 }
 
 /* Called by the Resend inbound webhook. The event only carries metadata, so the
@@ -282,7 +382,14 @@ export async function storeInboundEmail(resend: Resend, emailId: string): Promis
   const recipients = [...(email.to ?? []), ...(email.cc ?? []), ...(email.received_for ?? [])];
   const links = await resolveInboundLinks(admin, recipients, email.from, inReplyTo);
 
-  const folder = `${links.bandRequestId ?? links.musicActId ?? "unmatched"}/${emailId}`;
+  const contactId = await resolveContactId(admin, links, email.from);
+  const owner =
+    links.bandRequestId ??
+    links.privateHireRequestId ??
+    links.enquiryId ??
+    links.musicActId ??
+    (contactId ? `contact-${contactId}` : "unmatched");
+  const folder = `${owner}/${emailId}`;
   const attachments: EmailAttachment[] = [];
   if ((email.attachments ?? []).length > 0) {
     const { data: list } = await resend.emails.receiving.attachments.list({ emailId });
@@ -309,6 +416,9 @@ export async function storeInboundEmail(resend: Resend, emailId: string): Promis
   const { error: insertError } = await admin.from("email_messages").insert({
     band_booking_request_id: links.bandRequestId,
     music_act_id: links.musicActId,
+    private_hire_request_id: links.privateHireRequestId,
+    enquiry_id: links.enquiryId,
+    contact_id: contactId,
     direction: "inbound",
     kind: "reply",
     from_address: email.from,

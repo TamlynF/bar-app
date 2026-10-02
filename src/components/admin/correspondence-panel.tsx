@@ -5,7 +5,11 @@ import { format } from "date-fns";
 import { AlertCircle, Loader2, Mail, Paperclip, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { splitQuotedReply, type CorrespondenceMessage } from "@/lib/email/correspondence";
+import {
+  CORRESPONDENCE_SOURCE_LABELS,
+  splitQuotedReply,
+  type CorrespondenceMessage,
+} from "@/lib/email/correspondence";
 import {
   getCorrespondence,
   markCorrespondenceRead,
@@ -20,6 +24,9 @@ const KIND_LABELS: Record<string, string> = {
   booked: "Booking confirmed",
   declined: "Declined",
   rescheduled: "Rescheduled",
+  enquiry: "Enquiry received",
+  confirmed: "Booking confirmed",
+  cancelled: "Cancelled",
 };
 
 const LONG_BODY_CHARS = 420;
@@ -36,7 +43,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function MessageItem({ message, showRequestLink }: { message: CorrespondenceMessage; showRequestLink: boolean }) {
+function MessageItem({ message, showSource }: { message: CorrespondenceMessage; showSource: boolean }) {
   const [showQuoted, setShowQuoted] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const inbound = message.direction === "inbound";
@@ -68,7 +75,7 @@ function MessageItem({ message, showRequestLink }: { message: CorrespondenceMess
         </div>
         <p className="mt-0.5 truncate text-[11px] text-admin-muted" title={message.subject}>
           {message.subject}
-          {showRequestLink && !message.bandRequestId && " · sent from the act page"}
+          {showSource && ` · ${CORRESPONDENCE_SOURCE_LABELS[message.source]}`}
         </p>
 
         <p
@@ -137,13 +144,31 @@ function MessageItem({ message, showRequestLink }: { message: CorrespondenceMess
   );
 }
 
+type ThreadOwner = {
+  bandRequestId?: string;
+  privateHireRequestId?: string;
+  enquiryId?: string;
+  musicActId?: string;
+  contactId?: number;
+};
+
+function toFilter(o: ThreadOwner): CorrespondenceFilter | null {
+  if (o.bandRequestId) return { bandRequestId: o.bandRequestId };
+  if (o.privateHireRequestId) return { privateHireRequestId: o.privateHireRequestId };
+  if (o.enquiryId) return { enquiryId: o.enquiryId };
+  if (o.musicActId) return { musicActId: o.musicActId };
+  if (o.contactId) return { contactId: o.contactId };
+  return null;
+}
+
 export function CorrespondencePanel({
   bandRequestId,
   musicActId,
+  privateHireRequestId,
+  enquiryId,
+  contactId,
   editable = true,
-}: {
-  bandRequestId?: string;
-  musicActId?: string;
+}: ThreadOwner & {
   editable?: boolean;
 }) {
   const [thread, setThread] = useState<CorrespondenceThread | null>(null);
@@ -154,11 +179,13 @@ export function CorrespondencePanel({
   const [isSending, startSending] = useTransition();
   const markedFor = useRef<string | null>(null);
 
-  const filterKey = bandRequestId ? `band:${bandRequestId}` : musicActId ? `act:${musicActId}` : "";
+  const filterKey =
+    bandRequestId ?? privateHireRequestId ?? enquiryId ?? musicActId ?? (contactId ? `contact-${contactId}` : "");
+  const aggregated = !bandRequestId && !privateHireRequestId && !enquiryId;
 
   useEffect(() => {
-    if (!filterKey) return;
-    const filter: CorrespondenceFilter = bandRequestId ? { bandRequestId } : { musicActId: musicActId! };
+    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId });
+    if (!filter) return;
     let alive = true;
     getCorrespondence(filter)
       .then((t) => {
@@ -177,12 +204,12 @@ export function CorrespondencePanel({
     return () => {
       alive = false;
     };
-  }, [filterKey, bandRequestId, musicActId, reloadKey]);
+  }, [bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId, filterKey, reloadKey]);
 
   function send() {
     const body = draft.trim();
-    if (!body || !filterKey) return;
-    const filter: CorrespondenceFilter = bandRequestId ? { bandRequestId } : { musicActId: musicActId! };
+    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId });
+    if (!body || !filter) return;
     setSendError(null);
     startSending(async () => {
       try {
@@ -237,12 +264,12 @@ export function CorrespondencePanel({
       ) : messages.length === 0 ? (
         <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-dashed border-admin-line px-4 py-6 text-center">
           <Mail className="h-5 w-5 text-admin-muted" aria-hidden="true" />
-          <p className="text-[13px] text-admin-muted">No emails yet. Emails sent to this act and their replies appear here.</p>
+          <p className="text-[13px] text-admin-muted">No emails yet. Emails you send and the replies to them appear here.</p>
         </div>
       ) : (
         <ol className="space-y-2.5" aria-label="Email correspondence">
           {messages.map((m) => (
-            <MessageItem key={m.id} message={m} showRequestLink={!bandRequestId} />
+            <MessageItem key={m.id} message={m} showSource={aggregated} />
           ))}
         </ol>
       )}
@@ -267,7 +294,7 @@ export function CorrespondencePanel({
             }}
             rows={4}
             disabled={isSending || !thread.recipient}
-            placeholder={thread.recipient ? `Write to ${thread.recipient}…` : "Add an email address to this act first"}
+            placeholder={thread.recipient ? `Write to ${thread.recipient}…` : "Add an email address first"}
             className="w-full resize-y rounded-xl border border-admin-line bg-admin-card px-3 py-2 text-[13px] text-admin-ink transition-colors placeholder:text-admin-muted/60 focus:border-admin-primary/40 focus:outline-none disabled:opacity-60"
           />
           {sendError && (
@@ -279,7 +306,7 @@ export function CorrespondencePanel({
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] leading-snug text-admin-muted">
               {thread.repliesEnabled
-                ? "Replies from the band appear in this thread."
+                ? "Replies appear in this thread."
                 : "Replies won't show here until the reply domain is set up."}
             </p>
             <button

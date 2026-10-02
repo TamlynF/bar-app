@@ -1,6 +1,40 @@
 import { escapeHtml } from "./escape";
 
-export type CorrespondenceTarget = { kind: "band"; id: string } | { kind: "act"; id: string };
+export type CorrespondenceKind = "band" | "act" | "hire" | "enq" | "cust";
+
+export type CorrespondenceTarget = { kind: CorrespondenceKind; id: string };
+
+export type CorrespondenceFilter =
+  | { bandRequestId: string }
+  | { musicActId: string }
+  | { privateHireRequestId: string }
+  | { enquiryId: string }
+  | { contactId: number };
+
+export type CorrespondenceColumn =
+  | "band_booking_request_id"
+  | "music_act_id"
+  | "private_hire_request_id"
+  | "enquiry_id"
+  | "contact_id";
+
+export function correspondenceColumn(filter: CorrespondenceFilter): [CorrespondenceColumn, string | number] {
+  if ("bandRequestId" in filter) return ["band_booking_request_id", filter.bandRequestId];
+  if ("privateHireRequestId" in filter) return ["private_hire_request_id", filter.privateHireRequestId];
+  if ("enquiryId" in filter) return ["enquiry_id", filter.enquiryId];
+  if ("contactId" in filter) return ["contact_id", filter.contactId];
+  return ["music_act_id", filter.musicActId];
+}
+
+export type CorrespondenceSource = "band" | "hire" | "enquiry" | "act" | "customer";
+
+export const CORRESPONDENCE_SOURCE_LABELS: Record<CorrespondenceSource, string> = {
+  band: "Band request",
+  hire: "Private hire",
+  enquiry: "Enquiry",
+  act: "Music act",
+  customer: "Customer",
+};
 
 export type EmailAttachment = {
   name: string;
@@ -21,19 +55,21 @@ export type CorrespondenceMessage = {
   readAt: string | null;
   sentByName: string | null;
   bandRequestId: string | null;
+  source: CorrespondenceSource;
   createdAt: string;
 };
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const SHORT_REF = "[0-9a-f]{8}";
-const LOCAL_PART = new RegExp(`^(band|act)-(${UUID}|${SHORT_REF})$`, "i");
+const LOCAL_PART = new RegExp(`^(?:(band|act|hire|enq)-(${UUID}|${SHORT_REF})|(cust)-([0-9]{1,18}))$`, "i");
 
 /* The address carries the short reference staff already see (#Ref: 347CE8F7),
    not the full id, so it reads as a booking reference in the band's mail app.
    Addresses sent before this change carry the full id and still resolve. */
 export function correspondenceReplyAddress(target: CorrespondenceTarget, domain: string): string | null {
   if (!domain) return null;
-  return `${target.kind}-${target.id.slice(0, 8).toLowerCase()}@${domain}`;
+  const ref = target.kind === "cust" ? target.id : target.id.slice(0, 8).toLowerCase();
+  return `${target.kind}-${ref}@${domain}`;
 }
 
 export function withDisplayName(address: string, name: string): string {
@@ -58,7 +94,7 @@ export function bareAddress(address: string): string {
   return (angled ? angled[1] : address).trim().toLowerCase();
 }
 
-export type ParsedCorrespondenceAddress = { kind: "band" | "act"; ref: string };
+export type ParsedCorrespondenceAddress = { kind: CorrespondenceKind; ref: string };
 
 export function parseCorrespondenceAddress(addresses: string[], domain: string): ParsedCorrespondenceAddress | null {
   if (!domain) return null;
@@ -67,7 +103,8 @@ export function parseCorrespondenceAddress(addresses: string[], domain: string):
     const at = address.lastIndexOf("@");
     if (at === -1 || address.slice(at + 1) !== domain) continue;
     const match = address.slice(0, at).match(LOCAL_PART);
-    if (match) return { kind: match[1].toLowerCase() as "band" | "act", ref: match[2].toLowerCase() };
+    if (match?.[1]) return { kind: match[1].toLowerCase() as CorrespondenceKind, ref: match[2].toLowerCase() };
+    if (match?.[3]) return { kind: "cust", ref: match[4] };
   }
   return null;
 }

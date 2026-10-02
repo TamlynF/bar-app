@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { upsertContactByEmail } from "@/lib/music-acts";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
@@ -80,24 +81,26 @@ export async function createPrivateHire(data: PrivateHireData) {
   }
 
   await Promise.allSettled([
-    sendBookerEmail(supabase, data.full_name, data.email),
+    sendBookerEmail(supabase, record.id, data.full_name, data.email),
     sendAdminEmail(supabase, data, record.id),
   ]);
 
   return { success: true, id: record.id };
 }
 
-async function sendBookerEmail(supabase: ServerClient, name: string, email: string) {
+async function sendBookerEmail(supabase: ServerClient, requestId: string, name: string, email: string) {
   const slots = await renderTemplate(supabase, "private_hire.enquiry.customer", {
     customerName: name,
   });
   if (!slots) return;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
+  await sendCorrespondenceEmail({
+    resend,
+    links: { privateHireRequestId: requestId },
     to: email,
     subject: slots.subject,
     html: plainLayout({ slots }),
+    kind: "enquiry",
   });
 }
 

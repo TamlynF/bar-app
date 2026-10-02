@@ -23,6 +23,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { COUNTRY_CODES } from "@/lib/country-codes";
 import { saveContactAction, deleteContactAction } from "./actions";
+import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
 import {
   activityTotal,
   emptyActivity,
@@ -516,10 +517,12 @@ export default function CustomersClient({
   initialContacts = [],
   employees = [],
   activity = {},
+  unreadEmails = {},
 }: {
   initialContacts: ContactRecord[];
   employees?: EmployeeOption[];
   activity?: ActivityByContact;
+  unreadEmails?: Record<number, number>;
 }) {
   const sheet = useRecordSheet<ContactRecord>({
     records: initialContacts,
@@ -647,6 +650,18 @@ export default function CustomersClient({
                         {contact.full_name}
                       </p>
                       {hasBirthdayThisMonth(contact.birthday) && <BirthdayMarker />}
+                      {(unreadEmails[contact.id] ?? 0) > 0 && (
+                        <span
+                          className="relative ml-1 flex shrink-0 items-center"
+                          title={`${unreadEmails[contact.id]} new email${unreadEmails[contact.id] === 1 ? "" : "s"} from ${contact.full_name}`}
+                        >
+                          <Mail className="h-4 w-4 text-admin-warning" aria-hidden="true" />
+                          <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-admin-warning px-1 text-[11px] leading-none font-semibold text-white tabular-nums">
+                            {unreadEmails[contact.id]}
+                          </span>
+                          <span className="sr-only">{unreadEmails[contact.id]} new emails</span>
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-0.5 flex min-w-0 items-center gap-1 sm:mt-0">
@@ -834,6 +849,21 @@ export default function CustomersClient({
                 multiline
                 value={quizGroupNames.length ? quizGroupNames.join("\n") : "-"}
               />
+            </DetailCard>
+
+            <DetailCard>
+              <div className="flex items-center gap-2 border-b border-admin-line px-4 py-2 sm:px-5 sm:py-3">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-admin-primary">
+                  <Mail className="h-3.5 w-3.5" />
+                  Correspondence
+                </span>
+                {(unreadEmails[selected.id] ?? 0) > 0 && (
+                  <StatusPill tone="warning" showLabelOnMobile>
+                    {unreadEmails[selected.id]} new
+                  </StatusPill>
+                )}
+              </div>
+              <CorrespondencePanel key={selected.id} contactId={selected.id} />
             </DetailCard>
 
             {sheet.formError && <ErrorBox message={sheet.formError} />}

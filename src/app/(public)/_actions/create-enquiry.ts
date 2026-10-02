@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
+import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
@@ -48,7 +49,7 @@ export async function createEnquiry(formData: FormData) {
   }
 
   await Promise.allSettled([
-    sendEnquirerEmail(supabase, data.full_name, data.email),
+    sendEnquirerEmail(supabase, record.id, data.full_name, data.email),
     sendAdminEmail(supabase, data, record.id),
   ]);
 
@@ -57,17 +58,19 @@ export async function createEnquiry(formData: FormData) {
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
-async function sendEnquirerEmail(supabase: ServerClient, name: string, email: string) {
+async function sendEnquirerEmail(supabase: ServerClient, enquiryId: string, name: string, email: string) {
   const slots = await renderTemplate(supabase, "enquiry.received.customer", {
     customerName: name,
   });
   if (!slots) return;
 
-  await resend.emails.send({
-    from: EMAIL_FROM,
+  await sendCorrespondenceEmail({
+    resend,
+    links: { enquiryId },
     to: email,
     subject: slots.subject,
     html: plainLayout({ slots }),
+    kind: "enquiry",
   });
 }
 

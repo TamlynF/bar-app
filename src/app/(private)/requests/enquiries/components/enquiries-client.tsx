@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { replyToEnquiry, closeEnquiry } from "../actions";
+import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
 
 export type Enquiry = {
   id: string;
@@ -31,6 +32,7 @@ export type Enquiry = {
   reply_message: string | null;
   admin_notes: string | null;
   created_at: string;
+  unread_emails?: number;
 };
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
@@ -95,6 +97,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
 
   const status = normStatus(enquiry.status);
   const theme = statusTheme[status] ?? statusTheme.pending;
+  const unreadEmails = enquiry.unread_emails ?? 0;
 
   function handleReply() {
     if (!replyText.trim()) {
@@ -157,6 +160,18 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
           </p>
         </div>
 
+        {unreadEmails > 0 && (
+          <span
+            className="relative flex shrink-0 items-center"
+            title={`${unreadEmails} new email${unreadEmails === 1 ? "" : "s"} from ${enquiry.full_name}`}
+          >
+            <Mail className="h-4 w-4 text-[#9A5B00]" aria-hidden="true" />
+            <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#9A5B00] px-1 text-[9px] font-bold text-white tabular-nums ring-2 ring-white">
+              {unreadEmails}
+            </span>
+            <span className="sr-only">{unreadEmails} new emails</span>
+          </span>
+        )}
         <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
       </button>
 
@@ -229,6 +244,20 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
                 </p>
               </div>
             )}
+
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                Correspondence
+                {unreadEmails > 0 && (
+                  <span className="rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold tracking-normal text-white normal-case">
+                    {unreadEmails} new
+                  </span>
+                )}
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+                <CorrespondencePanel enquiryId={enquiry.id} editable={status === "responded"} />
+              </div>
+            </div>
 
             <div className="h-4" />
           </div>

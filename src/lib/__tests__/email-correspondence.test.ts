@@ -27,6 +27,15 @@ describe("correspondence addresses", () => {
     expect(parseCorrespondenceAddress([`act-${ID}@${DOMAIN}`], DOMAIN)).toEqual({ kind: "act", ref: ID });
   });
 
+  it("builds and parses enquiry and customer addresses", () => {
+    expect(correspondenceReplyAddress({ kind: "enq", id: ID }, DOMAIN)).toBe(`enq-347ce8f7@${DOMAIN}`);
+    expect(correspondenceReplyAddress({ kind: "cust", id: "1234" }, DOMAIN)).toBe(`cust-1234@${DOMAIN}`);
+    expect(parseCorrespondenceAddress([`enq-347ce8f7@${DOMAIN}`], DOMAIN)).toEqual({ kind: "enq", ref: "347ce8f7" });
+    expect(parseCorrespondenceAddress([`"Don Fenticas" <cust-1234@${DOMAIN}>`], DOMAIN)).toEqual({ kind: "cust", ref: "1234" });
+    expect(parseCorrespondenceAddress([`cust-abc@${DOMAIN}`], DOMAIN)).toBeNull();
+    expect(parseCorrespondenceAddress([`hire-347ce8f7@${DOMAIN}`], DOMAIN)).toEqual({ kind: "hire", ref: "347ce8f7" });
+  });
+
   it("turns a reference into an inclusive id range", () => {
     expect(idRangeForRef("347ce8f7")).toEqual([
       "347ce8f7-0000-0000-0000-000000000000",
