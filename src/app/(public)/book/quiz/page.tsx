@@ -91,7 +91,7 @@ export default async function QuizBookingPage({
   ];
 
   return (
-    <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
+    <main className="flex min-h-dvh w-full max-sm:-mb-[calc(env(safe-area-inset-bottom)+4.5rem)] flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body { 
           background-color: #26300D !important; 
@@ -129,7 +129,7 @@ export default async function QuizBookingPage({
             />
           </div>
           <div className="mt-4 space-y-2 px-2 sm:mt-6">
-            <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-stone-400 italic opacity-80 sm:text-base">
+            <p className="mx-auto max-w-sm text-center text-sm leading-relaxed font-medium text-ink-2 italic sm:text-base sm:text-stone-400 sm:opacity-80">
               {tagline}
             </p>
           </div>
@@ -155,7 +155,7 @@ export default async function QuizBookingPage({
 
           <div className="relative z-10 mb-8 text-center">
             <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Book Your Table</h3>
-            <p className="mt-2 text-xs font-medium text-stone-500 sm:text-base">
+            <p className="mt-2 text-sm font-medium text-ink-2 sm:text-base sm:text-stone-500">
               {events.length > 0
                 ? "Lock in your team before we are fully booked."
                 : "Check back soon for upcoming events."}
@@ -174,7 +174,7 @@ export default async function QuizBookingPage({
           </div>
         </div>
 
-        <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
+        <div className="mt-auto mb-2 flex flex-col items-center gap-4 pt-6 sm:mb-6 sm:pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50"></div>
             <CompanyWordmark className="h-3.5 opacity-50" />

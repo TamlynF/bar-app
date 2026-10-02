@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { COUNTRY_CODES } from "@/lib/country-codes";
 import { formatTime } from "@/lib/events-display";
+import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
+import { stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface BingoEvent {
   id: number;
@@ -51,6 +55,7 @@ export default function BingoBookingForm({ events }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     eventId: String(events[0]?.id ?? ""),
@@ -74,11 +79,28 @@ export default function BingoBookingForm({ events }: Props) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
+
+  const missingFields = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.fullName.trim()) errors.fullName = "Please enter your name.";
+    if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = "Please enter a valid email address.";
+    return errors;
+  };
+  const formComplete = Object.keys(missingFields()).length === 0;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+    const errors = missingFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
       const result = await createBingoBooking(fd);
@@ -175,7 +197,7 @@ export default function BingoBookingForm({ events }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -255,10 +277,12 @@ export default function BingoBookingForm({ events }: Props) {
             required
             value={formData.fullName}
             onChange={handleInputChange}
-            className={inputBaseClasses}
+            aria-invalid={!!fieldErrors.fullName}
+            className={cn(inputBaseClasses, fieldErrors.fullName && "border-red-500/60")}
             placeholder="e.g. Jane Smith"
           />
         </div>
+        <FieldError message={fieldErrors.fullName} />
       </div>
 
       <div className="space-y-1">
@@ -301,10 +325,12 @@ export default function BingoBookingForm({ events }: Props) {
             required
             value={formData.email}
             onChange={handleInputChange}
-            className={inputBaseClasses}
+            aria-invalid={!!fieldErrors.email}
+            className={cn(inputBaseClasses, fieldErrors.email && "border-red-500/60")}
             placeholder="e.g. jane@email.com"
           />
         </div>
+        <FieldError message={fieldErrors.email} />
       </div>
 
       <div className="space-y-1">
@@ -390,14 +416,17 @@ export default function BingoBookingForm({ events }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
+          className={cn(
+            stepPrimaryButtonClass,
+            !formComplete && incompleteButtonClass
+          )}
         >
           {isPending ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : hasPricing ? (
-            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" /></span>
+            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
           ) : (
-            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-6 w-6" /></span>
+            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-4 w-4" /></span>
           )}
         </button>
         {hasPricing ? (

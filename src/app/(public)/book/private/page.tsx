@@ -33,7 +33,7 @@ export default async function PrivateHirePage() {
   }));
 
   return (
-    <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
+    <main className="flex min-h-dvh w-full max-sm:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -45,7 +45,6 @@ export default async function PrivateHirePage() {
         }
         main {
           padding-top: env(safe-area-inset-top, 10px);
-          padding-bottom: env(safe-area-inset-bottom, 20px);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -53,28 +52,30 @@ export default async function PrivateHirePage() {
 
       <PublicNav currentPath="/book/private" />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-12 lg:px-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 sm:px-6 sm:pt-14 sm:pb-12 lg:px-8">
 
-        <div className="relative mb-12 rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2.5rem]">
-            <div className="absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
-          </div>
+        <div className="flex flex-col justify-center max-sm:flex-1 max-sm:py-4">
+          <div className="relative rounded-[2.5rem] border border-white/10 bg-white/3 p-4 shadow-2xl sm:mb-12 ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2.5rem]">
+              <div className="absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
+            </div>
 
-          <div className="relative z-10 mb-8 text-center">
-            <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Private Hire</h3>
-            <p className="mt-2 text-xs font-medium text-stone-500 sm:text-base">Fill in your details and we&apos;ll confirm availability.</p>
-          </div>
+            <div className="relative z-10 mb-3 text-center sm:mb-8">
+              <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Private Hire</h3>
+              <p className="mt-1.5 text-sm font-medium text-ink-2 sm:mt-2 sm:text-base sm:text-stone-500">Fill in your details and we&apos;ll confirm availability.</p>
+            </div>
 
-          <div className="relative z-10">
-            <PrivateHireForm
-              subtypes={subtypes}
-              minCapacity={companyInfo?.private_hire_min_capacity ?? null}
-              maxCapacity={companyInfo?.max_capacity ?? null}
-            />
+            <div className="relative z-10">
+              <PrivateHireForm
+                subtypes={subtypes}
+                minCapacity={companyInfo?.private_hire_min_capacity ?? null}
+                maxCapacity={companyInfo?.max_capacity ?? null}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="mt-auto mb-6 flex flex-col items-center gap-3 pt-8">
+        <div className="mt-auto flex flex-col items-center gap-3 pt-2 pb-4 sm:mb-6 sm:pt-8 sm:pb-0">
           <div className="flex items-center gap-4 text-stone-300">
             <div className="h-px w-6 bg-white/20" />
             <CompanyWordmark className="h-4 opacity-80" />

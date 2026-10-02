@@ -3,55 +3,20 @@
 import React, { useState, useTransition, useRef } from "react";
 import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
-import {
-  Plus, X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
-  ChevronRight, ArrowLeft, ExternalLink,
+import { X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
+  ChevronRight, ChevronLeft,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { format, startOfToday, startOfMonth } from "date-fns";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-
-const SOCIAL_FIELDS = [
-  {
-    key: "instagram" as const,
-    label: "Instagram",
-    icon: SiInstagram,
-    iconColor: "text-[#E1306C]",
-    prefix: "instagram.com/",
-    placeholder: "yourhandle",
-    urlBuilder: (h: string) => `https://instagram.com/${h}`,
-  },
-  {
-    key: "facebook" as const,
-    label: "Facebook",
-    icon: SiFacebook,
-    iconColor: "text-[#1877F2]",
-    prefix: "facebook.com/",
-    placeholder: "yourpage",
-    urlBuilder: (h: string) => `https://facebook.com/${h}`,
-  },
-  {
-    key: "youtube" as const,
-    label: "YouTube",
-    icon: SiYoutube,
-    iconColor: "text-[#FF0000]",
-    prefix: "youtube.com/@",
-    placeholder: "yourchannel",
-    urlBuilder: (h: string) => `https://youtube.com/@${h}`,
-  },
-  {
-    key: "tiktok" as const,
-    label: "TikTok",
-    icon: SiTiktok,
-    iconColor: "text-[#25F4EE]",
-    prefix: "tiktok.com/@",
-    placeholder: "yourhandle",
-    urlBuilder: (h: string) => `https://tiktok.com/@${h}`,
-  },
-];
+import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
+import { SpotifyArtistField } from "./spotify-artist-field";
+import { SocialLinksField, type SocialLinks } from "./social-links-field";
+import { socialUrl, type SocialPlatform } from "@/lib/social-links";
+import type { SpotifyArtist } from "@/lib/spotify-artists";
+import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
 
 interface VideoFile {
   id: string;
@@ -68,11 +33,13 @@ const MAX_VIDEOS = 10;
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 const MAX_DATES = 8;
 
-const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+const titleCase = (s: string) =>
+  s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bDj\b/g, "DJ");
 
 const inputClass =
-  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
+  "w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const STEPS = [
   { number: 1, title: "Your Act", subtitle: "Tell us about your act." },
@@ -92,38 +59,26 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
-  const [stepError, setStepError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [videoError, setVideoError] = useState<string | null>(null);
 
   const [groupName, setGroupName] = useState("");
   const [actType, setActType] = useState(typeOptions[0]?.value ?? "");
   const [genre, setGenre] = useState("");
+  const selectedTypeOption = typeOptions.find((o) => o.value === actType);
+  const selectedTypeLabel = selectedTypeOption ? titleCase(selectedTypeOption.label) : null;
   const [paymentAmount, setPaymentAmount] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
-  const [addedSocials, setAddedSocials] = useState<string[]>([]);
-  const [spotifyUrl, setSpotifyUrl] = useState("");
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
+  const [spotifyArtist, setSpotifyArtist] = useState<SpotifyArtist | null>(null);
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadHandles = useRef<Record<string, ResumableHandle>>({});
-
-  function handleSocial(key: string, value: string) {
-    setSocialLinks((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function addSocial(key: string) {
-    setAddedSocials((prev) => (prev.includes(key) ? prev : [...prev, key]));
-  }
-
-  function removeSocial(key: string) {
-    setAddedSocials((prev) => prev.filter((k) => k !== key));
-    handleSocial(key, "");
-  }
 
   function removeDate(d: Date) {
     setPreferredDates((prev) => prev.filter((x) => x.getTime() !== d.getTime()));
@@ -138,16 +93,36 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     ? new Date(`${availableDates[availableDates.length - 1]}T00:00:00`)
     : null;
 
-  function handleNext() {
-    setStepError(null);
+  function missingFields(): Record<string, string> {
+    const errors: Record<string, string> = {};
     if (step === 1) {
-      if (!groupName.trim()) { setStepError("Please enter your act or group name."); return; }
-      if (!genre.trim()) { setStepError("Please enter your genre."); return; }
+      if (!groupName.trim()) errors.groupName = "Please enter your act or group name.";
+      if (!genre.trim()) errors.genre = "Please enter your genre.";
     }
     if (step === 2) {
-      if (!name.trim()) { setStepError("Please enter your name."); return; }
-      if (!email.trim() || !email.includes("@")) { setStepError("Please enter a valid email address."); return; }
+      if (!name.trim()) errors.name = "Please enter your name.";
+      if (!EMAIL_PATTERN.test(email.trim())) errors.email = "Please enter a valid email address.";
     }
+    return errors;
+  }
+
+  const stepComplete =
+    Object.keys(missingFields()).length === 0 &&
+    (step !== 3 || (videoFiles.length > 0 && videoFiles.every((v) => v.uploadedUrl)));
+
+  function clearFieldError(key: string) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function handleNext() {
+    const errors = missingFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     if (step === 3) {
       if (videoFiles.length === 0) {
         setVideoError("Please upload at least one performance video.");
@@ -160,11 +135,13 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
       setVideoError(null);
     }
     setStep((s) => s + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleBack() {
-    setStepError(null);
+    setFieldErrors({});
     setStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function updateVideo(id: string, patch: Partial<VideoFile>) {
@@ -250,10 +227,9 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     const videoDescriptions = uploaded.map((v) => v.description.trim());
 
     const builtSocialLinks: Record<string, string> = {};
-    SOCIAL_FIELDS.forEach(({ key, urlBuilder }) => {
-      const handle = socialLinks[key]?.trim();
-      if (handle) builtSocialLinks[key] = urlBuilder(handle);
-    });
+    for (const [platform, handle] of Object.entries(socialLinks) as [SocialPlatform, string][]) {
+      if (handle.trim()) builtSocialLinks[platform] = socialUrl(platform, handle.trim());
+    }
 
     startTransition(async () => {
       try {
@@ -266,7 +242,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
           email,
           phone_no: phone || undefined,
           social_links: builtSocialLinks,
-          spotify_url: spotifyUrl.trim() || undefined,
+          spotify_url: spotifyArtist?.url,
           video_urls: uploadedUrls,
           video_descriptions: videoDescriptions,
           preferred_dates: sortedDates.map((d) => format(d, "yyyy-MM-dd")),
@@ -296,7 +272,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
   return (
     <form onSubmit={handleSubmit} className="space-y-0">
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between sm:mb-8">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
             <div
@@ -316,14 +292,14 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
         </span>
       </div>
 
-      <div className="mb-7">
-        <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
+      <div className="mb-4 sm:mb-7">
+        <h4 className="mb-1 font-black text-xl leading-none sm:text-2xl tracking-tight text-white uppercase">
           {currentStep.title}
         </h4>
-        <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
+        <p className="text-sm font-medium text-ink-2 sm:text-xs sm:text-stone-500">{currentStep.subtitle}</p>
       </div>
 
-      <div key={step} className="animate-in space-y-4 duration-200 fade-in">
+      <div key={step} className="animate-in space-y-3 duration-200 fade-in sm:space-y-4">
 
         {step === 1 && (
           <>
@@ -331,17 +307,19 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
               <label className={labelClass}>Act / Group Name <span className="text-red-400">*</span></label>
               <input
                 value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
+                onChange={(e) => { setGroupName(e.target.value); clearFieldError("groupName"); }}
                 placeholder="e.g. The Midnight Echo"
+                aria-invalid={!!fieldErrors.groupName}
                 className={inputClass}
               />
+              <FieldError message={fieldErrors.groupName} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Type <span className="text-red-400">*</span></label>
                 <Select value={actType} onValueChange={setActType}>
-                  <SelectTrigger aria-label="Type of Act" className={`${inputClass} pr-9`}>
-                    <SelectValue />
+                  <SelectTrigger aria-label="Type of Act" className={`${inputClass} pr-4 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-ink-2`}>
+                    <SelectValue>{selectedTypeLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {typeOptions.map((o) => (
@@ -354,10 +332,12 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                 <label className={labelClass}>Genre <span className="text-red-400">*</span></label>
                 <input
                   value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
+                  onChange={(e) => { setGenre(e.target.value); clearFieldError("genre"); }}
                   placeholder="e.g. Rock, Jazz, Pop"
+                  aria-invalid={!!fieldErrors.genre}
                   className={inputClass}
                 />
+                <FieldError message={fieldErrors.genre} />
               </div>
             </div>
           </>
@@ -369,10 +349,12 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
               <label className={labelClass}>Your Name <span className="text-red-400">*</span></label>
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
                 placeholder="Booker or contact name"
+                aria-invalid={!!fieldErrors.name}
                 className={inputClass}
               />
+              <FieldError message={fieldErrors.name} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -380,10 +362,12 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
                   placeholder="your@email.com"
+                  aria-invalid={!!fieldErrors.email}
                   className={inputClass}
                 />
+                <FieldError message={fieldErrors.email} />
               </div>
               <div>
                 <label className={labelClass}>Phone</label>
@@ -402,106 +386,15 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
         {step === 3 && (
           <>
             <div className="space-y-3">
-              <p className={labelClass}>Social Media</p>
-
-              {addedSocials.map((key) => {
-                const field = SOCIAL_FIELDS.find((f) => f.key === key);
-                if (!field) return null;
-                const { label, icon: Icon, iconColor, prefix, placeholder, urlBuilder } = field;
-                return (
-                  <div
-                    key={key}
-                    className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20"
-                  >
-                    <Icon className={`ml-3.5 h-4 w-4 shrink-0 ${iconColor}`} />
-                    <span className="pr-0.5 pl-2 text-sm whitespace-nowrap text-stone-400 select-none">{prefix}</span>
-                    <input
-                      type="text"
-                      value={socialLinks[key] || ""}
-                      onChange={(e) => handleSocial(key, e.target.value.replace(/^@/, ""))}
-                      placeholder={placeholder}
-                      aria-label={`${label} handle`}
-                      className="flex-1 bg-transparent py-3 pr-3 text-sm text-white placeholder:text-stone-500 focus:outline-none"
-                    />
-                    {socialLinks[key] && (
-                      <a
-                        href={urlBuilder(socialLinks[key])}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Open ${label} link in a new tab`}
-                        className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-[#FDCC4B]"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      title={`Remove ${label}`}
-                      onClick={() => removeSocial(key)}
-                      className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-red-400"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-
-              {addedSocials.length < SOCIAL_FIELDS.length && (
-                <Select key={addedSocials.length} onValueChange={addSocial}>
-                  <SelectTrigger
-                    aria-label="Add a social link"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> Add a social link
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SOCIAL_FIELDS.filter((f) => !addedSocials.includes(f.key)).map((f) => {
-                      const Icon = f.icon;
-                      return (
-                        <SelectItem key={f.key} value={f.key}>
-                          <span className="flex items-center gap-2">
-                            <Icon className={`h-4 w-4 ${f.iconColor}`} /> {f.label}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
+              <SocialLinksField links={socialLinks} onChange={setSocialLinks} labelClassName={`${labelClass} mb-0!`} />
             </div>
 
-            <div className="space-y-3 pt-2">
-              <p className={labelClass}>Spotify</p>
-              <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20">
-                <SiSpotify className="ml-3.5 h-4 w-4 shrink-0 text-[#1DB954]" />
-                <input
-                  type="url"
-                  inputMode="url"
-                  value={spotifyUrl}
-                  onChange={(e) => setSpotifyUrl(e.target.value)}
-                  placeholder="https://open.spotify.com/artist/…"
-                  aria-label="Spotify artist or profile link"
-                  className="flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none"
-                />
-                {spotifyUrl.trim() && (
-                  <a
-                    href={spotifyUrl.trim()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Open Spotify link in a new tab"
-                    className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-[#FDCC4B]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                )}
-              </div>
+            <div className="space-y-3 sm:pt-2">
+              <p className={labelClass}>Spotify profile link</p>
+              <SpotifyArtistField artist={spotifyArtist} initialQuery={groupName} onChange={setSpotifyArtist} />
             </div>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 sm:pt-2">
               <div className="flex items-center justify-between">
                 <p className={labelClass}>Performance Videos <span className="text-red-400">*</span></p>
                 <span className="text-[10px] font-bold text-stone-400">{videoFiles.length}/{MAX_VIDEOS}</span>
@@ -563,7 +456,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                           value={vf.description}
                           onChange={(e) => setVideoDescription(vf.id, e.target.value)}
                           placeholder="Add a short description (optional)"
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-stone-400 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
+                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-white placeholder:text-stone-400 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -585,12 +478,12 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`flex w-full items-center justify-center gap-2 rounded-xl border bg-white/5 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400 ${
-                      videoError ? "border-red-500/40" : "border-white/10"
+                    className={`flex w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed bg-gold/5 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gold/10 active:bg-gold/15 sm:py-4 ${
+                      videoError ? "border-red-500/50" : "border-gold/40 hover:border-gold/70"
                     }`}
                   >
-                    <Upload className="h-4 w-4" />
-                    {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
+                    <Upload className="h-4 w-4 text-gold" aria-hidden="true" />
+                    {videoFiles.length === 0 ? "Upload videos" : "Add another video"}
                   </button>
                 </>
               )}
@@ -692,7 +585,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
               />
             </div>
 
-            <div className="pt-2">
+            <div className="sm:pt-2">
               <label className={labelClass}>Additional Notes</label>
               <textarea
                 value={notes}
@@ -707,26 +600,16 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
 
       </div>
 
-      {stepError && (
-        <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
-          {stepError}
-        </p>
-      )}
-
       {error && step === 5 && (
         <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
 
-      <div className={`mt-8 flex gap-3 ${step === 1 ? "" : ""}`}>
+      <div className={stepButtonRowClass}>
         {step > 1 && (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex h-14 items-center gap-2 rounded-xl border border-white/10 px-5 font-black text-xs tracking-wider text-stone-400 uppercase transition-all hover:bg-white/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
+          <button type="button" onClick={handleBack} className={stepBackButtonClass}>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Back
           </button>
         )}
@@ -735,18 +618,13 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className={`${stepPrimaryButtonClass} ${stepComplete ? "" : incompleteButtonClass}`}
           >
             Next
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : (
-          <button
-            key="submit"
-            type="submit"
-            disabled={isPending}
-            className="h-14 flex-1 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <button key="submit" type="submit" disabled={isPending} className={stepPrimaryButtonClass}>
             {isPending ? "Submitting…" : "Submit Application"}
           </button>
         )}

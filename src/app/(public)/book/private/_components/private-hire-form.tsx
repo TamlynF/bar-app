@@ -4,17 +4,19 @@ import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import { privateHireSubtypeLabel, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
-  CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users,
+  CheckCircle2, ChevronLeft, ChevronRight, Calendar, Clock, Users,
   User, Mail, Phone, MessageSquareQuote, Tag, Info,
 } from "lucide-react";
+import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
+import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
 
 const inputBaseClass =
-  "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
-const labelClass = "block text-[10px] font-black text-stone-500 mb-2 uppercase tracking-[0.15em] ml-1";
+  "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
+const labelClass = "block text-[10px] font-black text-stone-500 mb-1 sm:mb-2 uppercase tracking-[0.15em] ml-1";
 const iconContainerClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
 const iconClass = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 const helperClass =
-  "mt-2 flex items-start gap-2 rounded-xl border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3 py-2.5 text-[11px] font-bold leading-relaxed text-[#FDCC4B]";
+  "col-span-2 flex items-start gap-2 rounded-xl border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3 py-2 text-[11px] font-bold leading-relaxed text-[#FDCC4B] max-sm:order-last sm:col-span-1 sm:mt-3 sm:py-2.5";
 
 function inputClass(hasError: boolean) {
   return `${inputBaseClass} ${
@@ -24,10 +26,6 @@ function inputClass(hasError: boolean) {
   }`;
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-2 ml-1 text-[10px] font-bold leading-relaxed text-red-400">{message}</p>;
-}
 
 const STEPS = [
   { number: 1, title: "Your Details",  subtitle: "Who should we contact?" },
@@ -179,6 +177,8 @@ export default function PrivateHireForm({
     }
   }
 
+  const stepComplete = Object.keys(step === 1 ? validateStep1() : step === 2 ? validateStep2() : {}).length === 0;
+
   function handleNext() {
     const errors = step === 1 ? validateStep1() : validateStep2();
     if (Object.keys(errors).length > 0) {
@@ -187,11 +187,13 @@ export default function PrivateHireForm({
     }
     setFieldErrors({});
     setStep((s) => s + 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleBack() {
     setFieldErrors({});
     setStep((s) => s - 1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -252,7 +254,7 @@ export default function PrivateHireForm({
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-0 overflow-hidden">
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between sm:mb-8">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
             <div
@@ -272,14 +274,14 @@ export default function PrivateHireForm({
         </span>
       </div>
 
-      <div className="mb-7">
-        <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
+      <div className="mb-4 sm:mb-7">
+        <h4 className="mb-1 font-black text-xl leading-none sm:text-2xl tracking-tight text-white uppercase">
           {currentStep.title}
         </h4>
-        <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
+        <p className="text-sm font-medium text-ink-2 sm:text-xs sm:text-stone-500">{currentStep.subtitle}</p>
       </div>
 
-      <div key={step} className="animate-in space-y-4 duration-200 fade-in">
+      <div key={step} className="animate-in space-y-3 duration-200 fade-in sm:space-y-4">
 
         {step === 1 && (
           <>
@@ -341,7 +343,8 @@ export default function PrivateHireForm({
 
         {step === 2 && (
           <>
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-0">
+            <div className="min-w-0 space-y-1">
               <label htmlFor="ph-guest-count" className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
@@ -362,13 +365,13 @@ export default function PrivateHireForm({
                 />
               </div>
               <FieldError message={fieldErrors.guestCount} />
-              <p className={helperClass}>
-                <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-                <span>Please try and be as accurate as you can, so that we can plan staffing accordingly!</span>
-              </p>
             </div>
+            <p className={helperClass}>
+              <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+              <span>Please try and be as accurate as you can, so that we can plan staffing accordingly!</span>
+            </p>
 
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1 sm:mt-4">
               <label htmlFor="ph-date" className={labelClass}>Date <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
@@ -382,10 +385,11 @@ export default function PrivateHireForm({
                   value={preferredDate}
                   onChange={(e) => { setPreferredDate(e.target.value); clearFieldError("preferredDate"); }}
                   aria-invalid={!!fieldErrors.preferredDate}
-                  className={`${inputClass(!!fieldErrors.preferredDate)} input-scheme-dark min-w-0`}
+                  className={`${inputClass(!!fieldErrors.preferredDate)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
                 />
               </div>
               <FieldError message={fieldErrors.preferredDate} />
+            </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 overflow-hidden sm:gap-6">
@@ -488,14 +492,10 @@ export default function PrivateHireForm({
         </p>
       )}
 
-      <div className="mt-8 flex gap-3">
+      <div className={stepButtonRowClass}>
         {step > 1 && (
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex h-16 items-center gap-2 rounded-2xl border border-white/10 px-5 font-black text-xs tracking-widest text-stone-400 uppercase transition-all hover:bg-white/5"
-          >
-            <ArrowLeft className="h-4 w-4" />
+          <button type="button" onClick={handleBack} className={stepBackButtonClass}>
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Back
           </button>
         )}
@@ -504,18 +504,13 @@ export default function PrivateHireForm({
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95"
+            className={`${stepPrimaryButtonClass} ${stepComplete ? "" : incompleteButtonClass}`}
           >
             Next
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : (
-          <button
-            key="submit"
-            type="submit"
-            disabled={isPending}
-            className="h-16 flex-1 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <button key="submit" type="submit" disabled={isPending} className={stepPrimaryButtonClass}>
             {isPending ? "Submitting…" : "Send Enquiry"}
           </button>
         )}

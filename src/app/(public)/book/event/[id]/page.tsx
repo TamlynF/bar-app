@@ -94,7 +94,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   });
 
   return (
-    <main className="relative flex flex-col bg-[#26300D] selection:bg-[#fdcc4b] w-full min-h-dvh overflow-x-hidden text-stone-300 selection:text-[#26300D] antialiased">
+    <main className="relative flex flex-col bg-[#26300D] selection:bg-[#fdcc4b] w-full min-h-dvh max-sm:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] overflow-x-hidden text-stone-300 selection:text-[#26300D] antialiased">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -104,7 +104,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         }
         main {
           padding-top: env(safe-area-inset-top, 10px);
-          padding-bottom: env(safe-area-inset-bottom, 20px);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -118,7 +117,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
       <PublicNav currentPath="/book/event" />
 
-      <div className="z-10 relative flex flex-col flex-1 mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 w-full max-w-3xl">
+      <div className="z-10 relative flex flex-col flex-1 mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pb-6 w-full max-w-3xl">
 
         <div className="flex flex-col items-center mb-6 sm:mb-10 text-center">
           {cfg.booking_image_url ? (
@@ -200,7 +199,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-4 mt-auto mb-6 pt-8">
+        <div className="flex flex-col items-center gap-4 mt-auto pt-6 pb-4 sm:mb-6 sm:pt-8 sm:pb-0">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="bg-stone-800/50 w-6 h-px" />
             <CompanyWordmark className="h-3.5 opacity-50" />

@@ -21,6 +21,10 @@ import { Button } from "@/components/ui/button";
 import { CountryCodeSelect } from "@/components/country-code-select";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
+import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
+import { stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface EventData {
   id: number;
@@ -55,6 +59,7 @@ export default function EventBookingForm({ event, config }: Props) {
   const [groupNameError, setGroupNameError] = useState("");
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
   const [seatingError, setSeatingError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const successRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +83,17 @@ export default function EventBookingForm({ event, config }: Props) {
   });
 
   const total = pricePerPerson * parseInt(formData.groupSize || "1");
+
+  const missingFields = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.fullName.trim()) errors.fullName = "Please enter your name.";
+    if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = "Please enter a valid email address.";
+    if (f.phone.visible && f.phone.required && !formData.phoneNo.trim()) errors.phoneNo = "Please enter your phone number.";
+    if (f.group_name.visible && f.group_name.required && !formData.groupName.trim()) errors.groupName = `Please enter a ${f.group_name.label.toLowerCase()}.`;
+    if (f.special_requests.visible && f.special_requests.required && !formData.specialRequests.trim()) errors.specialRequests = "Please fill in this field.";
+    return errors;
+  };
+  const formComplete = Object.keys(missingFields()).length === 0;
 
   const groupNameVisible = f.group_name.visible;
   const groupNameLabel = f.group_name.label;
@@ -140,11 +156,20 @@ export default function EventBookingForm({ event, config }: Props) {
     const { name, value } = e.target;
     setError(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (groupNameError || seatingError) return;
+    const errors = missingFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
     setError(null);
     const fd = new FormData(e.currentTarget);
     startTransition(async () => {
@@ -214,25 +239,16 @@ export default function EventBookingForm({ event, config }: Props) {
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-(--ev-fg,#57534e) transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 
-  const requiredFieldsComplete =
-    formData.fullName.trim() !== "" &&
-    formData.email.trim() !== "" &&
-    (!f.phone.visible || !f.phone.required || formData.phoneNo.trim() !== "") &&
-    (!f.group_name.visible || !f.group_name.required || formData.groupName.trim() !== "") &&
-    (!f.group_size.visible || !f.group_size.required || formData.groupSize !== "") &&
-    (!f.special_requests.visible || !f.special_requests.required || formData.specialRequests.trim() !== "");
-
   const submitDisabled =
     isPending ||
     isCheckingGroupName ||
     isCheckingSeating ||
     !!groupNameError ||
     !!seatingError ||
-    !!error ||
-    !requiredFieldsComplete;
+    !!error;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-6">
       <input type="hidden" name="event_id" value={event.id} />
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input type="hidden" name="group_name" value={f.group_name.visible ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
@@ -255,10 +271,12 @@ export default function EventBookingForm({ event, config }: Props) {
             required
             value={formData.fullName}
             onChange={handleInputChange}
-            className={inputBaseClasses}
+            aria-invalid={!!fieldErrors.fullName}
+            className={cn(inputBaseClasses, fieldErrors.fullName && "border-red-500/60")}
             placeholder="e.g. Jane Smith"
           />
         </div>
+        <FieldError message={fieldErrors.fullName} />
       </div>
 
       <div className="space-y-1">
@@ -275,10 +293,12 @@ export default function EventBookingForm({ event, config }: Props) {
             required
             value={formData.email}
             onChange={handleInputChange}
-            className={inputBaseClasses}
+            aria-invalid={!!fieldErrors.email}
+            className={cn(inputBaseClasses, fieldErrors.email && "border-red-500/60")}
             placeholder="e.g. jane@email.com"
           />
         </div>
+        <FieldError message={fieldErrors.email} />
       </div>
 
       {f.phone.visible && (
@@ -301,11 +321,13 @@ export default function EventBookingForm({ event, config }: Props) {
                 required={f.phone.required}
                 value={formData.phoneNo}
                 onChange={handleInputChange}
-                className={inputBaseClasses}
+                aria-invalid={!!fieldErrors.phoneNo}
+                className={cn(inputBaseClasses, fieldErrors.phoneNo && "border-red-500/60")}
                 placeholder="e.g. 7123 456789"
               />
             </div>
           </div>
+          <FieldError message={fieldErrors.phoneNo} />
         </div>
       )}
 
@@ -324,7 +346,8 @@ export default function EventBookingForm({ event, config }: Props) {
               required={f.group_name.required}
               value={formData.groupName}
               onChange={handleInputChange}
-              className={cn(inputBaseClasses, groupNameError && "border-red-500/50")}
+              aria-invalid={!!(fieldErrors.groupName || groupNameError)}
+              className={cn(inputBaseClasses, (groupNameError || fieldErrors.groupName) && "border-red-500/50")}
               placeholder="e.g. The Thirsty Trivia Titans"
             />
             {isCheckingGroupName && (
@@ -336,6 +359,7 @@ export default function EventBookingForm({ event, config }: Props) {
           {groupNameError && (
             <p className="mt-1.5 ml-1 font-black text-[9px] text-red-500 uppercase">{groupNameError}</p>
           )}
+          <FieldError message={fieldErrors.groupName} />
         </div>
       )}
 
@@ -398,10 +422,12 @@ export default function EventBookingForm({ event, config }: Props) {
               required={f.special_requests.required}
               value={formData.specialRequests}
               onChange={handleInputChange}
-              className={`${inputBaseClasses} min-h-25 resize-none py-3 text-sm`}
+              aria-invalid={!!fieldErrors.specialRequests}
+              className={cn(inputBaseClasses, "min-h-25 resize-none py-3 text-sm", fieldErrors.specialRequests && "border-red-500/60")}
               placeholder="Type your requests here..."
             />
           </div>
+          <FieldError message={fieldErrors.specialRequests} />
         </div>
       )}
 
@@ -424,14 +450,17 @@ export default function EventBookingForm({ event, config }: Props) {
         <button
           type="submit"
           disabled={submitDisabled}
-          className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
+          className={cn(
+            stepPrimaryButtonClass,
+            !formComplete && incompleteButtonClass
+          )}
         >
           {isPending ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : hasPricing ? (
-            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" /></span>
+            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
           ) : (
-            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-6 w-6" /></span>
+            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-4 w-4" /></span>
           )}
         </button>
       </div>

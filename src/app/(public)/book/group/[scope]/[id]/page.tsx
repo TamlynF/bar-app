@@ -186,7 +186,7 @@ export default async function GroupedBookingPage ({
   }))
 
   return (
-    <main className='relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]'>
+    <main className='relative flex min-h-dvh w-full max-sm:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]'>
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -200,7 +200,6 @@ export default async function GroupedBookingPage ({
         }
         main {
           padding-top: env(safe-area-inset-top, 10px);
-          padding-bottom: env(safe-area-inset-bottom, 20px);
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -210,7 +209,7 @@ export default async function GroupedBookingPage ({
 
       <PublicNav currentPath='/book/group' />
 
-      <div className='relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4 pb-4 sm:px-6 sm:pt-4 sm:pb-6 lg:px-8'>
+      <div className='relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4 sm:px-6 sm:pt-4 sm:pb-6 lg:px-8'>
         <div className='mb-4 flex max-h-[25vh] flex-col items-center text-center sm:mb-6'>
           {cfg.booking_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -297,7 +296,7 @@ export default async function GroupedBookingPage ({
           </div>
         </div>
 
-        <div className='mt-auto mb-6 flex flex-col items-center gap-4 pt-8'>
+        <div className='mt-auto flex flex-col items-center gap-4 pt-6 pb-4 sm:mb-6 sm:pt-8 sm:pb-0'>
           <div className='flex items-center gap-4 text-stone-800'>
             <div className='h-px w-6 bg-stone-800/50' />
             <CompanyWordmark className='h-3.5 opacity-50' />

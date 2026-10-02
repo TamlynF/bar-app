@@ -18,6 +18,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/events-display";
+import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
+import { stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface BookingResponse {
   success: boolean;
@@ -60,6 +64,7 @@ export default function BookingForm({ events }: Props) {
   const [dateError, setDateError] = useState("");
   const [isCheckingTeam, setIsCheckingTeam] = useState(false);
   const [teamNameError, setTeamNameError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     quizEventId: String(events[0]?.id ?? ""),
@@ -105,12 +110,31 @@ export default function BookingForm({ events }: Props) {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
+
+  const missingFields = () => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors.name = "Please enter your name.";
+    if (!formData.teamName.trim()) errors.teamName = "Please enter a team name.";
+    if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = "Please enter a valid email address.";
+    return errors;
+  };
+  const formComplete = Object.keys(missingFields()).length === 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (teamNameError) return;
+
+    const errors = missingFields();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     if (!formData.quizEventId) {
       setDateError("Please select a date.");
@@ -231,7 +255,7 @@ export default function BookingForm({ events }: Props) {
   const iconClasses = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label htmlFor="quizDate" className={labelClasses}>
@@ -298,10 +322,12 @@ export default function BookingForm({ events }: Props) {
               required
               value={formData.name}
               onChange={handleInputChange}
-              className={inputBaseClasses}
+              aria-invalid={!!fieldErrors.name}
+              className={cn(inputBaseClasses, fieldErrors.name && "border-red-500/60")}
               placeholder="e.g. John Doe"
             />
           </div>
+          <FieldError message={fieldErrors.name} />
         </div>
 
         <div className="space-y-1">
@@ -319,12 +345,14 @@ export default function BookingForm({ events }: Props) {
               required
               value={formData.teamName}
               onChange={handleInputChange}
-              className={cn(inputBaseClasses, teamNameError && "border-red-500/50")}
+              aria-invalid={!!(fieldErrors.teamName || teamNameError)}
+              className={cn(inputBaseClasses, (teamNameError || fieldErrors.teamName) && "border-red-500/50")}
               placeholder="e.g. Quizzy McQuizface"
             />
             {isCheckingTeam && <div className="absolute top-1/2 right-4 -translate-y-1/2"><Loader2 className="h-3 w-3 animate-spin text-[#fdcc4b]" /></div>}
           </div>
           {teamNameError && <p className="mt-1.5 ml-1 font-black text-[9px] text-red-500 uppercase">{teamNameError}</p>}
+          <FieldError message={fieldErrors.teamName} />
         </div>
       </div>
 
@@ -343,10 +371,12 @@ export default function BookingForm({ events }: Props) {
               required
               value={formData.email}
               onChange={handleInputChange}
-              className={inputBaseClasses}
+              aria-invalid={!!fieldErrors.email}
+              className={cn(inputBaseClasses, fieldErrors.email && "border-red-500/60")}
               placeholder="e.g. john@example.com"
             />
           </div>
+          <FieldError message={fieldErrors.email} />
         </div>
 
       <div className="space-y-1">
@@ -372,9 +402,12 @@ export default function BookingForm({ events }: Props) {
         <button
           type="submit"
           disabled={isSubmitting || !!teamNameError}
-          className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
+          className={cn(
+            stepPrimaryButtonClass,
+            !formComplete && incompleteButtonClass
+          )}
         >
-          {isSubmitting ? <Loader2 className="h-6 w-6 animate-spin" /> : <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-6 w-6" /></span>}
+          {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-4 w-4" /></span>}
         </button>
         <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
           By booking, you agree to show up or cancel at least 24 hours in advance.

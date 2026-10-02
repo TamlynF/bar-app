@@ -8,6 +8,7 @@ import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
+import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -58,6 +59,10 @@ export async function createBandBooking(data: BandBookingData) {
     }
   }
 
+  const spotify = data.spotify_url?.trim() ? await resolveSpotifyArtistLink(data.spotify_url) : null;
+  const spotifyArtist = spotify && "artist" in spotify ? spotify.artist : null;
+  const spotifyUrl = spotifyArtist?.url ?? (data.spotify_url?.trim() || undefined);
+
   const supabase = await createClient();
 
   const contactId = await upsertContactByEmail(supabase, {
@@ -70,7 +75,7 @@ export async function createBandBooking(data: BandBookingData) {
     group_name: data.group_name,
     type: data.type,
     genre: data.genre,
-    spotify_url: data.spotify_url,
+    spotify_url: spotifyUrl,
     social_links: data.social_links,
     video_urls: data.video_urls,
     video_descriptions: data.video_descriptions,
@@ -89,7 +94,9 @@ export async function createBandBooking(data: BandBookingData) {
         contact_id: contactId,
         phone_no: data.phone_no || null,
         social_links: data.social_links,
-        spotify_url: data.spotify_url || null,
+        spotify_url: spotifyUrl ?? null,
+        spotify_image_url: spotifyArtist?.imageUrl ?? null,
+        spotify_followers: spotifyArtist?.followers ?? null,
         video_urls: videoUrls,
         video_descriptions: data.video_descriptions ?? [],
         preferred_dates: preferredDates,
