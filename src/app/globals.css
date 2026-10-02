@@ -944,25 +944,6 @@ html:has([data-admin-shell]) body {
 .ad-spin {
   animation: ad-spin 1.6s linear infinite;
 }
-/* Full turn on the Y axis for the 3D wordmark, tilted slightly toward the
-   viewer so the extruded edge stays visible as it comes round. Each half
-   turn eases in and out, so it lingers face-on and sweeps quickly through
-   side-on, where a flat cut-out logo stops reading as solid. */
-@keyframes ad-turn {
-  0% {
-    transform: rotateX(6deg) rotateY(0deg);
-  }
-  50% {
-    transform: rotateX(6deg) rotateY(180deg);
-  }
-  100% {
-    transform: rotateX(6deg) rotateY(360deg);
-  }
-}
-.ad-turn {
-  transform: rotateX(6deg) rotateY(-14deg);
-  animation: ad-turn 18s cubic-bezier(0.7, 0, 0.3, 1) infinite;
-}
 [data-reveal] {
   transition:
     opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
@@ -1520,7 +1501,6 @@ html:has([data-admin-shell]) body {
   .ad-market-live,
   .ad-shimmer,
   .ad-odometer,
-  .ad-turn,
   .ad-pulse-cta > a {
     animation: none;
   }

@@ -1,5 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getFreeTablesForEvent } from "@/lib/table-allocation";
+import type { EventSpace } from "@/lib/events-display";
 
 export function sumConfirmedGroupSizes(bookings: { group_size: number | null }[]): number {
   return bookings.reduce((total, b) => total + (b.group_size ?? 0), 0);
@@ -62,6 +63,29 @@ async function hasReachedVenueCapacity(
     .eq("status", "confirmed");
 
   return sumConfirmedGroupSizes((data ?? []) as { group_size: number | null }[]) >= maxCapacity;
+}
+
+export async function getEventSpace(
+  supabase: SupabaseClient,
+  event: { id: number; requiresSeating: boolean }
+): Promise<EventSpace | null> {
+  if (event.requiresSeating) {
+    const [{ count: totalTables }, freeTables] = await Promise.all([
+      supabase.from("tables").select("*", { count: "exact", head: true }).eq("available", true),
+      getFreeTablesForEvent(supabase, event.id),
+    ]);
+    return totalTables ? { left: freeTables.length, total: totalTables } : null;
+  }
+
+  const maxCapacity = await getVenueMaxCapacity(supabase);
+  if (maxCapacity === null) return null;
+  const { data } = await supabase
+    .from("bookings")
+    .select("group_size")
+    .eq("event_id", event.id)
+    .eq("status", "confirmed");
+  const booked = sumConfirmedGroupSizes((data ?? []) as { group_size: number | null }[]);
+  return { left: Math.max(0, maxCapacity - booked), total: maxCapacity };
 }
 
 export async function updateFullyBookedStatus(

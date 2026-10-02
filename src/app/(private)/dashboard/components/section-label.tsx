@@ -7,7 +7,7 @@ export default function SectionLabel({
   badge,
   action,
 }: {
-  icon: React.ElementType;
+  icon: React.ElementType<{ className?: string }>;
   label: string;
   highlight?: boolean;
   badge?: string;

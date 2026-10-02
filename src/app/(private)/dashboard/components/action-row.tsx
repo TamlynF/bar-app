@@ -12,7 +12,7 @@ export default function ActionRow({
 }: {
   label: string;
   count: number;
-  icon: React.ElementType;
+  icon: React.ElementType<{ className?: string }>;
   href: string;
   activeColor: string;
   activeBg: string;

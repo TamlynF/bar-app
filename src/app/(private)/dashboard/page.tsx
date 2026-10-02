@@ -636,7 +636,7 @@ function QuickLink({
 }: {
   href: string;
   label: string;
-  icon: React.ElementType;
+  icon: React.ElementType<{ className?: string }>;
 }) {
   return (
     <Link

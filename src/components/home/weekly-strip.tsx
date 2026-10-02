@@ -5,12 +5,6 @@ import { formatClock, toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import { WEEKLY_NIGHTS } from "@/lib/weekly-nights";
 import { cn } from "@/lib/utils";
 
-const LISTING_COLOR: Record<WeeklyListing["key"], string> = {
-  quiz: "text-[#5ED6F0]",
-  karaoke: "text-[#FF8A80]",
-  live: "text-gold",
-};
-
 /* The three nights that happen every week without fail. They are not
    events in the schedule, so they never move or sell out; the quiz tile
    carries the one booking link. */
@@ -21,38 +15,37 @@ function closingTime(listing: WeeklyListing, hours: OpeningHours | null | undefi
 
 export function WeeklyStrip({ hours, className }: { hours?: OpeningHours | null; className?: string }) {
   return (
-    <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-3", className)}>
+    <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-2 sm:gap-3", className)}>
       <div className="flex items-center justify-between gap-3">
         <h2
           id="weekly-heading"
-          className="font-black text-h2 tracking-tighter text-ink uppercase sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
+          className="font-black text-sm tracking-[0.08em] text-ink-2 uppercase max-sm:leading-none sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
         >
           <span className="sm:hidden">Every week</span>
           <span className="hidden sm:inline">What’s on</span>
         </h2>
       </div>
-      <ul className="grid grid-cols-[auto_1fr_auto_auto_auto] divide-y divide-hairline border-y border-hairline sm:hidden">
+      <ul className="grid grid-cols-[auto_1fr_auto] divide-y divide-hairline border-y border-hairline sm:hidden">
         {WEEKLY_LISTINGS.map((listing) => (
-          <li key={listing.key} className="col-span-5 grid grid-cols-subgrid">
+          <li key={listing.key} className="col-span-3 grid grid-cols-subgrid">
             <Link
               href={listing.href}
-              className="group col-span-5 grid min-h-14 grid-cols-subgrid items-center gap-x-1 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              className="group col-span-3 grid min-h-13 grid-cols-subgrid items-center gap-x-1 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
             >
-              <span className="pr-2 font-pirata text-h2 leading-none text-ink">{listing.day}</span>
+              <span className="pr-2 font-black text-[13px] leading-none tracking-[0.02em] text-ink uppercase">{listing.day}</span>
               <span
                 className={cn(
-                  "pr-1 font-pirata text-h2 leading-none transition-opacity group-hover:opacity-80",
-                  LISTING_COLOR[listing.key]
+                  "pr-1 font-pirata text-[length:clamp(24px,calc((100vw_-_154px)*0.118),28px)] leading-none tracking-[0.01em] transition-opacity group-hover:opacity-80",
+                  listing.accentText
                 )}
               >
                 {listing.title}
               </span>
-              <span className="text-right text-meta whitespace-nowrap text-ink-2 tabular-nums">{listing.time}</span>
-              <span className="text-meta text-ink-2" aria-hidden={!closingTime(listing, hours)}>
-                {closingTime(listing, hours) ? "–" : ""}
-              </span>
-              <span className="text-right text-meta whitespace-nowrap text-ink-2 tabular-nums">
-                {closingTime(listing, hours)}
+              <span className="flex flex-col items-end gap-1 pl-2 whitespace-nowrap tabular-nums">
+                <span className="text-[15px] leading-none font-bold text-ink">{listing.time}</span>
+                {closingTime(listing, hours) && (
+                  <span className="text-xs leading-none text-ink-2">till {closingTime(listing, hours)}</span>
+                )}
               </span>
             </Link>
           </li>

@@ -253,7 +253,7 @@ const STATUS_TOAST: Record<BandStatus, string> = {
   declined: "Application declined",
 };
 
-const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; glyph: string; label: string }> = {
+const SOCIAL_META: Record<string, { icon: React.ElementType<{ className?: string }>; className: string; glyph: string; label: string }> = {
   instagram: {
     icon: SiInstagram,
     className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white border-transparent",
@@ -809,12 +809,16 @@ export function BandBookingCard({
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
+  const openParam = searchParams.get("open");
+  const [handledOpenParam, setHandledOpenParam] = useState<string | null>(null);
+  if (openParam !== handledOpenParam) {
+    setHandledOpenParam(openParam);
+    if (openParam === request.id) setOpen(true);
+  }
+
   useEffect(() => {
-    const openId = searchParams.get("open") ?? new URLSearchParams(window.location.search).get("open");
-    if (openId !== request.id) return;
-    setOpen(true);
-    window.history.replaceState(null, "", LIST_HREF);
-  }, [searchParams, request.id]);
+    if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
+  }, [openParam, request.id]);
 
   const eventHref = request.event_id
     ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`
@@ -843,9 +847,11 @@ export function BandBookingCard({
   const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
   const declineHead = declineReason.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
 
-  const hasClashes = clashes.length > 0;
+  const clashCheckReady = !(status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime);
+  const visibleClashes = clashCheckReady ? clashes : [];
+  const hasClashes = visibleClashes.length > 0;
   const clashWarning = hasClashes
-    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} - pick another time.`
+    ? `Clashes with ${visibleClashes.map((c) => c.title).join(", ")} - pick another time.`
     : undefined;
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
@@ -939,10 +945,7 @@ export function BandBookingCard({
   };
 
   useEffect(() => {
-    if (status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime) {
-      setClashes([]);
-      return;
-    }
+    if (status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -2485,7 +2488,7 @@ export function BandBookingCard({
                     </div>
                     </div>
                     {slotWarning && <FieldMessage warning={slotWarning} />}
-                    {clashes.length > 0 && <ClashList clashes={clashes} />}
+                    {visibleClashes.length > 0 && <ClashList clashes={visibleClashes} />}
                   </div>
 
                   <div className="flex items-center justify-end gap-2 sm:flex-1">

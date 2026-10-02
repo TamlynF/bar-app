@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getEventSpace } from "@/lib/update-fully-booked";
 import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -83,6 +84,7 @@ async function HomeContent() {
     .slice(0, SCHEDULE_EVENTS);
 
   const featured = events[0] ?? null;
+  const featuredSpace = featured?.isBookable ? await getEventSpace(supabase, featured) : null;
   const monthEndStr = format(endOfMonth(today), "yyyy-MM-dd");
   const monthEvents = events.filter((e) => e.date <= monthEndStr);
   const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
@@ -98,7 +100,7 @@ async function HomeContent() {
       <PublicNav currentPath="/" ticker />
       <MarqueeTicker items={tickerItems} />
 
-      <HomeHero featured={featured} today={today} hours={info?.opening_hours} />
+      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>

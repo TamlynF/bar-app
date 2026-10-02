@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; badge: string; icon: React.ElementType }
+  { label: string; badge: string; icon: React.ElementType<{ className?: string }> }
 > = {
   new: {
     label: "New",
@@ -50,7 +50,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const SOCIAL_ICONS: Record<string, React.ElementType> = {
+const SOCIAL_ICONS: Record<string, React.ElementType<{ className?: string }>> = {
   instagram: SiInstagram,
   facebook: SiFacebook,
   youtube: SiYoutube,

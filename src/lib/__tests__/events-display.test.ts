@@ -3,6 +3,7 @@ import {
   formatTime,
   getEventType,
   serializeEvent,
+  ticketAvailability,
   type EventRow,
 } from "@/lib/events-display";
 
@@ -157,5 +158,32 @@ describe("serializeEvent image fallback", () => {
       })
     );
     expect(s.imageUrl).toBe(ACT_IMG);
+  });
+});
+
+describe("ticketAvailability", () => {
+  const ticketed = serializeEvent(makeEvent({ seating_required: false }));
+  const seated = serializeEvent(makeEvent({ seating_required: true }));
+
+  it("shows nothing for events that cannot be booked", () => {
+    expect(ticketAvailability({ ...ticketed, isBookable: false }, { left: 1, total: 100 })).toBeNull();
+  });
+
+  it("is sold out when flagged or when no space is left", () => {
+    expect(ticketAvailability({ ...ticketed, isFullyBooked: true })?.status).toBe("sold_out");
+    expect(ticketAvailability(ticketed, { left: 0, total: 100 })).toEqual({ status: "sold_out", label: "Sold out" });
+  });
+
+  it("is nearly sold out at 20% or less remaining", () => {
+    expect(ticketAvailability(ticketed, { left: 20, total: 100 })).toEqual({ status: "nearly", label: "Only 20 left" });
+    expect(ticketAvailability(seated, { left: 2, total: 10 })).toEqual({ status: "nearly", label: "Nearly sold out" });
+  });
+
+  it("is available above 20% remaining or when space is unknown", () => {
+    expect(ticketAvailability(ticketed, { left: 21, total: 100 })).toEqual({
+      status: "available",
+      label: "Tickets available",
+    });
+    expect(ticketAvailability(seated, null)).toEqual({ status: "available", label: "Tables available" });
   });
 });

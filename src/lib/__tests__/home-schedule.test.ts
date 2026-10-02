@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countdownLabel, groupSchedule } from "@/lib/home-schedule";
+import { countdownLabel, groupSchedule, nightLabel } from "@/lib/home-schedule";
 import type { SerializedEvent } from "@/lib/events-display";
 
 function ev(id: number, date: string, title = `Event ${id}`): SerializedEvent {
@@ -57,5 +57,15 @@ describe("countdownLabel", () => {
     expect(countdownLabel("2026-09-21", today)).toBe("Tonight");
     expect(countdownLabel("2026-09-22", today)).toBe("Tomorrow");
     expect(countdownLabel("2026-09-24", today)).toBe("In 3 days");
+  });
+});
+
+describe("nightLabel", () => {
+  const friday = new Date(2026, 9, 2);
+
+  it("names the night within the coming week, and the date beyond it", () => {
+    expect(nightLabel("2026-10-02", friday)).toBe("Tonight");
+    expect(nightLabel("2026-10-03", friday)).toBe("This Saturday");
+    expect(nightLabel("2026-10-10", friday)).toBe("Saturday 10 October");
   });
 });

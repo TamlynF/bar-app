@@ -21,7 +21,7 @@ export const viewport: Viewport = {
   themeColor: "#26300D",
 };
 
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, React.ElementType<{ className?: string }>> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,

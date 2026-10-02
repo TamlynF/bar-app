@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS_STYLES: Record<
   string,
-  { label: string; badge: string; icon: React.ElementType }
+  { label: string; badge: string; icon: React.ElementType<{ className?: string }> }
 > = {
   pending: {
     label: "Pending Review",

@@ -166,6 +166,20 @@ export function entryText(event: SerializedEvent): string {
   return "Free entry · walk in";
 }
 
+export type EventSpace = { left: number; total: number };
+export type TicketAvailability = { status: "available" | "nearly" | "sold_out"; label: string };
+
+export const NEARLY_SOLD_OUT_SHARE = 0.2;
+
+export function ticketAvailability(event: SerializedEvent, space?: EventSpace | null): TicketAvailability | null {
+  if (!event.isBookable) return null;
+  if (event.isFullyBooked || (space && space.left <= 0)) return { status: "sold_out", label: "Sold out" };
+  if (space && space.left <= space.total * NEARLY_SOLD_OUT_SHARE) {
+    return { status: "nearly", label: event.requiresSeating ? "Nearly sold out" : `Only ${space.left} left` };
+  }
+  return { status: "available", label: event.requiresSeating ? "Tables available" : "Tickets available" };
+}
+
 export function serializeEvent(e: EventRow, band: BandInfo | null = null): SerializedEvent {
   const et = getEventType(e);
   return {

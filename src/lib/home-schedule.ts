@@ -53,3 +53,10 @@ export function countdownLabel(dateStr: string, today: Date): string {
   if (diff === 1) return "Tomorrow";
   return `In ${diff} days`;
 }
+
+export function nightLabel(dateStr: string, today: Date): string {
+  const diff = daysUntil(dateStr, today);
+  if (diff <= 0) return "Tonight";
+  const date = parseDate(dateStr);
+  return diff < 7 ? `This ${format(date, "EEEE")}` : format(date, "EEEE d MMMM");
+}

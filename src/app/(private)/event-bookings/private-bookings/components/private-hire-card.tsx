@@ -206,7 +206,7 @@ function EditRow({
   );
 }
 
-function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType }) {
+function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType<{ className?: string }> }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
@@ -624,9 +624,11 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           ? "A start and end time must be set to confirm this booking."
           : undefined;
 
-  const hasClashes = clashes.length > 0;
+  const clashCheckReady = !(isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime);
+  const visibleClashes = clashCheckReady ? clashes : [];
+  const hasClashes = visibleClashes.length > 0;
   const clashWarning = hasClashes
-    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} - pick another time.`
+    ? `Clashes with ${visibleClashes.map((c) => c.title).join(", ")} - pick another time.`
     : undefined;
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
@@ -666,18 +668,19 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
-  useEffect(() => {
-    const openId = searchParams.get("open") ?? new URLSearchParams(window.location.search).get("open");
-    if (openId !== request.id) return;
-    setOpen(true);
-    window.history.replaceState(null, "", LIST_HREF);
-  }, [searchParams, request.id]);
+  const openParam = searchParams.get("open");
+  const [handledOpenParam, setHandledOpenParam] = useState<string | null>(null);
+  if (openParam !== handledOpenParam) {
+    setHandledOpenParam(openParam);
+    if (openParam === request.id) setOpen(true);
+  }
 
   useEffect(() => {
-    if (isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime) {
-      setClashes([]);
-      return;
-    }
+    if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
+  }, [openParam, request.id]);
+
+  useEffect(() => {
+    if (isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
@@ -1481,7 +1484,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     </div>
                   </div>
                   {slotWarning && <FieldMessage warning={slotWarning} />}
-                  {clashes.length > 0 && <ClashList clashes={clashes} />}
+                  {visibleClashes.length > 0 && <ClashList clashes={visibleClashes} />}
                 </div>
 
                 <div className="flex items-center justify-end gap-2 sm:flex-1">
