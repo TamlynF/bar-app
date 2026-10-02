@@ -18,7 +18,9 @@ import {
   Shapes,
   ExternalLink,
   Image as ImageIcon,
+  PoundSterling,
 } from "lucide-react";
+import { formatGBP } from "@/lib/events-display";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import Link from "next/link";
 import { updateCompanyInfo } from "./actions";
@@ -60,6 +62,7 @@ interface CompanyInfo {
   youtube: string | null;
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
+  private_hire_deposit: number | null;
   created_at?: string;
   created_by?: number | null;
   updated_at?: string | null;
@@ -293,6 +296,7 @@ export default function CompanyInfoClient({
     youtube: socialPath(record?.youtube, "youtube"),
     max_capacity: record?.max_capacity?.toString() ?? "",
     private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
+    private_hire_deposit: record?.private_hire_deposit?.toString() ?? "",
   });
 
   const [form, setForm] = useState(() => emptyForm(initialData));
@@ -350,6 +354,7 @@ export default function CompanyInfoClient({
     fd.set("youtube", socialPath(form.youtube, "youtube"));
     fd.set("max_capacity", form.max_capacity);
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
+    fd.set("private_hire_deposit", form.private_hire_deposit);
 
     setFormError(null);
     startTransition(async () => {
@@ -365,6 +370,7 @@ export default function CompanyInfoClient({
           youtube: socialPath(form.youtube, "youtube"),
           max_capacity: parseInt(form.max_capacity) || null,
           private_hire_min_capacity: parseInt(form.private_hire_min_capacity) || null,
+          private_hire_deposit: parseFloat(form.private_hire_deposit) || null,
           ...(res.audit ?? {}),
         });
         setIsEditing(false);
@@ -548,6 +554,11 @@ export default function CompanyInfoClient({
                   ? `${data.private_hire_min_capacity} people`
                   : "-"
               }
+            />
+            <Row
+              icon={<PoundSterling className="h-3.5 w-3.5" />}
+              label="Private hire deposit"
+              value={data.private_hire_deposit ? formatGBP(Number(data.private_hire_deposit)) : "-"}
             />
             <Row
               icon={<Shapes className="h-3.5 w-3.5" />}
@@ -832,6 +843,19 @@ export default function CompanyInfoClient({
                 onChange={(e) => update("private_hire_min_capacity", e.target.value)}
                 aria-label="Private hire minimum capacity"
                 placeholder="e.g. 30"
+                className={cn(FIELD_INPUT, "tabular-nums")}
+              />
+            </FormRow>
+            <FormRow label="Private hire deposit (£)">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                value={form.private_hire_deposit}
+                onChange={(e) => update("private_hire_deposit", e.target.value)}
+                aria-label="Private hire deposit in pounds"
+                placeholder="e.g. 500"
                 className={cn(FIELD_INPUT, "tabular-nums")}
               />
             </FormRow>

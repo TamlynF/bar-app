@@ -19,6 +19,7 @@ export type CompanyInfoRow = {
   youtube: string | null;
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
+  private_hire_deposit: number | null;
   description: string | null;
   opening_hours: OpeningHours | null;
   tagline: string | null;

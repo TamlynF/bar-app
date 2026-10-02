@@ -52,6 +52,7 @@ export async function updateCompanyInfo(formData: FormData) {
     opening_hours: JSON.parse(formData.get("opening_hours")?.toString() || "{}"),
     max_capacity: parseInt(formData.get("max_capacity")?.toString() || "0", 10) || null,
     private_hire_min_capacity: parseInt(formData.get("private_hire_min_capacity")?.toString() || "0", 10) || null,
+    private_hire_deposit: parseFloat(formData.get("private_hire_deposit")?.toString() || "") || null,
     created_at: existing?.created_at ?? new Date().toISOString(),
     created_by: existing?.created_by ?? currentEmployeeId,
     updated_at: new Date().toISOString(),

@@ -7,6 +7,8 @@ import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
+import { getCompanyInfo } from "@/lib/company-info";
+import { describeOpenSessionClash, openSessionClash, toMinutes } from "@/lib/opening-hours";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -33,6 +35,14 @@ export interface PrivateHireData {
 }
 
 export async function createPrivateHire(data: PrivateHireData) {
+  const start = toMinutes(data.preferred_start_time);
+  const end = toMinutes(data.preferred_end_time);
+  if (data.preferred_date && start != null && end != null) {
+    const companyInfo = await getCompanyInfo();
+    const clash = openSessionClash(companyInfo?.opening_hours, data.preferred_date, start, end);
+    if (clash) throw new Error(describeOpenSessionClash(clash));
+  }
+
   const supabase = await createClient();
 
   // Ties the enquiry to a person rather than to whatever address they typed,

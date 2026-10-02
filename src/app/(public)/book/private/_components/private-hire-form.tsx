@@ -4,12 +4,28 @@ import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import { privateHireSubtypeLabel, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
-  CheckCircle2, ChevronLeft, ChevronRight, Calendar, Clock, Users,
-  User, Mail, Phone, MessageSquareQuote, Tag, Info,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  Clock,
+  Users,
+  User,
+  Mail,
+  Phone,
+  MessageSquareQuote,
+  Tag,
+  Info,
 } from "lucide-react";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
-import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+import {
+  stepBackButtonClass,
+  stepButtonRowClass,
+  stepPrimaryButtonClass,
+} from "@/app/(public)/book/_components/step-button-styles";
 import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
+import { describeOpenSessionClash, openSessionClash, type OpeningHours } from "@/lib/opening-hours";
+import { formatGBP } from "@/lib/events-display";
 
 const inputBaseClass =
   "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
@@ -17,7 +33,12 @@ const labelClass = "block text-[10px] font-black text-stone-500 mb-1 sm:mb-2 upp
 const iconContainerClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
 const iconClass = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 const helperClass =
-  "col-span-2 flex items-start gap-2 rounded-xl border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3 py-2 text-[11px] font-bold leading-relaxed text-[#FDCC4B] max-sm:order-last sm:col-span-1 sm:mt-3 sm:py-2.5";
+  "col-span-2 -mt-1 ml-1 flex items-start gap-1.5 text-xs leading-relaxed text-ink-2 sm:col-span-1 sm:mt-2";
+/* iPhone Safari draws date and time inputs at their own natural width, which
+   spills out of a half-width column; without the native styling they fill
+   the column like any other input, so they need an explicit height. */
+const dateTimeInputClass =
+  "input-scheme-dark block h-11.5 min-w-0 appearance-none pl-9 sm:h-13.5 sm:pl-11 [&::-webkit-date-and-time-value]:text-left";
 
 function inputClass(hasError: boolean) {
   return `${inputBaseClass} ${
@@ -27,10 +48,9 @@ function inputClass(hasError: boolean) {
   }`;
 }
 
-
 const STEPS = [
-  { number: 1, title: "Your Details",  subtitle: "Who should we contact?" },
-  { number: 2, title: "Your Event",    subtitle: "Tell us about the occasion." },
+  { number: 1, title: "Your Details", subtitle: "Who should we contact?" },
+  { number: 2, title: "Your Event", subtitle: "Tell us about the occasion." },
   { number: 3, title: "Final Details", subtitle: "Anything else we should know?" },
 ];
 
@@ -45,7 +65,8 @@ type FieldKey =
   | "preferredDate"
   | "preferredStartTime"
   | "preferredEndTime"
-  | "eventSubtypeId";
+  | "eventSubtypeId"
+  | "slot";
 
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
@@ -72,11 +93,16 @@ export default function PrivateHireForm({
   subtypes,
   minCapacity,
   maxCapacity,
+  openingHours,
+  deposit,
 }: {
   subtypes: PrivateHireSubtype[];
   minCapacity: number | null;
   maxCapacity: number | null;
+  openingHours: OpeningHours | null;
+  deposit: number | null;
 }) {
+  const depositLabel = deposit ? formatGBP(deposit) : null;
   const minGuests = minCapacity ?? DEFAULT_MIN_GUESTS;
 
   const [isPending, startTransition] = useTransition();
@@ -98,6 +124,11 @@ export default function PrivateHireForm({
   const [additionalReqs, setAdditionalReqs] = useState("");
 
   const selectedSubtype = subtypes.find((s) => String(s.id) === eventSubtypeId);
+  const openClash =
+    preferredDate && preferredStartTime && preferredEndTime
+      ? openSessionClash(openingHours, preferredDate, toMinutes(preferredStartTime), toMinutes(preferredEndTime))
+      : null;
+  const openClashMessage = openClash ? describeOpenSessionClash(openClash) : undefined;
 
   function clearFieldError(key: FieldKey) {
     setFieldErrors((prev) => {
@@ -150,9 +181,12 @@ export default function PrivateHireForm({
       if (end === start) {
         errors.preferredEndTime = "End time must be later than the start time.";
       } else if (end < start && end >= OVERNIGHT_CUTOFF_MINUTES) {
-        errors.preferredEndTime = "End time must be later than the start time, unless the event runs into the early hours.";
+        errors.preferredEndTime =
+          "End time must be later than the start time, unless the event runs into the early hours.";
       }
     }
+
+    if (!errors.preferredEndTime && openClashMessage) errors.slot = openClashMessage;
 
     if (!eventSubtypeId) errors.eventSubtypeId = "Please select a reason for hire.";
 
@@ -245,7 +279,8 @@ export default function PrivateHireForm({
         <CheckCircle2 className="h-12 w-12 text-[#FDCC4B]" />
         <h3 className="font-black text-xl tracking-tight text-white uppercase">Enquiry Submitted!</h3>
         <p className="max-w-xs text-sm leading-relaxed text-stone-400">
-          We&apos;ve received your private hire enquiry. Our team will be in touch shortly to discuss availability and next steps.
+          We&apos;ve received your private hire enquiry. Our team will be in touch shortly to discuss availability and
+          next steps.
         </p>
       </div>
     );
@@ -255,18 +290,13 @@ export default function PrivateHireForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-0 overflow-hidden">
-
       <div className="mb-4 flex items-center justify-between sm:mb-8">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
             <div
               key={s.number}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                s.number < step
-                  ? "w-6 bg-[#FDCC4B]"
-                  : s.number === step
-                  ? "w-8 bg-[#FDCC4B]"
-                  : "w-4 bg-white/10"
+                s.number < step ? "w-6 bg-[#FDCC4B]" : s.number === step ? "w-8 bg-[#FDCC4B]" : "w-4 bg-white/10"
               }`}
             />
           ))}
@@ -284,11 +314,12 @@ export default function PrivateHireForm({
       </div>
 
       <div key={step} className="animate-in space-y-3 duration-200 fade-in sm:space-y-4">
-
         {step === 1 && (
           <>
             <div className="space-y-1">
-              <label htmlFor="ph-full-name" className={labelClass}>Full Name <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-full-name" className={labelClass}>
+                Full Name <span className="text-red-500">*</span>
+              </label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <User className={iconClass} />
@@ -296,7 +327,10 @@ export default function PrivateHireForm({
                 <input
                   id="ph-full-name"
                   value={fullName}
-                  onChange={(e) => { setFullName(e.target.value); clearFieldError("fullName"); }}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    clearFieldError("fullName");
+                  }}
                   placeholder="Your full name"
                   aria-invalid={!!fieldErrors.fullName}
                   className={inputClass(!!fieldErrors.fullName)}
@@ -306,7 +340,9 @@ export default function PrivateHireForm({
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <div className="space-y-1">
-                <label htmlFor="ph-email" className={labelClass}>Email <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-email" className={labelClass}>
+                  Email <span className="text-red-500">*</span>
+                </label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Mail className={iconClass} />
@@ -315,7 +351,10 @@ export default function PrivateHireForm({
                     id="ph-email"
                     type="email"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearFieldError("email");
+                    }}
                     placeholder="your@email.com"
                     aria-invalid={!!fieldErrors.email}
                     className={inputClass(!!fieldErrors.email)}
@@ -324,7 +363,9 @@ export default function PrivateHireForm({
                 <FieldError message={fieldErrors.email} />
               </div>
               <div className="space-y-1">
-                <label htmlFor="ph-phone" className={labelClass}>Phone</label>
+                <label htmlFor="ph-phone" className={labelClass}>
+                  Phone
+                </label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Phone className={iconClass} />
@@ -346,57 +387,69 @@ export default function PrivateHireForm({
         {step === 2 && (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-0">
-            <div className="min-w-0 space-y-1">
-              <label htmlFor="ph-guest-count" className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
-              <div className="group relative">
-                <div className={iconContainerClass}>
-                  <Users className={iconClass} />
-                </div>
-                <input
-                  id="ph-guest-count"
-                  type="number"
-                  inputMode="numeric"
-                  min={minGuests}
-                  max={maxCapacity ?? undefined}
-                  value={guestCount}
-                  onChange={(e) => { setGuestCount(e.target.value); clearFieldError("guestCount"); }}
-                  onBlur={handleGuestCountBlur}
-                  placeholder={`e.g. ${minGuests}`}
-                  aria-invalid={!!fieldErrors.guestCount}
-                  className={inputClass(!!fieldErrors.guestCount)}
-                />
-              </div>
-              <FieldError message={fieldErrors.guestCount} />
-            </div>
-            <p className={helperClass}>
-              <Info className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>Please try and be as accurate as you can, so that we can plan staffing accordingly!</span>
-            </p>
-
-            <div className="min-w-0 space-y-1 sm:mt-4">
-              <label htmlFor="ph-date" className={labelClass}>Date <span className="text-red-500">*</span></label>
-              <div className="group relative">
-                <div className={iconContainerClass}>
-                  <Calendar className={iconClass} />
-                </div>
-                <input
-                  id="ph-date"
-                  title="Select a date"
-                  type="date"
-                  min={today}
-                  value={preferredDate}
-                  onChange={(e) => { setPreferredDate(e.target.value); clearFieldError("preferredDate"); }}
-                  aria-invalid={!!fieldErrors.preferredDate}
-                  className={`${inputClass(!!fieldErrors.preferredDate)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
-                />
-              </div>
-              <FieldError message={fieldErrors.preferredDate} />
-            </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 overflow-hidden sm:gap-6">
               <div className="min-w-0 space-y-1">
-                <label htmlFor="ph-start-time" className={labelClass}>Start Time <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-guest-count" className={labelClass}>
+                  Number of Guests <span className="text-red-500">*</span>
+                </label>
+                <div className="group relative">
+                  <div className={iconContainerClass}>
+                    <Users className={iconClass} />
+                  </div>
+                  <input
+                    id="ph-guest-count"
+                    type="number"
+                    inputMode="numeric"
+                    min={minGuests}
+                    max={maxCapacity ?? undefined}
+                    value={guestCount}
+                    onChange={(e) => {
+                      setGuestCount(e.target.value);
+                      clearFieldError("guestCount");
+                    }}
+                    onBlur={handleGuestCountBlur}
+                    placeholder={`e.g. ${minGuests}`}
+                    aria-invalid={!!fieldErrors.guestCount}
+                    className={inputClass(!!fieldErrors.guestCount)}
+                  />
+                </div>
+                <FieldError message={fieldErrors.guestCount} />
+              </div>
+              <p className={`${helperClass} max-sm:order-last`}>
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden="true" />
+                <span>Your best estimate of guests helps us plan staffing.</span>
+              </p>
+
+              <div className="min-w-0 space-y-1 sm:mt-4">
+                <label htmlFor="ph-date" className={labelClass}>
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <div className="group relative">
+                  <div className={iconContainerClass}>
+                    <Calendar className={iconClass} />
+                  </div>
+                  <input
+                    id="ph-date"
+                    title="Select a date"
+                    type="date"
+                    min={today}
+                    value={preferredDate}
+                    onChange={(e) => {
+                      setPreferredDate(e.target.value);
+                      clearFieldError("preferredDate");
+                    }}
+                    aria-invalid={!!fieldErrors.preferredDate}
+                    className={`${inputClass(!!fieldErrors.preferredDate)} ${dateTimeInputClass}`}
+                  />
+                </div>
+                <FieldError message={fieldErrors.preferredDate} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-6">
+              <div className="min-w-0 space-y-1">
+                <label htmlFor="ph-start-time" className={labelClass}>
+                  Start Time <span className="text-red-500">*</span>
+                </label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
@@ -409,13 +462,15 @@ export default function PrivateHireForm({
                     value={preferredStartTime}
                     onChange={(e) => handleStartTimeChange(e.target.value)}
                     aria-invalid={!!fieldErrors.preferredStartTime}
-                    className={`${inputClass(!!fieldErrors.preferredStartTime)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
+                    className={`${inputClass(!!fieldErrors.preferredStartTime)} ${dateTimeInputClass}`}
                   />
                 </div>
                 <FieldError message={fieldErrors.preferredStartTime} />
               </div>
               <div className="min-w-0 space-y-1">
-                <label htmlFor="ph-end-time" className={labelClass}>End Time <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-end-time" className={labelClass}>
+                  End Time <span className="text-red-500">*</span>
+                </label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
@@ -426,17 +481,23 @@ export default function PrivateHireForm({
                     type="time"
                     step={900}
                     value={preferredEndTime}
-                    onChange={(e) => { setPreferredEndTime(e.target.value); clearFieldError("preferredEndTime"); }}
+                    onChange={(e) => {
+                      setPreferredEndTime(e.target.value);
+                      clearFieldError("preferredEndTime");
+                    }}
                     aria-invalid={!!fieldErrors.preferredEndTime}
-                    className={`${inputClass(!!fieldErrors.preferredEndTime)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
+                    className={`${inputClass(!!fieldErrors.preferredEndTime)} ${dateTimeInputClass}`}
                   />
                 </div>
                 <FieldError message={fieldErrors.preferredEndTime} />
               </div>
             </div>
+            <FieldError id="ph-slot-error" message={openClashMessage} />
 
             <div className="space-y-1">
-              <label htmlFor="ph-reason" className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-reason" className={labelClass}>
+                Reason for Hire <span className="text-red-500">*</span>
+              </label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <Tag className={iconClass} />
@@ -445,7 +506,10 @@ export default function PrivateHireForm({
                   id="ph-reason"
                   title="Reason for Hire"
                   value={eventSubtypeId}
-                  onChange={(e) => { setEventSubtypeId(e.target.value); clearFieldError("eventSubtypeId"); }}
+                  onChange={(e) => {
+                    setEventSubtypeId(e.target.value);
+                    clearFieldError("eventSubtypeId");
+                  }}
                   aria-invalid={!!fieldErrors.eventSubtypeId}
                   className={`${inputClass(!!fieldErrors.eventSubtypeId)} cursor-pointer appearance-none pr-10`}
                 >
@@ -465,8 +529,36 @@ export default function PrivateHireForm({
 
         {step === 3 && (
           <>
+            {depositLabel && (
+              <div className="rounded-2xl border border-gold/30 bg-gold/10 p-4">
+                <p className="flex items-center gap-2 font-black text-sm tracking-wide text-gold uppercase">
+                  <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {depositLabel} refundable deposit
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-ink">
+                  Private hire is secured with a {depositLabel} deposit, refunded against your bar spend on the night.
+                </p>
+                <ul className="mt-2 space-y-1 text-sm leading-relaxed text-ink-2">
+                  <li className="flex gap-2">
+                    <span aria-hidden="true" className="text-gold">
+                      •
+                    </span>
+                    <span>Spend {depositLabel} or more at the bar and the full deposit is returned.</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span aria-hidden="true" className="text-gold">
+                      •
+                    </span>
+                    <span>Spend less and we refund the amount you spent.</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+
             <div className="space-y-1">
-              <label htmlFor="ph-additional" className={labelClass}>Additional Requests</label>
+              <label htmlFor="ph-additional" className={labelClass}>
+                Additional Requests
+              </label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <MessageSquareQuote className={iconClass} />
@@ -482,10 +574,8 @@ export default function PrivateHireForm({
                 />
               </div>
             </div>
-
           </>
         )}
-
       </div>
 
       {error && step === 3 && (
@@ -506,6 +596,8 @@ export default function PrivateHireForm({
             key="next"
             type="button"
             onClick={handleNext}
+            disabled={step === 2 && !!openClashMessage}
+            aria-describedby={step === 2 && openClashMessage ? "ph-slot-error" : undefined}
             className={`${stepPrimaryButtonClass} ${stepComplete ? "" : incompleteButtonClass}`}
           >
             Next
@@ -524,7 +616,6 @@ export default function PrivateHireForm({
           </button>
         )}
       </div>
-
     </form>
   );
 }

@@ -69,6 +69,8 @@ export default async function PrivateHirePage() {
                 subtypes={subtypes}
                 minCapacity={companyInfo?.private_hire_min_capacity ?? null}
                 maxCapacity={companyInfo?.max_capacity ?? null}
+                openingHours={companyInfo?.opening_hours ?? null}
+                deposit={companyInfo?.private_hire_deposit != null ? Number(companyInfo.private_hire_deposit) : null}
               />
             </div>
           </div>

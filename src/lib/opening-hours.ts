@@ -176,3 +176,36 @@ export function summariseOpeningHours(hours: OpeningHours | null | undefined): s
   flush(WEEK_ORDER.length - 1);
   return out;
 }
+
+export type OpenSessionClash = { dayIndex: number; open: number; close: number };
+
+/* The public opening session that a private hire slot on `dateIso` would run
+   into, if any. Times are minutes from midnight; an end at or before the start
+   runs past midnight. The previous night's session counts too, so 1am on a
+   Saturday clashes with Friday's 7pm–2am. */
+export function openSessionClash(
+  hours: OpeningHours | null | undefined,
+  dateIso: string,
+  start: number,
+  end: number,
+): OpenSessionClash | null {
+  if (!hours) return null;
+  const dayIndex = new Date(`${dateIso}T00:00:00`).getDay();
+  if (Number.isNaN(dayIndex)) return null;
+  const slotEnd = end <= start ? end + 1440 : end;
+
+  for (const offset of [-1, 0, 1]) {
+    const session = sessionFor(hours, dayIndex + offset);
+    if (!session) continue;
+    const sessionStart = offset * 1440 + session.open;
+    const sessionEnd = offset * 1440 + session.close + (session.isOvernight ? 1440 : 0);
+    if (start < sessionEnd && sessionStart < slotEnd) {
+      return { dayIndex: (((dayIndex + offset) % 7) + 7) % 7, open: session.open, close: session.close };
+    }
+  }
+  return null;
+}
+
+export function describeOpenSessionClash(clash: OpenSessionClash): string {
+  return `The bar is open to the public on ${DAY_LONG[clash.dayIndex]}s from ${formatClock(clash.open)} to ${formatClock(clash.close)}, so private hire can't overlap those hours. Please pick a different date or time.`;
+}
