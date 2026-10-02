@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RenderedSlots } from "./design";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { applyInvoiceReply, type ReceivedFile } from "@/lib/band-invoice-reply";
 import { ADMIN_EMAIL, EMAIL_FROM, EMAIL_REPLY_DOMAIN } from "@/lib/email";
 import {
   bareAddress,
@@ -22,6 +24,37 @@ import {
 export const EMAIL_ATTACHMENTS_BUCKET = "email-attachments";
 
 export type OutboundAttachment = { filename: string; content: Buffer; contentType: string };
+
+/* A template's own files, read with the service role at send time. A file
+   that cannot be read is skipped and logged - a missing PDF must never stop a
+   booking confirmation from going out. */
+export async function loadTemplateAttachments(
+  slots: RenderedSlots | null | undefined
+): Promise<OutboundAttachment[]> {
+  const files = slots?.design?.attachments ?? [];
+  if (files.length === 0) return [];
+  const admin = createAdminClient();
+  const loaded = await Promise.all(
+    files.map(async (f): Promise<OutboundAttachment | null> => {
+      const { data, error } = await admin.storage.from(EMAIL_ATTACHMENTS_BUCKET).download(f.path);
+      if (error || !data) {
+        console.error(`[email templates] attachment ${f.path} could not be read:`, error?.message);
+        return null;
+      }
+      return { filename: f.name, content: Buffer.from(await data.arrayBuffer()), contentType: f.contentType };
+    })
+  );
+  return loaded.filter((a): a is OutboundAttachment => a !== null);
+}
+
+/* For the send sites that call Resend directly rather than through
+   sendCorrespondenceEmail - spread the result into the send options. */
+export async function resendTemplateAttachments(
+  slots: RenderedSlots | null | undefined
+): Promise<{ attachments?: { filename: string; content: Buffer }[] }> {
+  const files = await loadTemplateAttachments(slots);
+  return files.length ? { attachments: files.map((f) => ({ filename: f.filename, content: f.content })) } : {};
+}
 const SIGNED_URL_SECONDS = 60 * 60;
 
 type Links = {
@@ -57,7 +90,7 @@ function replyTarget(links: Links): CorrespondenceTarget | null {
   return null;
 }
 
-function escapeLike(value: string): string {
+export function escapeLike(value: string): string {
   return value.replace(/[%_\\]/g, "\\$&");
 }
 
@@ -104,7 +137,10 @@ export async function sendCorrespondenceEmail(p: {
   inReplyTo?: string | null;
   fallbackReplyTo?: string | null;
   attachments?: OutboundAttachment[];
+  /* The rendered template this email was built from - its own files go too. */
+  templateSlots?: RenderedSlots | null;
 }): Promise<{ error: string | null }> {
+  const attachments = [...(await loadTemplateAttachments(p.templateSlots)), ...(p.attachments ?? [])];
   const target = replyTarget(p.links);
   const replyAddress = target ? correspondenceReplyAddress(target, EMAIL_REPLY_DOMAIN) : null;
   const replyTo = replyAddress
@@ -121,8 +157,8 @@ export async function sendCorrespondenceEmail(p: {
     ...(replyTo ? { replyTo } : {}),
     ...(bcc ? { bcc } : {}),
     ...(headers ? { headers } : {}),
-    ...(p.attachments?.length
-      ? { attachments: p.attachments.map((a) => ({ filename: a.filename, content: a.content })) }
+    ...(attachments.length
+      ? { attachments: attachments.map((a) => ({ filename: a.filename, content: a.content })) }
       : {}),
   });
   if (error) {
@@ -142,7 +178,7 @@ export async function sendCorrespondenceEmail(p: {
   }
 
   const stored: EmailAttachment[] = [];
-  for (const [i, a] of (p.attachments ?? []).entries()) {
+  for (const [i, a] of attachments.entries()) {
     const name = safeAttachmentName(a.filename, `attachment-${i + 1}`);
     const path = `outbound/${data?.id ?? crypto.randomUUID()}/${i + 1}-${name}`;
     const { error: upErr } = await admin.storage
@@ -245,6 +281,7 @@ export async function loadCorrespondence(
       readAt: r.read_at,
       sentByName: sender?.full_name ?? null,
       bandRequestId: r.band_booking_request_id,
+      privateHireRequestId: r.private_hire_request_id,
       source: sourceOf(r),
       createdAt: r.created_at,
     };
@@ -411,6 +448,7 @@ export async function storeInboundEmail(resend: Resend, emailId: string): Promis
     (contactId ? `contact-${contactId}` : "unmatched");
   const folder = `${owner}/${emailId}`;
   const attachments: EmailAttachment[] = [];
+  const received: ReceivedFile[] = [];
   if ((email.attachments ?? []).length > 0) {
     const { data: list } = await resend.emails.receiving.attachments.list({ emailId });
     for (const [i, a] of (list?.data ?? []).entries()) {
@@ -420,9 +458,11 @@ export async function storeInboundEmail(resend: Resend, emailId: string): Promis
         if (!res.ok) throw new Error(`download ${res.status}`);
         const name = safeAttachmentName(a.filename, `attachment-${i + 1}`);
         const path = `${folder}/${i + 1}-${name}`;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        received.push({ name, contentType: a.content_type, bytes });
         const { error: upErr } = await admin.storage
           .from(EMAIL_ATTACHMENTS_BUCKET)
-          .upload(path, await res.arrayBuffer(), { contentType: a.content_type, upsert: true });
+          .upload(path, bytes, { contentType: a.content_type, upsert: true });
         if (upErr) throw upErr;
         attachments.push({ name, path, size: a.size, contentType: a.content_type });
       } catch (e) {
@@ -453,5 +493,12 @@ export async function storeInboundEmail(resend: Resend, emailId: string): Promis
   });
   if (insertError && insertError.code !== "23505") {
     throw new Error(`Could not store received email ${emailId}: ${insertError.message}`);
+  }
+  if (insertError || received.length === 0) return;
+
+  try {
+    await applyInvoiceReply(admin, links, received, new Date().toISOString(), email.subject ?? "");
+  } catch (e) {
+    console.error(`[correspondence inbound] invoice read failed for ${emailId}:`, e);
   }
 }

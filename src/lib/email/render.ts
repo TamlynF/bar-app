@@ -18,6 +18,8 @@ export const SLOT_KEYS = [
   "outro",
   "ctaLabel",
   "footnote",
+  "cardTitle",
+  "noteTitle",
 ] as const;
 
 export type SlotKey = (typeof SLOT_KEYS)[number];
@@ -33,6 +35,8 @@ export const EMPTY_SLOTS: TemplateSlots = {
   outro: "",
   ctaLabel: "",
   footnote: "",
+  cardTitle: "",
+  noteTitle: "",
 };
 
 /* The subject line lands in a mail client's list view as plain text, so its
@@ -52,7 +56,7 @@ export type RenderResult = {
   unknownTokens: string[];
 };
 
-function substitute(
+export function substitute(
   template: string,
   values: MergeValues,
   escape: boolean,

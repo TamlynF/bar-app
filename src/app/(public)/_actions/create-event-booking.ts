@@ -34,6 +34,7 @@ import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -375,6 +376,7 @@ async function sendPaymentPendingEmail(
       to: args.email,
       subject,
       html,
+      ...(await resendTemplateAttachments(slots)),
     });
     if (resendError) console.error("Resend API Error:", resendError);
   } catch (emailError) {
@@ -435,6 +437,7 @@ async function sendEventBookingEmail(
       to: email,
       subject,
       html,
+      ...(await resendTemplateAttachments(slots)),
     });
     if (resendError) {
       console.error("Resend API Error:", resendError);

@@ -2,11 +2,30 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { format } from "date-fns";
-import { AlertCircle, ChevronDown, ImageOff, Loader2, Mail, MoreHorizontal, Paperclip, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  ImageOff,
+  Link2,
+  Loader2,
+  Mail,
+  MoreHorizontal,
+  Paperclip,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmailComposer } from "@/components/admin/email-composer";
 import { cleanEmailHtml, emailFrameDocument } from "@/lib/email/email-html";
 import {
@@ -17,8 +36,11 @@ import {
 import {
   getCorrespondence,
   markCorrespondenceRead,
+  relinkCorrespondenceMessage,
   sendCorrespondenceReply,
+  type CorrespondenceBooking,
   type CorrespondenceFilter,
+  type RelinkScope,
   type CorrespondenceThread,
 } from "@/app/(private)/settings/music-acts/correspondence-actions";
 
@@ -28,6 +50,7 @@ const KIND_LABELS: Record<string, string> = {
   booked: "Booking confirmed",
   declined: "Declined",
   rescheduled: "Rescheduled",
+  invoice: "Invoice request",
   enquiry: "Enquiry received",
   confirmed: "Booking confirmed",
   cancelled: "Cancelled",
@@ -63,7 +86,7 @@ function snippetOf(message: CorrespondenceMessage): string {
     .trim();
 }
 
-function EmailHtmlFrame({
+export function EmailHtmlFrame({
   html,
   allowImages,
   title,
@@ -72,7 +95,7 @@ function EmailHtmlFrame({
   html: string;
   allowImages: boolean;
   title: string;
-  onHeight: (px: number) => void;
+  onHeight?: (px: number) => void;
 }) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(0);
@@ -82,7 +105,7 @@ function EmailHtmlFrame({
     if (!doc?.documentElement) return;
     const px = Math.ceil(doc.documentElement.scrollHeight);
     setHeight(px);
-    onHeight(px);
+    onHeight?.(px);
   }
 
   function handleLoad() {
@@ -218,14 +241,95 @@ function EmailBody({ message, fadeClass }: { message: CorrespondenceMessage; fad
   );
 }
 
+const NO_BOOKING = "none";
+
+function BookingLink({
+  currentId,
+  bookings,
+  noun,
+  onRelink,
+  busy,
+}: {
+  currentId: string | null;
+  bookings: CorrespondenceBooking[];
+  noun: string;
+  onRelink?: (targetId: string | null) => void;
+  busy: boolean;
+}) {
+  const current = bookings.find((b) => b.id === currentId);
+  const unlinked = `Not linked to a ${noun.toLowerCase()}`;
+  const label = current ? current.label : currentId ? `Another ${noun.toLowerCase()}` : unlinked;
+  const chip = cn(
+    "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold",
+    current ? "border-admin-primary/25 bg-white text-admin-primary" : "border-dashed border-admin-line bg-white/70 text-admin-muted"
+  );
+  const content = (
+    <>
+      <Link2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+      <span className="truncate">
+        {current ? `${noun}: ` : ""}
+        {label}
+      </span>
+    </>
+  );
+  if (!onRelink) return <span className={chip}>{content}</span>;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`Linked ${noun.toLowerCase()}: ${label}. Change`}
+          title={`Change which ${noun.toLowerCase()} this email belongs to`}
+          className={cn(chip, "transition-colors hover:bg-admin-primary-soft disabled:opacity-50 max-sm:min-h-8")}
+        >
+          {busy ? <Loader2 className="h-3 w-3 shrink-0 animate-spin" aria-hidden="true" /> : null}
+          {content}
+          <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-72">
+        <DropdownMenuLabel className="text-[12px] text-admin-muted">This email belongs to</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={currentId ?? NO_BOOKING}
+          onValueChange={(v) => {
+            const next = v === NO_BOOKING ? null : v;
+            if (next !== currentId) onRelink(next);
+          }}
+        >
+          {bookings.map((b) => (
+            <DropdownMenuRadioItem key={b.id} value={b.id} className="text-[13px]">
+              {b.label}
+            </DropdownMenuRadioItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuRadioItem value={NO_BOOKING} className="text-[13px]">
+            {unlinked}
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function MessageBubble({
   message,
   counterpartName,
   showSource,
+  bookings,
+  bookingNoun = "Booking",
+  linkedId,
+  onRelink,
+  relinking,
 }: {
   message: CorrespondenceMessage;
   counterpartName?: string;
   showSource: boolean;
+  bookings?: CorrespondenceBooking[];
+  bookingNoun?: string;
+  linkedId: string | null;
+  onRelink?: (targetId: string | null) => void;
+  relinking: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const outbound = message.direction === "outbound";
@@ -291,6 +395,17 @@ function MessageBubble({
             </span>
           </button>
         </CollapsibleTrigger>
+        {bookings && (
+          <div className="-mt-1 px-3 pb-2.5 pl-13.5">
+            <BookingLink
+              currentId={linkedId}
+              bookings={bookings}
+              noun={bookingNoun}
+              onRelink={onRelink}
+              busy={relinking}
+            />
+          </div>
+        )}
         <CollapsibleContent className="px-3 pb-3 sm:pl-13.5">
           <EmailBody message={message} fadeClass={outbound ? "from-admin-primary-soft" : "from-white"} />
           {message.attachments.length > 0 && (
@@ -369,6 +484,7 @@ export function CorrespondencePanel({
   const [reloadKey, setReloadKey] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
   const [isSending, startSending] = useTransition();
+  const [relinkingId, setRelinkingId] = useState<string | null>(null);
   const markedFor = useRef<string | null>(null);
 
   const filterKey =
@@ -429,6 +545,29 @@ export function CorrespondencePanel({
     });
   }
 
+  const relinkScope: RelinkScope | null = musicActId
+    ? { musicActId }
+    : privateHireRequestId
+      ? { privateHireRequestId }
+      : null;
+
+  async function relink(messageId: string, targetId: string | null) {
+    if (!relinkScope) return;
+    setRelinkingId(messageId);
+    const res = await relinkCorrespondenceMessage(messageId, relinkScope, targetId).catch(() => ({
+      error: "Couldn't move that email.",
+      thread: undefined,
+    }));
+    setRelinkingId(null);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    if (res.thread) setThread(res.thread);
+    const noun = (thread?.bookingNoun ?? "Booking").toLowerCase();
+    toast.success(targetId ? `Email moved to that ${noun}` : `Email unlinked from its ${noun}`);
+  }
+
   const hasInbound = messages.some((m) => m.direction === "inbound");
   const who = counterpartName?.trim();
 
@@ -473,7 +612,17 @@ export function CorrespondencePanel({
         ) : (
           <ol className="space-y-2.5" aria-label="Email correspondence">
             {messages.map((m) => (
-              <MessageBubble key={m.id} message={m} counterpartName={who} showSource={aggregated} />
+              <MessageBubble
+                key={m.id}
+                message={m}
+                counterpartName={who}
+                showSource={aggregated}
+                bookings={thread.bookings}
+                bookingNoun={thread.bookingNoun}
+                linkedId={musicActId ? m.bandRequestId : m.privateHireRequestId}
+                onRelink={editable && relinkScope ? (id) => relink(m.id, id) : undefined}
+                relinking={relinkingId === m.id}
+              />
             ))}
           </ol>
         )}

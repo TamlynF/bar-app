@@ -14,6 +14,7 @@ import {
   MoreVertical,
   NotebookPen,
   Phone,
+  Plus,
   Save,
   Trash2,
   Undo2,
@@ -51,6 +52,7 @@ import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
 import { showFirstFrame } from "@/lib/video-preview";
 import type { MusicActRow, SocialLinks } from "@/lib/music-acts";
+import { sanitizeBankAccounts, type BankAccount } from "@/lib/bank-accounts";
 import {
   addMusicActNote,
   deleteMusicActNote,
@@ -115,6 +117,7 @@ type FormState = {
   bank_account_no: string;
   bank_sort_code: string;
   bank_payment_ref: string;
+  extra_bank_accounts: BankAccount[];
   is_favorite: boolean;
   contact_name: string;
   contact_email: string;
@@ -136,6 +139,7 @@ function formFromAct(a: MusicActWithContact | null): FormState {
     bank_account_no: a?.bank_account_no ?? "",
     bank_sort_code: a?.bank_sort_code ?? "",
     bank_payment_ref: a?.bank_payment_ref ?? "",
+    extra_bank_accounts: sanitizeBankAccounts(a?.extra_bank_accounts),
     is_favorite: a?.is_favorite ?? false,
     contact_name: a?.contact?.full_name ?? "",
     contact_email: a?.contact?.email ?? "",
@@ -289,6 +293,78 @@ function TextRow({
       />
       {trailing}
     </div>
+  );
+}
+
+const EMPTY_ACCOUNT: BankAccount = { account_name: "", account_no: "", sort_code: "", payment_ref: "" };
+
+function ExtraBankAccounts({
+  accounts,
+  onChange,
+}: {
+  accounts: BankAccount[];
+  onChange: (next: BankAccount[]) => void;
+}) {
+  const update = (i: number, patch: Partial<BankAccount>) =>
+    onChange(accounts.map((a, j) => (j === i ? { ...a, ...patch } : a)));
+  return (
+    <>
+      {accounts.map((a, i) => (
+        <div key={i} className="border-b border-[#D8D5C8] bg-admin-surface/40">
+          <div className="flex items-center justify-between gap-2 px-4 pt-2 sm:px-5">
+            <p className="min-w-0 truncate text-[12px] font-bold text-admin-ink">
+              Account {i + 2}
+              {a.source && <span className="ml-1.5 font-normal text-admin-muted">from {a.source}</span>}
+            </p>
+            <button
+              type="button"
+              onClick={() => onChange(accounts.filter((_, j) => j !== i))}
+              aria-label={`Remove account ${i + 2}`}
+              title="Remove account"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-error-bg hover:text-admin-error sm:h-8 sm:w-8"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <TextRow
+            label="Account name"
+            value={a.account_name}
+            onChange={(v) => update(i, { account_name: v })}
+            placeholder="Account holder"
+          />
+          <TextRow
+            label="Account no."
+            numeric
+            value={a.account_no}
+            onChange={(v) => update(i, { account_no: v })}
+            placeholder="12345678"
+          />
+          <TextRow
+            label="Sort code"
+            numeric
+            value={a.sort_code}
+            onChange={(v) => update(i, { sort_code: v })}
+            placeholder="12-34-56"
+          />
+          <TextRow
+            label="Payment ref"
+            value={a.payment_ref}
+            onChange={(v) => update(i, { payment_ref: v })}
+            placeholder="Reference"
+          />
+        </div>
+      ))}
+      <div className="px-4 py-2 sm:px-5">
+        <button
+          type="button"
+          onClick={() => onChange([...accounts, { ...EMPTY_ACCOUNT }])}
+          className="flex h-11 items-center gap-1.5 rounded-xl border border-[#34451F] px-3 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8] sm:h-9"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Add another account
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -470,6 +546,7 @@ export function MusicActSheet({
       bank_account_no: form.bank_account_no,
       bank_sort_code: form.bank_sort_code,
       bank_payment_ref: form.bank_payment_ref,
+      extra_bank_accounts: form.extra_bank_accounts,
       is_favorite: form.is_favorite,
       contact: {
         booker_name: form.contact_name,
@@ -1188,6 +1265,10 @@ export function MusicActSheet({
                     value={form.bank_payment_ref}
                     onChange={(v) => set("bank_payment_ref", v)}
                     placeholder="Reference"
+                  />
+                  <ExtraBankAccounts
+                    accounts={form.extra_bank_accounts}
+                    onChange={(next) => set("extra_bank_accounts", next)}
                   />
                 </Section>
 

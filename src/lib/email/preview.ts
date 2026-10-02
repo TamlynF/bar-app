@@ -16,7 +16,8 @@ import {
   plainNote,
 } from "./layout";
 import { renderSlots, type TemplateSlots } from "./render";
-import { sampleValues, type EmailScenario } from "./scenarios";
+import { sampleValues, scenarioFamily, type EmailScenario } from "./scenarios";
+import { fillBlocks, type EmailDesign, type RenderedSlots } from "./design";
 
 const SAMPLE_BOOKING_ROWS = [
   { label: "📅 Date", value: "Thu, 4 Sep 2026" },
@@ -47,56 +48,65 @@ const SAMPLE_FIELDS_PANEL = [
 
 const SAMPLE_URL = "https://example.test/manage-booking/1042";
 
-const PLAIN_SCENARIOS = new Set([
-  "enquiry.received.customer",
-  "enquiry.received.admin",
-  "enquiry.reply",
-  "band.application.customer",
-  "band.application.admin",
-  "private_hire.enquiry.customer",
-  "private_hire.enquiry.admin",
-  "private_hire.confirmed",
-  "private_hire.cancelled",
-]);
-
 const ADMIN_ALERT_SCENARIOS = new Set([
   "enquiry.received.admin",
   "band.application.admin",
   "private_hire.enquiry.admin",
 ]);
 
-function bandMiddle(key: string): string {
+function bandSampleCard(key: string, slots: RenderedSlots): string {
+  const brand = slots.design?.brand;
   if (key === "band.offered") {
-    return (
-      bandCard("Proposed Slot", "Saturday, 12 September 2026, 8:00 PM – 10:30 PM", "Fee: £250") +
-      bandNote("Load-in from 6pm, please bring your own DI boxes.")
-    );
+    return bandCard(slots.cardTitle || "Proposed Slot", "Saturday, 12 September 2026, 8:00 PM – 10:30 PM", "Fee: £250", brand);
   }
   if (key === "band.rescheduled") {
-    return bandCard("New Performance Slot", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM");
+    return bandCard(slots.cardTitle || "New Performance Slot", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM", brand);
   }
   if (key === "band.booked") {
-    return bandCard("Performance Date", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM");
+    return bandCard(slots.cardTitle || "Performance Date", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM", brand);
+  }
+  if (key === "band.invoice") {
+    return bandCard(slots.cardTitle || "Your Performance", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM · Fee: £250", brand);
   }
   return "";
 }
 
-export function previewHtml(scenario: EmailScenario, slots: TemplateSlots): string {
-  const { slots: filled } = renderSlots(slots, sampleValues(scenario));
+function bandSampleNote(key: string, slots: RenderedSlots): string {
+  const brand = slots.design?.brand;
+  const title = slots.noteTitle || undefined;
+  if (key === "band.offered") return bandNote("Load-in from 6pm, please bring your own DI boxes.", brand, title);
+  if (key === "band.booked" || key === "band.declined") {
+    return bandNote("Thanks again for playing with us last spring.", brand, title);
+  }
+  return "";
+}
 
-  if (scenario.group === "Band bookings" && !PLAIN_SCENARIOS.has(scenario.key)) {
+export function previewHtml(scenario: EmailScenario, slots: TemplateSlots, design?: EmailDesign): string {
+  const values = sampleValues(scenario);
+  const rendered = renderSlots(slots, values).slots;
+  const filled = design
+    ? {
+        ...rendered,
+        design: { brand: design.brand, blocks: design.blocks ? fillBlocks(design.blocks, values, new Set()) : null },
+      }
+    : rendered;
+  const family = scenarioFamily(scenario);
+
+  if (family === "band") {
+    const card = bandSampleCard(scenario.key, filled);
+    const note = bandSampleNote(scenario.key, filled);
+    const offered = scenario.key === "band.offered";
     return bandLayout({
       slots: filled,
       groupName: "The Wandering Hearts",
-      middleHtml: bandMiddle(scenario.key),
-      tailHtml:
-        scenario.key === "band.booked" || scenario.key === "band.declined"
-          ? bandNote("Thanks again for playing with us last spring.")
-          : "",
+      middleHtml: offered ? card + note : card,
+      tailHtml: offered ? "" : note,
+      cardHtml: card,
+      noteHtml: note,
     });
   }
 
-  if (PLAIN_SCENARIOS.has(scenario.key)) {
+  if (family === "plain") {
     const isAdminAlert = ADMIN_ALERT_SCENARIOS.has(scenario.key);
     return plainLayout({
       slots: filled,

@@ -9,7 +9,7 @@ import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
-import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
+import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -137,6 +137,7 @@ async function sendBookerEmail(supabase: ServerClient, requestId: string, name: 
     links: { bandRequestId: requestId },
     to: email,
     subject: slots.subject,
+    templateSlots: slots,
     html: plainLayout({ slots }),
     kind: "application",
   });
@@ -192,5 +193,6 @@ async function sendAdminEmail(supabase: ServerClient, data: BandBookingData, id:
       ctaUrl: requestUrl,
       trailer: `Application ID: ${escapeHtml(id)}`,
     }),
+    ...(await resendTemplateAttachments(slots)),
   });
 }

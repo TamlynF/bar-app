@@ -274,6 +274,7 @@ async function sendOutcomeEmail(
     links: { privateHireRequestId: requestId },
     to: email,
     subject: slots.subject,
+    templateSlots: slots,
     html: plainLayout({ slots, bodyHtml: plainNote(escapeHtml(notes?.trim() || "")) }),
     kind: status,
     sentBy,

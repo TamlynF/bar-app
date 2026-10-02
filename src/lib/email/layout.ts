@@ -12,7 +12,16 @@
    <strong>), so it is interpolated as-is. */
 
 import { escapeHtml, safeUrl } from "./escape";
-import { toParagraphs, type TemplateSlots } from "./render";
+import { toParagraphs } from "./render";
+import {
+  EMPTY_BRAND,
+  fontStack,
+  logoHtml,
+  renderBlocks,
+  textOn,
+  type EmailBrand,
+  type RenderedSlots,
+} from "./design";
 
 /* ── Shared brand card - booking confirmations, changes, admin alerts ──── */
 
@@ -63,16 +72,19 @@ const brandParagraphs = (text: string): string =>
     .join("");
 
 export function brandLayout(p: {
-  slots: TemplateSlots;
+  slots: RenderedSlots;
   bodyHtml: string;
   ctaUrl?: string;
 }): string {
+  const brand = p.slots.design?.brand ?? EMPTY_BRAND;
+  const blocks = p.slots.design?.blocks;
+  const accent = brand.accent ?? "#FDCC4B";
   const href = p.ctaUrl ? safeUrl(p.ctaUrl) : "";
   const cta =
     href && p.slots.ctaLabel
       ? `
           <div style="text-align: center; margin: 40px 0 20px 0;">
-            <a href="${href}" style="background-color: #FDCC4B; color: #26300D; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">${p.slots.ctaLabel}</a>
+            <a href="${href}" style="background-color: ${accent}; color: ${textOn(accent)}; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">${p.slots.ctaLabel}</a>
           </div>
           <p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">
             Button not working? Copy and paste this link:<br>
@@ -84,25 +96,32 @@ export function brandLayout(p: {
     ? `<p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">${p.slots.footnote}</p>`
     : "";
 
-  return `
-    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
-        <div style="background-color: #26300D; padding: 32px 16px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${p.slots.heading}</h1>
-          <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">${p.slots.eyebrow || "Don Fenticas"}</p>
-        </div>
-        <div style="padding: 32px 20px; color: #1F1F1A;">
-          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">${p.slots.greeting}</h2>
-          ${brandParagraphs(p.slots.intro)}
+  const details = `
           <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 20px 16px; margin: 28px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">${p.bodyHtml}
             </table>
-          </div>
+          </div>`;
+
+  const body = blocks
+    ? renderBlocks(blocks, "brand", accent, { details, button: cta })
+    : `
+          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">${p.slots.greeting}</h2>
+          ${brandParagraphs(p.slots.intro)}${details}
           ${brandParagraphs(p.slots.outro)}${cta}
-          ${footnote}
+          ${footnote}`;
+
+  return `
+    <div style="font-family: ${fontStack(brand, "'Helvetica Neue', Helvetica, Arial, sans-serif")}; background-color: #F7F4EA; margin: 0; padding: 24px 10px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
+        <div style="background-color: ${brand.headerBg ?? "#26300D"}; padding: 32px 16px; text-align: center;">
+          ${logoHtml(brand)}
+          <h1 style="color: ${brand.headerText ?? "#ffffff"}; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">${p.slots.heading}</h1>
+          <p style="color: ${accent}; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">${p.slots.eyebrow || "Don Fenticas"}</p>
+        </div>
+        <div style="padding: 32px 20px; color: #1F1F1A;">${body}
         </div>
         <div style="background-color: #1F1F1A; padding: 30px; text-align: center;">
-          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">Don Fenticas · Licensed Venue</p>
+          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">${brand.footerText ? escapeHtml(brand.footerText) : "Don Fenticas · Licensed Venue"}</p>
         </div>
       </div>
     </div>
@@ -116,21 +135,31 @@ const bandParagraphs = (text: string): string =>
     .map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`)
     .join("");
 
-export function bandCard(label: string, value: string, sub?: string): string {
+/* The small heading on the slot card and the team note. Brand settings can
+   recolour it or drop the capitals; left alone it is the original style. */
+function bandLabelStyle(brand: EmailBrand): string {
+  const upper = brand.cardLabelCase !== "plain";
+  return upper
+    ? `margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:${brand.cardLabelColor ?? "#5E6654"};`
+    : `margin:0 0 4px;font-size:13px;font-weight:700;color:${brand.cardLabelColor ?? "#5E6654"};`;
+}
+
+export function bandCard(label: string, value: string, sub?: string, brand: EmailBrand = EMPTY_BRAND): string {
+  const large = brand.cardValueSize === "large";
   return `
-        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">${label}</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${value}</p>
-          ${sub ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${sub}</p>` : ""}
+        <div style="background:${brand.cardBg ?? "#fff"};border:2px solid ${brand.cardBorder ?? "#D8D5C8"};border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="${bandLabelStyle(brand)}">${label}</p>
+          <p style="margin:0;font-size:${large ? 24 : 18}px;font-weight:900;color:#20231A;">${value}</p>
+          ${sub ? `<p style="margin:4px 0 0;font-size:${large ? 16 : 14}px;font-weight:700;color:#5E6654;">${sub}</p>` : ""}
         </div>`;
 }
 
-export function bandNote(note: string): string {
+export function bandNote(note: string, brand: EmailBrand = EMPTY_BRAND, title = "Note from our team"): string {
   if (!note) return "";
   return `
-        <div style="background:#fff;border-left:4px solid #34451F;border-radius:8px;padding:16px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${note}</p>
+        <div style="background:${brand.cardBg ?? "#fff"};border-left:4px solid ${brand.noteBar ?? "#34451F"};border-radius:8px;padding:16px;margin:20px 0;">
+          <p style="${bandLabelStyle(brand)}">${title}</p>
+          <div style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${note}</div>
         </div>`;
 }
 
@@ -138,27 +167,39 @@ export function bandNote(note: string): string {
    which is the only thing that differs between the offer, outcome and
    reschedule emails. */
 export function bandLayout(p: {
-  slots: TemplateSlots;
+  slots: RenderedSlots;
   groupName?: string | null;
   middleHtml?: string;
   tailHtml?: string;
+  cardHtml?: string;
+  noteHtml?: string;
 }): string {
+  const brand = p.slots.design?.brand ?? EMPTY_BRAND;
+  const blocks = p.slots.design?.blocks;
+  const body = blocks
+    ? renderBlocks(blocks, "band", brand.accent ?? "#FDCC4B", {
+        slotCard: p.cardHtml ?? "",
+        teamNote: p.noteHtml ?? "",
+      })
+    : `
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p.slots.greeting}</p>
+        ${bandParagraphs(p.slots.intro)}${p.middleHtml ?? ""}
+        ${bandParagraphs(p.slots.outro)}${p.tailHtml ?? ""}`;
+
   return `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
-      <div style="background:#34451F;padding:32px 24px;text-align:center;">
-        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
+    <div style="font-family:${fontStack(brand, "'Helvetica Neue',Helvetica,Arial,sans-serif")};max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
+      <div style="background:${brand.headerBg ?? "#34451F"};padding:32px 24px;text-align:center;">
+        ${logoHtml(brand)}
+        <h1 style="margin:0;color:${brand.headerText ?? "#FDCC4B"};font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
           ${p.slots.heading}
         </h1>
         ${p.groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${p.groupName}</p>` : ""}
       </div>
-      <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p.slots.greeting}</p>
-        ${bandParagraphs(p.slots.intro)}${p.middleHtml ?? ""}
-        ${bandParagraphs(p.slots.outro)}${p.tailHtml ?? ""}
+      <div style="padding:32px 24px;">${body}
       </div>
       <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
         <p style="margin:0;font-size:11px;color:#5E6654;">
-          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
+          ${brand.footerText ? escapeHtml(brand.footerText) : "Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB"}
         </p>
       </div>
     </div>`;
@@ -181,7 +222,7 @@ export function plainNote(note: string): string {
 }
 
 export function plainLayout(p: {
-  slots: TemplateSlots;
+  slots: RenderedSlots;
   /* Contents of the grey panel. Acknowledgements put their outro copy here;
      the admin alerts put a generated field list here instead. */
   panelHtml?: string;
@@ -191,12 +232,15 @@ export function plainLayout(p: {
      footnote above it. */
   trailer?: string;
 }): string {
+  const brand = p.slots.design?.brand ?? EMPTY_BRAND;
+  const blocks = p.slots.design?.blocks;
+  const accent = brand.accent ?? "#FDCC4B";
   const href = p.ctaUrl ? safeUrl(p.ctaUrl) : "";
   const cta =
     href && p.slots.ctaLabel
       ? `
         <div style="text-align:center;margin:32px 0 20px 0;">
-          <a href="${href}" style="background-color:#FDCC4B;color:#26300D;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:900;display:inline-block;text-transform:uppercase;letter-spacing:1.5px;">${p.slots.ctaLabel}</a>
+          <a href="${href}" style="background-color:${accent};color:${textOn(accent)};padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:900;display:inline-block;text-transform:uppercase;letter-spacing:1.5px;">${p.slots.ctaLabel}</a>
         </div>
         <p style="font-size:12px;color:#6b7280;text-align:center;">
           Button not working? Copy and paste this link:<br>
@@ -212,14 +256,22 @@ export function plainLayout(p: {
         )
       : "";
 
-  return `
-    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
+  const trailer = p.trailer ? `<p style="font-size:12px;color:#6b7280;">${p.trailer}</p>` : "";
+
+  const body = blocks
+    ? renderBlocks(blocks, "plain", accent, { details: p.bodyHtml ?? "", panel, button: cta, trailer })
+    : `
         <h2 style="margin-top:0;color:#111827;">${p.slots.greeting}</h2>
         ${plainParagraphs(p.slots.intro)}${p.bodyHtml ?? ""}
         ${panel}${cta}
         ${p.slots.footnote ? `<p style="font-size:12px;color:#6b7280;">${p.slots.footnote}</p>` : ""}
-        ${p.trailer ? `<p style="font-size:12px;color:#6b7280;">${p.trailer}</p>` : ""}
+        ${trailer}`;
+
+  return `
+    <div style="font-family:${fontStack(brand, "sans-serif")};max-width:600px;margin:0 auto;color:#1f2937;">
+      <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
+        ${logoHtml(brand, "0 0 24px")}${body}
       </div>
+      ${brand.footerText ? `<p style="margin:16px 0 0;text-align:center;font-size:11px;color:#6b7280;">${escapeHtml(brand.footerText)}</p>` : ""}
     </div>`;
 }

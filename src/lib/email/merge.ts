@@ -5,7 +5,8 @@
    the browser so the editor and the preview agree without a round trip. */
 
 import { SLOT_KEYS, type SlotKey } from "./render";
-import type { EmailScenario } from "./scenarios";
+import { scenarioFamily, type EmailScenario } from "./scenarios";
+import { sanitizeAttachments, sanitizeBlocks, type EmailBlock, type TemplateAttachment } from "./design";
 
 export type EmailTemplateRow = {
   id: number;
@@ -18,6 +19,10 @@ export type EmailTemplateRow = {
   outro: string | null;
   cta_label: string | null;
   footnote: string | null;
+  card_title?: string | null;
+  note_title?: string | null;
+  blocks?: unknown;
+  attachments?: unknown;
   is_active: boolean;
   created_at: string | null;
   updated_at: string | null;
@@ -32,6 +37,10 @@ export type ResolvedTemplate = {
   /* False when the scenario is running entirely on its built-in copy - drives
      the Default / Customised pill and whether "Reset to default" does anything. */
   isCustomised: boolean;
+  /* The body as blocks, or null for the standard layout. */
+  blocks: EmailBlock[] | null;
+  /* Files sent with every email from this template. */
+  attachments: TemplateAttachment[];
   row: EmailTemplateRow | null;
 };
 
@@ -44,6 +53,8 @@ export const COLUMN_FOR_SLOT: Record<SlotKey, keyof EmailTemplateRow> = {
   outro: "outro",
   ctaLabel: "cta_label",
   footnote: "footnote",
+  cardTitle: "card_title",
+  noteTitle: "note_title",
 };
 
 export function mergeOverride(
@@ -63,11 +74,16 @@ export function mergeOverride(
     }
   }
 
+  const blocks = row?.blocks ? sanitizeBlocks(row.blocks, scenarioFamily(scenario)) : null;
+  const attachments = sanitizeAttachments(row?.attachments, scenario.key);
+
   return {
     scenario,
     slots,
     isActive: row?.is_active ?? true,
-    isCustomised,
+    isCustomised: isCustomised || !!blocks || attachments.length > 0,
+    blocks,
+    attachments,
     row,
   };
 }

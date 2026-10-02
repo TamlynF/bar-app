@@ -26,6 +26,7 @@ export interface MusicActRow {
   bank_account_name: string | null;
   bank_sort_code: string | null;
   bank_payment_ref: string | null;
+  extra_bank_accounts: unknown;
   internal_notes: string | null;
   is_favorite: boolean;
   created_at: string;

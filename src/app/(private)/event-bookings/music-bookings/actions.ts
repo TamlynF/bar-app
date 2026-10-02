@@ -10,14 +10,14 @@ import { eventSlotIsComplete } from "@/lib/event-active";
 import {
   bandMergeValues,
   bandScenarioKey,
-  bandSlotCardLabel,
   buildBandEmail,
   type BandEmailKind,
 } from "@/lib/band-emails";
 import { renderTemplate } from "@/lib/email/resolve";
-import { bandCard, bandLayout, bandNote } from "@/lib/email/layout";
-import { escapeHtml } from "@/lib/email/escape";
-import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
+import { bandEmailHtml, plainNoteHtml } from "@/lib/band-email-html";
+import { cleanReplyFragment, htmlToPlainText } from "@/lib/email/correspondence";
+import { sendCorrespondenceEmail, type OutboundAttachment } from "@/lib/email/correspondence-data";
+import { INVOICE_REQUEST_SELECT, sendInvoiceRequest, type InvoiceRequestRow } from "@/lib/band-invoice-requests";
 import {
   upsertContactByEmail,
   upsertMusicActFromBand,
@@ -25,6 +25,33 @@ import {
 } from "@/lib/music-acts";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const MAX_EMAIL_FILES = 5;
+const MAX_EMAIL_BYTES = 9 * 1024 * 1024;
+
+/* The confirm dialog sends its rich message and any attachments as FormData.
+   The message is cut back to the editor's tag subset before it is emailed. */
+async function emailExtrasFrom(
+  form?: FormData
+): Promise<{ notesHtml?: string; attachments?: OutboundAttachment[] }> {
+  if (!form) return {};
+  const raw = String(form.get("html") ?? "");
+  const notesHtml = htmlToPlainText(raw).trim() ? cleanReplyFragment(raw) : "";
+  const files = form
+    .getAll("files")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, MAX_EMAIL_FILES);
+  if (files.reduce((sum, f) => sum + f.size, 0) > MAX_EMAIL_BYTES) {
+    throw new Error("Attachments must be under 9 MB in total.");
+  }
+  const attachments = await Promise.all(
+    files.map(async (f) => ({
+      filename: f.name,
+      content: Buffer.from(await f.arrayBuffer()),
+      contentType: f.type || "application/octet-stream",
+    }))
+  );
+  return { notesHtml, attachments };
+}
 
 export type BandStatus = BandStatusType;
 
@@ -274,7 +301,8 @@ export async function rescheduleConfirmedBooking(
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
-  emailNote?: string
+  emailNote?: string,
+  emailExtras?: FormData
 ): Promise<{ emailError: string | null; clashes?: ClashEvent[] }> {
   const supabase = await createClient();
   const empId = await currentEmployeeId();
@@ -390,6 +418,7 @@ export async function updateBandStatus(
       endTime: record.selected_end_time,
       paymentAmount: record.payment_amount,
       notes: emailNote,
+      ...(await emailExtrasFrom(emailExtras)),
     });
   }
 
@@ -431,6 +460,8 @@ async function sendBandEmail(
     endTime: string | null;
     paymentAmount?: number | null;
     notes?: string | null;
+    notesHtml?: string;
+    attachments?: OutboundAttachment[];
   }
 ): Promise<string | null> {
   const slots = await renderTemplate(
@@ -450,20 +481,12 @@ async function sendBandEmail(
     notes: p.notes,
   });
 
-  const card =
-    kind === "offered"
-      ? bandCard(bandSlotCardLabel(kind), escapeHtml(e.slotLabel ?? ""), escapeHtml(e.feeLabel ?? ""))
-      : e.dateLabel
-        ? bandCard(bandSlotCardLabel(kind), escapeHtml(e.dateLabel), escapeHtml(e.timeLabel))
-        : "";
-
-  const note = bandNote(escapeHtml(e.noteLabel ?? ""));
-
-  const html = bandLayout({
+  const html = bandEmailHtml({
+    kind,
     slots,
-    groupName: p.groupName ? escapeHtml(p.groupName) : null,
-    middleHtml: kind === "offered" ? card + note : card,
-    tailHtml: kind === "offered" ? "" : note,
+    email: e,
+    groupName: p.groupName,
+    noteHtml: p.notesHtml ?? plainNoteHtml(e.noteLabel ?? ""),
   });
 
   const { error } = await sendCorrespondenceEmail({
@@ -474,6 +497,25 @@ async function sendBandEmail(
     html,
     kind,
     sentBy: p.sentBy,
+    attachments: p.attachments,
+    templateSlots: slots,
   });
   return error;
+}
+
+/* Staff sending the after-gig invoice request by hand - the Monday job sends
+   the same email on its own, and skips a booking that already has one. */
+export async function sendInvoiceRequestAction(id: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const sentBy = await currentEmployeeId();
+  const { data, error } = await supabase
+    .from("band_booking_requests")
+    .select(INVOICE_REQUEST_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return { error: "This booking could not be found." };
+  const outcome = await sendInvoiceRequest(supabase, resend, data as unknown as InvoiceRequestRow, sentBy);
+  if (outcome === "disabled") return { error: "The invoice request email is switched off in Email templates." };
+  if (!outcome) revalidatePath("/event-bookings/music-bookings");
+  return { error: outcome };
 }

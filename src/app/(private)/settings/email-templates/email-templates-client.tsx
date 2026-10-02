@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Mail, MailX } from "lucide-react";
+import { LayoutTemplate, Mail, MailX, Paperclip, RotateCcw } from "lucide-react";
 import {
   DetailCard,
   DetailCell,
@@ -16,10 +16,20 @@ import {
   EmptyState,
 } from "@/components/admin";
 import { cn } from "@/lib/utils";
-import { EMAIL_SCENARIOS, EMAIL_SCENARIO_GROUPS, isWired } from "@/lib/email/scenarios";
+import { EMAIL_SCENARIOS, EMAIL_SCENARIO_GROUPS, isWired, scenarioFamily } from "@/lib/email/scenarios";
 import { mergeOverride, type EmailTemplateRow, type ResolvedTemplate } from "@/lib/email/merge";
 import type { SlotKey, TemplateSlots } from "@/lib/email/render";
 import { previewHtml, previewSubject } from "@/lib/email/preview";
+import {
+  BLOCK_REPLACED_SLOTS,
+  defaultBlocks,
+  type EmailBlock,
+  type EmailBrand,
+  type TemplateAttachment,
+} from "@/lib/email/design";
+import { AttachmentChips, EmailAttachmentsEditor } from "./email-attachments-editor";
+import { EmailBrandEditor } from "./email-brand-editor";
+import { EmailBlocksEditor } from "./email-blocks-editor";
 import {
   saveEmailTemplateAction,
   resetEmailTemplateAction,
@@ -37,12 +47,16 @@ const SLOT_LABELS: Record<SlotKey, string> = {
   outro: "Closing copy",
   ctaLabel: "Button label",
   footnote: "Small print",
+  cardTitle: "Slot card label",
+  noteTitle: "Note label",
 };
 
 const SLOT_HINTS: Partial<Record<SlotKey, string>> = {
   intro: "Leave a blank line between paragraphs. Sits above the details block.",
   outro: "Sits below the details block, before the button.",
   ctaLabel: "The link itself is generated - this is only the wording on the button.",
+  cardTitle: "The small heading on the date and time card.",
+  noteTitle: "The heading on the message typed when the email is sent.",
 };
 
 const MULTILINE_SLOTS: ReadonlySet<SlotKey> = new Set<SlotKey>(["intro", "outro", "footnote"]);
@@ -52,9 +66,12 @@ const FORM_ID = "email-template-form";
 export default function EmailTemplatesClient({
   rows,
   employees,
+  brand,
 }: {
   rows: EmailTemplateRow[];
   employees: Employee[];
+  brand: EmailBrand;
+  brandUpdatedAt?: string | null;
 }) {
   const resolved = useMemo(() => {
     const byKey = new Map(rows.map((row) => [row.scenario_key, row]));
@@ -70,7 +87,10 @@ export default function EmailTemplatesClient({
 
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<TemplateSlots | null>(null);
+  const [draftBlocks, setDraftBlocks] = useState<EmailBlock[] | null>(null);
+  const [draftFiles, setDraftFiles] = useState<TemplateAttachment[]>([]);
   const lastFocused = useRef<SlotKey | null>(null);
+  const blockInsert = useRef<((text: string) => void) | null>(null);
 
   const employeeName = useCallback(
     (id: number | null | undefined) =>
@@ -99,12 +119,17 @@ export default function EmailTemplatesClient({
   const selected = sheet.selected;
 
   const openEdit = useCallback(() => {
-    if (selected) setDraft({ ...selected.slots });
+    if (selected) {
+      setDraft({ ...selected.slots });
+      setDraftBlocks(selected.blocks);
+      setDraftFiles(selected.attachments);
+    }
     sheet.startEdit();
   }, [selected, sheet]);
 
   const closeSheet = useCallback(() => {
     setDraft(null);
+    setDraftBlocks(null);
     sheet.close();
   }, [sheet]);
 
@@ -136,6 +161,10 @@ export default function EmailTemplatesClient({
 
   const insertToken = useCallback(
     (token: string) => {
+      if (blockInsert.current) {
+        blockInsert.current(`{{${token}}}`);
+        return;
+      }
       const slot = lastFocused.current;
       if (!slot || !draft) return;
       setDraft({ ...draft, [slot]: `${draft[slot]}{{${token}}}` });
@@ -143,19 +172,30 @@ export default function EmailTemplatesClient({
     [draft]
   );
 
+  const focusSlot = (slot: SlotKey) => {
+    lastFocused.current = slot;
+    blockInsert.current = null;
+  };
+
   const editing = sheet.mode === "edit";
   const liveSlots = editing && draft ? draft : selected?.slots ?? null;
+  const liveBlocks = editing ? draftBlocks : (selected?.blocks ?? null);
+  const liveFiles = editing ? draftFiles : (selected?.attachments ?? []);
+  const family = selected ? scenarioFamily(selected.scenario) : "plain";
+  const replaced = draftBlocks ? BLOCK_REPLACED_SLOTS[family] : new Set<string>();
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-admin-line bg-admin-card p-4 sm:p-5">
         <h1 className="text-lg font-bold tracking-tight text-admin-ink">Email templates</h1>
         <p className="mt-1 text-[13px] text-admin-muted">
-          The wording of every automatic email the venue sends. Editing here changes what
-          customers receive - the details block in each email is filled in from the real
-          booking and cannot be edited.
+          Every automatic email the venue sends. Set the shared brand below, then open an email to
+          change its wording or customise its layout - add text, images and buttons, and move the
+          booking blocks that are filled in from the real booking.
         </p>
       </div>
+
+      <EmailBrandEditor brand={brand} rows={rows} />
 
       {sheet.formError && !sheet.open && <ErrorBox message={sheet.formError} />}
 
@@ -308,8 +348,16 @@ export default function EmailTemplatesClient({
               <form id={FORM_ID} action={sheet.submit(saveEmailTemplateAction)}>
                 <input type="hidden" name="scenario_key" value={selected.scenario.key} />
 
+                <input type="hidden" name="blocks" value={draftBlocks ? JSON.stringify(draftBlocks) : ""} />
+                <input type="hidden" name="attachments" value={JSON.stringify(draftFiles)} />
+                {selected.scenario.slots
+                  .filter((slot) => replaced.has(slot))
+                  .map((slot) => (
+                    <input key={slot} type="hidden" name={slot} value={draft[slot]} />
+                  ))}
+
                 <DetailCard>
-                  {selected.scenario.slots.map((slot) => (
+                  {selected.scenario.slots.filter((slot) => !replaced.has(slot)).map((slot) => (
                     <FormRow key={slot} label={SLOT_LABELS[slot]} align="start">
                       <div className="min-w-0 flex-1 space-y-1">
                         {MULTILINE_SLOTS.has(slot) ? (
@@ -318,7 +366,7 @@ export default function EmailTemplatesClient({
                             aria-label={SLOT_LABELS[slot]}
                             rows={slot === "intro" ? 5 : 3}
                             value={draft[slot]}
-                            onFocus={() => (lastFocused.current = slot)}
+                            onFocus={() => focusSlot(slot)}
                             onChange={(e) => setDraft({ ...draft, [slot]: e.target.value })}
                             className="w-full resize-y rounded-xl border border-admin-line bg-white px-3 py-2.5 text-sm text-admin-ink outline-none focus:border-admin-primary"
                           />
@@ -327,7 +375,7 @@ export default function EmailTemplatesClient({
                             name={slot}
                             aria-label={SLOT_LABELS[slot]}
                             value={draft[slot]}
-                            onFocus={() => (lastFocused.current = slot)}
+                            onFocus={() => focusSlot(slot)}
                             onChange={(e) => setDraft({ ...draft, [slot]: e.target.value })}
                             className="h-11 w-full rounded-xl border border-admin-line bg-white px-3 text-sm text-admin-ink outline-none focus:border-admin-primary"
                           />
@@ -361,11 +409,75 @@ export default function EmailTemplatesClient({
                     Click a field to add it to the box you last typed in.
                   </p>
                 </div>
+
+                <div className="mt-4 rounded-2xl border border-admin-line bg-admin-card p-3 sm:p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <LayoutTemplate className="h-4 w-4 text-admin-primary" aria-hidden="true" />
+                    <p className="flex-1 text-[13px] font-bold text-admin-ink">Layout</p>
+                    {draftBlocks && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftBlocks(null);
+                          blockInsert.current = null;
+                        }}
+                        className="flex h-11 items-center gap-1.5 rounded-xl border border-[#D8D5C8] px-3 text-[13px] font-semibold text-[#5E6654] hover:bg-[#ECE9DE] sm:h-9"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Use standard layout
+                      </button>
+                    )}
+                  </div>
+                  {draftBlocks ? (
+                    <EmailBlocksEditor
+                      blocks={draftBlocks}
+                      onChange={setDraftBlocks}
+                      onFocusInsert={(insert) => (blockInsert.current = insert)}
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-[12px] leading-snug text-admin-muted">
+                        This email uses the standard layout. Customise it to add paragraphs, images,
+                        logos and buttons, or to move the booking blocks around.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setDraftBlocks(defaultBlocks(selected.scenario.key, family, draft))}
+                        className="flex h-11 items-center gap-1.5 rounded-xl border border-[#34451F] px-3.5 text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8] sm:h-9"
+                      >
+                        <LayoutTemplate className="h-4 w-4" />
+                        Customise layout
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-admin-line bg-admin-card p-3 sm:p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4 text-admin-primary" aria-hidden="true" />
+                    <p className="text-[13px] font-bold text-admin-ink">Attachments</p>
+                  </div>
+                  <EmailAttachmentsEditor
+                    scenarioKey={selected.scenario.key}
+                    files={draftFiles}
+                    onChange={setDraftFiles}
+                  />
+                </div>
               </form>
             ) : (
               <DetailCard>
+                {selected.blocks && (
+                  <DetailCell label="Layout" value={`Custom layout - ${selected.blocks.length} blocks`} />
+                )}
+                {selected.attachments.length > 0 && (
+                  <DetailCell
+                    label="Attachments"
+                    value={selected.attachments.map((a) => a.name).join(", ")}
+                  />
+                )}
                 {selected.scenario.slots
                   .filter((slot) => selected.slots[slot])
+                  .filter((slot) => !selected.blocks || !BLOCK_REPLACED_SLOTS[family].has(slot))
                   .map((slot) => (
                     <DetailCell
                       key={slot}
@@ -391,12 +503,17 @@ export default function EmailTemplatesClient({
                   <p className="mb-2 truncate text-[13px] font-semibold text-admin-ink">
                     {previewSubject(selected.scenario, liveSlots) || "(no subject)"}
                   </p>
+                  {liveFiles.length > 0 && (
+                    <div className="mb-2">
+                      <AttachmentChips files={liveFiles} scenarioKey={selected.scenario.key} />
+                    </div>
+                  )}
                   <iframe
                     /* Sandboxed with no allowances: the preview is inert markup,
                        and template copy must never be able to script this page. */
                     sandbox=""
                     title={`Preview of ${selected.scenario.label}`}
-                    srcDoc={previewHtml(selected.scenario, liveSlots)}
+                    srcDoc={previewHtml(selected.scenario, liveSlots, { brand, blocks: liveBlocks })}
                     className="h-125 w-full rounded-xl border border-admin-line bg-white"
                   />
                 </div>

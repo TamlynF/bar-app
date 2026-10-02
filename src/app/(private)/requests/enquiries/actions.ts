@@ -78,6 +78,7 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
       links: { enquiryId: id },
       to: record.email,
       subject: slots.subject,
+    templateSlots: slots,
       html: plainLayout({ slots, bodyHtml, panelHtml }),
       kind: "message",
       sentBy: empId,

@@ -24,15 +24,19 @@ export function EmailComposer({
   label,
   placeholder = "Write a reply…",
   disabled,
-  sending,
+  sending = false,
   onSend,
+  onChange,
+  minHeightClass = "min-h-24",
 }: {
   id: string;
   label: React.ReactNode;
   placeholder?: string;
   disabled?: boolean;
-  sending: boolean;
-  onSend: (html: string, files: File[]) => Promise<boolean>;
+  sending?: boolean;
+  onSend?: (html: string, files: File[]) => Promise<boolean>;
+  onChange?: (draft: { html: string; text: string; files: File[] }) => void;
+  minHeightClass?: string;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -61,8 +65,10 @@ export function EmailComposer({
         role: "textbox",
         "aria-multiline": "true",
         "aria-label": "Email message",
-        class:
-          "min-h-24 px-3 py-2 text-[13px] leading-relaxed text-admin-ink outline-none [&_a]:text-admin-primary [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_ul]:list-disc [&_ul]:pl-5",
+        class: cn(
+          minHeightClass,
+          "px-3 py-2 text-[13px] leading-relaxed text-admin-ink outline-none [&_a]:text-admin-primary [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_ul]:list-disc [&_ul]:pl-5"
+        ),
       },
       handleKeyDown: (_view, event) => {
         if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -86,10 +92,16 @@ export function EmailComposer({
     link: editor?.isActive("link") ?? false,
   };
 
-  const canSend = !disabled && !sending && (!state.empty || files.length > 0);
+  const canSend = !!onSend && !disabled && !sending && (!state.empty || files.length > 0);
+
+  const html = editor && !state.empty ? editor.getHTML() : "";
+  const text = editor && !state.empty ? editor.getText() : "";
+  useEffect(() => {
+    onChange?.({ html, text, files });
+  }, [html, text, files, onChange]);
 
   async function send() {
-    if (!editor || !canSend) return;
+    if (!editor || !canSend || !onSend) return;
     const ok = await onSend(state.empty ? "" : editor.getHTML(), files);
     if (ok) {
       editor.commands.clearContent();
@@ -283,17 +295,19 @@ export function EmailComposer({
         </ul>
       )}
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={!canSend}
-          className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:h-10"
-        >
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          Send reply
-        </button>
-      </div>
+      {onSend && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={!canSend}
+            className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:h-10"
+          >
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Send reply
+          </button>
+        </div>
+      )}
     </div>
   );
 }

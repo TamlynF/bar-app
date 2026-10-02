@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { upsertContactByEmail, type SocialLinks } from "@/lib/music-acts";
+import { sanitizeBankAccounts, type BankAccount } from "@/lib/bank-accounts";
 
 export interface MusicActInput {
   id?: string;
@@ -22,6 +23,7 @@ export interface MusicActInput {
   bank_account_name?: string | null;
   bank_sort_code?: string | null;
   bank_payment_ref?: string | null;
+  extra_bank_accounts?: BankAccount[];
   is_favorite?: boolean;
   contact?: { booker_name?: string | null; email?: string | null; phone_no?: string | null };
 }
@@ -78,6 +80,7 @@ export async function saveMusicActAction(
     bank_account_name: input.bank_account_name?.trim() || null,
     bank_sort_code: input.bank_sort_code?.trim() || null,
     bank_payment_ref: input.bank_payment_ref?.trim() || null,
+    ...(input.extra_bank_accounts ? { extra_bank_accounts: sanitizeBankAccounts(input.extra_bank_accounts) } : {}),
     is_favorite: !!input.is_favorite,
     ...(contactId != null ? { contact_id: contactId } : {}),
   };

@@ -12,6 +12,7 @@ import {
   addBandNote,
   updateBandNote,
   deleteBandNote,
+  sendInvoiceRequestAction,
 } from "../actions";
 import type { BandStatus } from "../actions";
 import {
@@ -45,6 +46,7 @@ import {
   Info,
   Pencil,
   PoundSterling,
+  Receipt,
   Undo2,
   User,
   Video,
@@ -74,6 +76,10 @@ import { toast } from "sonner";
 import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
 import { type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
+import { bandEmailHtml } from "@/lib/band-email-html";
+import type { TemplateSlots } from "@/lib/email/render";
+import { EmailHtmlFrame } from "@/components/admin/correspondence-panel";
+import { BandEmailDialog, type BandEmailDialogConfig, type BandEmailDialogResult } from "./band-email-dialog";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
@@ -628,77 +634,36 @@ function StageStepper({
   );
 }
 
-function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to: string; slotLabel?: string }) {
+function EmailPreview({
+  kind,
+  slots,
+  email,
+  groupName,
+  to,
+}: {
+  kind: BandEmailKind;
+  slots: TemplateSlots;
+  email: BandEmail;
+  groupName: string | null;
+  to: string;
+}) {
   return (
-    <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
-      <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">To: {to}</p>
-      <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
-      <p className="text-xs text-[#5E6654]">{email.greeting}</p>
-      {email.body.map((p, i) => (
-        <p key={i} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
-      ))}
-      {(email.dateLabel || email.slotLabel) && (
-        <div className="mt-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
-          <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{slotLabel}</p>
-          <p className="font-black text-sm text-[#20231A]">{email.slotLabel || email.dateLabel}</p>
-          {!email.slotLabel && email.timeLabel && (
-            <p className="text-xs font-bold text-[#5E6654]">{email.timeLabel}</p>
-          )}
-          {email.feeLabel && <p className="mt-1 text-xs font-bold text-[#5E6654]">{email.feeLabel}</p>}
-        </div>
-      )}
-      {email.outro.map((p, i) => (
-        <p key={`outro-${i}`} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
-      ))}
-      {email.noteLabel && (
-        <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
-          <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Note from our team</p>
-          <p className="text-xs leading-relaxed text-[#20231A]">{email.noteLabel}</p>
-        </div>
-      )}
+    <div className="overflow-hidden rounded-xl border border-[#D8D5C8] bg-white text-left">
+      <p className="truncate border-b border-[#D8D5C8] px-3 py-2 text-[12px] text-[#5E6654]">
+        To <span className="font-semibold text-[#20231A]">{to}</span> · {email.subject}
+      </p>
+      <div className="max-h-[50vh] overflow-y-auto bg-[#E9E6DC] p-3">
+        <EmailHtmlFrame
+          html={bandEmailHtml({ kind, slots, email, groupName, noteHtml: "" })}
+          allowImages
+          title={`Preview: ${email.subject}`}
+        />
+      </div>
     </div>
   );
 }
 
-function EmailWithNote({
-  initialNote,
-  onNoteChange,
-  build,
-  to,
-  label,
-  placeholder,
-  slotLabel,
-}: {
-  initialNote: string;
-  onNoteChange: (v: string) => void;
-  build: (note: string) => BandEmail;
-  to: string;
-  label: string;
-  placeholder: string;
-  slotLabel?: string;
-}) {
-  const [note, setNote] = useState(initialNote);
-  return (
-    <div className="space-y-2 text-left">
-      <label className="block">
-        <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-          {label}
-        </span>
-        <textarea
-          value={note}
-          rows={3}
-          placeholder={placeholder}
-          onChange={(e) => {
-            setNote(e.target.value);
-            onNoteChange(e.target.value);
-          }}
-          className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-xs text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
-        />
-      </label>
-      <EmailPreview email={build(note)} to={to} slotLabel={slotLabel} />
-    </div>
-  );
-}
+type EmailConfirmation = { ok: boolean; note: string; html: string; files: File[] };
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -937,7 +902,9 @@ export function BandBookingCard({
   const slotRowRef = useRef<HTMLDivElement>(null);
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
-  const noteDraft = useRef("");
+  const [emailDialog, setEmailDialog] = useState<
+    (BandEmailDialogConfig & { resolve: (r: BandEmailDialogResult) => void }) | null
+  >(null);
 
   const [isFavorite, setIsFavorite] = useState(request.is_favorite);
   const [, startFavTransition] = useTransition();
@@ -1266,7 +1233,7 @@ export function BandBookingCard({
     }
   }
 
-  async function confirmEmail(newStatus: BandStatus): Promise<{ ok: boolean; note: string }> {
+  async function confirmEmail(newStatus: BandStatus): Promise<EmailConfirmation> {
     const slot = {
       name: bookerName || request.booker_name,
       groupName: actName || request.group_name,
@@ -1323,7 +1290,7 @@ export function BandBookingCard({
     };
 
     const d = dialogs[newStatus];
-    if (!d) return { ok: true, note: adminNotes };
+    if (!d) return { ok: true, note: adminNotes, html: "", files: [] };
 
     /* Fetched rather than composed here, so the preview shows the copy that
        will actually be sent - including anything changed on the settings page. */
@@ -1337,41 +1304,40 @@ export function BandBookingCard({
           variant: d.destructive ? "destructive" : undefined,
         }),
         note: adminNotes,
+        html: "",
+        files: [],
       };
     }
 
-    const initial = "";
-    noteDraft.current = initial;
-    const ok = await confirm({
-      title: d.title,
-      description: `${d.description} Preview:`,
-      confirmLabel: d.confirmLabel,
-      variant: d.destructive ? "destructive" : undefined,
-      content: (
-        <EmailWithNote
-          initialNote={initial}
-          onNoteChange={(v) => {
-            noteDraft.current = v;
-          }}
-          build={(note) =>
-            buildBandEmail({
-              slots,
-              kind: d.kind,
-              date: slot.date,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
-              paymentAmount: d.paymentAmount,
-              notes: note,
-            })
-          }
-          to={to}
-          label={d.label}
-          placeholder={d.placeholder}
-          slotLabel={d.slotLabel}
-        />
-      ),
-    });
-    return { ok, note: noteDraft.current };
+    confirmOpen.current = true;
+    const result = await new Promise<BandEmailDialogResult>((resolve) =>
+      setEmailDialog({
+        title: d.title,
+        description: d.description,
+        confirmLabel: d.confirmLabel,
+        destructive: d.destructive,
+        label: d.label,
+        placeholder: d.placeholder,
+        to,
+        kind: d.kind,
+        slots,
+        groupName: request.group_name,
+        build: (note) =>
+          buildBandEmail({
+            slots,
+            kind: d.kind,
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            paymentAmount: d.paymentAmount,
+            notes: note,
+          }),
+        resolve,
+      })
+    );
+    confirmOpen.current = false;
+    setEmailDialog(null);
+    return { ok: result.ok, note: result.text, html: result.html, files: result.files };
   }
 
   function handleAction(newStatus: BandStatus) {
@@ -1382,13 +1348,13 @@ export function BandBookingCard({
         const c = await findClashes();
         if (c.length) return;
       }
-      const { ok, note } = await confirmEmail(newStatus);
+      const { ok, note, html, files } = await confirmEmail(newStatus);
       if (!ok) return;
-      applyStatus(newStatus, note);
+      applyStatus(newStatus, note, { html, files });
     }, () => setError("Failed to update. Please try again."));
   }
 
-  function applyStatus(newStatus: BandStatus, note: string) {
+  function applyStatus(newStatus: BandStatus, note: string, extras?: { html: string; files: File[] }) {
     setPendingStage(newStatus);
     startTransition(async () => {
       await attempt(async () => {
@@ -1403,7 +1369,13 @@ export function BandBookingCard({
             selected_end_time: selectedEndTime || null,
           });
         }
-        const result = await updateBandStatus(request.id, newStatus, note || undefined);
+        let emailExtras: FormData | undefined;
+        if (extras && (extras.html || extras.files.length > 0)) {
+          emailExtras = new FormData();
+          emailExtras.set("html", extras.html);
+          for (const f of extras.files) emailExtras.append("files", f);
+        }
+        const result = await updateBandStatus(request.id, newStatus, note || undefined, emailExtras);
         if (result?.clashes?.length) {
           setClashes(result.clashes);
           toast.error("This slot now clashes with another event - pick another time.");
@@ -1449,6 +1421,8 @@ export function BandBookingCard({
           confirmLabel: "Update & Email",
           content: slots ? (
             <EmailPreview
+              kind="rescheduled"
+              slots={slots}
               email={buildBandEmail({
                 slots,
                 kind: "rescheduled",
@@ -1456,8 +1430,8 @@ export function BandBookingCard({
                 startTime: selectedStartTime || null,
                 endTime: selectedEndTime || null,
               })}
+              groupName={request.group_name}
               to={request.email}
-              slotLabel="New Slot"
             />
           ) : undefined,
         });
@@ -1564,6 +1538,31 @@ export function BandBookingCard({
   }
 
   const [emailCount, setEmailCount] = useState<number | null>(null);
+  const [threadKey, setThreadKey] = useState(0);
+
+  async function sendInvoiceRequest() {
+    if (!request.email) {
+      toast.error("This booking has no email address.");
+      return;
+    }
+    const ok = await confirm({
+      title: "Send invoice request",
+      description: `Email ${request.group_name || request.booker_name} at ${request.email} to thank them for playing and ask for their invoice, with the invoice template attached.${
+        status === "booked" && request.event_id ? "" : " This booking isn't booked onto an event, so the email won't show a performance date."
+      } The Monday job won't send it again.`,
+      confirmLabel: "Send email",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const { error } = await sendInvoiceRequestAction(request.id);
+      if (error) {
+        toast.error(`Invoice request not sent: ${error}`);
+        return;
+      }
+      toast.success("Invoice request sent");
+      setThreadKey((k) => k + 1);
+    });
+  }
 
   const notesCards = (
     <>
@@ -2736,6 +2735,17 @@ export function BandBookingCard({
                 title="Correspondence"
                 headerRight={
                   <span className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={sendInvoiceRequest}
+                      disabled={isPending}
+                      aria-label="Send invoice request"
+                      title="Send the after-gig invoice request"
+                      className="flex h-11 items-center gap-1.5 rounded-lg border border-[#34451F] bg-white px-2.5 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8] disabled:pointer-events-none disabled:opacity-50 sm:h-8"
+                    >
+                      <Receipt className="h-4 w-4" aria-hidden="true" />
+                      <span className="max-sm:hidden">Request invoice</span>
+                    </button>
                     <MessageCountPill count={emailCount} />
                     {unreadEmails > 0 ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -2747,6 +2757,7 @@ export function BandBookingCard({
                 }
               >
                 <CorrespondencePanel
+                  key={threadKey}
                   bandRequestId={request.id}
                   editable={editable}
                   counterpartName={request.group_name || request.booker_name}
@@ -2763,6 +2774,7 @@ export function BandBookingCard({
           </div>
 
           {ConfirmDialogUI}
+          <BandEmailDialog config={emailDialog} onResolve={(r) => emailDialog?.resolve(r)} />
         </SheetContent>
       </Sheet>
     </>

@@ -430,12 +430,14 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     group: "Band bookings",
     description: "Staff move a band request to Offered. The proposed slot card is generated.",
     recipient: "customer",
-    slots: BAND_SLOTS,
+    slots: [...BAND_SLOTS, "cardTitle", "noteTitle"],
     mergeFields: [
       CUSTOMER_NAME,
       { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
     ],
     defaults: slots({
+      cardTitle: "Proposed Slot",
+      noteTitle: "Note from our team",
       subject: "We'd love to book you, {{groupName}} - Don Fenticas",
       heading: "We'd Love to Book You",
       greeting: "Hi {{customerName}},",
@@ -451,12 +453,14 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     group: "Band bookings",
     description: "Staff move a band request to Booked.",
     recipient: "customer",
-    slots: BAND_SLOTS,
+    slots: [...BAND_SLOTS, "cardTitle", "noteTitle"],
     mergeFields: [
       CUSTOMER_NAME,
       { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
     ],
     defaults: slots({
+      cardTitle: "Performance Date",
+      noteTitle: "Note from our team",
       subject: "Your Performance at Don Fenticas is Confirmed!",
       heading: "You're Confirmed!",
       greeting: "Hey {{customerName}},",
@@ -471,12 +475,13 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     group: "Band bookings",
     description: "Staff move a band request to Declined.",
     recipient: "customer",
-    slots: BAND_SLOTS,
+    slots: [...BAND_SLOTS, "noteTitle"],
     mergeFields: [
       CUSTOMER_NAME,
       { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
     ],
     defaults: slots({
+      noteTitle: "Note from our team",
       subject: "Update on Your Application - Don Fenticas",
       heading: "Application Update",
       greeting: "Hey {{customerName}},",
@@ -491,7 +496,7 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     group: "Band bookings",
     description: "Staff change the date or time of a confirmed booking, sending it back to Offered.",
     recipient: "customer",
-    slots: BAND_SLOTS,
+    slots: [...BAND_SLOTS, "cardTitle"],
     mergeFields: [
       CUSTOMER_NAME,
       { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
@@ -502,6 +507,7 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       },
     ],
     defaults: slots({
+      cardTitle: "New Performance Slot",
       subject: "Please confirm your updated performance slot - Don Fenticas",
       heading: "Slot Updated",
       greeting: "Hey {{customerName}},",
@@ -509,7 +515,31 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
         "We've updated the proposed date and time for your performance at Don Fenticas{{groupSuffix}}.\n\nPlease review the new slot below and reply to this email to confirm it works for you. Your booking is on hold until we hear back.",
     }),
   },
-
+  {
+    key: "band.invoice",
+    label: "Invoice request after a gig",
+    group: "Band bookings",
+    description:
+      "Sent automatically on Monday morning to every booked act that played in the last seven days and hasn't had one yet. Attach the invoice template here; bank details on a completed one that's sent back are copied to the booking and the act.",
+    recipient: "customer",
+    slots: [...BAND_SLOTS, "cardTitle"],
+    mergeFields: [
+      CUSTOMER_NAME,
+      { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
+      { token: "eventDate", label: "Performance date", sample: "Friday, 25 September 2026" },
+      { token: "fee", label: "Agreed fee, or blank", sample: "£150" },
+    ],
+    defaults: slots({
+      cardTitle: "Your Performance",
+      subject: "Thanks for playing at Don Fenticas - please send your invoice",
+      heading: "Thanks for Playing!",
+      greeting: "Hi {{customerName}},",
+      intro:
+        "A huge thank you to {{groupName}} for playing at Don Fenticas. We really enjoyed having you, and we hope you had a great night too.",
+      outro:
+        "So we can get you paid, please reply to this email with your invoice, including the bank details you'd like us to pay into.\n\nIf you don't have an invoice of your own, we've attached a simple template you can fill in and send back - just add your bank details and the amount.\n\nThanks again, and we hope to see you back on our stage soon.",
+    }),
+  },
   /* ── Private hire ─────────────────────────────────────────────────────── */
   {
     key: "private_hire.enquiry.customer",
@@ -616,6 +646,7 @@ const WIRED_SCENARIOS = new Set([
   "band.booked",
   "band.declined",
   "band.rescheduled",
+  "band.invoice",
 ]);
 
 export function isWired(key: string): boolean {
@@ -623,6 +654,25 @@ export function isWired(key: string): boolean {
 }
 
 const BY_KEY = new Map(EMAIL_SCENARIOS.map((s) => [s.key, s]));
+
+/* Which of the three email designs a scenario is drawn with. */
+const PLAIN_SCENARIOS = new Set([
+  "enquiry.received.customer",
+  "enquiry.received.admin",
+  "enquiry.reply",
+  "band.application.customer",
+  "band.application.admin",
+  "private_hire.enquiry.customer",
+  "private_hire.enquiry.admin",
+  "private_hire.confirmed",
+  "private_hire.cancelled",
+]);
+
+export function scenarioFamily(scenario: EmailScenario): "band" | "brand" | "plain" {
+  if (PLAIN_SCENARIOS.has(scenario.key)) return "plain";
+  if (scenario.group === "Band bookings") return "band";
+  return "brand";
+}
 
 export function findScenario(key: string): EmailScenario | undefined {
   return BY_KEY.get(key);

@@ -1,4 +1,5 @@
 import { escapeHtml } from "./escape";
+import { unwrapListParagraphs } from "./design";
 
 export type CorrespondenceKind = "band" | "act" | "hire" | "enq" | "cust";
 
@@ -56,6 +57,7 @@ export type CorrespondenceMessage = {
   readAt: string | null;
   sentByName: string | null;
   bandRequestId: string | null;
+  privateHireRequestId: string | null;
   source: CorrespondenceSource;
   createdAt: string;
 };
@@ -188,8 +190,8 @@ const REPLY_ALLOWED_TAGS = new Set(["p", "br", "strong", "b", "em", "i", "u", "s
 /* Staff replies come from the editor as a small HTML subset. Anything outside
    it is dropped and links keep only an http(s)/mailto href, so a reply can't
    carry markup the editor never produces. */
-export function replyHtml(editorHtml: string): string {
-  const cleaned = editorHtml.replace(/<\/?([a-z0-9]+)([^>]*)>/gi, (tag, name: string, attrs: string) => {
+export function cleanReplyFragment(editorHtml: string): string {
+  return unwrapListParagraphs(editorHtml.replace(/<\/?([a-z0-9]+)([^>]*)>/gi, (tag, name: string, attrs: string) => {
     const lower = name.toLowerCase();
     if (!REPLY_ALLOWED_TAGS.has(lower)) return "";
     if (tag.startsWith("</")) return `</${lower}>`;
@@ -198,11 +200,41 @@ export function replyHtml(editorHtml: string): string {
       return /^(https?:|mailto:)/i.test(href) ? `<a href="${href}" target="_blank" rel="noopener noreferrer">` : "<a>";
     }
     return `<${lower}>`;
-  });
-  return `<div style="font-family:sans-serif;max-width:600px;color:#1f2937;font-size:14px;line-height:1.55;">${cleaned}</div>`;
+  }));
+}
+
+export function replyHtml(editorHtml: string): string {
+  return `<div style="font-family:sans-serif;max-width:600px;color:#1f2937;font-size:14px;line-height:1.55;">${cleanReplyFragment(editorHtml)}</div>`;
 }
 
 export function safeAttachmentName(name: string | null | undefined, fallback: string): string {
   const cleaned = (name ?? "").replace(/[/\\?%*:|"<>\u0000-\u001f]/g, "_").trim();
   return cleaned.slice(-120) || fallback;
+}
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  reviewing: "Reviewing",
+  offered: "Offered",
+  booked: "Booked",
+  declined: "Declined",
+  pending: "Pending",
+  pending_review: "Pending",
+  confirmed: "Confirmed",
+  cancelled: "Cancelled",
+};
+
+/* How a band booking or private hire is named in a thread: the date it's
+   for (or when it came in, if no date yet), its stage and its short reference. */
+export function correspondenceBookingLabel(b: {
+  id: string;
+  status: string | null;
+  date: string | null;
+  createdAt: string;
+}): string {
+  const when = b.date
+    ? new Date(`${b.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+    : `Received ${new Date(b.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+  const status = b.status ? (BOOKING_STATUS_LABELS[b.status] ?? b.status.charAt(0).toUpperCase() + b.status.slice(1)) : "";
+  return [when, status, `#${b.id.slice(0, 8)}`].filter(Boolean).join(" · ");
 }

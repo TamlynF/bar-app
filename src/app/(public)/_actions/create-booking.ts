@@ -8,6 +8,7 @@ import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
 import { EMAIL_FROM } from "@/lib/email";
 import { renderTemplate } from "@/lib/email/resolve";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 import {
   allocateOnCreate,
   commitMapping,
@@ -248,7 +249,8 @@ async function sendBookingEmail(
       from: EMAIL_FROM,
         to: email,
         subject: subject,
-        html: html
+        html: html,
+        ...(await resendTemplateAttachments(slots)),
       });
 
       if (resendError) {

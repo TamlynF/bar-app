@@ -19,6 +19,8 @@ import {
   type BookingSnapshot,
 } from "@/lib/booking-emails";
 import { renderTemplate } from "@/lib/email/resolve";
+import type { RenderedSlots } from "@/lib/email/design";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -127,13 +129,14 @@ export async function loadBookingSnapshot(
   };
 }
 
-async function send(to: string, email: BookingEmail): Promise<void> {
+async function send(to: string, email: BookingEmail, slots: RenderedSlots): Promise<void> {
   try {
     const { error } = await getResend().emails.send({
       from: EMAIL_FROM,
       to,
       subject: email.subject,
       html: email.html,
+      ...(await resendTemplateAttachments(slots)),
     });
     if (error) console.error("Resend API Error:", error);
   } catch (err) {
@@ -176,7 +179,8 @@ export async function notifyAdminBookingCreated(
       slots,
       booking: loaded.snapshot,
       adminUrl: urls(loaded).adminUrl,
-    })
+    }),
+    slots
   );
 }
 
@@ -200,7 +204,8 @@ export async function notifyBookingChanged(
   if (customerSlots) {
     await send(
       loaded.snapshot.customerEmail,
-      buildBookingChangedEmail({ slots: customerSlots, changes, manageUrl })
+      buildBookingChangedEmail({ slots: customerSlots, changes, manageUrl }),
+      customerSlots
     );
   }
 
@@ -214,7 +219,8 @@ export async function notifyBookingChanged(
           booking: loaded.snapshot,
           changes,
           adminUrl,
-        })
+        }),
+        adminSlots
       );
     }
   }
@@ -236,7 +242,8 @@ export async function notifyBookingCancelled(
   if (customerSlots) {
     await send(
       loaded.snapshot.customerEmail,
-      buildBookingCancelledEmail({ slots: customerSlots, booking: loaded.snapshot })
+      buildBookingCancelledEmail({ slots: customerSlots, booking: loaded.snapshot }),
+      customerSlots
     );
   }
 
@@ -245,7 +252,8 @@ export async function notifyBookingCancelled(
     if (adminSlots) {
       await send(
         ADMIN_EMAIL,
-        buildAdminBookingCancelledEmail({ slots: adminSlots, booking: loaded.snapshot, adminUrl })
+        buildAdminBookingCancelledEmail({ slots: adminSlots, booking: loaded.snapshot, adminUrl }),
+        adminSlots
       );
     }
   }

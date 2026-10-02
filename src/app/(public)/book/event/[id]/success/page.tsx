@@ -10,6 +10,7 @@ import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-email
 import { renderTemplate } from "@/lib/email/resolve";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 export const viewport: Viewport = {
   themeColor: "#26300D",
@@ -97,6 +98,7 @@ async function confirmAndNotify(bookingId: string) {
           to: contact.email,
           subject,
           html,
+          ...(await resendTemplateAttachments(slots)),
         }).catch(() => {});
       }
     }

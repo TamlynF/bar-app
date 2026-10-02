@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-confirmation";
 import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
 import { catalogCopiedWithin } from "@/lib/square-catalog-sync";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 /* Every market price push fires this webhook too, so a live market would
    otherwise re-copy the whole catalog after each re-rank, competing with its
@@ -166,6 +167,7 @@ export async function POST(req: NextRequest) {
           to: contact.email,
           subject,
           html,
+          ...(await resendTemplateAttachments(slots)),
         }).catch(() => {});
       }
     }

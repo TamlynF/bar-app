@@ -10,7 +10,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EMAIL_SCENARIOS, findScenario } from "./scenarios";
-import { renderSlots, type MergeValues, type TemplateSlots } from "./render";
+import { renderSlots, type MergeValues } from "./render";
+import { brandFromRow, fillBlocks, type EmailBrand, type EmailBrandRow, type RenderedSlots } from "./design";
 import { mergeOverride, type EmailTemplateRow, type ResolvedTemplate } from "./merge";
 
 export { mergeOverride };
@@ -62,19 +63,26 @@ export async function resolveAllTemplates(supabase: TemplateClient): Promise<Res
 
 /* What a send site calls: resolved copy with the merge values filled in, or null
    when the scenario has been switched off. */
+export async function resolveBrand(supabase: TemplateClient): Promise<EmailBrand> {
+  const { data, error } = await supabase.from("email_brand").select("*").eq("id", 1).maybeSingle();
+  /* No brand row, or no read, means every design keeps its own look. */
+  if (error) console.error("[email templates] could not read brand:", error.message);
+  return brandFromRow((data as EmailBrandRow | null) ?? null);
+}
+
 export async function renderTemplate(
   supabase: TemplateClient,
   key: string,
   values: MergeValues
-): Promise<TemplateSlots | null> {
-  const resolved = await resolveTemplate(supabase, key);
+): Promise<RenderedSlots | null> {
+  const [resolved, brand] = await Promise.all([resolveTemplate(supabase, key), resolveBrand(supabase)]);
   if (!resolved || !resolved.isActive) return null;
 
   const { slots, unknownTokens } = renderSlots(resolved.slots, values);
-  if (unknownTokens.length > 0) {
-    console.error(
-      `[email templates] "${key}" references unknown fields: ${unknownTokens.join(", ")}`
-    );
+  const unknown = new Set(unknownTokens);
+  const blocks = resolved.blocks ? fillBlocks(resolved.blocks, values, unknown) : null;
+  if (unknown.size > 0) {
+    console.error(`[email templates] "${key}" references unknown fields: ${[...unknown].join(", ")}`);
   }
-  return slots;
+  return { ...slots, design: { brand, blocks, attachments: resolved.attachments } };
 }

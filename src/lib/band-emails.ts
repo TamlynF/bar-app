@@ -21,7 +21,7 @@ function formatDateLong(d?: string | null): string {
   });
 }
 
-export type BandEmailKind = "offered" | "booked" | "declined" | "rescheduled";
+export type BandEmailKind = "offered" | "booked" | "declined" | "rescheduled" | "invoice";
 
 export const bandScenarioKey = (kind: BandEmailKind) => `band.${kind}`;
 
@@ -45,12 +45,16 @@ export type RescheduleEmail = BandEmail;
 export function bandMergeValues(p: {
   name: string;
   groupName?: string | null;
+  date?: string | null;
+  paymentAmount?: number | null;
 }): MergeValues {
   return {
     customerName: p.name,
     groupName: p.groupName ?? "you",
     /* Blank rather than "()" when the act has no name of its own. */
     groupSuffix: p.groupName ? ` (${p.groupName})` : "",
+    eventDate: formatDateLong(p.date),
+    fee: p.paymentAmount != null ? `£${p.paymentAmount}` : "",
   };
 }
 
@@ -88,7 +92,7 @@ export function buildBandEmail(p: {
         ? [dateLabel, timeLabel].filter(Boolean).join(", ")
         : "to be arranged"
       : undefined,
-    feeLabel: offered && p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
+    feeLabel: (offered || p.kind === "invoice") && p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
     noteLabel: p.notes?.trim() || "",
   };
 }
@@ -97,5 +101,6 @@ export function buildBandEmail(p: {
 export function bandSlotCardLabel(kind: BandEmailKind): string {
   if (kind === "offered") return "Proposed Slot";
   if (kind === "rescheduled") return "New Performance Slot";
+  if (kind === "invoice") return "Your Performance";
   return "Performance Date";
 }

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { upsertContactByEmail } from "@/lib/music-acts";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
-import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
+import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/correspondence-data";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
@@ -99,6 +99,7 @@ async function sendBookerEmail(supabase: ServerClient, requestId: string, name: 
     links: { privateHireRequestId: requestId },
     to: email,
     subject: slots.subject,
+    templateSlots: slots,
     html: plainLayout({ slots }),
     kind: "enquiry",
   });
@@ -138,5 +139,6 @@ async function sendAdminEmail(supabase: ServerClient, data: PrivateHireData, id:
       ctaUrl: requestUrl,
       trailer: `Enquiry ID: ${escapeHtml(id)}`,
     }),
+    ...(await resendTemplateAttachments(slots)),
   });
 }

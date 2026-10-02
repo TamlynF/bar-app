@@ -23,6 +23,7 @@ import { checkoutReturnPath } from "@/lib/booking-links";
 import { buildCheckoutOptions } from "@/lib/square-order";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
+import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -268,6 +269,7 @@ async function sendPaymentPendingEmail(
       to: args.email,
       subject,
       html,
+      ...(await resendTemplateAttachments(slots)),
     });
     if (resendError) console.error("Resend API Error:", resendError);
   } catch (emailError) {
@@ -324,7 +326,8 @@ async function sendBookingEmail(
         from: EMAIL_FROM,
         to: email,
         subject: subject,
-        html: html
+        html: html,
+        ...(await resendTemplateAttachments(slots)),
       });
 
       if (resendError) {

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
-import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
+import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/correspondence-data";
 import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
@@ -69,6 +69,7 @@ async function sendEnquirerEmail(supabase: ServerClient, enquiryId: string, name
     links: { enquiryId },
     to: email,
     subject: slots.subject,
+    templateSlots: slots,
     html: plainLayout({ slots }),
     kind: "enquiry",
   });
@@ -98,5 +99,6 @@ async function sendAdminEmail(supabase: ServerClient, data: EnquiryData, id: str
     to: ADMIN_EMAIL,
     subject: slots.subject,
     html: plainLayout({ slots, panelHtml, trailer: `Enquiry ID: ${escapeHtml(id)}` }),
+    ...(await resendTemplateAttachments(slots)),
   });
 }

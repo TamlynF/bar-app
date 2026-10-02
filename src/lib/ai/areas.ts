@@ -15,7 +15,8 @@ export type AiAreaKey =
   | "quiz_images"
   | "marketing_trends"
   | "market_prices"
-  | "menu_import";
+  | "menu_import"
+  | "invoice_reading";
 
 export type AiArea = {
   key: AiAreaKey;
@@ -86,6 +87,16 @@ export const AI_AREAS: readonly AiArea[] = [
     key: "menu_import",
     label: "Menu import",
     description: "Reads a menu PDF or photo and turns it into categories and priced items.",
+    kind: "text",
+    needs: ["text", "file", "json"],
+    defaultProvider: "gemini",
+    defaultModel: QUIZ_TEXT_MODEL,
+  },
+  {
+    key: "invoice_reading",
+    label: "Invoice reading",
+    description:
+      "Reads the bank details off an invoice an act emails back that isn't our fillable template - their own PDF or a photo.",
     kind: "text",
     needs: ["text", "file", "json"],
     defaultProvider: "gemini",

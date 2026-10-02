@@ -15,6 +15,14 @@
     {
       "path": "/api/marketing/trends/refresh?kind=price",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/band-invoice-requests?utc=8",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/band-invoice-requests?utc=9",
+      "schedule": "0 9 * * 1"
     }
   ]
 }
