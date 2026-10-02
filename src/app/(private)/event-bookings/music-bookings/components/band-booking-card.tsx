@@ -40,6 +40,7 @@ import {
   Heart,
   Hash,
   Copy,
+  MoreVertical,
   NotebookPen,
   Info,
   Pencil,
@@ -52,7 +53,8 @@ import {
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -64,7 +66,7 @@ import { attempt } from "@/lib/attempt";
 import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
 import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
-import { BookingNoteQuote, InternalNotesPanel } from "@/components/admin/internal-notes-panel";
+import { BookingNoteWidget, InternalNotesPanel } from "@/components/admin/internal-notes-panel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -1564,35 +1566,22 @@ export function BandBookingCard({
   const notesCards = (
     <>
       {bookingNote && (
-        <Section
-          title="Notes from booking"
-          headerRight={
-            <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
-              From applicant
-            </span>
-          }
-        >
-          <BookingNoteQuote note={bookingNote} />
-        </Section>
+        <BookingNoteWidget
+          note={bookingNote}
+          title="Note from the band"
+          author={request.booker_name || request.group_name}
+          createdAt={request.created_at}
+        />
       )}
       <div data-internal-notes className="scroll-mt-4">
-        <Section
-          title="Internal notes"
-          headerRight={
-            <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
-              Staff only{bandNoteList.length > 0 && ` · ${bandNoteList.length}`}
-            </span>
-          }
-        >
-          <InternalNotesPanel
-            notes={bandNoteList}
-            editable={editable}
-            placeholder="Add a note about the band…"
-            onAdd={(body) => addBandNote(request.id, body)}
-            onUpdate={updateBandNote}
-            onDelete={deleteBandNote}
-          />
-        </Section>
+        <InternalNotesPanel
+          notes={bandNoteList}
+          editable={editable}
+          placeholder="Add a note about the band…"
+          onAdd={(body) => addBandNote(request.id, body)}
+          onUpdate={updateBandNote}
+          onDelete={deleteBandNote}
+        />
       </div>
     </>
   );
@@ -1902,54 +1891,66 @@ export function BandBookingCard({
                   aria-pressed={isFavorite}
                   aria-label={isFavorite ? "Remove from favourites" : "Mark as favourite"}
                   title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
+                  className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-admin-surface focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none"
                 >
                   <Heart
                     className={cn(
-                      "h-4 w-4 transition-colors",
+                      "h-5.5 w-5.5 transition-colors",
                       isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5E6654]"
                     )}
                   />
                 </button>
 
-                <button
-                  type="button"
-                  onClick={revealInternalNotes}
-                  aria-label={`Internal notes: ${bandNoteList.length}`}
-                  title="Go to internal notes"
-                  className={cn(
-                    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9",
-                    hasChanges && "max-sm:hidden"
-                  )}
-                >
-                  <NotebookPen
-                    className={cn(
-                      "h-4 w-4 transition-colors",
-                      bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]"
-                    )}
-                  />
-                  {bandNoteList.length > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
-                      {bandNoteList.length}
-                    </span>
-                  )}
-                </button>
-
                 <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="System information"
-                      title="System information"
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9",
-                        hasChanges && "max-sm:hidden"
-                      )}
+                  <DropdownMenu modal={false}>
+                    <PopoverAnchor asChild>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={
+                            bandNoteList.length > 0 ? `More actions (${bandNoteList.length} team notes)` : "More actions"
+                          }
+                          title="More actions"
+                          className={cn(
+                            "relative -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none data-[state=open]:bg-admin-surface",
+                            hasChanges && "max-sm:hidden"
+                          )}
+                        >
+                          <MoreVertical className="h-5 w-5" />
+                          {bandNoteList.length > 0 && (
+                            <span
+                              aria-hidden="true"
+                              className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#9A5B00] ring-2 ring-white"
+                            />
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                    </PopoverAnchor>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-56"
+                      onCloseAutoFocus={(e) => e.preventDefault()}
                     >
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                      <DropdownMenuItem onSelect={revealInternalNotes}>
+                        <NotebookPen className="h-4 w-4" />
+                        <span className="flex-1">Team notes</span>
+                        {bandNoteList.length > 0 && (
+                          <span className="rounded-full bg-[#FCE9A6] px-1.5 text-[11px] font-semibold text-[#9A5B00] tabular-nums">
+                            {bandNoteList.length}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setTimeout(() => setSysInfoOpen(true), 0)}>
+                        <Info className="h-4 w-4" />
+                        System information
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <PopoverContent
+                    align="end"
+                    onFocusOutside={(e) => e.preventDefault()}
+                    className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0"
+                  >
                     <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
                       System Information
                     </span>

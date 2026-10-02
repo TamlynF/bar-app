@@ -28,12 +28,13 @@ import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -620,27 +621,14 @@ export function MusicActSheet({
 
   const notesCards = (
     <div data-internal-notes className="scroll-mt-4">
-      <Section
-        title="Internal notes"
-        headerRight={
-          <span className={SUBTLE_PILL}>
-            Staff only{notes.length > 0 && ` · ${notes.length}`}
-          </span>
-        }
-      >
-        {act ? (
-          <InternalNotesPanel
-            notes={notes}
-            editable
-            placeholder="Add a note about the act…"
-            onAdd={(body) => addMusicActNote(act.id, body)}
-            onUpdate={updateMusicActNote}
-            onDelete={deleteMusicActNote}
-          />
-        ) : (
-          <p className="p-4 text-[13px] text-admin-muted sm:px-5">Save the act first to add notes.</p>
-        )}
-      </Section>
+      <InternalNotesPanel
+        notes={notes}
+        editable={!!act}
+        placeholder="Add a note about the act…"
+        onAdd={(body) => (act ? addMusicActNote(act.id, body) : Promise.resolve())}
+        onUpdate={updateMusicActNote}
+        onDelete={deleteMusicActNote}
+      />
     </div>
   );
 
@@ -749,42 +737,62 @@ export function MusicActSheet({
                 aria-pressed={favourite}
                 aria-label={favourite ? "Remove from favourites" : "Mark as favourite"}
                 title={favourite ? "Remove from favourites" : "Mark as favourite"}
-                className={cn(HEADER_ICON_BUTTON, (hasChanges || isNew) && "max-sm:hidden")}
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-admin-surface focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none disabled:opacity-50",
+                  (hasChanges || isNew) && "max-sm:hidden"
+                )}
               >
-                <Heart className={cn("h-4 w-4 transition-colors", favourite ? "fill-rose-500 text-rose-500" : "text-[#5E6654]")} />
+                <Heart className={cn("h-5.5 w-5.5 transition-colors", favourite ? "fill-rose-500 text-rose-500" : "text-[#5E6654]")} />
               </button>
 
               {act && (
                 <>
-                  <button
-                    type="button"
-                    onClick={revealInternalNotes}
-                    aria-label={`Internal notes: ${notes.length}`}
-                    title="Go to internal notes"
-                    className={cn(HEADER_ICON_BUTTON, "relative", hasChanges && "max-sm:hidden")}
-                  >
-                    <NotebookPen
-                      className={cn("h-4 w-4 transition-colors", notes.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]")}
-                    />
-                    {notes.length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 text-[9px] font-bold text-white tabular-nums ring-2 ring-white">
-                        {notes.length}
-                      </span>
-                    )}
-                  </button>
-
                   <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="System information"
-                        title="System information"
-                        className={cn(HEADER_ICON_BUTTON, hasChanges && "max-sm:hidden")}
-                      >
-                        <Info className="h-4 w-4" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                    <DropdownMenu modal={false}>
+                      <PopoverAnchor asChild>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={notes.length > 0 ? `More actions (${notes.length} team notes)` : "More actions"}
+                            title="More actions"
+                            className="relative -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none data-[state=open]:bg-admin-surface"
+                          >
+                            <MoreVertical className="h-5 w-5" />
+                            {notes.length > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#9A5B00] ring-2 ring-white"
+                              />
+                            )}
+                          </button>
+                        </DropdownMenuTrigger>
+                      </PopoverAnchor>
+                      <DropdownMenuContent align="end" className="w-56" onCloseAutoFocus={(e) => e.preventDefault()}>
+                        <DropdownMenuItem onSelect={revealInternalNotes}>
+                          <NotebookPen className="h-4 w-4" />
+                          <span className="flex-1">Team notes</span>
+                          {notes.length > 0 && (
+                            <span className="rounded-full bg-[#FCE9A6] px-1.5 text-[11px] font-semibold text-[#9A5B00] tabular-nums">
+                              {notes.length}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setTimeout(() => setSysInfoOpen(true), 0)}>
+                          <Info className="h-4 w-4" />
+                          System information
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                          <Trash2 className="h-4 w-4" />
+                          Delete act
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <PopoverContent
+                      align="end"
+                      onFocusOutside={(e) => e.preventDefault()}
+                      className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0"
+                    >
                       <span className="block border-b border-[#D8D5C8] bg-admin-surface px-4 py-2.5 text-[13px] font-bold text-admin-ink">
                         System information
                       </span>
@@ -802,25 +810,6 @@ export function MusicActSheet({
                       ))}
                     </PopoverContent>
                   </Popover>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="More actions"
-                        title="More actions"
-                        className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-ink transition-colors hover:bg-admin-surface"
-                      >
-                        <MoreVertical className="h-5 w-5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-                        <Trash2 className="h-4 w-4" />
-                        Delete act
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </>
               )}
             </div>
