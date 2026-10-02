@@ -35,6 +35,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -157,7 +158,7 @@ const formatTimeRange = (start?: string | null, end?: string | null) =>
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+      <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
         {label}
       </span>
       <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
@@ -191,7 +192,7 @@ function EditRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
+      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
       {!editable ? (
         <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">{readOnlyValue ?? (value || "-")}</span>
       ) : (
@@ -212,7 +213,7 @@ function EditRow({
 function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType<{ className?: string }> }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
+      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
         <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
         {href && (
@@ -246,10 +247,10 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
+    <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
       <div
         className={cn(
-          "flex w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5",
+          "flex min-h-12 w-full items-center gap-3 bg-white px-4 py-2 transition-colors has-[button:active]:bg-admin-surface sm:px-5",
           open && "border-b border-[#D8D5C8]"
         )}
       >
@@ -258,14 +259,14 @@ function Section({
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
+          <span className="font-bold text-[14px] text-admin-ink">{title}</span>
         </button>
         {headerRight}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-          className="shrink-0 transition-all hover:brightness-95"
+          className="shrink-0 transition-all hover:brightness-95 max-sm:flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center"
         >
           <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
@@ -476,7 +477,7 @@ function StageStepper({
 function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
   return (
     <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
-      <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">To: {to}</p>
+      <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">To: {to}</p>
       <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
       <p className="text-xs text-[#5E6654]">{email.greeting}</p>
       {email.body.map((p, i) => (
@@ -484,7 +485,7 @@ function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
       ))}
       {email.noteLabel && (
         <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Note from our team</p>
+          <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Note from our team</p>
           <p className="text-xs leading-relaxed text-[#20231A]">{email.noteLabel}</p>
         </div>
       )}
@@ -511,7 +512,7 @@ function EmailWithNote({
   return (
     <div className="space-y-2 text-left">
       <label className="block">
-        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+        <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
           {label}
         </span>
         <textarea
@@ -751,7 +752,7 @@ export function PrivateHireCard({
     }
   }
 
-  function handleCancel() {
+  function discardChanges() {
     setGuestCount(String(request.guest_count ?? ""));
     setSubtypeId(request.event_subtypes_id != null ? String(request.event_subtypes_id) : "");
     setSelectedDate(request.selected_date || "");
@@ -760,6 +761,10 @@ export function PrivateHireCard({
     setAdminNotes(request.admin_notes || "");
     setClashes([]);
     setError(null);
+  }
+
+  function closeDiscarding() {
+    discardChanges();
     setSheetOpen(false);
   }
 
@@ -892,7 +897,6 @@ export function PrivateHireCard({
       runSave(async () => {
         await updatePrivateHireFields(request.id, editFields());
         toast.success("Changes saved");
-        setSheetOpen(false);
       });
     }, () => setError("Failed to update. Please try again."));
   }
@@ -928,7 +932,7 @@ export function PrivateHireCard({
         cancelLabel: "Keep editing",
         variant: "destructive",
       });
-      if (discard) handleCancel();
+      if (discard) closeDiscarding();
       return;
     }
     const save = await confirm({
@@ -939,7 +943,7 @@ export function PrivateHireCard({
       dismissible: false,
     });
     if (save) handleSave();
-    else handleCancel();
+    else closeDiscarding();
   }
 
   const preferredDate = request.preferred_date;
@@ -1083,16 +1087,24 @@ export function PrivateHireCard({
           onEscapeKeyDown={(e) => {
             if (confirmOpen.current) e.preventDefault();
           }}
-          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
+          showCloseButton={false}
+          className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[92vh] sm:w-3xl sm:max-w-[96vw] sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 md:w-4xl lg:max-h-[94vh] lg:w-5xl xl:w-6xl"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#20231A] uppercase">
+          <SheetDragHandle onClose={requestClose} className="bg-white/80 backdrop-blur-md" />
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-1 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <div className="flex items-start justify-between gap-1.5 sm:gap-3">
+              <button
+                type="button"
+                onClick={requestClose}
+                aria-label="Close"
+                title="Close"
+                className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+              >
+                <X className="h-5 w-5 shrink-0" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="mt-2 truncate text-lg leading-tight font-bold tracking-tight text-admin-ink">
                   {request.full_name}
-                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5E6654] normal-case italic">
-                    (#Ref: {shortRef})
-                  </span>
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   Review and manage this private hire enquiry.
@@ -1100,13 +1112,41 @@ export function PrivateHireCard({
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
+                {hasChanges && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={discardChanges}
+                      disabled={isPending}
+                      aria-label="Discard changes"
+                      title="Discard changes"
+                      className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] disabled:opacity-50 max-sm:w-11 max-sm:px-0 sm:h-9"
+                    >
+                      <Undo2 className="h-4 w-4 shrink-0" />
+                      <span className="max-sm:hidden">Cancel</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isPending || hasClashes}
+                      title={hasClashes ? clashWarning : "Save changes"}
+                      className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:h-9"
+                    >
+                      {isPending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Save className="h-4 w-4 shrink-0" />}
+                      Save
+                    </button>
+                  </>
+                )}
                 <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
                       aria-label="System information"
                       title="System information"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9"
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9",
+                        hasChanges && "max-sm:hidden"
+                      )}
                     >
                       <Info className="h-4 w-4" />
                     </button>
@@ -1148,7 +1188,7 @@ export function PrivateHireCard({
                     />
                     {(isCancelled || !!declineReason) && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                        <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                           Decline Reason
                         </span>
                         {declineReasonOpen ? (
@@ -1200,9 +1240,15 @@ export function PrivateHireCard({
             />
           </div>
 
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            {error && (
+              <p className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-snug font-bold text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                {error}
+              </p>
+            )}
             {bodyReady ? (
-            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
+            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
               <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section
                   title="Event Details"
@@ -1254,7 +1300,7 @@ export function PrivateHireCard({
                   <SheetRow label="Name" value={request.full_name} />
 
                   <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Type / Subtype</span>
+                    <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Type / Subtype</span>
                     {!editable || !options ? (
                       <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">
                         {typeName || "-"}
@@ -1294,7 +1340,7 @@ export function PrivateHireCard({
 
                   {hasPreferred && (
                     <div className="flex items-center gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                         Preferred Date &amp; Time
                       </span>
                       <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
@@ -1337,7 +1383,7 @@ export function PrivateHireCard({
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                         Selected Date &amp; Time
                       </span>
                       {editable ? (
@@ -1379,7 +1425,7 @@ export function PrivateHireCard({
                                     applyDate("");
                                     setDatePickerOpen(false);
                                   }}
-                                  className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                                  className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                                 >
                                   <X className="h-3.5 w-3.5" />
                                   Clear date
@@ -1459,7 +1505,7 @@ export function PrivateHireCard({
 
                   {bookingNote && (
                     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                      <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                         Notes from Booking
                       </span>
                       <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
@@ -1538,48 +1584,6 @@ export function PrivateHireCard({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-end gap-2">
-                  {!hasChanges ? (
-                    <button
-                      type="button"
-                      onClick={handleCancel}
-                      disabled={isPending}
-                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
-                    >
-                      <X className="h-3.5 w-3.5 shrink-0" />
-                      Close
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleCancel}
-                        disabled={isPending}
-                        title="Discard changes"
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
-                      >
-                        <Undo2 className="h-3.5 w-3.5 shrink-0" />
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={isPending || hasClashes}
-                        title={hasClashes ? clashWarning : undefined}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
-                      >
-                        {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Save className="h-3.5 w-3.5 shrink-0" />}
-                        Save
-                      </button>
-                    </>
-                  )}
-              </div>
-
-              {error && <p className="text-xs font-bold text-red-500">{error}</p>}
-            </div>
-          </div>
           {ConfirmDialogUI}
         </SheetContent>
       </Sheet>

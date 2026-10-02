@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -503,7 +504,7 @@ function StageStepper({
 function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to: string; slotLabel?: string }) {
   return (
     <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
-      <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">To: {to}</p>
+      <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">To: {to}</p>
       <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
       <p className="text-xs text-[#5E6654]">{email.greeting}</p>
       {email.body.map((p, i) => (
@@ -511,7 +512,7 @@ function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to:
       ))}
       {(email.dateLabel || email.slotLabel) && (
         <div className="mt-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{slotLabel}</p>
+          <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{slotLabel}</p>
           <p className="font-black text-sm text-[#20231A]">{email.slotLabel || email.dateLabel}</p>
           {!email.slotLabel && email.timeLabel && (
             <p className="text-xs font-bold text-[#5E6654]">{email.timeLabel}</p>
@@ -524,7 +525,7 @@ function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to:
       ))}
       {email.noteLabel && (
         <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Note from our team</p>
+          <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Note from our team</p>
           <p className="text-xs leading-relaxed text-[#20231A]">{email.noteLabel}</p>
         </div>
       )}
@@ -553,7 +554,7 @@ function EmailWithNote({
   return (
     <div className="space-y-2 text-left">
       <label className="block">
-        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+        <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
           {label}
         </span>
         <textarea
@@ -575,7 +576,7 @@ function EmailWithNote({
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+      <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
         {label}
       </span>
       <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
@@ -606,7 +607,7 @@ function EditRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
+      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
       {!editable ? (
         <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">{readOnlyValue ?? (value || "-")}</span>
       ) : options ? (
@@ -650,10 +651,10 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
+    <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
       <div
         className={cn(
-          "flex w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5",
+          "flex min-h-12 w-full items-center gap-3 bg-white px-4 py-2 transition-colors has-[button:active]:bg-admin-surface sm:px-5",
           open && "border-b border-[#D8D5C8]"
         )}
       >
@@ -662,14 +663,14 @@ function Section({
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
+          <span className="font-bold text-[14px] text-admin-ink">{title}</span>
         </button>
         {headerRight}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-          className="shrink-0 transition-all hover:brightness-95"
+          className="shrink-0 transition-all hover:brightness-95 max-sm:flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center"
         >
           <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
@@ -1000,7 +1001,7 @@ export function BandBookingCard({
     return list;
   }
 
-  function handleCancel() {
+  function discardChanges() {
     setActName(request.group_name ?? "");
     setReqType(request.type ?? "");
     setGenre(request.genre ?? "");
@@ -1025,7 +1026,6 @@ export function BandBookingCard({
     setSheetVideos(seedSheetVideos(request));
     setClashes([]);
     setError(null);
-    setSheetOpen(false);
   }
 
   function handleToggleFavorite() {
@@ -1322,7 +1322,6 @@ export function BandBookingCard({
           } else {
             toast.success("Booking updated - band notified");
           }
-          setSheetOpen(false);
         });
         return;
       }
@@ -1338,7 +1337,6 @@ export function BandBookingCard({
         runSave(async () => {
           await updateBandBookingFields(request.id, detailFields());
           toast.success("Changes saved");
-          setSheetOpen(false);
         });
         return;
       }
@@ -1351,7 +1349,6 @@ export function BandBookingCard({
           selected_end_time: selectedEndTime || null,
         });
         toast.success("Changes saved");
-        setSheetOpen(false);
       });
     }, () => setError("Failed to update. Please try again."));
   }
@@ -1364,6 +1361,11 @@ export function BandBookingCard({
         setError("Failed to update. Please try again.");
       }
     });
+  }
+
+  function closeDiscarding() {
+    discardChanges();
+    setSheetOpen(false);
   }
 
   async function requestClose() {
@@ -1387,7 +1389,7 @@ export function BandBookingCard({
         cancelLabel: "Keep editing",
         variant: "destructive",
       });
-      if (discard) handleCancel();
+      if (discard) closeDiscarding();
       return;
     }
     const save = await confirm({
@@ -1398,7 +1400,7 @@ export function BandBookingCard({
       dismissible: false,
     });
     if (save) handleSave();
-    else handleCancel();
+    else closeDiscarding();
   }
 
   return (
@@ -1644,16 +1646,24 @@ export function BandBookingCard({
           onEscapeKeyDown={(e) => {
             if (confirmOpen.current) e.preventDefault();
           }}
-          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
+          showCloseButton={false}
+          className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[92vh] sm:w-3xl sm:max-w-[96vw] sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 md:w-4xl lg:max-h-[94vh] lg:w-5xl xl:w-6xl"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#20231A] uppercase">
+          <SheetDragHandle onClose={requestClose} className="bg-white/80 backdrop-blur-md" />
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-1 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <div className="flex items-start justify-between gap-1.5 sm:gap-3">
+              <button
+                type="button"
+                onClick={requestClose}
+                aria-label="Close"
+                title="Close"
+                className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+              >
+                <X className="h-5 w-5 shrink-0" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <SheetTitle className="mt-2 truncate text-lg leading-tight font-bold tracking-tight text-admin-ink">
                   {request.group_name || request.booker_name}
-                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5E6654] normal-case italic">
-                    (#Ref: {shortRef})
-                  </span>
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   Review and manage this band request.
@@ -1661,6 +1671,37 @@ export function BandBookingCard({
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5">
+                {hasChanges && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={discardChanges}
+                      disabled={isPending}
+                      aria-label="Discard changes"
+                      title="Discard changes"
+                      className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] disabled:opacity-50 max-sm:w-11 max-sm:px-0 sm:h-9"
+                    >
+                      <Undo2 className="h-4 w-4 shrink-0" />
+                      <span className="max-sm:hidden">Cancel</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isPending || hasClashes || videosUploading}
+                      title={
+                        hasClashes
+                          ? clashWarning
+                          : videosUploading
+                            ? "Wait for videos to finish uploading."
+                            : "Save changes"
+                      }
+                      className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:h-9"
+                    >
+                      {isPending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Save className="h-4 w-4 shrink-0" />}
+                      Save
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
                   onClick={handleToggleFavorite}
@@ -1682,7 +1723,10 @@ export function BandBookingCard({
                     type="button"
                     aria-label={`Band notes (internal): ${bandNoteList.length}`}
                     title="Band notes (internal)"
-                    className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
+                    className={cn(
+                      "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9",
+                      hasChanges && "max-sm:hidden"
+                    )}
                   >
                     <NotebookPen
                       className={cn(
@@ -1704,7 +1748,10 @@ export function BandBookingCard({
                       type="button"
                       aria-label="System information"
                       title="System information"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9"
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9",
+                        hasChanges && "max-sm:hidden"
+                      )}
                     >
                       <Info className="h-4 w-4" />
                     </button>
@@ -1746,7 +1793,7 @@ export function BandBookingCard({
                     />
                     {(isDeclined || !!declineReason) && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                        <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                           Decline Reason
                         </span>
                         {declineReasonOpen ? (
@@ -1798,9 +1845,15 @@ export function BandBookingCard({
             />
           </div>
 
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            {error && (
+              <p className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-snug font-bold text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                {error}
+              </p>
+            )}
             {bodyReady ? (
-            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
+            <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
               <div className="min-w-0 space-y-4 sm:space-y-5">
               <Section
                 title="Event Details"
@@ -1851,7 +1904,7 @@ export function BandBookingCard({
               >
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
                 <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                  <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Type / Genre</span>
+                  <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Type / Genre</span>
                   {!editable ? (
                     <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">
                       {toTitleCase(request.type) || "-"}
@@ -1925,7 +1978,7 @@ export function BandBookingCard({
                       {canExpand && showAllDates ? (
                         <>
                           <div className="flex items-center justify-between gap-3">
-                            <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                            <span className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                               Preferred Dates
                             </span>
                             <button type="button" onClick={() => setShowAllDates(false)} className={toggleClass}>
@@ -1937,7 +1990,7 @@ export function BandBookingCard({
                         </>
                       ) : (
                         <div className="flex items-center gap-3">
-                          <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                          <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                             Preferred Dates
                           </span>
                           <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
@@ -1964,7 +2017,7 @@ export function BandBookingCard({
                   )}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                    <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                       Date &amp; Time
                     </span>
                     {editable ? (
@@ -2005,7 +2058,7 @@ export function BandBookingCard({
                                   applyDate("");
                                   setDatePickerOpen(false);
                                 }}
-                                className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                                className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                               >
                                 <X className="h-3.5 w-3.5" />
                                 Clear date
@@ -2080,7 +2133,7 @@ export function BandBookingCard({
 
                 {bookingNote && (
                   <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                    <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                       Notes from Booking
                     </span>
                     <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
@@ -2428,7 +2481,7 @@ export function BandBookingCard({
                   type="button"
                   onClick={() => setShowContactDetails((v) => !v)}
                   aria-expanded={showContactDetails}
-                  className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
+                  className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
                 >
                   {showContactDetails ? "View less" : "View more"}
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showContactDetails && "rotate-180")} />
@@ -2448,7 +2501,7 @@ export function BandBookingCard({
                   }
                 >
                   <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Amount</span>
+                    <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Amount</span>
                     {editable ? (
                       <div className="flex flex-1 items-center justify-end gap-1">
                         <span className="text-[13px] font-semibold text-[#5E6654]">£</span>
@@ -2475,7 +2528,7 @@ export function BandBookingCard({
                       {showBankDetails && (
                         <>
                           <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Paid</span>
+                            <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Paid</span>
                             {editable ? (
                               <div className="flex flex-1 items-center justify-end gap-1">
                                 <span className="text-[13px] font-semibold text-[#5E6654]">£</span>
@@ -2504,7 +2557,7 @@ export function BandBookingCard({
                         type="button"
                         onClick={() => setShowBankDetails((v) => !v)}
                         aria-expanded={showBankDetails}
-                        className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
+                        className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
                       >
                         {showBankDetails ? "View less" : "View more"}
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBankDetails && "rotate-180")} />
@@ -2542,54 +2595,6 @@ export function BandBookingCard({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
-            <div className="space-y-2">
-                <div className="flex items-center justify-end gap-2">
-                    {!hasChanges ? (
-                      <button
-                        type="button"
-                        onClick={handleCancel}
-                        disabled={isPending}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
-                      >
-                        <X className="h-3.5 w-3.5 shrink-0" />
-                        Close
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={handleCancel}
-                          disabled={isPending}
-                          title="Discard changes"
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
-                        >
-                          <Undo2 className="h-3.5 w-3.5 shrink-0" />
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSave}
-                          disabled={isPending || hasClashes || videosUploading}
-                          title={
-                            hasClashes
-                              ? clashWarning
-                              : videosUploading
-                                ? "Wait for videos to finish uploading."
-                                : undefined
-                          }
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
-                        >
-                          {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Save className="h-3.5 w-3.5 shrink-0" />}
-                          Save
-                        </button>
-                      </>
-                    )}
-                </div>
-
-                {error && <p className="text-xs font-bold text-red-500">{error}</p>}
-            </div>
-          </div>
           {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
