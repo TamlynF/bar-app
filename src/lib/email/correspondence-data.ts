@@ -1,10 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EMAIL_FROM, EMAIL_REPLY_DOMAIN } from "@/lib/email";
+import { ADMIN_EMAIL, EMAIL_FROM, EMAIL_REPLY_DOMAIN } from "@/lib/email";
 import {
   bareAddress,
   correspondenceReplyAddress,
+  idRangeForRef,
+  senderDisplayName,
+  withDisplayName,
   htmlToPlainText,
   parseCorrespondenceAddress,
   safeAttachmentName,
@@ -24,7 +27,8 @@ function replyTarget(links: Links): CorrespondenceTarget | null {
   return null;
 }
 
-/* Sends an email to a band and records it in the thread. Logging failures are
+/* Sends an email to a band and records it in the thread, with a blind copy to
+   the staff inbox so the outgoing side is in webmail too. Logging failures are
    reported but never stop the email, which has already gone. */
 export async function sendCorrespondenceEmail(p: {
   resend: Resend;
@@ -37,8 +41,10 @@ export async function sendCorrespondenceEmail(p: {
   inReplyTo?: string | null;
 }): Promise<{ error: string | null }> {
   const target = replyTarget(p.links);
-  const replyTo = target ? correspondenceReplyAddress(target, EMAIL_REPLY_DOMAIN) : null;
+  const replyAddress = target ? correspondenceReplyAddress(target, EMAIL_REPLY_DOMAIN) : null;
+  const replyTo = replyAddress ? withDisplayName(replyAddress, senderDisplayName(EMAIL_FROM)) : null;
   const headers = p.inReplyTo ? { "In-Reply-To": p.inReplyTo, References: p.inReplyTo } : undefined;
+  const bcc = ADMIN_EMAIL && bareAddress(ADMIN_EMAIL) !== bareAddress(p.to) ? ADMIN_EMAIL : null;
 
   const { data, error } = await p.resend.emails.send({
     from: EMAIL_FROM,
@@ -46,6 +52,7 @@ export async function sendCorrespondenceEmail(p: {
     subject: p.subject,
     html: p.html,
     ...(replyTo ? { replyTo } : {}),
+    ...(bcc ? { bcc } : {}),
     ...(headers ? { headers } : {}),
   });
   if (error) {
@@ -199,15 +206,27 @@ async function resolveInboundLinks(
   const target = parseCorrespondenceAddress(recipients, EMAIL_REPLY_DOMAIN);
 
   if (target?.kind === "band") {
+    const [lo, hi] = idRangeForRef(target.ref);
     const { data } = await admin
       .from("band_booking_requests")
       .select("id, music_acts_id")
-      .eq("id", target.id)
+      .gte("id", lo)
+      .lte("id", hi)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (data) return { bandRequestId: data.id as string, musicActId: (data.music_acts_id as string | null) ?? null };
   }
   if (target?.kind === "act") {
-    const { data } = await admin.from("music_acts").select("id").eq("id", target.id).maybeSingle();
+    const [lo, hi] = idRangeForRef(target.ref);
+    const { data } = await admin
+      .from("music_acts")
+      .select("id")
+      .gte("id", lo)
+      .lte("id", hi)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (data) return { bandRequestId: null, musicActId: data.id as string };
   }
 

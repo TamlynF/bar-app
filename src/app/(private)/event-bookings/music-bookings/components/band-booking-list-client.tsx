@@ -169,7 +169,10 @@ export default function BandBookingListClient({
   }, []);
 
   const mountedAt = useRef<number | null>(null);
-  const clientNow = useCallback(() => (mountedAt.current ??= Date.now()), []);
+  const clientNow = useCallback(() => {
+    if (mountedAt.current === null) mountedAt.current = Date.now();
+    return mountedAt.current;
+  }, []);
   const nowMs = useSyncExternalStore(subscribeToNothing, clientNow, serverNow);
 
   const lifecycles = useMemo(() => {
@@ -432,7 +435,7 @@ export default function BandBookingListClient({
                         wide={spreadColumns}
                         lifecycle={lifecycles.get(req.id) ?? null}
                         maxVideoBytes={maxVideoBytes}
-                        onSheetOpenChange={(open) => pinWhileOpen(req, open)}
+                        onSheetOpenChange={pinWhileOpen}
                       />
                     ))
                   )

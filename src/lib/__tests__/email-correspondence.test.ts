@@ -3,20 +3,44 @@ import {
   bareAddress,
   correspondenceReplyAddress,
   htmlToPlainText,
+  idRangeForRef,
   parseCorrespondenceAddress,
   plainReplyHtml,
   replySubject,
   safeAttachmentName,
+  senderDisplayName,
   splitQuotedReply,
+  withDisplayName,
 } from "@/lib/email/correspondence";
 
 const DOMAIN = "reply.example.co.uk";
 const ID = "347ce8f7-1234-4abc-9def-0123456789ab";
 
 describe("correspondence addresses", () => {
-  it("builds a reply address per request or act", () => {
-    expect(correspondenceReplyAddress({ kind: "band", id: ID }, DOMAIN)).toBe(`band-${ID}@${DOMAIN}`);
-    expect(correspondenceReplyAddress({ kind: "act", id: ID }, DOMAIN)).toBe(`act-${ID}@${DOMAIN}`);
+  it("builds a short reply address from the booking reference", () => {
+    expect(correspondenceReplyAddress({ kind: "band", id: ID }, DOMAIN)).toBe(`band-347ce8f7@${DOMAIN}`);
+    expect(correspondenceReplyAddress({ kind: "act", id: ID.toUpperCase() }, DOMAIN)).toBe(`act-347ce8f7@${DOMAIN}`);
+  });
+
+  it("parses short references and the full ids sent before them", () => {
+    expect(parseCorrespondenceAddress([`band-347CE8F7@${DOMAIN}`], DOMAIN)).toEqual({ kind: "band", ref: "347ce8f7" });
+    expect(parseCorrespondenceAddress([`act-${ID}@${DOMAIN}`], DOMAIN)).toEqual({ kind: "act", ref: ID });
+  });
+
+  it("turns a reference into an inclusive id range", () => {
+    expect(idRangeForRef("347ce8f7")).toEqual([
+      "347ce8f7-0000-0000-0000-000000000000",
+      "347ce8f7-ffff-ffff-ffff-ffffffffffff",
+    ]);
+    expect(idRangeForRef(ID)).toEqual([ID, ID]);
+  });
+
+  it("adds the sender's display name to the reply-to", () => {
+    const name = senderDisplayName("Don Fenticas <admin@example.co.uk>");
+    expect(name).toBe("Don Fenticas");
+    expect(withDisplayName(`band-347ce8f7@${DOMAIN}`, name)).toBe(`"Don Fenticas" <band-347ce8f7@${DOMAIN}>`);
+    expect(withDisplayName("a@b.com", "")).toBe("a@b.com");
+    expect(senderDisplayName("admin@example.co.uk")).toBe("");
   });
 
   it("has no reply address without a domain", () => {
@@ -26,12 +50,13 @@ describe("correspondence addresses", () => {
   it("finds the target among the recipients, ignoring display names and case", () => {
     expect(
       parseCorrespondenceAddress(["someone@else.com", `Don Fenticas <BAND-${ID.toUpperCase()}@Reply.Example.co.uk>`], DOMAIN)
-    ).toEqual({ kind: "band", id: ID });
+    ).toEqual({ kind: "band", ref: ID });
   });
 
   it("ignores addresses on another domain or with a malformed id", () => {
     expect(parseCorrespondenceAddress([`band-${ID}@example.co.uk`], DOMAIN)).toBeNull();
     expect(parseCorrespondenceAddress([`band-123@${DOMAIN}`], DOMAIN)).toBeNull();
+    expect(parseCorrespondenceAddress([`band-347ce8f7x@${DOMAIN}`], DOMAIN)).toBeNull();
   });
 
   it("strips display names from addresses", () => {

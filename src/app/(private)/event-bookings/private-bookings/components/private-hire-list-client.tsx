@@ -241,7 +241,7 @@ export default function PrivateHireListClient({
                   </p>
                 ) : (
                   items.map((req) => (
-                    <PrivateHireCard key={req.id} request={req} onSheetOpenChange={(open) => pinWhileOpen(req, open)} />
+                    <PrivateHireCard key={req.id} request={req} onSheetOpenChange={pinWhileOpen} />
                   ))
                 )}
               </section>

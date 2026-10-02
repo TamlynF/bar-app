@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import React, { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   updatePrivateHireStatus,
@@ -39,6 +39,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
+import { attempt } from "@/lib/attempt";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -534,7 +535,7 @@ export function PrivateHireCard({
   onSheetOpenChange,
 }: {
   request: PrivateHireRequest;
-  onSheetOpenChange?: (open: boolean) => void;
+  onSheetOpenChange?: (request: PrivateHireRequest, open: boolean) => void;
 }) {
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
@@ -550,17 +551,18 @@ export function PrivateHireCard({
     openedFromLink.current = true;
     setOpen(true);
   }, [requestedId, request.id]);
-  const confirm = useCallback(
-    async (opts: Parameters<typeof baseConfirm>[0]) => {
-      confirmOpen.current = true;
-      try {
-        return await baseConfirm(opts);
-      } finally {
-        confirmOpen.current = false;
-      }
-    },
-    [baseConfirm]
-  );
+  async function confirm(opts: Parameters<typeof baseConfirm>[0]) {
+    confirmOpen.current = true;
+    let ok = false;
+    await attempt(
+      async () => {
+        ok = await baseConfirm(opts);
+      },
+      () => {}
+    );
+    confirmOpen.current = false;
+    return ok;
+  }
 
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [isPending, startTransition] = useTransition();
@@ -673,8 +675,7 @@ export function PrivateHireCard({
   };
 
   function setSheetOpen(next: boolean) {
-    if (next) React.startTransition(() => setOpen(true));
-    else setOpen(false);
+    setOpen(next);
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
@@ -689,9 +690,14 @@ export function PrivateHireCard({
     if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
   }, [openParam, request.id]);
 
+  const reportedOpen = useRef(false);
   useEffect(() => {
-    onSheetOpenChange?.(open);
-  }, [open, onSheetOpenChange]);
+    if (!open && !reportedOpen.current) return;
+    reportedOpen.current = open;
+    onSheetOpenChange?.(request, open);
+  }, [open, request, onSheetOpenChange]);
+
+  const bodyReady = useDeferredValue(open, false);
 
   useEffect(() => {
     if (isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime) return;
@@ -753,40 +759,6 @@ export function PrivateHireCard({
     setClashes([]);
     setError(null);
     setSheetOpen(false);
-  }
-
-  async function requestClose() {
-    if (!hasChanges) {
-      setSheetOpen(false);
-      return;
-    }
-    if (askingToClose.current || !!pendingStage) return;
-    askingToClose.current = true;
-    try {
-      if (hasClashes) {
-        const discard = await confirm({
-          title: "Discard changes?",
-          description:
-            "This slot clashes with another event, so these changes can't be saved. Close and discard them?",
-          confirmLabel: "Discard",
-          cancelLabel: "Keep editing",
-          variant: "destructive",
-        });
-        if (discard) handleCancel();
-        return;
-      }
-      const save = await confirm({
-        title: "Save changes?",
-        description: "You've made changes to this request. Save them before closing?",
-        confirmLabel: "Save changes",
-        cancelLabel: "Discard",
-        dismissible: false,
-      });
-      if (save) handleSave();
-      else handleCancel();
-    } finally {
-      askingToClose.current = false;
-    }
   }
 
   async function confirmEmail(newStatus: PrivateAction): Promise<{ ok: boolean; note: string }> {
@@ -868,25 +840,21 @@ export function PrivateHireCard({
   function handleAction(next: PrivateStage) {
     setError(null);
     setClashes([]);
-    void (async () => {
-      try {
-        if (next === "confirmed") {
-          const c = await findClashes();
-          if (c.length) return;
-        }
-        const { ok, note } = await confirmEmail(next);
-        if (!ok) return;
-        applyStatus(next, note);
-      } catch {
-        setError("Failed to update. Please try again.");
+    void attempt(async () => {
+      if (next === "confirmed") {
+        const c = await findClashes();
+        if (c.length) return;
       }
-    })();
+      const { ok, note } = await confirmEmail(next);
+      if (!ok) return;
+      applyStatus(next, note);
+    }, () => setError("Failed to update. Please try again."));
   }
 
   function applyStatus(newStatus: PrivateAction, note: string) {
     setPendingStage(newStatus);
     startTransition(async () => {
-      try {
+      await attempt(async () => {
         if (hasChanges) {
           await updatePrivateHireFields(request.id, { ...editFields(), admin_notes: note || null });
         }
@@ -894,11 +862,8 @@ export function PrivateHireCard({
         setAdminNotes(note);
         const label = STATUS_TOAST[newStatus];
         toast.success(newStatus === "pending" ? label : `${label} - enquirer emailed`);
-      } catch {
-        setError("Failed to update. Please try again.");
-      } finally {
-        setPendingStage(null);
-      }
+      }, () => setError("Failed to update. Please try again."));
+      setPendingStage(null);
     });
   }
 
@@ -906,32 +871,28 @@ export function PrivateHireCard({
     if (!hasChanges) return;
     setError(null);
     setClashes([]);
-    void (async () => {
-      try {
-        if (status === "confirmed" && dateTimeChanged) {
-          const c = await findClashes();
-          if (c.length) return;
-        }
-
-        if (status === "confirmed") {
-          const ok = await confirm({
-            title: "Save changes?",
-            description:
-              "This hire is confirmed - saving updates its details and the linked event.",
-            confirmLabel: "Save Changes",
-          });
-          if (!ok) return;
-        }
-
-        runSave(async () => {
-          await updatePrivateHireFields(request.id, editFields());
-          toast.success("Changes saved");
-          setSheetOpen(false);
-        });
-      } catch {
-        setError("Failed to update. Please try again.");
+    void attempt(async () => {
+      if (status === "confirmed" && dateTimeChanged) {
+        const c = await findClashes();
+        if (c.length) return;
       }
-    })();
+
+      if (status === "confirmed") {
+        const ok = await confirm({
+          title: "Save changes?",
+          description:
+            "This hire is confirmed - saving updates its details and the linked event.",
+          confirmLabel: "Save Changes",
+        });
+        if (!ok) return;
+      }
+
+      runSave(async () => {
+        await updatePrivateHireFields(request.id, editFields());
+        toast.success("Changes saved");
+        setSheetOpen(false);
+      });
+    }, () => setError("Failed to update. Please try again."));
   }
 
   function runSave(work: () => Promise<void>) {
@@ -942,6 +903,41 @@ export function PrivateHireCard({
         setError("Failed to update. Please try again.");
       }
     });
+  }
+
+  async function requestClose() {
+    if (!hasChanges) {
+      setSheetOpen(false);
+      return;
+    }
+    if (askingToClose.current || !!pendingStage) return;
+    askingToClose.current = true;
+    await attempt(askBeforeClose, () => {});
+    askingToClose.current = false;
+  }
+
+  async function askBeforeClose() {
+    if (hasClashes) {
+      const discard = await confirm({
+        title: "Discard changes?",
+        description:
+          "This slot clashes with another event, so these changes can't be saved. Close and discard them?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        variant: "destructive",
+      });
+      if (discard) handleCancel();
+      return;
+    }
+    const save = await confirm({
+      title: "Save changes?",
+      description: "You've made changes to this request. Save them before closing?",
+      confirmLabel: "Save changes",
+      cancelLabel: "Discard",
+      dismissible: false,
+    });
+    if (save) handleSave();
+    else handleCancel();
   }
 
   const preferredDate = request.preferred_date;
@@ -1191,6 +1187,7 @@ export function PrivateHireCard({
           </div>
 
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
+            {bodyReady ? (
             <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
               <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section
@@ -1505,6 +1502,11 @@ export function PrivateHireCard({
                 </Section>
               </div>
             </div>
+            ) : (
+              <div className="flex justify-center py-16" aria-busy="true">
+                <Loader2 className="h-6 w-6 animate-spin text-[#5E6654]/50" aria-label="Loading booking" />
+              </div>
+            )}
             <div className="h-4" />
           </div>
 

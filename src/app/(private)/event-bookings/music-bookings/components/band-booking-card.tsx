@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import React, { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite, bandEmailSlotsAction } from "../actions";
 import type { BandStatus } from "../actions";
@@ -47,6 +47,7 @@ import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
+import { attempt } from "@/lib/attempt";
 import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
 import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
@@ -735,7 +736,7 @@ export function BandBookingCard({
   wide?: boolean;
   lifecycle?: BandLifecycleStage | null;
   maxVideoBytes: number;
-  onSheetOpenChange?: (open: boolean) => void;
+  onSheetOpenChange?: (request: BandRequest, open: boolean) => void;
 }) {
   const maxVideoMb = megabytes(maxVideoBytes);
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
@@ -752,17 +753,18 @@ export function BandBookingCard({
     openedFromLink.current = true;
     setOpen(true);
   }, [requestedId, request.id]);
-  const confirm = useCallback(
-    async (opts: Parameters<typeof baseConfirm>[0]) => {
-      confirmOpen.current = true;
-      try {
-        return await baseConfirm(opts);
-      } finally {
-        confirmOpen.current = false;
-      }
-    },
-    [baseConfirm]
-  );
+  async function confirm(opts: Parameters<typeof baseConfirm>[0]) {
+    confirmOpen.current = true;
+    let ok = false;
+    await attempt(
+      async () => {
+        ok = await baseConfirm(opts);
+      },
+      () => {}
+    );
+    confirmOpen.current = false;
+    return ok;
+  }
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
@@ -816,8 +818,7 @@ export function BandBookingCard({
   const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
   function setSheetOpen(next: boolean) {
-    if (next) React.startTransition(() => setOpen(true));
-    else setOpen(false);
+    setOpen(next);
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
@@ -832,9 +833,14 @@ export function BandBookingCard({
     if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
   }, [openParam, request.id]);
 
+  const reportedOpen = useRef(false);
   useEffect(() => {
-    onSheetOpenChange?.(open);
-  }, [open, onSheetOpenChange]);
+    if (!open && !reportedOpen.current) return;
+    reportedOpen.current = open;
+    onSheetOpenChange?.(request, open);
+  }, [open, request, onSheetOpenChange]);
+
+  const bodyReady = useDeferredValue(open, false);
 
   const eventHref = request.event_id
     ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`
@@ -992,40 +998,6 @@ export function BandBookingCard({
     );
     setClashes(list);
     return list;
-  }
-
-  async function requestClose() {
-    if (!hasChanges) {
-      setSheetOpen(false);
-      return;
-    }
-    if (askingToClose.current || !!pendingStage) return;
-    askingToClose.current = true;
-    try {
-      if (hasClashes) {
-        const discard = await confirm({
-          title: "Discard changes?",
-          description:
-            "This slot clashes with another event, so these changes can't be saved. Close and discard them?",
-          confirmLabel: "Discard",
-          cancelLabel: "Keep editing",
-          variant: "destructive",
-        });
-        if (discard) handleCancel();
-        return;
-      }
-      const save = await confirm({
-        title: "Save changes?",
-        description: "You've made changes to this request. Save them before closing?",
-        confirmLabel: "Save changes",
-        cancelLabel: "Discard",
-        dismissible: false,
-      });
-      if (save) handleSave();
-      else handleCancel();
-    } finally {
-      askingToClose.current = false;
-    }
   }
 
   function handleCancel() {
@@ -1251,25 +1223,21 @@ export function BandBookingCard({
   function handleAction(newStatus: BandStatus) {
     setError(null);
     setClashes([]);
-    void (async () => {
-      try {
-        if (newStatus === "booked" || newStatus === "offered") {
-          const c = await findClashes();
-          if (c.length) return;
-        }
-        const { ok, note } = await confirmEmail(newStatus);
-        if (!ok) return;
-        applyStatus(newStatus, note);
-      } catch {
-        setError("Failed to update. Please try again.");
+    void attempt(async () => {
+      if (newStatus === "booked" || newStatus === "offered") {
+        const c = await findClashes();
+        if (c.length) return;
       }
-    })();
+      const { ok, note } = await confirmEmail(newStatus);
+      if (!ok) return;
+      applyStatus(newStatus, note);
+    }, () => setError("Failed to update. Please try again."));
   }
 
   function applyStatus(newStatus: BandStatus, note: string) {
     setPendingStage(newStatus);
     startTransition(async () => {
-      try {
+      await attempt(async () => {
         const isDecline = newStatus === "declined";
         const persistedNote = isDecline ? note : adminNotes;
         if (hasChanges) {
@@ -1299,11 +1267,8 @@ export function BandBookingCard({
         } else {
           toast.success(label);
         }
-      } catch {
-        setError("Failed to update. Please try again.");
-      } finally {
-        setPendingStage(null);
-      }
+      }, () => setError("Failed to update. Please try again."));
+      setPendingStage(null);
     });
   }
 
@@ -1311,88 +1276,84 @@ export function BandBookingCard({
     if (!hasChanges) return;
     setError(null);
     setClashes([]);
-    void (async () => {
-      try {
-        if (status === "booked" && dateTimeChanged) {
-          const c = await findClashes();
-          if (c.length) return;
+    void attempt(async () => {
+      if (status === "booked" && dateTimeChanged) {
+        const c = await findClashes();
+        if (c.length) return;
 
-          const slots = await bandEmailSlotsAction(
-            "rescheduled",
-            request.booker_name,
-            request.group_name
-          );
+        const slots = await bandEmailSlotsAction(
+          "rescheduled",
+          request.booker_name,
+          request.group_name
+        );
 
-          const ok = await confirm({
-            title: "Update slot & notify band",
-            description: slots
-              ? "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:"
-              : "This moves the booking back to Offered and takes the linked event off the schedule. The re-confirm email is switched off, so nothing will be sent.",
-            confirmLabel: "Update & Email",
-            content: slots ? (
-              <EmailPreview
-                email={buildBandEmail({
-                  slots,
-                  kind: "rescheduled",
-                  date: selectedDate || null,
-                  startTime: selectedStartTime || null,
-                  endTime: selectedEndTime || null,
-                })}
-                to={request.email}
-                slotLabel="New Slot"
-              />
-            ) : undefined,
-          });
-          if (!ok) return;
-
-          runSave(async () => {
-            await updateBandBookingFields(request.id, detailFields());
-            const result = await rescheduleConfirmedBooking(request.id, {
-              selected_date: selectedDate || null,
-              selected_start_time: selectedStartTime || null,
-              selected_end_time: selectedEndTime || null,
-              admin_notes: adminNotes || null,
-            });
-            if (result?.emailError) {
-              toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
-            } else {
-              toast.success("Booking updated - band notified");
-            }
-            setSheetOpen(false);
-          });
-          return;
-        }
-
-        if (status === "booked") {
-          const ok = await confirm({
-            title: "Save changes?",
-            description:
-              "This booking is booked - saving updates its details and the linked event.",
-            confirmLabel: "Save Changes",
-          });
-          if (!ok) return;
-          runSave(async () => {
-            await updateBandBookingFields(request.id, detailFields());
-            toast.success("Changes saved");
-            setSheetOpen(false);
-          });
-          return;
-        }
+        const ok = await confirm({
+          title: "Update slot & notify band",
+          description: slots
+            ? "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:"
+            : "This moves the booking back to Offered and takes the linked event off the schedule. The re-confirm email is switched off, so nothing will be sent.",
+          confirmLabel: "Update & Email",
+          content: slots ? (
+            <EmailPreview
+              email={buildBandEmail({
+                slots,
+                kind: "rescheduled",
+                date: selectedDate || null,
+                startTime: selectedStartTime || null,
+                endTime: selectedEndTime || null,
+              })}
+              to={request.email}
+              slotLabel="New Slot"
+            />
+          ) : undefined,
+        });
+        if (!ok) return;
 
         runSave(async () => {
-          await updateBandBookingFields(request.id, {
-            ...detailFields(),
+          await updateBandBookingFields(request.id, detailFields());
+          const result = await rescheduleConfirmedBooking(request.id, {
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
             selected_end_time: selectedEndTime || null,
+            admin_notes: adminNotes || null,
           });
+          if (result?.emailError) {
+            toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
+          } else {
+            toast.success("Booking updated - band notified");
+          }
+          setSheetOpen(false);
+        });
+        return;
+      }
+
+      if (status === "booked") {
+        const ok = await confirm({
+          title: "Save changes?",
+          description:
+            "This booking is booked - saving updates its details and the linked event.",
+          confirmLabel: "Save Changes",
+        });
+        if (!ok) return;
+        runSave(async () => {
+          await updateBandBookingFields(request.id, detailFields());
           toast.success("Changes saved");
           setSheetOpen(false);
         });
-      } catch {
-        setError("Failed to update. Please try again.");
+        return;
       }
-    })();
+
+      runSave(async () => {
+        await updateBandBookingFields(request.id, {
+          ...detailFields(),
+          selected_date: selectedDate || null,
+          selected_start_time: selectedStartTime || null,
+          selected_end_time: selectedEndTime || null,
+        });
+        toast.success("Changes saved");
+        setSheetOpen(false);
+      });
+    }, () => setError("Failed to update. Please try again."));
   }
 
   function runSave(work: () => Promise<void>) {
@@ -1403,6 +1364,41 @@ export function BandBookingCard({
         setError("Failed to update. Please try again.");
       }
     });
+  }
+
+  async function requestClose() {
+    if (!hasChanges) {
+      setSheetOpen(false);
+      return;
+    }
+    if (askingToClose.current || !!pendingStage) return;
+    askingToClose.current = true;
+    await attempt(askBeforeClose, () => {});
+    askingToClose.current = false;
+  }
+
+  async function askBeforeClose() {
+    if (hasClashes) {
+      const discard = await confirm({
+        title: "Discard changes?",
+        description:
+          "This slot clashes with another event, so these changes can't be saved. Close and discard them?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        variant: "destructive",
+      });
+      if (discard) handleCancel();
+      return;
+    }
+    const save = await confirm({
+      title: "Save changes?",
+      description: "You've made changes to this request. Save them before closing?",
+      confirmLabel: "Save changes",
+      cancelLabel: "Discard",
+      dismissible: false,
+    });
+    if (save) handleSave();
+    else handleCancel();
   }
 
   return (
@@ -1803,6 +1799,7 @@ export function BandBookingCard({
           </div>
 
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
+            {bodyReady ? (
             <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
               <div className="min-w-0 space-y-4 sm:space-y-5">
               <Section
@@ -2537,6 +2534,11 @@ export function BandBookingCard({
 
               </div>
             </div>
+            ) : (
+              <div className="flex justify-center py-16" aria-busy="true">
+                <Loader2 className="h-6 w-6 animate-spin text-[#5E6654]/50" aria-label="Loading booking" />
+              </div>
+            )}
             <div className="h-4" />
           </div>
 

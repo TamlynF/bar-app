@@ -25,11 +25,32 @@ export type CorrespondenceMessage = {
 };
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-const LOCAL_PART = new RegExp(`^(band|act)-(${UUID})$`, "i");
+const SHORT_REF = "[0-9a-f]{8}";
+const LOCAL_PART = new RegExp(`^(band|act)-(${UUID}|${SHORT_REF})$`, "i");
 
+/* The address carries the short reference staff already see (#Ref: 347CE8F7),
+   not the full id, so it reads as a booking reference in the band's mail app.
+   Addresses sent before this change carry the full id and still resolve. */
 export function correspondenceReplyAddress(target: CorrespondenceTarget, domain: string): string | null {
   if (!domain) return null;
-  return `${target.kind}-${target.id}@${domain}`;
+  return `${target.kind}-${target.id.slice(0, 8).toLowerCase()}@${domain}`;
+}
+
+export function withDisplayName(address: string, name: string): string {
+  const cleaned = name.replace(/["<>\r\n]/g, "").trim();
+  return cleaned ? `"${cleaned}" <${address}>` : address;
+}
+
+export function senderDisplayName(from: string): string {
+  const match = from.match(/^\s*"?([^"<]+?)"?\s*</);
+  return match ? match[1].trim() : "";
+}
+
+/* Inclusive uuid bounds for a reference: one id for a full uuid, every id
+   starting with the eight characters for a short one. */
+export function idRangeForRef(ref: string): [string, string] {
+  if (ref.length === 36) return [ref, ref];
+  return [`${ref}-0000-0000-0000-000000000000`, `${ref}-ffff-ffff-ffff-ffffffffffff`];
 }
 
 export function bareAddress(address: string): string {
@@ -37,14 +58,16 @@ export function bareAddress(address: string): string {
   return (angled ? angled[1] : address).trim().toLowerCase();
 }
 
-export function parseCorrespondenceAddress(addresses: string[], domain: string): CorrespondenceTarget | null {
+export type ParsedCorrespondenceAddress = { kind: "band" | "act"; ref: string };
+
+export function parseCorrespondenceAddress(addresses: string[], domain: string): ParsedCorrespondenceAddress | null {
   if (!domain) return null;
   for (const raw of addresses) {
     const address = bareAddress(raw);
     const at = address.lastIndexOf("@");
     if (at === -1 || address.slice(at + 1) !== domain) continue;
     const match = address.slice(0, at).match(LOCAL_PART);
-    if (match) return { kind: match[1].toLowerCase() as "band" | "act", id: match[2].toLowerCase() };
+    if (match) return { kind: match[1].toLowerCase() as "band" | "act", ref: match[2].toLowerCase() };
   }
   return null;
 }
