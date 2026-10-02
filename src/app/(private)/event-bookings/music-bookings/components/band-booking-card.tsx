@@ -45,6 +45,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
+import { megabytes } from "@/lib/video-upload-limit";
+import { randomId } from "@/lib/random-id";
+import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -57,7 +60,6 @@ import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-e
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
 const MAX_VIDEOS = 10;
-const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 
 const NOTE_PREVIEW_LEN = 50;
 
@@ -724,11 +726,14 @@ export function BandBookingCard({
   request,
   wide = false,
   lifecycle = null,
+  maxVideoBytes,
 }: {
   request: BandRequest;
   wide?: boolean;
   lifecycle?: BandLifecycleStage | null;
+  maxVideoBytes: number;
 }) {
+  const maxVideoMb = megabytes(maxVideoBytes);
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -1060,13 +1065,13 @@ export function BandBookingCard({
     const remaining = MAX_VIDEOS - sheetVideos.length;
 
     for (const file of files.slice(0, remaining)) {
-      const id = crypto.randomUUID();
+      const id = randomId();
       const previewUrl = URL.createObjectURL(file);
 
-      if (file.size > MAX_VIDEO_BYTES) {
+      if (file.size > maxVideoBytes) {
         setSheetVideos((prev) => [
           ...prev,
-          { id, url: null, description: "", previewUrl, uploading: false, progress: 0, error: "File too large (max 250 MB)." },
+          { id, url: null, description: "", previewUrl, uploading: false, progress: 0, error: `File too large (max ${maxVideoMb} MB).` },
         ]);
         continue;
       }
@@ -2117,7 +2122,8 @@ export function BandBookingCard({
                                 <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#20231A]">
                                   {v.previewUrl && (
                                     <video
-                                      src={`${v.previewUrl}#t=0.1`}
+                                      src={v.previewUrl}
+                                      onLoadedMetadata={showFirstFrame}
                                       muted
                                       playsInline
                                       preload="metadata"
@@ -2201,7 +2207,7 @@ export function BandBookingCard({
 
                       {editable && sheetVideos.length < MAX_VIDEOS && (
                         <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5E6654]/70 sm:px-5">
-                          MP4, WebM or MOV - max 250 MB each. Applied when you hit Save Changes.{" "}
+                          MP4, WebM or MOV - max {maxVideoMb} MB each. Applied when you hit Save Changes.{" "}
                           {sheetVideos.length}/{MAX_VIDEOS}
                         </p>
                       )}

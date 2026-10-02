@@ -22,7 +22,7 @@ import { CountryCodeSelect } from "@/components/country-code-select";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
-import { stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+import { stepActionRowClass, stepPrimaryButtonClass, stepSubmitFitClass } from "@/app/(public)/book/_components/step-button-styles";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -447,22 +447,25 @@ export default function EventBookingForm({ event, config }: Props) {
       )}
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={submitDisabled}
-          className={cn(
-            stepPrimaryButtonClass,
-            !formComplete && incompleteButtonClass
-          )}
-        >
-          {isPending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : hasPricing ? (
-            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
-          ) : (
-            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-4 w-4" /></span>
-          )}
-        </button>
+        <div className={stepActionRowClass}>
+          <button
+            type="submit"
+            disabled={submitDisabled}
+            className={cn(
+              stepPrimaryButtonClass,
+              stepSubmitFitClass,
+              !formComplete && incompleteButtonClass
+            )}
+          >
+            {isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : hasPricing ? (
+              <span className="flex items-center">Pay £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
+            ) : (
+              <span className="flex items-center">Book now <ChevronRight className="ml-2 h-4 w-4" /></span>
+            )}
+          </button>
+        </div>
       </div>
     </form>
   );

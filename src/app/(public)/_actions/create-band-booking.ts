@@ -43,9 +43,12 @@ export interface BandBookingData {
 }
 
 export async function createBandBooking(data: BandBookingData) {
-  const videoUrls = data.video_urls.filter(Boolean);
+  const videoUrls = data.video_urls.map((u) => u.trim()).filter(Boolean);
   if (videoUrls.length === 0) {
-    throw new Error("Please upload at least one performance video.");
+    throw new Error("Please add at least one performance video.");
+  }
+  if (videoUrls.some((u) => !/^https?:\/\/[^\s]+$/i.test(u))) {
+    throw new Error("One of your video links isn't valid. Please check it and try again.");
   }
 
   const preferredDates = data.preferred_dates.filter(Boolean);
@@ -110,7 +113,7 @@ export async function createBandBooking(data: BandBookingData) {
     .single();
 
   if (error || !record) {
-    console.error("Band booking insert error:", error);
+    console.error("Band booking insert error:", error?.code, error?.message, error?.details);
     throw new Error("Failed to submit your application. Please try again.");
   }
 

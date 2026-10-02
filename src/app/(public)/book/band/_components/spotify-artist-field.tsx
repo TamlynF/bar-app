@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Loader2, Music2, X } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
@@ -9,10 +9,17 @@ import { FieldError } from "@/app/(public)/book/_components/field-error";
 import type { SpotifyArtist } from "@/lib/spotify-artists";
 
 const SEARCH_DELAY_MS = 300;
+const UNREACHABLE = "We couldn't reach Spotify. Try again, or paste your profile link.";
 const followerFormat = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
 function looksLikeLink(text: string) {
   return /spotify\.|spotify:|^https?:\/\//i.test(text.trim());
+}
+
+function sameName(a: string, b: string) {
+  const plain = (s: string) =>
+    s.normalize("NFKD").toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]/g, "");
+  return plain(a) === plain(b);
 }
 
 function followersLabel(followers: number | null) {
@@ -37,23 +44,56 @@ function ArtistAvatar({ artist, large }: { artist: SpotifyArtist; large?: boolea
 /* Spotify profile picker: search by name (starting from the act name typed on
    step 1) or paste any Spotify share link. Either way the band confirms the
    artist from a photo and follower count, and the form keeps the canonical
-   open.spotify.com/artist link. */
+   open.spotify.com/artist link. With autoMatch, the act name is looked up as
+   the field opens and the first artist with that exact name is picked. */
 export function SpotifyArtistField({
   artist,
   initialQuery,
+  autoMatch,
+  onAutoMatched,
   onChange,
 }: {
   artist: SpotifyArtist | null;
   initialQuery: string;
+  autoMatch: boolean;
+  onAutoMatched: (picked: boolean) => void;
   onChange: (artist: SpotifyArtist | null) => void;
 }) {
+  const [matchOnOpen] = useState(() => autoMatch && !artist && initialQuery.trim().length >= 2);
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SpotifyArtist[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(matchOnOpen);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(0);
+  const matchStarted = useRef(false);
+
+  useEffect(() => {
+    if (!matchOnOpen || matchStarted.current) return;
+    matchStarted.current = true;
+    const name = initialQuery.trim();
+    const request = ++latest.current;
+    findSpotifyArtists(name)
+      .then((found) => {
+        if (request !== latest.current) return;
+        const match = found.find((a) => sameName(a.name, name));
+        if (match) {
+          choose(match);
+          onAutoMatched(true);
+          return;
+        }
+        onAutoMatched(false);
+        setLoading(false);
+        setResults(found);
+        setError(`We couldn't find "${name}" on Spotify. Search again or paste your profile link.`);
+      })
+      .catch(() => {
+        if (request !== latest.current) return;
+        setLoading(false);
+        setError(UNREACHABLE);
+      });
+  });
 
   function run(text: string) {
     const request = ++latest.current;
@@ -65,24 +105,35 @@ export function SpotifyArtistField({
     }
     setLoading(true);
     if (looksLikeLink(trimmed)) {
-      lookupSpotifyArtist(trimmed).then((result) => {
-        if (request !== latest.current) return;
-        setLoading(false);
-        if ("artist" in result) {
-          choose(result.artist);
-        } else {
-          setResults([]);
-          setError(result.error);
-        }
-      });
+      lookupSpotifyArtist(trimmed)
+        .then((result) => {
+          if (request !== latest.current) return;
+          setLoading(false);
+          if ("artist" in result) {
+            choose(result.artist);
+          } else {
+            setResults([]);
+            setError(result.error);
+          }
+        })
+        .catch(() => failed(request));
       return;
     }
-    findSpotifyArtists(trimmed).then((found) => {
-      if (request !== latest.current) return;
-      setLoading(false);
-      setResults(found);
-      setOpen(true);
-    });
+    findSpotifyArtists(trimmed)
+      .then((found) => {
+        if (request !== latest.current) return;
+        setLoading(false);
+        setResults(found);
+        setOpen(true);
+        if (found.length === 0) setError(`No Spotify artists found for "${trimmed}".`);
+      })
+      .catch(() => failed(request));
+  }
+
+  function failed(request: number) {
+    if (request !== latest.current) return;
+    setLoading(false);
+    setError(UNREACHABLE);
   }
 
   function schedule(text: string, delay: number) {

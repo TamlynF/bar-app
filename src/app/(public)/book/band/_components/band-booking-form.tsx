@@ -3,6 +3,9 @@
 import React, { useState, useTransition, useRef } from "react";
 import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
+import { megabytes } from "@/lib/video-upload-limit";
+import { randomId } from "@/lib/random-id";
+import { showFirstFrame } from "@/lib/video-preview";
 import { X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
   ChevronRight, ChevronLeft,
 } from "lucide-react";
@@ -14,9 +17,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
 import { SpotifyArtistField } from "./spotify-artist-field";
 import { SocialLinksField, type SocialLinks } from "./social-links-field";
+import { VideoLinksField, type VideoLinkEntry } from "./video-links-field";
 import { socialUrl, type SocialPlatform } from "@/lib/social-links";
 import type { SpotifyArtist } from "@/lib/spotify-artists";
 import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
 
 interface VideoFile {
   id: string;
@@ -30,7 +35,6 @@ interface VideoFile {
 }
 
 const MAX_VIDEOS = 10;
-const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 const MAX_DATES = 8;
 
 const titleCase = (s: string) =>
@@ -40,6 +44,7 @@ const inputClass =
   "w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NO_VIDEO_ERROR = "Please add at least one performance video - paste a link or upload a clip.";
 
 const STEPS = [
   { number: 1, title: "Your Act", subtitle: "Tell us about your act." },
@@ -52,10 +57,13 @@ const STEPS = [
 interface BandBookingFormProps {
   typeOptions: { value: string; label: string }[];
   availableDates: string[];
+  maxVideoBytes: number;
 }
 
-export default function BandBookingForm({ typeOptions, availableDates }: BandBookingFormProps) {
+export default function BandBookingForm({ typeOptions, availableDates, maxVideoBytes }: BandBookingFormProps) {
+  const maxVideoMb = megabytes(maxVideoBytes);
   const [isPending, startTransition] = useTransition();
+  useFormScrollRest();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
@@ -74,7 +82,11 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
   const [notes, setNotes] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
   const [spotifyArtist, setSpotifyArtist] = useState<SpotifyArtist | null>(null);
+  const [spotifyMatchedFor, setSpotifyMatchedFor] = useState("");
+  const [spotifyAutoPicked, setSpotifyAutoPicked] = useState(false);
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
+  const [videoLinks, setVideoLinks] = useState<VideoLinkEntry[]>([]);
+  const totalVideos = videoLinks.length + videoFiles.length;
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,7 +120,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
 
   const stepComplete =
     Object.keys(missingFields()).length === 0 &&
-    (step !== 3 || (videoFiles.length > 0 && videoFiles.every((v) => v.uploadedUrl)));
+    (step !== 3 || (totalVideos > 0 && videoFiles.every((v) => v.uploadedUrl)));
 
   function clearFieldError(key: string) {
     setFieldErrors((prev) => {
@@ -124,8 +136,8 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (step === 3) {
-      if (videoFiles.length === 0) {
-        setVideoError("Please upload at least one performance video.");
+      if (totalVideos === 0) {
+        setVideoError(NO_VIDEO_ERROR);
         return;
       }
       if (videoFiles.some((v) => !v.uploadedUrl)) {
@@ -135,13 +147,13 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
       setVideoError(null);
     }
     setStep((s) => s + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollFormToRest();
   }
 
   function handleBack() {
     setFieldErrors({});
     setStep((s) => s - 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollFormToRest();
   }
 
   function updateVideo(id: string, patch: Partial<VideoFile>) {
@@ -157,17 +169,17 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     if (!files.length) return;
     setVideoError(null);
 
-    const remaining = MAX_VIDEOS - videoFiles.length;
+    const remaining = MAX_VIDEOS - totalVideos;
     const toAdd = files.slice(0, remaining);
 
     for (const file of toAdd) {
-      const id = crypto.randomUUID();
+      const id = randomId();
       const previewUrl = URL.createObjectURL(file);
 
-      if (file.size > MAX_VIDEO_BYTES) {
+      if (file.size > maxVideoBytes) {
         setVideoFiles((prev) => [
           ...prev,
-          { id, file, previewUrl, uploadedUrl: null, description: "", progress: 0, error: "File too large (max 250 MB).", uploading: false },
+          { id, file, previewUrl, uploadedUrl: null, description: "", progress: 0, error: `Too large to upload (max ${maxVideoMb} MB). Paste a link to it instead.`, uploading: false },
         ]);
         continue;
       }
@@ -210,8 +222,8 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     e.preventDefault();
     setError(null);
 
-    if (videoFiles.length === 0) {
-      setVideoError("Please upload at least one performance video.");
+    if (totalVideos === 0) {
+      setVideoError(NO_VIDEO_ERROR);
       setStep(3);
       return;
     }
@@ -223,8 +235,8 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
     }
 
     const uploaded = videoFiles.filter((v) => v.uploadedUrl);
-    const uploadedUrls = uploaded.map((v) => v.uploadedUrl as string);
-    const videoDescriptions = uploaded.map((v) => v.description.trim());
+    const videoUrls = [...videoLinks.map((l) => l.url), ...uploaded.map((v) => v.uploadedUrl as string)];
+    const videoDescriptions = [...videoLinks, ...uploaded].map((v) => v.description.trim());
 
     const builtSocialLinks: Record<string, string> = {};
     for (const [platform, handle] of Object.entries(socialLinks) as [SocialPlatform, string][]) {
@@ -243,7 +255,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
           phone_no: phone || undefined,
           social_links: builtSocialLinks,
           spotify_url: spotifyArtist?.url,
-          video_urls: uploadedUrls,
+          video_urls: videoUrls,
           video_descriptions: videoDescriptions,
           preferred_dates: sortedDates.map((d) => format(d, "yyyy-MM-dd")),
           notes: notes || undefined,
@@ -307,7 +319,14 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
               <label className={labelClass}>Act / Group Name <span className="text-red-400">*</span></label>
               <input
                 value={groupName}
-                onChange={(e) => { setGroupName(e.target.value); clearFieldError("groupName"); }}
+                onChange={(e) => {
+                  setGroupName(e.target.value);
+                  clearFieldError("groupName");
+                  if (spotifyAutoPicked) {
+                    setSpotifyArtist(null);
+                    setSpotifyAutoPicked(false);
+                  }
+                }}
                 placeholder="e.g. The Midnight Echo"
                 aria-invalid={!!fieldErrors.groupName}
                 className={inputClass}
@@ -391,17 +410,40 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
 
             <div className="space-y-3 sm:pt-2">
               <p className={labelClass}>Spotify profile link</p>
-              <SpotifyArtistField artist={spotifyArtist} initialQuery={groupName} onChange={setSpotifyArtist} />
+              <SpotifyArtistField
+                artist={spotifyArtist}
+                initialQuery={groupName}
+                autoMatch={spotifyMatchedFor !== groupName.trim()}
+                onAutoMatched={(picked) => {
+                  setSpotifyMatchedFor(groupName.trim());
+                  setSpotifyAutoPicked(picked);
+                }}
+                onChange={(next) => {
+                  setSpotifyArtist(next);
+                  setSpotifyAutoPicked(false);
+                }}
+              />
             </div>
 
             <div className="space-y-3 sm:pt-2">
               <div className="flex items-center justify-between">
                 <p className={labelClass}>Performance Videos <span className="text-red-400">*</span></p>
-                <span className="text-[10px] font-bold text-stone-400">{videoFiles.length}/{MAX_VIDEOS}</span>
+                <span className="text-[10px] font-bold text-stone-400">{totalVideos}/{MAX_VIDEOS}</span>
               </div>
-              <p className="-mt-1 text-[11px] text-stone-500">
-                Upload at least one video of your act (MP4, WebM, MOV - max 250 MB each).
+              <p className="-mt-1.5 text-xs leading-relaxed text-ink-2">
+                Add at least one. Paste a link from YouTube, Vimeo, Instagram, TikTok, Facebook, Google Drive or
+                Dropbox, or upload a short clip.
               </p>
+
+              <VideoLinksField
+                links={videoLinks}
+                onChange={(next) => {
+                  setVideoLinks(next);
+                  setVideoError(null);
+                }}
+                canAdd={totalVideos < MAX_VIDEOS}
+                invalid={!!videoError}
+              />
 
               {videoFiles.length > 0 && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -409,8 +451,10 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                     <div key={vf.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
                       <div className="relative aspect-video w-full bg-black">
                         <video
-                          src={`${vf.previewUrl}#t=0.1`}
+                          src={vf.previewUrl}
                           preload="metadata"
+                          playsInline
+                          onLoadedMetadata={showFirstFrame}
                           controls
                           className="h-full w-full object-contain"
                         >
@@ -464,7 +508,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                 </div>
               )}
 
-              {videoFiles.length < MAX_VIDEOS && (
+              {totalVideos < MAX_VIDEOS && (
                 <>
                   <input
                     title="Upload Videos"
@@ -483,7 +527,8 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                     }`}
                   >
                     <Upload className="h-4 w-4 text-gold" aria-hidden="true" />
-                    {videoFiles.length === 0 ? "Upload videos" : "Add another video"}
+                    {videoFiles.length === 0 ? "Upload a clip" : "Upload another clip"}
+                    <span className="text-xs font-medium text-ink-2">max {maxVideoMb} MB</span>
                   </button>
                 </>
               )}
@@ -498,76 +543,78 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
         )}
 
         {step === 4 && (
-          <>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className={labelClass}>Preferred Dates</p>
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <p className={`${labelClass} mb-0!`}>Preferred dates</p>
                 <span className="text-[10px] font-bold text-stone-400">{preferredDates.length}/{MAX_DATES}</span>
               </div>
-
-              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[auto_1fr]">
-                <div
-                  style={{
-                    "--primary": "#FDCC4B",
-                    "--primary-foreground": "#26300D",
-                    "--accent": "rgba(255,255,255,0.10)",
-                    "--accent-foreground": "#FDCC4B",
-                    "--background": "transparent",
-                    "--muted-foreground": "#a8a29e",
-                    "--border": "rgba(255,255,255,0.10)",
-                    "--ring": "#FDCC4B",
-                  } as React.CSSProperties}
-                  className="flex justify-center rounded-2xl border border-white/10 bg-white/5 p-2"
-                >
-                  <Calendar
-                    mode="multiple"
-                    max={MAX_DATES}
-                    selected={preferredDates}
-                    onSelect={(dates) => setPreferredDates((dates ?? []).filter(isDateAvailable))}
-                    disabled={(date) => !isDateAvailable(date)}
-                    startMonth={startOfMonth(firstAvailable ?? startOfToday())}
-                    endMonth={lastAvailable ? startOfMonth(lastAvailable) : undefined}
-                    defaultMonth={firstAvailable ?? new Date()}
-                    className="bg-transparent text-white [--cell-size:1.9rem]"
-                  />
-                </div>
-
-                {availableDates.length === 0 ? (
-                  <p className="flex items-center text-[11px] text-stone-500">
-                    No stage slots are open at the moment. Carry on and add a note on the next step
-                    and we&apos;ll be in touch.
-                  </p>
-                ) : sortedDates.length > 0 ? (
-                  <div className="flex flex-wrap content-start gap-2">
-                    {sortedDates.map((d) => (
-                      <span
-                        key={d.getTime()}
-                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-1 pr-1 pl-3 text-xs font-medium whitespace-nowrap text-white"
-                      >
-                        {format(d, "EEE, d MMM yyyy")}
-                        <button
-                          title={`Remove ${format(d, "d MMM")}`}
-                          type="button"
-                          onClick={() => removeDate(d)}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-400/10 hover:text-red-400"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="flex items-center text-[11px] text-stone-600">No dates selected yet.</p>
-                )}
-              </div>
-
-              <p className="text-[11px] text-stone-500">
-                Only nights with a free 2-hour stage slot are selectable - Fridays, Saturdays, and
-                public holidays (plus the night before).
+              <p className="mt-1 text-xs leading-relaxed text-ink-2">
+                {preferredDates.length >= MAX_DATES
+                  ? `That's the most you can pick. Remove one to choose a different night.`
+                  : `Pick all the nights you can play (up to ${MAX_DATES}).`}
               </p>
             </div>
 
-          </>
+            <div
+              style={{
+                "--primary": "#FDCC4B",
+                "--primary-foreground": "#26300D",
+                "--accent": "rgba(255,255,255,0.10)",
+                "--accent-foreground": "#FDCC4B",
+                "--background": "transparent",
+                "--muted-foreground": "#a8a29e",
+                "--border": "rgba(255,255,255,0.10)",
+                "--ring": "#FDCC4B",
+              } as React.CSSProperties}
+              className="flex justify-center rounded-2xl border border-white/10 bg-black/20 p-2"
+            >
+              <Calendar
+                mode="multiple"
+                max={MAX_DATES}
+                selected={preferredDates}
+                onSelect={(dates) => setPreferredDates((dates ?? []).filter(isDateAvailable))}
+                disabled={(date) => !isDateAvailable(date)}
+                startMonth={startOfMonth(firstAvailable ?? startOfToday())}
+                endMonth={lastAvailable ? startOfMonth(lastAvailable) : undefined}
+                defaultMonth={firstAvailable ?? new Date()}
+                className="bg-transparent p-1 text-white [--cell-size:2.375rem] sm:[--cell-size:2.5rem]"
+              />
+            </div>
+
+            {availableDates.length === 0 ? (
+              <p className="text-xs leading-relaxed text-ink-2">
+                No stage slots are open at the moment. Carry on and add a note on the next step and we&apos;ll be in
+                touch.
+              </p>
+            ) : sortedDates.length > 0 ? (
+              <ul aria-label="Dates you picked" className="flex flex-wrap gap-2">
+                {sortedDates.map((d) => (
+                  <li
+                    key={d.getTime()}
+                    className="inline-flex h-9 items-center gap-0.5 rounded-full border border-gold/40 bg-gold/10 pl-3 text-xs font-semibold whitespace-nowrap text-ink"
+                  >
+                    {format(d, "EEE d MMM")}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${format(d, "EEEE d MMMM")}`}
+                      onClick={() => removeDate(d)}
+                      className="flex size-9 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:text-red-400"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-ink-2">No dates picked yet. Dates are optional.</p>
+            )}
+
+            <p className="border-t border-white/10 pt-3 text-xs leading-relaxed text-stone-400">
+              Only nights with a free 2-hour stage slot can be picked: Fridays, Saturdays and public holidays (plus the
+              night before).
+            </p>
+          </div>
         )}
 
         {step === 5 && (
@@ -625,7 +672,14 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
           </button>
         ) : (
           <button key="submit" type="submit" disabled={isPending} className={stepPrimaryButtonClass}>
-            {isPending ? "Submitting…" : "Submit Application"}
+            {isPending ? (
+              "Submitting…"
+            ) : (
+              <>
+                Submit
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </>
+            )}
           </button>
         )}
       </div>

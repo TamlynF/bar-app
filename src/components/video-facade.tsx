@@ -5,12 +5,18 @@ import { Play, ExternalLink } from "lucide-react";
 
 function youTubeId(url: string): string | null {
   const m = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/
   );
   return m ? m[1] : null;
 }
 
+function vimeoId(url: string): string | null {
+  const m = url.match(/(?:player\.vimeo\.com\/video\/|vimeo\.com\/(?:[^?#]*\/)?)(\d{6,})/);
+  return m ? m[1] : null;
+}
+
 function isVideoFile(url: string): boolean {
+  if (/dropbox\.com|drive\.google\.com/i.test(url)) return false;
   return url.includes(".supabase.co") || /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 }
 
@@ -25,7 +31,8 @@ export function VideoFacade({
 }) {
   const [active, setActive] = useState(false);
   const ytId = youTubeId(url);
-  const embeddable = Boolean(ytId) || isVideoFile(url);
+  const vmId = ytId ? null : vimeoId(url);
+  const embeddable = Boolean(ytId || vmId) || isVideoFile(url);
 
   if (!embeddable) {
     return (
@@ -42,6 +49,17 @@ export function VideoFacade({
   }
 
   if (active) {
+    if (vmId) {
+      return (
+        <iframe
+          className={`aspect-video w-full rounded-2xl border border-black/10 ${className}`}
+          src={`https://player.vimeo.com/video/${vmId}?autoplay=1`}
+          title={title}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      );
+    }
     return ytId ? (
       <iframe
         className={`aspect-video w-full rounded-2xl border border-black/10 ${className}`}
@@ -76,7 +94,7 @@ export function VideoFacade({
           loading="lazy"
           className="absolute inset-0 h-full w-full object-cover"
         />
-      ) : (
+      ) : vmId ? null : (
         <video
           src={`${url}#t=0.1`}
           muted

@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { COUNTRY_CODES } from "@/lib/country-codes";
 import { formatTime } from "@/lib/events-display";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
-import { stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+import { stepActionRowClass, stepPrimaryButtonClass, stepSubmitFitClass } from "@/app/(public)/book/_components/step-button-styles";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -413,22 +413,25 @@ export default function BingoBookingForm({ events }: Props) {
       )}
 
       <div className="pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className={cn(
-            stepPrimaryButtonClass,
-            !formComplete && incompleteButtonClass
-          )}
-        >
-          {isPending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : hasPricing ? (
-            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
-          ) : (
-            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-4 w-4" /></span>
-          )}
-        </button>
+        <div className={stepActionRowClass}>
+          <button
+            type="submit"
+            disabled={isPending}
+            className={cn(
+              stepPrimaryButtonClass,
+              stepSubmitFitClass,
+              !formComplete && incompleteButtonClass
+            )}
+          >
+            {isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : hasPricing ? (
+              <span className="flex items-center">Pay £{total.toFixed(2)} <ChevronRight className="ml-2 h-4 w-4" /></span>
+            ) : (
+              <span className="flex items-center">Book now <ChevronRight className="ml-2 h-4 w-4" /></span>
+            )}
+          </button>
+        </div>
         {hasPricing ? (
           <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
             You&apos;ll be taken to a secure Square checkout to complete payment.

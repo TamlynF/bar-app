@@ -30,6 +30,9 @@ import { readImageFileDimensions } from "@/lib/image-file-dimensions";
 import { posterSizeWarning } from "@/lib/poster-image-quality";
 import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
+import { megabytes } from "@/lib/video-upload-limit";
+import { randomId } from "@/lib/random-id";
+import { showFirstFrame } from "@/lib/video-preview";
 import type { MusicActRow, SocialLinks } from "@/lib/music-acts";
 import MusicActNotesPopover, { MusicActNotesPanel } from "./music-act-notes-popover";
 import {
@@ -62,7 +65,6 @@ export type EmployeeOption = { id: number; full_name: string };
 
 const supabase = createClient();
 const MAX_VIDEOS = 10;
-const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 
 const FIELD_INPUT =
   "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
@@ -145,7 +147,7 @@ function formFromAct(a: MusicActWithContact): FormState {
 
 function videosFromAct(a: MusicActWithContact): VideoItem[] {
   return (a.video_urls ?? []).filter(Boolean).map((url, i) => ({
-    id: crypto.randomUUID(),
+    id: randomId(),
     url,
     description: (a.video_descriptions ?? [])[i]?.trim() || "",
     uploading: false,
@@ -170,12 +172,15 @@ export default function MusicActsClient({
   counts = {},
   typeOptions = [],
   employees = [],
+  maxVideoBytes,
 }: {
   initialActs: MusicActWithContact[];
   counts: Record<string, ActCounts>;
   typeOptions: string[];
   employees?: EmployeeOption[];
+  maxVideoBytes: number;
 }) {
+  const maxVideoMb = megabytes(maxVideoBytes);
   const sheet = useRecordSheet<MusicActWithContact>({
     records: initialActs,
     getId: (record) => record.id,
@@ -255,7 +260,7 @@ export default function MusicActsClient({
     }
   };
 
-  const save = sheet.submit(async (): Promise<{ error: string } | undefined> => {
+  const saveAct = async (): Promise<{ error: string } | undefined> => {
     if (!form.group_name.trim()) return { error: "Group name is required." };
     if (uploadingAnyVideo) return { error: "Please wait for videos to finish uploading." };
 
@@ -290,7 +295,9 @@ export default function MusicActsClient({
     if ("error" in result) return { error: result.error };
     releaseUploads();
     return undefined;
-  });
+  };
+
+  const save = (formData: FormData) => sheet.submit(saveAct)(formData);
 
   // A record on the list is already saved, so the heart and the notes write
   // straight through. Inside an unsaved form they only move form state, and the
@@ -375,10 +382,10 @@ export default function MusicActsClient({
     const files = Array.from(e.target.files ?? []);
     const remaining = MAX_VIDEOS - videos.length;
     for (const file of files.slice(0, remaining)) {
-      const id = crypto.randomUUID();
+      const id = randomId();
       const previewUrl = URL.createObjectURL(file);
-      if (file.size > MAX_VIDEO_BYTES) {
-        setVideos((prev) => [...prev, { id, url: null, description: "", uploading: false, progress: 0, error: "File too large (max 250 MB).", previewUrl }]);
+      if (file.size > maxVideoBytes) {
+        setVideos((prev) => [...prev, { id, url: null, description: "", uploading: false, progress: 0, error: `File too large (max ${maxVideoMb} MB).`, previewUrl }]);
         continue;
       }
       setVideos((prev) => [...prev, { id, url: null, description: "", uploading: true, progress: 0, error: null, previewUrl }]);
@@ -1116,7 +1123,8 @@ export default function MusicActsClient({
                         <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-admin-ink">
                           {v.previewUrl && (
                             <video
-                              src={`${v.previewUrl}#t=0.1`}
+                              src={v.previewUrl}
+                              onLoadedMetadata={showFirstFrame}
                               muted
                               playsInline
                               preload="metadata"

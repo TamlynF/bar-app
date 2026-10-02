@@ -7,6 +7,7 @@ import { type GeneralBooking } from "./components/booking-list";
 import BookingsSection, { type EventSummary } from "./components/bookings-section";
 import BandBookingListClient from "../../../music-bookings/components/band-booking-list-client";
 import { type BandRequest } from "../../../music-bookings/components/band-booking-card";
+import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
 import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
 
@@ -50,10 +51,11 @@ export default async function GeneralEventBookingsPage({
 
   const requestKind = isAllSubtypes ? await getTypeRequestKind(type) : null;
   if (requestKind === "music_act") {
-    const requests = (await getBandRequestsForType()) as unknown as BandRequest[];
+    const [bandRequests, maxVideoBytes] = await Promise.all([getBandRequestsForType(), getVideoUploadLimitBytes()]);
+    const requests = bandRequests as unknown as BandRequest[];
     return (
       <RequestsShell title="Band applications" subtitle="Review and respond to artist bookings">
-        <BandBookingListClient initialRequests={requests} initialStatuses={initialStatuses} />
+        <BandBookingListClient initialRequests={requests} initialStatuses={initialStatuses} maxVideoBytes={maxVideoBytes} />
       </RequestsShell>
     );
   }

@@ -1,4 +1,8 @@
-export const stepButtonRowClass = "mt-5 grid grid-cols-2 gap-3 sm:mt-8";
+export const stepActionRowClass = "grid grid-cols-2 gap-3";
+
+export const stepSubmitFitClass = "w-max min-w-full justify-self-end px-2 whitespace-nowrap";
+
+export const stepButtonRowClass = `mt-5 ${stepActionRowClass} sm:mt-8`;
 
 export const stepPrimaryButtonClass =
   "col-start-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gold font-black text-sm tracking-wider text-[#26300D] uppercase shadow-[0_3px_0_#a8801c] transition-[translate,box-shadow,background-color,opacity] duration-150 hover:-translate-y-0.5 hover:bg-[#ffd76a] hover:shadow-[0_5px_0_#a8801c] active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 sm:h-14";

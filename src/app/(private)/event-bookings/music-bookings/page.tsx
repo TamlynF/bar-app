@@ -2,6 +2,7 @@ import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { BandRequest } from "./components/band-booking-card";
 import BandBookingListClient from "./components/band-booking-list-client";
+import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function MusicBookingsPage({
     : [];
   const supabase = await createClient();
 
+  const maxVideoBytesPromise = getVideoUploadLimitBytes();
   const { data: requests, error } = await supabase
     .from("band_booking_requests")
     .select(
@@ -29,10 +31,11 @@ export default async function MusicBookingsPage({
   if (error) console.error("Music bookings fetch error:", error);
 
   const items = (requests ?? []) as unknown as BandRequest[];
+  const maxVideoBytes = await maxVideoBytesPromise;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-1.5 py-4 sm:px-3 sm:py-0 md:px-4 xl:max-w-none">
-      <BandBookingListClient initialRequests={items} initialStatuses={initialStatuses} />
+      <BandBookingListClient initialRequests={items} initialStatuses={initialStatuses} maxVideoBytes={maxVideoBytes} />
     </div>
   );
 }

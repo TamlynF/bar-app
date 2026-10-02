@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
 import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
+import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
 
 const inputBaseClass =
   "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
@@ -79,6 +80,7 @@ export default function PrivateHireForm({
   const minGuests = minCapacity ?? DEFAULT_MIN_GUESTS;
 
   const [isPending, startTransition] = useTransition();
+  useFormScrollRest();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
@@ -187,13 +189,13 @@ export default function PrivateHireForm({
     }
     setFieldErrors({});
     setStep((s) => s + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollFormToRest();
   }
 
   function handleBack() {
     setFieldErrors({});
     setStep((s) => s - 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollFormToRest();
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -511,7 +513,14 @@ export default function PrivateHireForm({
           </button>
         ) : (
           <button key="submit" type="submit" disabled={isPending} className={stepPrimaryButtonClass}>
-            {isPending ? "Submitting…" : "Send Enquiry"}
+            {isPending ? (
+              "Submitting…"
+            ) : (
+              <>
+                Submit
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </>
+            )}
           </button>
         )}
       </div>

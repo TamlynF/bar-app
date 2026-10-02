@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import MusicActsClient, { type ActCounts, type MusicActWithContact } from "./music-acts-client";
+import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function MusicActsPage() {
   const supabase = await createClient();
 
-  const [{ data: acts, error }, { data: bookings }, { data: subtypes }, { data: employees }] =
+  const [{ data: acts, error }, { data: bookings }, { data: subtypes }, { data: employees }, maxVideoBytes] =
     await Promise.all([
       supabase
         .from("music_acts")
@@ -23,6 +24,7 @@ export default async function MusicActsPage() {
         .eq("behavior", "music_act")
         .order("name", { ascending: true }),
       supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
+      getVideoUploadLimitBytes(),
     ]);
 
   if (error) console.error("Error fetching music acts:", error);
@@ -50,6 +52,7 @@ export default async function MusicActsPage() {
       counts={counts}
       typeOptions={typeOptions}
       employees={employees ?? []}
+      maxVideoBytes={maxVideoBytes}
     />
   );
 }

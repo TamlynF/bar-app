@@ -1,11 +1,10 @@
 import React from "react";
 import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { toCamelCase } from "@/lib/utils";
 import { getAvailableBandDates } from "@/lib/band-availability-data";
+import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
-import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Book the Stage",
@@ -28,7 +27,7 @@ export default async function BandBookingPage() {
 
   const dbTypeOptions = (subtypeRows ?? []).map((r) => {
     const label = r.title?.trim() || r.name;
-    return { value: toCamelCase(label), label };
+    return { value: r.name, label };
   });
 
   const typeOptions = dbTypeOptions.length > 0 ? dbTypeOptions : [
@@ -37,7 +36,7 @@ export default async function BandBookingPage() {
     { value: "dj", label: "DJ" },
   ];
 
-  const availableDates = await getAvailableBandDates();
+  const [availableDates, maxVideoBytes] = await Promise.all([getAvailableBandDates(), getVideoUploadLimitBytes()]);
 
   return (
     <main className="flex min-h-dvh w-full max-sm:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
@@ -73,20 +72,9 @@ export default async function BandBookingPage() {
             </div>
 
             <div className="relative z-10">
-              <BandBookingForm typeOptions={typeOptions} availableDates={availableDates} />
+              <BandBookingForm typeOptions={typeOptions} availableDates={availableDates} maxVideoBytes={maxVideoBytes} />
             </div>
           </div>
-        </div>
-
-        <div className="mt-auto flex flex-col items-center gap-3 pt-2 pb-4 sm:mb-6 sm:pt-8 sm:pb-0">
-          <div className="flex items-center gap-4 text-stone-300">
-            <div className="h-px w-6 bg-white/20" />
-            <CompanyWordmark className="h-4 opacity-80" />
-            <div className="h-px w-6 bg-white/20" />
-          </div>
-          <p className="text-[9px] tracking-widest text-stone-400 uppercase">
-            Licensed Venue • Please Drink Responsibly
-          </p>
         </div>
 
       </div>

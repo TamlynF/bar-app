@@ -115,7 +115,8 @@ port = 54324
 [storage]
 enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
-# Raised to 250 MiB for band performance-video uploads (band-videos bucket).
+# Matches the live project's 250 MB upload cap and band-videos bucket limit, so
+# local uploads fail the same way. The forms read the bucket limit at runtime.
 file_size_limit = "250MiB"
 
 # Uncomment to configure local storage buckets

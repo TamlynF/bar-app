@@ -28,6 +28,7 @@ import {
   saveSubtypeAction,
   deleteSubtypeAction,
 } from "./actions";
+import { randomId } from "@/lib/random-id";
 
 const storageClient = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1407,7 +1408,7 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear, post
     setSizeWarning(poster ? posterSizeWarning(await readImageFileDimensions(file)) : null);
     try {
       const ext = file.name.split(".").pop();
-      const path = `${pathPrefix}${crypto.randomUUID()}.${ext}`;
+      const path = `${pathPrefix}${randomId()}.${ext}`;
       const { data, error } = await storageClient.storage.from(IMAGE_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false });
       if (error) throw error;
       const publicUrl = storageClient.storage.from(IMAGE_BUCKET).getPublicUrl(data.path).data.publicUrl;

@@ -71,6 +71,8 @@ import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction, p
 import { setEventWinner } from "../quiz-leaderboards/actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useNow } from "@/hooks/use-now";
+import { randomId } from "@/lib/random-id";
 import { setAdminPageAction } from "@/lib/admin-page-action";
 
 const PHONE_QUERY = "(max-width: 639px)";
@@ -460,6 +462,7 @@ export default function EventsClient({
       return next;
     });
   const isPhone = useMediaQuery(PHONE_QUERY);
+  const nowMs = useNow();
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -570,7 +573,7 @@ export default function EventsClient({
   const [qrBusy, setQrBusy] = useState(false);
   const [qrCopied, setQrCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
-  const [quizOpen, setQuizOpen] = useState(true);
+  const [quizToggle, setQuizToggle] = useState<{ eventId: number; open: boolean } | null>(null);
   const [bookingsOpen, setBookingsOpen] = useState(true);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
 
@@ -780,7 +783,7 @@ export default function EventsClient({
     setFormError(null);
     setImageWarning(posterSizeWarning(await readImageFileDimensions(file)));
     const ext = file.name.split(".").pop();
-    const path = `events/${crypto.randomUUID()}.${ext}`;
+    const path = `events/${randomId()}.${ext}`;
     const { data, error } = await storageClient.storage
       .from(EVENT_IMAGE_BUCKET)
       .upload(path, file, { cacheControl: "3600", upsert: false });
@@ -1238,8 +1241,9 @@ export default function EventsClient({
 
   const endsAfterNow = (e: EventRecord) => {
     if (!e.date) return false;
+    if (nowMs == null) return e.date >= todayStr;
     const end = (e.end_time ?? "23:59").slice(0, 5);
-    return new Date(`${e.date}T${end}:00`).getTime() > Date.now();
+    return new Date(`${e.date}T${end}:00`).getTime() > nowMs;
   };
 
   /* An event is over the moment its end time passes, not at the next midnight -
@@ -1249,13 +1253,7 @@ export default function EventsClient({
   /* On a phone the rounds list is long enough to bury the rest of the sheet,
      and the progress bar under the title already says how far along it is,
      so a quiz opens with its rounds folded away. Desktop keeps them open. */
-  useEffect(() => {
-    if (!selected) return;
-    if (subtypeById.get(selected.event_subtypes_id)?.behavior !== "quiz") return;
-    const onPhone = window.matchMedia("(max-width: 639px)").matches;
-    setQuizOpen(!onPhone);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.id]);
+  const quizOpen = quizToggle && quizToggle.eventId === selected?.id ? quizToggle.open : !isPhone;
 
   const confirmedTeams = (eventId: number) =>
     bookings.filter((b) => b.event_id === eventId && b.status === "confirmed");
@@ -1285,7 +1283,6 @@ export default function EventsClient({
     });
   };
 
-  const promptValueRef = useRef("");
   const promptForValue = async (opts: {
     title: string;
     description: string;
@@ -1297,7 +1294,7 @@ export default function EventsClient({
     suggestionLabel?: string;
     confirmLabel: string;
   }): Promise<string | null> => {
-    promptValueRef.current = opts.initialValue ?? "";
+    let typedValue = opts.initialValue ?? "";
     const ok = await confirm({
       title: opts.title,
       description: opts.description,
@@ -1311,13 +1308,13 @@ export default function EventsClient({
           suggestion={opts.suggestion}
           suggestionLabel={opts.suggestionLabel}
           onChange={(value) => {
-            promptValueRef.current = value;
+            typedValue = value;
           }}
         />
       ),
     });
     if (!ok) return null;
-    const value = promptValueRef.current.trim();
+    const value = typedValue.trim();
     return value === "" ? null : value;
   };
 
@@ -2324,6 +2321,7 @@ export default function EventsClient({
     }
   }
   const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+  const dialogIssues = issuesEvent ? eventIssues(issuesEvent) : [];
 
   /* An end time at or before the start belongs to the following morning, so the
      slot has to be measured as an instant rather than as a time of day. */
@@ -2335,7 +2333,7 @@ export default function EventsClient({
     const day = new Date(`${formDate}T00:00:00`);
     if (Number.isNaN(day.getTime())) return false;
     const minutes = start != null && end <= start ? end + 24 * 60 : end;
-    return day.getTime() + minutes * 60_000 > Date.now();
+    return nowMs != null && day.getTime() + minutes * 60_000 > nowMs;
   })();
 
   /* A new event switches itself on as soon as it is complete and still ahead of
@@ -3528,7 +3526,7 @@ export default function EventsClient({
                             variant="card"
                             className="order-1"
                             open={quizOpen}
-                            onToggle={() => setQuizOpen(o => !o)}
+                            onToggle={() => selected && setQuizToggle({ eventId: selected.id, open: !quizOpen })}
                             phoneProgress={{
                               pct: targetQuestionCount > 0 ? (savedQuestionCount / targetQuestionCount) * 100 : 0,
                               value: readyRoundCount,
@@ -4020,222 +4018,219 @@ export default function EventsClient({
 
       <Dialog open={!!issuesEvent} onOpenChange={(open) => { if (!open) setIssuesEvent(null); }}>
         <DialogContent className="max-w-md gap-0 overflow-hidden rounded-3xl border-2 border-admin-line bg-admin-surface p-0 shadow-2xl">
-          {issuesEvent && (() => {
-            const issues = eventIssues(issuesEvent);
-            return (
-              <>
-                <div className="flex flex-col gap-1 px-6 pt-6 pb-4">
-                  <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-admin-ink">
-                    {issues.length === 0 ? (
-                      <>
-                        <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-admin-success" />
-                        Nothing left to fix
-                      </>
-                    ) : (
-                      <>
-                        <HelpCircle className="h-4.5 w-4.5 shrink-0 text-admin-error" />
-                        {issues.length} issue{issues.length === 1 ? "" : "s"} to fix
-                      </>
-                    )}
-                  </DialogTitle>
-                  <DialogDescription className="text-[13px] font-medium text-admin-muted">
-                    {issuesEvent.title || "Untitled Event"}
-                    {issuesEvent.date ? ` · ${formatDate(issuesEvent.date)}` : ""}
-                  </DialogDescription>
-                </div>
-                <ul className="max-h-[50vh] divide-y divide-admin-line overflow-y-auto border-y border-admin-line bg-admin-card">
-                  {issues.length === 0 ? (
-                    <li className="flex items-start gap-2.5 px-6 py-4">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-admin-success" aria-hidden="true" />
-                      <span className="text-[13px] leading-snug font-semibold text-admin-ink">
-                        Everything this event was flagged for has been sorted.
-                      </span>
-                    </li>
+          {issuesEvent && (
+            <>
+              <div className="flex flex-col gap-1 px-6 pt-6 pb-4">
+                <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-admin-ink">
+                  {dialogIssues.length === 0 ? (
+                    <>
+                      <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-admin-success" />
+                      Nothing left to fix
+                    </>
                   ) : (
-                    issues.map((issue) => (
-                      <li key={issue} className="px-6 py-3">
-                        <div className="flex items-start gap-2.5">
-                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-admin-error" aria-hidden="true" />
-                          <span className="text-[13px] leading-snug font-semibold text-admin-ink">{issue}</span>
-                        </div>
-                        {issue === ISSUE_NO_WINNER && (() => {
-                          const teams = confirmedTeams(issuesEvent.id);
-                          return (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button type="button" disabled={isPending} className={ISSUE_ACTION_BUTTON}>
-                                  <Trophy className="h-4 w-4 shrink-0" />
-                                  Set winner
-                                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                                {teams.length === 0 ? (
-                                  <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
-                                ) : (
-                                  teams.map((team) => (
-                                    <DropdownMenuItem
-                                      key={team.id}
-                                      disabled={isPending}
-                                      onClick={() => chooseWinner(issuesEvent, team.id)}
-                                    >
-                                      <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
-                                    </DropdownMenuItem>
-                                  ))
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          );
-                        })()}
-                        {issue === ISSUE_NO_HOST && (
+                    <>
+                      <HelpCircle className="h-4.5 w-4.5 shrink-0 text-admin-error" />
+                      {dialogIssues.length} issue{dialogIssues.length === 1 ? "" : "s"} to fix
+                    </>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-[13px] font-medium text-admin-muted">
+                  {issuesEvent.title || "Untitled Event"}
+                  {issuesEvent.date ? ` · ${formatDate(issuesEvent.date)}` : ""}
+                </DialogDescription>
+              </div>
+              <ul className="max-h-[50vh] divide-y divide-admin-line overflow-y-auto border-y border-admin-line bg-admin-card">
+                {dialogIssues.length === 0 ? (
+                  <li className="flex items-start gap-2.5 px-6 py-4">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-admin-success" aria-hidden="true" />
+                    <span className="text-[13px] leading-snug font-semibold text-admin-ink">
+                      Everything this event was flagged for has been sorted.
+                    </span>
+                  </li>
+                ) : (
+                  dialogIssues.map((issue) => (
+                    <li key={issue} className="px-6 py-3">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-admin-error" aria-hidden="true" />
+                        <span className="text-[13px] leading-snug font-semibold text-admin-ink">{issue}</span>
+                      </div>
+                      {issue === ISSUE_NO_WINNER && (() => {
+                        const teams = confirmedTeams(issuesEvent.id);
+                        return (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button type="button" disabled={isPending} className={ISSUE_ACTION_BUTTON}>
-                                <UserRound className="h-4 w-4 shrink-0" />
-                                Set host
+                                <Trophy className="h-4 w-4 shrink-0" />
+                                Set winner
                                 <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
-                              {activeEmployees.length === 0 ? (
-                                <DropdownMenuItem disabled>No active employees</DropdownMenuItem>
+                              {teams.length === 0 ? (
+                                <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
                               ) : (
-                                activeEmployees.map((employee) => (
+                                teams.map((team) => (
                                   <DropdownMenuItem
-                                    key={employee.id}
+                                    key={team.id}
                                     disabled={isPending}
-                                    onClick={() =>
-                                      applyEventPatch(
-                                        issuesEvent,
-                                        { host_employee_id: employee.id },
-                                        `${employee.full_name} is now hosting`
-                                      )
-                                    }
+                                    onClick={() => chooseWinner(issuesEvent, team.id)}
                                   >
-                                    <span className="truncate">{employee.full_name}</span>
+                                    <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
                                   </DropdownMenuItem>
                                 ))
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        )}
-                        {issue.startsWith(ISSUE_QUIZ_INCOMPLETE) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const target = issuesEvent;
-                              const origin: EventLinkOrigin = selected?.id === target.id ? "sheet" : "list";
-                              setIssuesEvent(null);
-                              navigateFromRow(target, quizHrefFor(target, origin));
-                            }}
-                            className={ISSUE_ACTION_BUTTON}
-                          >
-                            <Brain className="h-4 w-4 shrink-0" />
-                            Manage quiz
-                          </button>
-                        )}
-                        {issue === ISSUE_NO_KARAOKE_LINK && (
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            onClick={async () => {
-                              const link = await promptForValue({
-                                title: "Add the Singa request link",
-                                description: "The link guests use to send their song requests on the night.",
-                                label: "Singa request link",
-                                placeholder: "https://…",
-                                initialValue: issuesEvent.karaoke_request_url ?? "",
-                                confirmLabel: "Save link",
-                              });
-                              if (link) applyEventPatch(issuesEvent, { karaoke_request_url: link }, "Singa link saved");
-                            }}
-                            className={ISSUE_ACTION_BUTTON}
-                          >
-                            <Mic2 className="h-4 w-4 shrink-0" />
-                            Add Singa link
-                          </button>
-                        )}
-                        {issue === ISSUE_NO_PAYMENT && (
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            onClick={async () => {
-                              const entered = await promptForValue({
-                                title: "Set the payment amount",
-                                description: "What one ticket for this event costs.",
-                                label: "Amount (£)",
-                                placeholder: "e.g. 5.00",
-                                numeric: true,
-                                initialValue: issuesEvent.payment_amount ? String(issuesEvent.payment_amount) : "",
-                                confirmLabel: "Save amount",
-                              });
-                              if (entered === null) return;
-                              const amount = parseFloat(entered);
-                              if (!Number.isFinite(amount) || amount <= 0) {
-                                toast.error("Enter an amount greater than 0.");
-                                return;
-                              }
-                              applyEventPatch(issuesEvent, { payment_amount: amount }, "Payment amount saved");
-                            }}
-                            className={ISSUE_ACTION_BUTTON}
-                          >
-                            <PoundSterling className="h-4 w-4 shrink-0" />
-                            Set amount
-                          </button>
-                        )}
-                        {issue === ISSUE_NO_BOOKING_URL && (
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            onClick={async () => {
-                              const link = await promptForValue({
-                                title: "Set the booking link",
-                                description:
-                                  "Paste the link you want guests to book on, or build the standard one for this event.",
-                                label: "Booking URL",
-                                placeholder: "https://…",
-                                initialValue: issuesEvent.booking_page_url ?? "",
-                                suggestion: bookingUrlFor({
-                                  typeId: issuesEvent.event_types_id,
-                                  subtypeId: issuesEvent.event_subtypes_id,
-                                  grouping: typeById.get(issuesEvent.event_types_id)?.booking_grouping,
-                                  eventId: issuesEvent.id,
-                                }),
-                                suggestionLabel: "Create it automatically",
-                                confirmLabel: "Save link",
-                              });
-                              if (link) applyEventPatch(issuesEvent, { booking_page_url: link }, "Booking link saved");
-                            }}
-                            className={ISSUE_ACTION_BUTTON}
-                          >
-                            <Link2 className="h-4 w-4 shrink-0" />
-                            Set booking link
-                          </button>
-                        )}
-                      </li>
-                    ))
-                  )}
-                </ul>
-                <div className="flex flex-row gap-2 px-6 py-5">
-                  <button
-                    type="button"
-                    onClick={() => setIssuesEvent(null)}
-                    className="h-11 flex-1 rounded-xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface"
-                  >
-                    Close
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { const target = issuesEvent; setIssuesEvent(null); openView(target); }}
-                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Open event
-                  </button>
-                </div>
-              </>
-            );
-          })()}
+                        );
+                      })()}
+                      {issue === ISSUE_NO_HOST && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button type="button" disabled={isPending} className={ISSUE_ACTION_BUTTON}>
+                              <UserRound className="h-4 w-4 shrink-0" />
+                              Set host
+                              <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+                            {activeEmployees.length === 0 ? (
+                              <DropdownMenuItem disabled>No active employees</DropdownMenuItem>
+                            ) : (
+                              activeEmployees.map((employee) => (
+                                <DropdownMenuItem
+                                  key={employee.id}
+                                  disabled={isPending}
+                                  onClick={() =>
+                                    applyEventPatch(
+                                      issuesEvent,
+                                      { host_employee_id: employee.id },
+                                      `${employee.full_name} is now hosting`
+                                    )
+                                  }
+                                >
+                                  <span className="truncate">{employee.full_name}</span>
+                                </DropdownMenuItem>
+                              ))
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      {issue.startsWith(ISSUE_QUIZ_INCOMPLETE) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const target = issuesEvent;
+                            const origin: EventLinkOrigin = selected?.id === target.id ? "sheet" : "list";
+                            setIssuesEvent(null);
+                            navigateFromRow(target, quizHrefFor(target, origin));
+                          }}
+                          className={ISSUE_ACTION_BUTTON}
+                        >
+                          <Brain className="h-4 w-4 shrink-0" />
+                          Manage quiz
+                        </button>
+                      )}
+                      {issue === ISSUE_NO_KARAOKE_LINK && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={async () => {
+                            const link = await promptForValue({
+                              title: "Add the Singa request link",
+                              description: "The link guests use to send their song requests on the night.",
+                              label: "Singa request link",
+                              placeholder: "https://…",
+                              initialValue: issuesEvent.karaoke_request_url ?? "",
+                              confirmLabel: "Save link",
+                            });
+                            if (link) applyEventPatch(issuesEvent, { karaoke_request_url: link }, "Singa link saved");
+                          }}
+                          className={ISSUE_ACTION_BUTTON}
+                        >
+                          <Mic2 className="h-4 w-4 shrink-0" />
+                          Add Singa link
+                        </button>
+                      )}
+                      {issue === ISSUE_NO_PAYMENT && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={async () => {
+                            const entered = await promptForValue({
+                              title: "Set the payment amount",
+                              description: "What one ticket for this event costs.",
+                              label: "Amount (£)",
+                              placeholder: "e.g. 5.00",
+                              numeric: true,
+                              initialValue: issuesEvent.payment_amount ? String(issuesEvent.payment_amount) : "",
+                              confirmLabel: "Save amount",
+                            });
+                            if (entered === null) return;
+                            const amount = parseFloat(entered);
+                            if (!Number.isFinite(amount) || amount <= 0) {
+                              toast.error("Enter an amount greater than 0.");
+                              return;
+                            }
+                            applyEventPatch(issuesEvent, { payment_amount: amount }, "Payment amount saved");
+                          }}
+                          className={ISSUE_ACTION_BUTTON}
+                        >
+                          <PoundSterling className="h-4 w-4 shrink-0" />
+                          Set amount
+                        </button>
+                      )}
+                      {issue === ISSUE_NO_BOOKING_URL && (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={async () => {
+                            const link = await promptForValue({
+                              title: "Set the booking link",
+                              description:
+                                "Paste the link you want guests to book on, or build the standard one for this event.",
+                              label: "Booking URL",
+                              placeholder: "https://…",
+                              initialValue: issuesEvent.booking_page_url ?? "",
+                              suggestion: bookingUrlFor({
+                                typeId: issuesEvent.event_types_id,
+                                subtypeId: issuesEvent.event_subtypes_id,
+                                grouping: typeById.get(issuesEvent.event_types_id)?.booking_grouping,
+                                eventId: issuesEvent.id,
+                              }),
+                              suggestionLabel: "Create it automatically",
+                              confirmLabel: "Save link",
+                            });
+                            if (link) applyEventPatch(issuesEvent, { booking_page_url: link }, "Booking link saved");
+                          }}
+                          className={ISSUE_ACTION_BUTTON}
+                        >
+                          <Link2 className="h-4 w-4 shrink-0" />
+                          Set booking link
+                        </button>
+                      )}
+                    </li>
+                  ))
+                )}
+              </ul>
+              <div className="flex flex-row gap-2 px-6 py-5">
+                <button
+                  type="button"
+                  onClick={() => setIssuesEvent(null)}
+                  className="h-11 flex-1 rounded-xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { const target = issuesEvent; setIssuesEvent(null); openView(target); }}
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Open event
+                </button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

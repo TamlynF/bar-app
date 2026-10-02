@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { PictureRoundItem } from "@/app/(private)/event-setups/quiz-generator/actions";
+import { randomId } from "@/lib/random-id";
 
 /* Generated pictures arrive as data URIs. A full round of them is well past the
    request body limit, so they go to storage straight from the browser and the
@@ -17,7 +18,7 @@ export async function uploadPictureDrafts(
       const blob = await (await fetch(item.imageUrl)).blob();
       const contentType = blob.type || "image/png";
       const ext = contentType === "image/jpeg" ? "jpg" : "png";
-      const path = `quiz-pictures/${eventId}/${crypto.randomUUID()}.${ext}`;
+      const path = `quiz-pictures/${eventId}/${randomId()}.${ext}`;
 
       const { data, error } = await supabase.storage
         .from("gallery")

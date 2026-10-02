@@ -53,9 +53,11 @@ function optionsFor(requests: BandRequest[], field: "type" | "genre") {
 export default function BandBookingListClient({
   initialRequests,
   initialStatuses = [],
+  maxVideoBytes,
 }: {
   initialRequests: BandRequest[];
   initialStatuses?: string[];
+  maxVideoBytes: number;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
@@ -418,6 +420,7 @@ export default function BandBookingListClient({
                         request={req}
                         wide={spreadColumns}
                         lifecycle={lifecycles.get(req.id) ?? null}
+                        maxVideoBytes={maxVideoBytes}
                       />
                     ))
                   )

@@ -10,6 +10,7 @@ import {
   type FieldConfig,
   type GroupSizeFieldConfig,
 } from "@/lib/booking-config";
+import { randomId } from "@/lib/random-id";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -182,7 +183,7 @@ export function BookingConfigEditor({
     setUploading(true);
     setUploadError(null);
     const ext = file.name.split(".").pop();
-    const path = `${crypto.randomUUID()}.${ext}`;
+    const path = `${randomId()}.${ext}`;
     const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { cacheControl: "3600", upsert: false });
     if (error) {
       setUploadError(`Upload failed: ${error.message}`);
