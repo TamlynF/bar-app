@@ -279,3 +279,44 @@ async function sendOutcomeEmail(
     sentBy,
   });
 }
+
+function revalidatePrivateHireNotes() {
+  revalidatePath("/event-bookings/private-bookings");
+}
+
+export async function addPrivateHireNote(requestId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId();
+  const { error } = await supabase
+    .from("private_hire_notes")
+    .insert({ request_id: requestId, body: text, created_by: empId, updated_by: empId });
+
+  if (error) throw new Error("Failed to add the note.");
+  revalidatePrivateHireNotes();
+}
+
+export async function updatePrivateHireNote(noteId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId();
+  const { error } = await supabase
+    .from("private_hire_notes")
+    .update({ body: text, updated_by: empId, updated_at: new Date().toISOString() })
+    .eq("id", noteId);
+
+  if (error) throw new Error("Failed to save the note.");
+  revalidatePrivateHireNotes();
+}
+
+export async function deletePrivateHireNote(noteId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("private_hire_notes").delete().eq("id", noteId);
+
+  if (error) throw new Error("Failed to delete the note.");
+  revalidatePrivateHireNotes();
+}

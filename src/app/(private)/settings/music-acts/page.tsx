@@ -18,9 +18,12 @@ export default async function MusicActsPage() {
     await Promise.all([
       supabase
         .from("music_acts")
-        .select("*, contact:contacts(id, full_name, email, phone_no)")
+        .select(
+          "*, contact:contacts(id, full_name, email, phone_no), notes:music_act_notes(id, body, created_at, author:employees!music_act_notes_created_by_fkey(full_name))"
+        )
         .order("is_favorite", { ascending: false })
-        .order("group_name", { ascending: true }),
+        .order("group_name", { ascending: true })
+        .order("created_at", { referencedTable: "music_act_notes", ascending: true }),
       supabase
         .from("band_booking_requests")
         .select("music_acts_id, linked_event:events!band_booking_requests_event_id_fkey(date)")

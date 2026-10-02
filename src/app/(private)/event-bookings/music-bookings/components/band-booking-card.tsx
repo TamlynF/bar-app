@@ -2,7 +2,17 @@
 
 import React, { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite, bandEmailSlotsAction } from "../actions";
+import {
+  updateBandStatus,
+  updateBandBookingFields,
+  getClashingEvents,
+  rescheduleConfirmedBooking,
+  toggleBandFavorite,
+  bandEmailSlotsAction,
+  addBandNote,
+  updateBandNote,
+  deleteBandNote,
+} from "../actions";
 import type { BandStatus } from "../actions";
 import {
   ChevronDown,
@@ -52,6 +62,7 @@ import { attempt } from "@/lib/attempt";
 import { showFirstFrame } from "@/lib/video-preview";
 import BandNotesPopover from "./band-notes-popover";
 import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { BookingNoteQuote, InternalNotesPanel } from "@/components/admin/internal-notes-panel";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -64,7 +75,6 @@ const DEFAULT_START_TIME = "22:00"; // 10pm
 
 const MAX_VIDEOS = 10;
 
-const NOTE_PREVIEW_LEN = 50;
 
 const PREFERRED_DATES_VISIBLE = 4;
 
@@ -779,12 +789,12 @@ export function BandBookingCard({
   const [bookAttempted, setBookAttempted] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
   const slotRowRef = useRef<HTMLDivElement>(null);
+  const sheetBodyRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
   const noteDraft = useRef("");
 
   const [isFavorite, setIsFavorite] = useState(request.is_favorite);
   const [, startFavTransition] = useTransition();
-  const [noteExpanded, setNoteExpanded] = useState(false);
   const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
 
   const [actName, setActName] = useState(request.group_name ?? "");
@@ -815,8 +825,6 @@ export function BandBookingCard({
   const editable = status !== "declined";
 
   const bookingNote = (request.notes ?? "").trim();
-  const noteIsLong = bookingNote.length > NOTE_PREVIEW_LEN;
-  const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
   function setSheetOpen(next: boolean) {
     setOpen(next);
@@ -1403,6 +1411,48 @@ export function BandBookingCard({
     else closeDiscarding();
   }
 
+  function revealInternalNotes() {
+    const cards = sheetBodyRef.current?.querySelectorAll<HTMLElement>("[data-internal-notes]") ?? [];
+    const visible = Array.from(cards).find((el) => el.offsetParent !== null);
+    visible?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  const notesCards = (
+    <>
+      {bookingNote && (
+        <Section
+          title="Notes from booking"
+          headerRight={
+            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+              From applicant
+            </span>
+          }
+        >
+          <BookingNoteQuote note={bookingNote} />
+        </Section>
+      )}
+      <div data-internal-notes className="scroll-mt-4">
+        <Section
+          title="Internal notes"
+          headerRight={
+            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+              Staff only{bandNoteList.length > 0 && ` · ${bandNoteList.length}`}
+            </span>
+          }
+        >
+          <InternalNotesPanel
+            notes={bandNoteList}
+            editable={editable}
+            placeholder="Add a note about the band…"
+            onAdd={(body) => addBandNote(request.id, body)}
+            onUpdate={updateBandNote}
+            onDelete={deleteBandNote}
+          />
+        </Section>
+      </div>
+    </>
+  );
+
   return (
     <>
       <div
@@ -1718,29 +1768,28 @@ export function BandBookingCard({
                   />
                 </button>
 
-                <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
-                  <button
-                    type="button"
-                    aria-label={`Band notes (internal): ${bandNoteList.length}`}
-                    title="Band notes (internal)"
+                <button
+                  type="button"
+                  onClick={revealInternalNotes}
+                  aria-label={`Internal notes: ${bandNoteList.length}`}
+                  title="Go to internal notes"
+                  className={cn(
+                    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9",
+                    hasChanges && "max-sm:hidden"
+                  )}
+                >
+                  <NotebookPen
                     className={cn(
-                      "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9",
-                      hasChanges && "max-sm:hidden"
+                      "h-4 w-4 transition-colors",
+                      bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]"
                     )}
-                  >
-                    <NotebookPen
-                      className={cn(
-                        "h-4 w-4 transition-colors",
-                        bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]"
-                      )}
-                    />
-                    {bandNoteList.length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
-                        {bandNoteList.length}
-                      </span>
-                    )}
-                  </button>
-                </BandNotesPopover>
+                  />
+                  {bandNoteList.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
+                      {bandNoteList.length}
+                    </span>
+                  )}
+                </button>
 
                 <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                   <PopoverTrigger asChild>
@@ -1845,7 +1894,7 @@ export function BandBookingCard({
             />
           </div>
 
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div ref={sheetBodyRef} className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
             {error && (
               <p className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-snug font-bold text-red-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -2130,39 +2179,9 @@ export function BandBookingCard({
                     </div>
                   )}
                 </div>
-
-                {bookingNote && (
-                  <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                      Notes from Booking
-                    </span>
-                    <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
-                      &quot;{noteExpanded ? bookingNote : noteHead}{noteIsLong && !noteExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => setNoteExpanded(true)}
-                          title="Show the full note"
-                          aria-label="Show the full note"
-                          aria-expanded={false}
-                          className="px-0.5 font-black text-[#34451F] not-italic hover:underline"
-                        >
-                          …
-                        </button>
-                      )}&quot;
-                      {noteIsLong && noteExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => setNoteExpanded(false)}
-                          aria-expanded={true}
-                          className="ml-1.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase not-italic hover:underline"
-                        >
-                          Less
-                        </button>
-                      )}
-                    </p>
-                  </div>
-                )}
               </Section>
+
+              <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
 
               {(showSocials || sheetVideos.length > 0) && (
                 <Section title="Act Media">
@@ -2431,6 +2450,7 @@ export function BandBookingCard({
               </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
+              <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
                 {showContactDetails && (

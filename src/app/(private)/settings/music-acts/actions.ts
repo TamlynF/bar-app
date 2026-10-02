@@ -22,7 +22,6 @@ export interface MusicActInput {
   bank_account_name?: string | null;
   bank_sort_code?: string | null;
   bank_payment_ref?: string | null;
-  internal_notes?: string | null;
   is_favorite?: boolean;
   contact?: { booker_name?: string | null; email?: string | null; phone_no?: string | null };
 }
@@ -79,7 +78,6 @@ export async function saveMusicActAction(
     bank_account_name: input.bank_account_name?.trim() || null,
     bank_sort_code: input.bank_sort_code?.trim() || null,
     bank_payment_ref: input.bank_payment_ref?.trim() || null,
-    internal_notes: input.internal_notes?.trim() || null,
     is_favorite: !!input.is_favorite,
     ...(contactId != null ? { contact_id: contactId } : {}),
   };
@@ -138,8 +136,41 @@ export async function setMusicActFavoriteAction(id: string, isFavorite: boolean)
   return patchMusicAct(id, { is_favorite: isFavorite });
 }
 
-export async function setMusicActNotesAction(id: string, notes: string) {
-  return patchMusicAct(id, { internal_notes: notes.trim() || null });
+export async function addMusicActNote(actId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId(supabase);
+  const { error } = await supabase
+    .from("music_act_notes")
+    .insert({ act_id: actId, body: text, created_by: empId, updated_by: empId });
+
+  if (error) throw new Error("Failed to add the note.");
+  revalidatePath("/settings/music-acts");
+}
+
+export async function updateMusicActNote(noteId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId(supabase);
+  const { error } = await supabase
+    .from("music_act_notes")
+    .update({ body: text, updated_by: empId, updated_at: new Date().toISOString() })
+    .eq("id", noteId);
+
+  if (error) throw new Error("Failed to save the note.");
+  revalidatePath("/settings/music-acts");
+}
+
+export async function deleteMusicActNote(noteId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("music_act_notes").delete().eq("id", noteId);
+
+  if (error) throw new Error("Failed to delete the note.");
+  revalidatePath("/settings/music-acts");
 }
 
 export async function deleteMusicActAction(

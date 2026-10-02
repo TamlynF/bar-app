@@ -8,6 +8,9 @@ import {
   getPrivateEventOptions,
   getClashingEvents,
   privateHireEmailSlotsAction,
+  addPrivateHireNote,
+  updatePrivateHireNote,
+  deletePrivateHireNote,
 } from "../actions";
 import {
   AlertCircle,
@@ -26,6 +29,7 @@ import {
   Info,
   Loader2,
   Mail,
+  NotebookPen,
   MessageSquareQuote,
   Phone,
   Save,
@@ -42,6 +46,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
 import { CorrespondencePanel } from "@/components/admin/correspondence-panel";
+import { BookingNoteQuote, InternalNotesPanel, type InternalNote } from "@/components/admin/internal-notes-panel";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -51,7 +56,6 @@ import { buildPrivateHireOutcomeEmail, type PrivateHireEmail } from "@/lib/priva
 
 type PrivateEventOptions = { types: { id: number; name: string }[]; subtypes: { id: number; name: string; event_types_id: number }[] };
 
-const NOTE_PREVIEW_LEN = 50;
 
 const DECLINE_PREVIEW_LEN = 28;
 
@@ -65,6 +69,7 @@ interface LinkedEvent {
 export interface PrivateHireRequest {
   id: string;
   unread_emails?: number;
+  internal_notes?: InternalNote[];
   full_name: string;
   email: string;
   phone_no: string | null;
@@ -576,9 +581,9 @@ export function PrivateHireCard({
   const [confirmAttempted, setConfirmAttempted] = useState(false);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
-  const [noteExpanded, setNoteExpanded] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
   const slotRowRef = useRef<HTMLDivElement>(null);
+  const sheetBodyRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
   const noteDraft = useRef("");
 
@@ -611,8 +616,7 @@ export function PrivateHireCard({
     toTitleCase(subtypeOptions.find((s) => String(s.id) === subtypeId)?.name ?? currentSub?.name);
 
   const bookingNote = (request.additional_requirements ?? "").trim();
-  const noteIsLong = bookingNote.length > NOTE_PREVIEW_LEN;
-  const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
+  const internalNotes = request.internal_notes ?? [];
 
   const declineReason = adminNotes.trim();
   const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
@@ -978,6 +982,48 @@ export function PrivateHireCard({
       interactive ? "hover:brightness-95" : "cursor-not-allowed"
     );
 
+  function revealInternalNotes() {
+    const cards = sheetBodyRef.current?.querySelectorAll<HTMLElement>("[data-internal-notes]") ?? [];
+    const visible = Array.from(cards).find((el) => el.offsetParent !== null);
+    visible?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  const notesCards = (
+    <>
+      {bookingNote && (
+        <Section
+          title="Notes from booking"
+          headerRight={
+            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+              From enquirer
+            </span>
+          }
+        >
+          <BookingNoteQuote note={bookingNote} />
+        </Section>
+      )}
+      <div data-internal-notes className="scroll-mt-4">
+        <Section
+          title="Internal notes"
+          headerRight={
+            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+              Staff only{internalNotes.length > 0 && ` · ${internalNotes.length}`}
+            </span>
+          }
+        >
+          <InternalNotesPanel
+            notes={internalNotes}
+            editable={editable}
+            placeholder="Add a note about this hire…"
+            onAdd={(body) => addPrivateHireNote(request.id, body)}
+            onUpdate={updatePrivateHireNote}
+            onDelete={deletePrivateHireNote}
+          />
+        </Section>
+      </div>
+    </>
+  );
+
   return (
     <>
       <button
@@ -1137,6 +1183,29 @@ export function PrivateHireCard({
                     </button>
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={revealInternalNotes}
+                  aria-label={`Internal notes: ${internalNotes.length}`}
+                  title="Go to internal notes"
+                  className={cn(
+                    "relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9",
+                    hasChanges && "max-sm:hidden"
+                  )}
+                >
+                  <NotebookPen
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      internalNotes.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]"
+                    )}
+                  />
+                  {internalNotes.length > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 text-[9px] font-bold text-white tabular-nums ring-2 ring-white">
+                      {internalNotes.length}
+                    </span>
+                  )}
+                </button>
+
                 <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                   <PopoverTrigger asChild>
                     <button
@@ -1240,7 +1309,7 @@ export function PrivateHireCard({
             />
           </div>
 
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div ref={sheetBodyRef} className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
             {error && (
               <p className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-snug font-bold text-red-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1502,39 +1571,9 @@ export function PrivateHireCard({
                       </div>
                     )}
                   </div>
-
-                  {bookingNote && (
-                    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                      <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                        Notes from Booking
-                      </span>
-                      <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
-                        &quot;{noteExpanded ? bookingNote : noteHead}{noteIsLong && !noteExpanded && (
-                          <button
-                            type="button"
-                            onClick={() => setNoteExpanded(true)}
-                            title="Show the full note"
-                            aria-label="Show the full note"
-                            aria-expanded={false}
-                            className="px-0.5 font-black text-[#34451F] not-italic hover:underline"
-                          >
-                            …
-                          </button>
-                        )}&quot;
-                        {noteIsLong && noteExpanded && (
-                          <button
-                            type="button"
-                            onClick={() => setNoteExpanded(false)}
-                            aria-expanded={true}
-                            className="ml-1.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase not-italic hover:underline"
-                          >
-                            Less
-                          </button>
-                        )}
-                      </p>
-                    </div>
-                  )}
                 </Section>
+
+                <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
 
                 {isCancelled && (
                   <Section title="Cancellation Reason for Applicant">
@@ -1570,6 +1609,7 @@ export function PrivateHireCard({
               </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
+                <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
                 <Section title="Contact">
                   <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
                   <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
