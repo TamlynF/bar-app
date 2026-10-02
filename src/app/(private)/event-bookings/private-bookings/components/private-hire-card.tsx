@@ -1697,6 +1697,11 @@ export function PrivateHireCard({
 
                 <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
 
+                <Section title="Contact">
+                  <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
+                  <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
+                </Section>
+
                 {isCancelled && (
                   <Section title="Cancellation Reason for Applicant">
                     <div className="p-4 sm:p-5">
@@ -1714,7 +1719,10 @@ export function PrivateHireCard({
                     </div>
                   </Section>
                 )}
+              </div>
 
+              <div className="min-w-0 space-y-4 sm:space-y-5">
+                <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
                 <Section
                   title="Correspondence"
                   headerRight={
@@ -1727,14 +1735,6 @@ export function PrivateHireCard({
                   }
                 >
                   <CorrespondencePanel privateHireRequestId={request.id} editable={editable} />
-                </Section>
-              </div>
-
-              <div className="min-w-0 space-y-4 sm:space-y-5">
-                <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
-                <Section title="Contact">
-                  <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
-                  <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
                 </Section>
               </div>
             </div>

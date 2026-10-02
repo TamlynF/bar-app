@@ -2572,23 +2572,6 @@ export function BandBookingCard({
                 </Section>
               )}
 
-              <Section
-                title="Correspondence"
-                headerRight={
-                  unreadEmails > 0 ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
-                      <Mail className="h-3 w-3" aria-hidden="true" />
-                      {unreadEmails} new
-                    </span>
-                  ) : undefined
-                }
-              >
-                <CorrespondencePanel bandRequestId={request.id} editable={editable} />
-              </Section>
-              </div>
-
-              <div className="min-w-0 space-y-4 sm:space-y-5">
-              <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
                 {showContactDetails && (
@@ -2742,6 +2725,23 @@ export function BandBookingCard({
                   </div>
                 </Section>
               )}
+              </div>
+
+              <div className="min-w-0 space-y-4 sm:space-y-5">
+              <div className="space-y-4 sm:space-y-5 max-lg:hidden">{notesCards}</div>
+              <Section
+                title="Correspondence"
+                headerRight={
+                  unreadEmails > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#9A5B00] px-2 py-0.5 text-[11px] font-semibold text-white">
+                      <Mail className="h-3 w-3" aria-hidden="true" />
+                      {unreadEmails} new
+                    </span>
+                  ) : undefined
+                }
+              >
+                <CorrespondencePanel bandRequestId={request.id} editable={editable} />
+              </Section>
 
               </div>
             </div>

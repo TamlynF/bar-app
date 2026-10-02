@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { format } from "date-fns";
-import { Loader2, Maximize2, MessageSquare, StickyNote } from "lucide-react";
+import { ChevronDown, Loader2, Maximize2, MessageSquare, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ export type InternalNote = {
   created_at: string;
   author?: { full_name: string | null } | { full_name: string | null }[] | null;
 };
+
+const COLLAPSED_COUNT = 5;
 
 const WIDGET_SHADOW =
   "shadow-[0_1px_0_rgba(32,35,26,0.08),0_10px_20px_-12px_rgba(32,35,26,0.45)] transition-shadow hover:shadow-[0_1px_0_rgba(32,35,26,0.08),0_14px_24px_-12px_rgba(32,35,26,0.5)]";
@@ -231,14 +233,11 @@ export function InternalNotesPanel({
 }) {
   const [draft, setDraft] = useState("");
   const [isPending, startTransition] = useTransition();
-  const listRef = useRef<HTMLUListElement>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const ordered = [...notes].sort((a, b) => a.created_at.localeCompare(b.created_at));
-
-  useEffect(() => {
-    const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
-  }, [notes.length]);
+  const overflowing = ordered.length > COLLAPSED_COUNT;
+  const shown = showAll || !overflowing ? ordered : ordered.slice(-COLLAPSED_COUNT);
 
   function run(work: () => Promise<void>, done: () => void) {
     startTransition(async () => {
@@ -271,8 +270,8 @@ export function InternalNotesPanel({
       </div>
 
       {ordered.length > 0 && (
-        <ul ref={listRef} className="max-h-33 overflow-y-auto sm:max-h-56">
-          {ordered.map((note) => (
+        <ul>
+          {shown.map((note) => (
             <TeamNoteRow
               key={note.id}
               note={note}
@@ -324,6 +323,18 @@ export function InternalNotesPanel({
         </div>
       ) : (
         ordered.length === 0 && <p className="px-4 py-2.5 text-[13px] text-admin-muted">No notes yet.</p>
+      )}
+
+      {overflowing && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-[#EED891] bg-[#FCEFC2] px-4 text-[12px] font-bold text-[#9A5B00] transition-colors hover:bg-[#FCE9A6] focus-visible:bg-[#FCE9A6] focus-visible:outline-none sm:min-h-8"
+        >
+          {showAll ? "View less" : `View all ${ordered.length} notes`}
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")} aria-hidden="true" />
+        </button>
       )}
     </div>
   );
