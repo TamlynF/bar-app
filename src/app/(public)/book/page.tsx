@@ -8,7 +8,6 @@ import { PageHeader } from "@/components/editorial/page-header";
 import { DateChip } from "@/components/editorial/date-chip";
 import { cardIcon } from "@/lib/booking-card-icons";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
-import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
   title: "Book",
@@ -339,16 +338,6 @@ export default async function BookingHubPage() {
           </div>
         )}
 
-        <div className="mt-16 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-3 text-stone-500">
-            <div className="h-px w-6 bg-stone-500/40" />
-            <CompanyWordmark className="h-3.5 opacity-60" />
-            <div className="h-px w-6 bg-stone-500/40" />
-          </div>
-          <p className="text-[8px] font-bold tracking-widest text-stone-500 uppercase">
-            Licensed Venue · Please Drink Responsibly
-          </p>
-        </div>
       </div>
     </main>
   );

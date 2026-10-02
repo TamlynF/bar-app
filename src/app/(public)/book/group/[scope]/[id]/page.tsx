@@ -296,16 +296,6 @@ export default async function GroupedBookingPage ({
           </div>
         </div>
 
-        <div className='mt-auto flex flex-col items-center gap-4 pt-6 pb-4 sm:mb-6 sm:pt-8 sm:pb-0'>
-          <div className='flex items-center gap-4 text-stone-800'>
-            <div className='h-px w-6 bg-stone-800/50' />
-            <CompanyWordmark className='h-3.5 opacity-50' />
-            <div className='h-px w-6 bg-stone-800/50' />
-          </div>
-          <p className='text-[8px] tracking-widest text-stone-600 uppercase opacity-30'>
-            Licensed Venue • Please Drink Responsibly
-          </p>
-        </div>
       </div>
     </main>
   )
