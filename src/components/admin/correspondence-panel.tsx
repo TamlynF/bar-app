@@ -23,6 +23,7 @@ const KIND_LABELS: Record<string, string> = {
 };
 
 const LONG_BODY_CHARS = 420;
+const LONG_BODY_LINES = 8;
 
 function senderName(m: CorrespondenceMessage): string {
   if (m.direction === "outbound") return m.sentByName ?? "Don Fenticas";
@@ -40,7 +41,7 @@ function MessageItem({ message, showRequestLink }: { message: CorrespondenceMess
   const [expanded, setExpanded] = useState(false);
   const inbound = message.direction === "inbound";
   const { body, quoted } = inbound ? splitQuotedReply(message.textBody) : { body: message.textBody, quoted: "" };
-  const isLong = body.length > LONG_BODY_CHARS;
+  const isLong = body.length > LONG_BODY_CHARS || body.split("\n").length > LONG_BODY_LINES;
   const kindLabel = message.kind ? KIND_LABELS[message.kind] : undefined;
   const unread = inbound && !message.readAt;
 

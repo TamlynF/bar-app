@@ -68,6 +68,7 @@ export default function BandBookingListClient({
     setFilters((f) => ({ ...f, ...patch }));
 
   const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(() => new Set());
+  const [pinned, setPinned] = useState<{ id: string; status: string } | null>(null);
   const toggleColumn = (col: string) =>
     setCollapsedColumns((prev) => {
       const next = new Set(prev);
@@ -153,9 +154,19 @@ export default function BandBookingListClient({
 
   const grouped = useMemo(() => {
     const map = new Map<string, BandRequest[]>(COLUMNS.map((c) => [c, []]));
-    for (const r of searchedRequests) map.get(normStatus(r.status))?.push(r);
+    for (const r of searchedRequests) {
+      const status = pinned?.id === r.id ? pinned.status : normStatus(r.status);
+      map.get(status)?.push(r);
+    }
     return map;
-  }, [searchedRequests]);
+  }, [searchedRequests, pinned]);
+
+  const pinWhileOpen = useCallback((req: BandRequest, open: boolean) => {
+    setPinned((p) => {
+      if (open) return p?.id === req.id ? p : { id: req.id, status: normStatus(req.status) };
+      return p?.id === req.id ? null : p;
+    });
+  }, []);
 
   const mountedAt = useRef<number | null>(null);
   const clientNow = useCallback(() => (mountedAt.current ??= Date.now()), []);
@@ -421,6 +432,7 @@ export default function BandBookingListClient({
                         wide={spreadColumns}
                         lifecycle={lifecycles.get(req.id) ?? null}
                         maxVideoBytes={maxVideoBytes}
+                        onSheetOpenChange={(open) => pinWhileOpen(req, open)}
                       />
                     ))
                   )

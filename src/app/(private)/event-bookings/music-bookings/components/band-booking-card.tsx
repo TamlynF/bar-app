@@ -729,11 +729,13 @@ export function BandBookingCard({
   wide = false,
   lifecycle = null,
   maxVideoBytes,
+  onSheetOpenChange,
 }: {
   request: BandRequest;
   wide?: boolean;
   lifecycle?: BandLifecycleStage | null;
   maxVideoBytes: number;
+  onSheetOpenChange?: (open: boolean) => void;
 }) {
   const maxVideoMb = megabytes(maxVideoBytes);
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
@@ -814,7 +816,8 @@ export function BandBookingCard({
   const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
   function setSheetOpen(next: boolean) {
-    setOpen(next);
+    if (next) React.startTransition(() => setOpen(true));
+    else setOpen(false);
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
@@ -828,6 +831,10 @@ export function BandBookingCard({
   useEffect(() => {
     if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
   }, [openParam, request.id]);
+
+  useEffect(() => {
+    onSheetOpenChange?.(open);
+  }, [open, onSheetOpenChange]);
 
   const eventHref = request.event_id
     ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`

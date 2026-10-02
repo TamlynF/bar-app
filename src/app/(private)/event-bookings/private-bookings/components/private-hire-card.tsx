@@ -529,7 +529,13 @@ function EmailWithNote({
 
 const LIST_HREF = "/event-bookings/private-bookings";
 
-export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
+export function PrivateHireCard({
+  request,
+  onSheetOpenChange,
+}: {
+  request: PrivateHireRequest;
+  onSheetOpenChange?: (open: boolean) => void;
+}) {
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -667,7 +673,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   };
 
   function setSheetOpen(next: boolean) {
-    setOpen(next);
+    if (next) React.startTransition(() => setOpen(true));
+    else setOpen(false);
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
@@ -681,6 +688,10 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   useEffect(() => {
     if (openParam === request.id) window.history.replaceState(null, "", LIST_HREF);
   }, [openParam, request.id]);
+
+  useEffect(() => {
+    onSheetOpenChange?.(open);
+  }, [open, onSheetOpenChange]);
 
   useEffect(() => {
     if (isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime) return;

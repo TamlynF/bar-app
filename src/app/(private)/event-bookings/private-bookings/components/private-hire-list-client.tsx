@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Search, Inbox, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrivateHireCard, type PrivateHireRequest } from "./private-hire-card";
@@ -65,6 +65,7 @@ export default function PrivateHireListClient({
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
     () => new Set(initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean))
   );
+  const [pinned, setPinned] = useState<{ id: string; status: string } | null>(null);
 
   const toggleStatusFilter = (status: string) => {
     const next = new Set(activeStatusFilters);
@@ -93,9 +94,19 @@ export default function PrivateHireListClient({
 
   const grouped = useMemo(() => {
     const map = new Map<string, PrivateHireRequest[]>(COLUMNS.map((c) => [c, []]));
-    for (const r of searchedRequests) map.get(normStatus(r.status))?.push(r);
+    for (const r of searchedRequests) {
+      const status = pinned?.id === r.id ? pinned.status : normStatus(r.status);
+      map.get(status)?.push(r);
+    }
     return map;
-  }, [searchedRequests]);
+  }, [searchedRequests, pinned]);
+
+  const pinWhileOpen = useCallback((req: PrivateHireRequest, open: boolean) => {
+    setPinned((p) => {
+      if (open) return p?.id === req.id ? p : { id: req.id, status: normStatus(req.status) };
+      return p?.id === req.id ? null : p;
+    });
+  }, []);
 
   const totalShown = visibleColumns.reduce((n, c) => n + (grouped.get(c)?.length ?? 0), 0);
 
@@ -229,7 +240,9 @@ export default function PrivateHireListClient({
                     Nothing here
                   </p>
                 ) : (
-                  items.map((req) => <PrivateHireCard key={req.id} request={req} />)
+                  items.map((req) => (
+                    <PrivateHireCard key={req.id} request={req} onSheetOpenChange={(open) => pinWhileOpen(req, open)} />
+                  ))
                 )}
               </section>
             );
