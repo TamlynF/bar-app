@@ -29,6 +29,7 @@ import { attempt } from "@/lib/attempt";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,17 +177,19 @@ const ROW = "flex items-center justify-between gap-3 border-b border-[#D8D5C8] p
 const ROW_LABEL = "shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]";
 const HEADER_ICON_BUTTON =
   "flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9";
-const SUBTLE_PILL = "rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted";
+const SUBTLE_PILL = "rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted";
 
 function Section({
   title,
   headerRight,
   className,
+  hint,
   children,
 }: {
   title: string;
   headerRight?: React.ReactNode;
   className?: string;
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
@@ -194,17 +197,44 @@ function Section({
     <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
       <div
         className={cn(
-          "flex min-h-12 w-full items-center gap-3 bg-white px-4 py-2 transition-colors has-[button:active]:bg-admin-surface sm:px-5",
+          "flex min-h-12 w-full items-center gap-3 bg-admin-primary-soft px-4 py-2 transition-colors has-[button:active]:bg-[#D9E2C8] sm:px-5",
           open && "border-b border-[#D8D5C8]"
         )}
       >
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
-        >
-          <span className="font-bold text-[14px] text-admin-ink">{title}</span>
-        </button>
+        <div className="flex flex-1 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center text-left transition-all hover:brightness-95"
+          >
+            <span className="font-bold text-[14px] text-admin-ink">{title}</span>
+          </button>
+          {hint && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`About ${title}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-white/70 hover:text-admin-primary max-sm:h-11 max-sm:w-11"
+                  >
+                    <Info className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="start" className="leading-snug">
+                  {hint}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => setOpen((o) => !o)}
+            className="min-h-8 flex-1 self-stretch"
+          />
+        </div>
         {headerRight}
         <button
           type="button"
@@ -917,6 +947,16 @@ export function MusicActSheet({
                 <Section
                   title="Act media"
                   headerRight={<span className={SUBTLE_PILL}>{videos.length}/{MAX_VIDEOS} videos</span>}
+                  hint={
+                    <>
+                      <p className="font-semibold">
+                        Videos: {videos.length}/{MAX_VIDEOS}
+                      </p>
+                      <p className="text-admin-muted">
+                        MP4, WebM or MOV - max {maxVideoMb} MB each. Applied when you hit Save.
+                      </p>
+                    </>
+                  }
                 >
                   <TextRow
                     label="Spotify"
@@ -1091,9 +1131,7 @@ export function MusicActSheet({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[12px] text-admin-muted">
-                        No videos yet. MP4, WebM or MOV, up to {maxVideoMb} MB each.
-                      </p>
+                      <p className="text-[12px] text-admin-muted">No videos yet.</p>
                     )}
                   </div>
                 </Section>

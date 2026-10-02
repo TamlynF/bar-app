@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Music2,
   Link2,
+  Check,
   CheckCircle2,
   XCircle,
   Clock3,
@@ -52,6 +53,7 @@ import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-i
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
@@ -313,61 +315,128 @@ const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
 const PIPELINE: BandStatus[] = ["new", "reviewing", "offered", "booked"];
 
-type StageTone = "current" | "past" | "future";
+const STAGE_SOLID: Record<string, string> = {
+  new: "bg-sky-600",
+  reviewing: "bg-amber-600",
+  offered: "bg-purple-600",
+  booked: "bg-green-600",
+  declined: "bg-red-600",
+};
 
-function StageChip({
+const STAGE_ACTION_LABEL: Partial<Record<BandStatus, string>> = {
+  reviewing: "Start review",
+  offered: "Send offer",
+  booked: "Mark as booked",
+};
+
+function stageHint(status: string, blocker?: string): string {
+  switch (status) {
+    case "new":
+      return "New application. Review it, then send an offer or decline.";
+    case "reviewing":
+      return "Under review. Send an offer when you're ready, or decline.";
+    case "offered":
+      return blocker
+        ? `Offer sent. ${blocker}`
+        : "Offer sent. Mark it as booked once the band confirms.";
+    case "booked":
+      return "Booked and on the schedule.";
+    case "declined":
+      return "Declined. Reopen it to move it back into review.";
+    default:
+      return "";
+  }
+}
+
+function StepNode({
   stage,
+  index,
   tone,
-  reason,
-  isPending,
-  anyPending,
-  onSelect,
-  onBlockedClick,
+  title,
+  onClick,
+  pending,
+  disabled,
 }: {
   stage: BandStatus;
-  tone: StageTone;
-  reason: string | null;
-  isPending: boolean;
-  anyPending: boolean;
-  onSelect: (next: BandStatus) => void;
-  onBlockedClick?: () => void;
+  index: number;
+  tone: "current" | "past" | "future";
+  title: string;
+  onClick?: () => void;
+  pending: boolean;
+  disabled: boolean;
 }) {
-  const t = statusTheme[stage];
-  const interactive = tone !== "current" && !reason;
-  const nudges = !interactive && tone !== "current" && !!onBlockedClick;
+  const label = statusTheme[stage]?.label ?? stage;
+
+  if (tone === "current") {
+    return (
+      <span
+        aria-current="step"
+        title={title}
+        className={cn(
+          "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold text-white shadow-sm",
+          STAGE_SOLID[stage]
+        )}
+      >
+        <span className="h-2 w-2 shrink-0 rounded-full bg-white" aria-hidden="true" />
+        {label}
+      </span>
+    );
+  }
+
+  const content = (
+    <>
+      {pending ? (
+        <Loader2 className="h-6 w-6 shrink-0 animate-spin p-0.5 text-[#34451F]" />
+      ) : tone === "past" ? (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#34451F] text-white">
+          <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
+        </span>
+      ) : (
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#D8D5C8] bg-white text-[11px] font-bold text-admin-muted tabular-nums">
+          {index + 1}
+        </span>
+      )}
+      <span
+        className={cn(
+          "text-[13px] font-semibold whitespace-nowrap max-sm:sr-only",
+          tone === "past" ? "text-admin-ink" : "text-admin-muted"
+        )}
+      >
+        {label}
+      </span>
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <span title={title} className="inline-flex shrink-0 items-center gap-2 px-1.5 py-1">
+        {content}
+      </span>
+    );
+  }
 
   return (
     <button
       type="button"
-      disabled={anyPending || (!interactive && !nudges)}
-      onClick={() => (interactive ? onSelect(stage) : onBlockedClick?.())}
-      title={reason ?? `Move to ${t.label}`}
-      aria-current={tone === "current" ? "step" : undefined}
-      aria-disabled={!interactive || undefined}
-      className={cn(
-        "flex h-12 shrink-0 items-center gap-2 rounded-full border-2 px-3.5 transition-all sm:h-10",
-        tone === "current" && cn(t.bg, t.text, t.border),
-        tone === "past" && "border-[#D8D5C8] bg-white text-[#5E6654]",
-        tone === "future" && "border-transparent text-[#5E6654]/45",
-        interactive
-          ? cn(
-              "cursor-pointer hover:brightness-95",
-              tone === "future" && "border-dashed border-[#34451F]/30 text-[#34451F]"
-            )
-          : nudges
-            ? "cursor-pointer border-dashed border-amber-300 text-amber-600/70 hover:bg-amber-50 hover:text-amber-700"
-            : "cursor-default"
-      )}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-1.5 py-1 transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-60 sm:min-h-9 sm:pr-2.5"
     >
-      {isPending ? (
-        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-      ) : tone === "past" ? (
-        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
-      ) : (
-        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#D8D5C8]")} />
-      )}
-      <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
+      {content}
     </button>
+  );
+}
+
+function StepConnector({ done }: { done: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "w-3 shrink-0 sm:w-8",
+        done ? "h-0.5 rounded-full bg-[#34451F]" : "h-0 border-t-2 border-dashed border-[#D8D5C8]"
+      )}
+    />
   );
 }
 
@@ -391,121 +460,167 @@ function StageStepper({
   const transitions = BAND_TRANSITIONS[status as BandStatus] ?? [];
   const currentLabel = statusTheme[status]?.label ?? status;
   const reachable = (s: BandStatus) => transitions.some((t) => t.next === s);
-
-  const blockedReason = (s: BandStatus): string | null => {
-    if (!reachable(s)) return `Not available from ${currentLabel}`;
-    return blockers[s] ?? null;
-  };
-
-  const chip = (s: BandStatus, tone: StageTone) => {
-    const slotFixable = reachable(s) && !!blockers[s];
-    return (
-      <StageChip
-        key={s}
-        stage={s}
-        tone={tone}
-        reason={tone === "current" ? "Current stage" : blockedReason(s)}
-        isPending={pendingStage === s}
-        anyPending={!!pendingStage}
-        onSelect={onSelect}
-        onBlockedClick={slotFixable ? onRevealSlot : undefined}
-      />
-    );
-  };
-
   const idx = PIPELINE.indexOf(status as BandStatus);
+  const isDeclined = idx === -1;
+  const busy = !!pendingStage;
 
-  if (idx === -1) {
-    const t = statusTheme[status];
-    if (!t) return null;
-    const exits = transitions.filter((tr) => PIPELINE.includes(tr.next));
-    return (
-      <div className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto" aria-label={`Status: ${t.label}`}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-current="step"
-              title="Decline reason for applicant - click to view or edit"
-              className={cn(
-                "relative flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 transition-all hover:brightness-95 sm:h-10",
-                t.bg,
-                t.text,
-                t.border
-              )}
-            >
-              <span className={cn("h-2 w-2 shrink-0 rounded-full", t.dot)} />
-              <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
-              {declineReason.trim() && (
-                <BellRing
-                  aria-label="A reason has been recorded"
-                  className="absolute -top-1.5 -right-1.5 h-4 w-4 fill-yellow-300 text-yellow-500"
-                />
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0 sm:w-96">
-            <span className="flex items-center gap-1.5 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
-              <MessageSquareQuote className="h-3.5 w-3.5" />
-              Decline Reason for Applicant
-            </span>
-            <div className="p-3">
-              <textarea
-                aria-label="Decline reason for applicant"
-                value={declineReason}
-                onChange={(e) => onDeclineReasonChange(e.target.value)}
-                rows={4}
-                placeholder="The reason given to the band when this was declined..."
-                className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
-              />
-              <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">
-                Saved when you hit Save Changes.
-              </p>
-            </div>
-          </PopoverContent>
-        </Popover>
-        {exits.map((tr) => (
-          <React.Fragment key={tr.next}>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#5E6654]/30" aria-hidden="true" />
-            {chip(tr.next, "future")}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  }
+  const primary = transitions.find((t) => t.primary) ?? (isDeclined ? transitions[0] : undefined);
+  const primaryBlocker = primary ? blockers[primary.next] : undefined;
+  const hint = stageHint(status, isDeclined ? undefined : primaryBlocker);
+
+  const stepAction = (s: BandStatus) => {
+    if (!reachable(s)) return { title: `Not available from ${currentLabel}`, onClick: undefined };
+    const blocker = blockers[s];
+    if (blocker) return { title: blocker, onClick: onRevealSlot };
+    return { title: `Move to ${statusTheme[s]?.label ?? s}`, onClick: () => onSelect(s) };
+  };
 
   return (
-    <div
-      className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto"
-      aria-label={`Stage ${idx + 1} of ${PIPELINE.length}: ${currentLabel}`}
-    >
-      {PIPELINE.map((s, i) => (
-        <React.Fragment key={s}>
-          {i > 0 && (
-            <ArrowRight
-              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#34451F]" : "text-[#5E6654]/30")}
-              aria-hidden="true"
-            />
-          )}
-          {chip(s, i === idx ? "current" : i < idx ? "past" : "future")}
-        </React.Fragment>
-      ))}
+    <div className="mt-3 rounded-2xl border border-admin-line bg-admin-surface/50 px-3 py-2.5 sm:px-4">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="shrink-0 leading-tight">
+            <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+              {isDeclined ? "Status" : "Stage"}
+            </p>
+            <p className="text-[13px] font-bold text-admin-ink tabular-nums">
+              {isDeclined ? "Closed" : `${idx + 1} of ${PIPELINE.length}`}
+            </p>
+          </div>
 
-      {reachable("declined") && (
-        <button
-          type="button"
-          disabled={!!pendingStage}
-          onClick={() => onSelect("declined")}
-          title="Decline application - a terminal exit, not a pipeline step"
-          className="ml-auto flex h-12 shrink-0 items-center gap-2 rounded-full border-2 border-dashed border-red-300 bg-red-50 px-3.5 text-red-600 transition-colors hover:bg-red-100 disabled:pointer-events-none disabled:opacity-50 sm:h-10"
-        >
-          {pendingStage === "declined" ? (
-            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-          ) : (
-            <XCircle className="h-3.5 w-3.5 shrink-0" />
+          <ol
+            className="no-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto sm:gap-1.5"
+            aria-label={isDeclined ? "Status: Declined" : `Stage ${idx + 1} of ${PIPELINE.length}: ${currentLabel}`}
+          >
+            {isDeclined ? (
+              <li className="flex items-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-current="step"
+                      title="Decline reason for applicant - click to view or edit"
+                      className={cn(
+                        "relative inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:brightness-95",
+                        STAGE_SOLID.declined
+                      )}
+                    >
+                      <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Declined
+                      {declineReason.trim() && (
+                        <BellRing
+                          aria-label="A reason has been recorded"
+                          className="absolute -top-1.5 -right-1.5 h-4 w-4 fill-yellow-300 text-yellow-500"
+                        />
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0 sm:w-96">
+                    <span className="flex items-center gap-1.5 border-b border-[#D8D5C8] bg-admin-surface px-4 py-2.5 text-[13px] font-bold text-admin-ink">
+                      <MessageSquareQuote className="h-3.5 w-3.5" />
+                      Decline reason for applicant
+                    </span>
+                    <div className="p-3">
+                      <textarea
+                        aria-label="Decline reason for applicant"
+                        value={declineReason}
+                        onChange={(e) => onDeclineReasonChange(e.target.value)}
+                        rows={4}
+                        placeholder="The reason given to the band when this was declined..."
+                        className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
+                      />
+                      <p className="mt-1.5 text-[12px] leading-snug text-admin-muted">Saved when you hit Save.</p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </li>
+            ) : (
+              PIPELINE.map((s, i) => {
+                const tone = i === idx ? "current" : i < idx ? "past" : "future";
+                const action = tone === "current" ? { title: "Current stage", onClick: undefined } : stepAction(s);
+                return (
+                  <li key={s} className="flex items-center gap-1 sm:gap-1.5">
+                    {i > 0 && <StepConnector done={i <= idx} />}
+                    <StepNode
+                      stage={s}
+                      index={i}
+                      tone={tone}
+                      title={action.title}
+                      onClick={action.onClick}
+                      pending={pendingStage === s}
+                      disabled={busy}
+                    />
+                  </li>
+                );
+              })
+            )}
+          </ol>
+        </div>
+
+        <div className="flex items-center gap-2 lg:ml-auto">
+          {reachable("declined") && (
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onSelect("declined")}
+                title="Decline this application"
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold text-[#B33A32] transition-colors hover:bg-admin-error-bg disabled:pointer-events-none disabled:opacity-50 sm:h-9"
+              >
+                {pendingStage === "declined" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Decline
+              </button>
+              {primary && <span className="h-6 w-px shrink-0 bg-admin-line" aria-hidden="true" />}
+            </>
           )}
-          <span className="font-black text-[10px] tracking-widest uppercase">Decline</span>
-        </button>
+
+          {primary &&
+            (primaryBlocker ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onRevealSlot}
+                title={primaryBlocker}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 text-[13px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 lg:flex-initial"
+              >
+                <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {primary.next === "booked" ? "Pick a slot to book" : "Fix the slot"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onSelect(primary.next)}
+                className={cn(
+                  "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-[13px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-9 lg:flex-initial",
+                  isDeclined
+                    ? "border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8]"
+                    : "bg-[#34451F] text-white shadow-sm hover:bg-[#283719]"
+                )}
+              >
+                {pendingStage === primary.next ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : isDeclined ? (
+                  <Undo2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                ) : null}
+                {isDeclined ? "Reopen" : (STAGE_ACTION_LABEL[primary.next] ?? primary.label)}
+                {!isDeclined && pendingStage !== primary.next && (
+                  <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+                )}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {hint && (
+        <p
+          className={cn(
+            "mt-2 text-[12px] leading-snug",
+            !isDeclined && primaryBlocker ? "font-semibold text-amber-800" : "text-admin-muted"
+          )}
+        >
+          {hint}
+        </p>
       )}
     </div>
   );
@@ -651,12 +766,14 @@ function Section({
   defaultOpen = true,
   className,
   headerRight,
+  hint,
   children,
 }: {
   title: string;
   defaultOpen?: boolean;
   className?: string;
   headerRight?: React.ReactNode;
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -664,17 +781,44 @@ function Section({
     <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
       <div
         className={cn(
-          "flex min-h-12 w-full items-center gap-3 bg-white px-4 py-2 transition-colors has-[button:active]:bg-admin-surface sm:px-5",
+          "flex min-h-12 w-full items-center gap-3 bg-admin-primary-soft px-4 py-2 transition-colors has-[button:active]:bg-[#D9E2C8] sm:px-5",
           open && "border-b border-[#D8D5C8]"
         )}
       >
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
-        >
-          <span className="font-bold text-[14px] text-admin-ink">{title}</span>
-        </button>
+        <div className="flex flex-1 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center text-left transition-all hover:brightness-95"
+          >
+            <span className="font-bold text-[14px] text-admin-ink">{title}</span>
+          </button>
+          {hint && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={`About ${title}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-white/70 hover:text-admin-primary max-sm:h-11 max-sm:w-11"
+                  >
+                    <Info className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="start" className="leading-snug">
+                  {hint}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            onClick={() => setOpen((o) => !o)}
+            className="min-h-8 flex-1 self-stretch"
+          />
+        </div>
         {headerRight}
         <button
           type="button"
@@ -1423,7 +1567,7 @@ export function BandBookingCard({
         <Section
           title="Notes from booking"
           headerRight={
-            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+            <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
               From applicant
             </span>
           }
@@ -1435,7 +1579,7 @@ export function BandBookingCard({
         <Section
           title="Internal notes"
           headerRight={
-            <span className="rounded-md bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
+            <span className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-admin-muted">
               Staff only{bandNoteList.length > 0 && ` · ${bandNoteList.length}`}
             </span>
           }
@@ -1882,7 +2026,6 @@ export function BandBookingCard({
                 </Popover>
               </div>
             </div>
-            <div className="mt-3 border-t border-[#D8D5C8]" />
             <StageStepper
               status={status}
               onSelect={handleAction}
@@ -2164,15 +2307,7 @@ export function BandBookingCard({
                       </span>
                     )}
                   </div>
-                  {editable &&
-                    slotWarning &&
-                    (showSlotWarning ? (
-                      <FieldMessage warning={slotWarning} />
-                    ) : (
-                      <p className="mt-1.5 text-right text-[11px] leading-snug text-[#5E6654]">
-                        Optional for now - needed before this act can be booked.
-                      </p>
-                    ))}
+                  {editable && slotWarning && showSlotWarning && <FieldMessage warning={slotWarning} />}
                   {visibleClashes.length > 0 && (
                     <div className="mt-2">
                       <ClashList clashes={visibleClashes} />
@@ -2184,7 +2319,21 @@ export function BandBookingCard({
               <div className="space-y-4 sm:space-y-5 lg:hidden">{notesCards}</div>
 
               {(showSocials || sheetVideos.length > 0) && (
-                <Section title="Act Media">
+                <Section
+                  title="Act Media"
+                  hint={
+                    editable ? (
+                      <>
+                        <p className="font-semibold">
+                          Videos: {sheetVideos.length}/{MAX_VIDEOS}
+                        </p>
+                        <p className="text-admin-muted">
+                          MP4, WebM or MOV - max {maxVideoMb} MB each. Applied when you hit Save.
+                        </p>
+                      </>
+                    ) : undefined
+                  }
+                >
                   {showSocials && (
                     <div className="flex items-center gap-1.5 px-4 py-2 sm:px-5">
                       {SOCIAL_ORDER.map((key) => {
@@ -2264,9 +2413,9 @@ export function BandBookingCard({
                               type="button"
                               aria-label="Edit social links"
                               title="Edit social links"
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#34451F] bg-white text-[#34451F] transition-colors hover:bg-[#E5EBD8] focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none max-sm:h-11 max-sm:w-11"
                             >
-                              <Pencil className="h-3 w-3" />
+                              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#D8D5C8] bg-white p-3">
@@ -2326,12 +2475,7 @@ export function BandBookingCard({
                   {(sheetVideos.length > 0 || editable) && (
                     <div className={cn(showSocials && "border-t border-[#D8D5C8]")}>
                       {(sheetVideos.length > 0 || (editable && sheetVideos.length < MAX_VIDEOS)) && (
-                        <div
-                          className={cn(
-                            "grid grid-cols-2 gap-3 px-4 pt-3 sm:grid-cols-3 sm:px-5",
-                            !(editable && sheetVideos.length < MAX_VIDEOS) && "pb-3"
-                          )}
-                        >
+                        <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
                           {sheetVideos.map((v, i) => (
                             <div key={v.id} className="min-w-0">
                               {v.url ? (
@@ -2422,13 +2566,6 @@ export function BandBookingCard({
                           )}
                         </div>
                       )}
-
-                      {editable && sheetVideos.length < MAX_VIDEOS && (
-                        <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5E6654]/70 sm:px-5">
-                          MP4, WebM or MOV - max {maxVideoMb} MB each. Applied when you hit Save Changes.{" "}
-                          {sheetVideos.length}/{MAX_VIDEOS}
-                        </p>
-                      )}
                     </div>
                   )}
                 </Section>
@@ -2501,7 +2638,7 @@ export function BandBookingCard({
                   type="button"
                   onClick={() => setShowContactDetails((v) => !v)}
                   aria-expanded={showContactDetails}
-                  className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
+                  className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F2F5EC] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-admin-primary-soft hover:text-[#20231A] sm:px-5"
                 >
                   {showContactDetails ? "View less" : "View more"}
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showContactDetails && "rotate-180")} />
@@ -2577,7 +2714,7 @@ export function BandBookingCard({
                         type="button"
                         onClick={() => setShowBankDetails((v) => !v)}
                         aria-expanded={showBankDetails}
-                        className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
+                        className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F2F5EC] px-4 py-1.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654] transition-colors last:border-0 hover:bg-admin-primary-soft hover:text-[#20231A] sm:px-5"
                       >
                         {showBankDetails ? "View less" : "View more"}
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBankDetails && "rotate-180")} />
