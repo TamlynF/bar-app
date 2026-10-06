@@ -154,6 +154,7 @@ export async function sendCorrespondenceEmail(p: {
     to: p.to,
     subject: p.subject,
     html: p.html,
+    text: htmlToPlainText(p.html),
     ...(replyTo ? { replyTo } : {}),
     ...(bcc ? { bcc } : {}),
     ...(headers ? { headers } : {}),
