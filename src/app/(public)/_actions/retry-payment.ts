@@ -1,28 +1,14 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { squareClient, squareErrorDetail } from "@/lib/square";
-import {
-  buildBuyerPhone,
-  buildCheckoutOptions,
-  buildEventOrder,
-  buildPaymentNote,
-  buildPrePopulatedData,
-} from "@/lib/square-order";
-import { getContactEmail } from "@/lib/company-info";
+import { buildBuyerPhone } from "@/lib/square-order";
+import { startBookingCheckout } from "@/lib/start-booking-checkout";
 import { getFreeTablesForEvent, seatingApplies, type SeatingEvent } from "@/lib/table-allocation";
 import { hasVenueSpaceFor } from "@/lib/update-fully-booked";
 import { releaseUnpaidBooking } from "@/lib/release-unpaid-booking";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
-
-const appUrl = process.env.NEXT_PUBLIC_SITE_URL
-  ? process.env.NEXT_PUBLIC_SITE_URL
-  : process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
 
 export type RetryPaymentResult =
   | { checkoutUrl: string }
@@ -118,37 +104,21 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
   const title = event.title || (behavior === "bingo" ? "Music Bingo" : "Event");
   const buyerPhone = buildBuyerPhone(contact.country_code, contact.phone_no);
 
-  let checkoutUrl: string | undefined;
-  let orderId: string | undefined;
-  try {
-    const { paymentLink } = await squareClient.checkout.paymentLinks.create({
-      idempotencyKey: randomUUID(),
-      paymentNote: buildPaymentNote({ bookingId: Number(booking.id), title, eventDate: event.date }),
-      order: buildEventOrder({
-        locationId: process.env.SQUARE_LOCATION_ID!,
-        bookingId: Number(booking.id),
-        eventId,
-        title,
-        eventDate: event.date,
-        amountPence: paymentAmountPence,
-        groupSize,
-        fullName: contact.full_name,
-      }),
-      checkoutOptions: buildCheckoutOptions({
-        redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: booking.id })}`,
-        supportEmail: await getContactEmail(),
-      }),
-      prePopulatedData: buildPrePopulatedData({
-        email: contact.email,
-        fullName: contact.full_name,
-        buyerPhone,
-      }),
-    });
-    checkoutUrl = paymentLink?.url;
-    orderId = paymentLink?.orderId;
-  } catch (err) {
-    console.error("[retryBookingPayment] Square payment link error:", squareErrorDetail(err));
-  }
+  const checkout = await startBookingCheckout({
+    bookingId: Number(booking.id),
+    eventId,
+    title,
+    eventDate: event.date,
+    amountPence: paymentAmountPence,
+    groupSize,
+    fullName: contact.full_name,
+    email: contact.email,
+    buyerPhone,
+    successPath: checkoutReturnPath({ eventId, bookingId: booking.id }),
+    hostedOnly: true,
+  });
+  const checkoutUrl = checkout.ok && "checkoutUrl" in checkout ? checkout.checkoutUrl : undefined;
+  const orderId = checkout.ok ? checkout.orderId : undefined;
 
   if (!checkoutUrl) {
     await releaseUnpaidBooking(supabase, { bookingId, eventId });

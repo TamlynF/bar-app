@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import SquarePaymentSheet from "@/components/square-payment-sheet";
+import type { InPagePayment } from "@/lib/square-web-payments";
 import { CountryCodeSelect } from "@/components/country-code-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatTime } from "@/lib/events-display";
@@ -71,6 +73,8 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
+  const [payment, setPayment] = useState<{ key: string; session: InPagePayment } | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
   const [isCheckingGroupName, setIsCheckingGroupName] = useState(false);
   const [groupNameError, setGroupNameError] = useState("");
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
@@ -204,11 +208,19 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     setError(null);
-    const fd = new FormData(e.currentTarget);    
+    const fd = new FormData(e.currentTarget);
+    const formKey = JSON.stringify([...fd.entries()]);
+    if (payment?.key === formKey) {
+      setPayOpen(true);
+      return;
+    }
     startTransition(async () => {
       const result = await createEventBooking(fd);
       if (result.error) {
         setError(result.error);
+      } else if (result.payment) {
+        setPayment({ key: formKey, session: result.payment });
+        setPayOpen(true);
       } else if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else if (result.success) {
@@ -592,6 +604,9 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
           </p>
         )}
       </div>
+      {payment && (
+        <SquarePaymentSheet payment={payment.session} open={payOpen} onOpenChange={setPayOpen} />
+      )}
     </form>
   );
 }

@@ -163,43 +163,6 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     }),
   },
   {
-    key: "booking.bingo.confirmed",
-    label: "Music Bingo confirmed",
-    group: "Bookings",
-    description:
-      "A Music Bingo booking is confirmed - both the free path and once a Square payment settles.",
-    recipient: "customer",
-    slots: BOOKING_SLOTS,
-    mergeFields: [...BOOKING_FIELDS, CONTACT_EMAIL],
-    defaults: slots({
-      subject: "🎫 Booking Confirmed: Music Bingo @ Don Fenticas 🎵",
-      heading: "Music Bingo",
-      greeting: "Hey {{customerName}}!",
-      intro:
-        "Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for {{groupSize}}.",
-      ctaLabel: "Manage Booking",
-      footnote:
-        "Can't make it? Please cancel at least 24 hours in advance using Manage Booking, so we can offer your place to someone else. Questions? Email us at {{contactEmail}}",
-    }),
-  },
-  {
-    key: "booking.bingo.waitlisted",
-    label: "Music Bingo waitlisted",
-    group: "Bookings",
-    description: "Music Bingo is full, so the booking goes on the waitlist.",
-    recipient: "customer",
-    slots: BOOKING_SLOTS,
-    mergeFields: BOOKING_FIELDS,
-    defaults: slots({
-      subject: "📋 You're on the Waitlist: Music Bingo @ Don Fenticas",
-      heading: "Music Bingo",
-      greeting: "Hey {{customerName}}!",
-      intro:
-        "We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!",
-      ctaLabel: "Manage Booking",
-    }),
-  },
-  {
     key: "booking.payment_pending",
     label: "Payment not finished",
     group: "Bookings",
@@ -763,8 +726,6 @@ const WIRED_SCENARIOS = new Set([
   "booking.quiz.waitlisted",
   "booking.event.confirmed",
   "booking.event.waitlisted",
-  "booking.bingo.confirmed",
-  "booking.bingo.waitlisted",
   "booking.payment_pending",
   "booking.changed.by_customer",
   "booking.changed.by_admin",

@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import SquarePaymentSheet from "@/components/square-payment-sheet";
+import type { InPagePayment } from "@/lib/square-web-payments";
 import { CountryCodeSelect } from "@/components/country-code-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
@@ -55,6 +58,8 @@ export default function EventBookingForm({ event, config }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
+  const [payment, setPayment] = useState<{ key: string; session: InPagePayment } | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
   const [isCheckingGroupName, setIsCheckingGroupName] = useState(false);
   const [groupNameError, setGroupNameError] = useState("");
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
@@ -173,10 +178,18 @@ export default function EventBookingForm({ event, config }: Props) {
     if (Object.keys(errors).length > 0) return;
     setError(null);
     const fd = new FormData(e.currentTarget);
+    const formKey = JSON.stringify([...fd.entries()]);
+    if (payment?.key === formKey) {
+      setPayOpen(true);
+      return;
+    }
     startTransition(async () => {
       const result = await createEventBooking(fd);
       if (result.error) {
         setError(result.error);
+      } else if (result.payment) {
+        setPayment({ key: formKey, session: result.payment });
+        setPayOpen(true);
       } else if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else if (result.success) {
@@ -236,6 +249,10 @@ export default function EventBookingForm({ event, config }: Props) {
   }
 
   const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder:text-(--ev-fg-dim,#44403c) focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold autofill:transition-[background-color] autofill:duration-[600000s] autofill:filter-none autofill:[-webkit-text-fill-color:#fff] autofill:caret-white";
+  const selectTriggerClasses = cn(
+    inputBaseClasses,
+    "h-auto cursor-pointer gap-2 text-left data-[state=open]:border-[#fdcc4b] data-[state=open]:ring-1 data-[state=open]:ring-[#fdcc4b]"
+  );
   const labelClasses = "block text-[10px] font-black text-(--ev-fg,#78716c) mb-2 uppercase tracking-[0.15em] ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-(--ev-fg,#57534e) transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
@@ -382,22 +399,30 @@ export default function EventBookingForm({ event, config }: Props) {
             <div className={iconContainerClasses}>
               <Users className={iconClasses} />
             </div>
-            <select
-              title={f.group_size.label}
-              name="groupSize"
-              required={f.group_size.required}
+            <Select
               value={formData.groupSize}
-              onChange={handleInputChange}
-              className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10", seatingError && "border-red-500/50")}
+              onValueChange={(value) => {
+                setError(null);
+                setFormData((prev) => ({ ...prev, groupSize: value }));
+                setFieldErrors(({ groupSize: _cleared, ...rest }) => rest);
+              }}
             >
-              {groupSizeOptions.map((n) => (
-                <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
-              ))}
-            </select>
-            {isCheckingSeating ? (
-              <Loader2 className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-[#fdcc4b]" />
-            ) : (
-              <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+              <SelectTrigger
+                aria-label={f.group_size.label}
+                className={cn(selectTriggerClasses, seatingError && "border-red-500/50")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {groupSizeOptions.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n} {n === 1 ? "person" : "people"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isCheckingSeating && (
+              <Loader2 className="pointer-events-none absolute top-1/2 right-9 h-4 w-4 -translate-y-1/2 animate-spin text-[#fdcc4b]" />
             )}
           </div>
           {seatingError && (
@@ -477,6 +502,9 @@ export default function EventBookingForm({ event, config }: Props) {
           </button>
         </div>
       </div>
+      {payment && (
+        <SquarePaymentSheet payment={payment.session} open={payOpen} onOpenChange={setPayOpen} />
+      )}
     </form>
   );
 }

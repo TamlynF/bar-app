@@ -36,13 +36,44 @@ export function formatEventDateNote(eventDate: string | null | undefined): strin
   return format(new Date(`${eventDate}T00:00:00`), "EEE d MMM yyyy");
 }
 
+export const PAYMENT_NOTE_MAX = 72;
+const NOTE_NAME_MAX = 20;
+const NOTE_TITLE_MIN = 12;
+const NOTE_SEPARATOR = " - ";
+
+export function truncateText(text: string, max: number): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+}
+
+/* Square's transaction list and phone app cut this heading short, so the
+   fixed-width parts (booking, tickets, name) lead and the event title is
+   shortened to fit PAYMENT_NOTE_MAX. The date goes first when space runs out. */
 export function buildPaymentNote(input: {
   bookingId: number;
   title: string;
+  groupSize: number;
+  fullName: string;
   eventDate?: string | null;
 }): string {
-  const date = formatEventDateNote(input.eventDate);
-  return [`Booking #${input.bookingId}`, input.title, date].filter(Boolean).join(" - ");
+  const lead = [
+    `Booking #${input.bookingId}`,
+    `${input.groupSize} ticket${input.groupSize !== 1 ? "s" : ""}`,
+    truncateText(input.fullName, NOTE_NAME_MAX),
+  ].filter(Boolean);
+  const date = input.eventDate
+    ? format(new Date(`${input.eventDate}T00:00:00`), "d MMM")
+    : undefined;
+
+  const titleRoom = (tail: string[]) =>
+    PAYMENT_NOTE_MAX - [...lead, ...tail].join(NOTE_SEPARATOR).length - NOTE_SEPARATOR.length;
+
+  const title = input.title.trim();
+  const tail = date && titleRoom([date]) >= Math.min(NOTE_TITLE_MIN, title.length) ? [date] : [];
+  const room = titleRoom(tail);
+  const parts = room > 0 && title ? [...lead, truncateText(title, room), ...tail] : [...lead, ...tail];
+  return parts.join(NOTE_SEPARATOR);
 }
 
 export interface EventOrderInput {
@@ -57,22 +88,31 @@ export interface EventOrderInput {
   currency?: Square.Currency;
 }
 
+export function formatTicketCheckoutTitle(input: {
+  title: string;
+  groupSize: number;
+  eventDate?: string | null;
+}): string {
+  const date = formatEventDateNote(input.eventDate);
+  return [formatTicketLineName(input.title, input.groupSize), date].filter(Boolean).join(" - ");
+}
+
 /* No fulfillment: Square rejects a payment link that has both a fulfillment
    and prePopulatedData (CONFLICTING_PARAMETERS), and adds a DIGITAL one itself
-   once the buyer pays. The booker is identified by ticketName instead. */
+   once the buyer pays. The booker is identified by ticketName instead.
+   One line at the group total, so checkout reads "Quiz Night - 2 tickets"
+   rather than an "Order summary (2 items)" list. */
 export function buildEventOrder(input: EventOrderInput): Square.Order {
-  const dateNote = formatEventDateNote(input.eventDate);
   return {
     locationId: input.locationId,
     referenceId: String(input.bookingId),
     ticketName: formatBookingTicketName(input.bookingId, input.fullName),
     metadata: { booking_id: String(input.bookingId), event_id: String(input.eventId) },
     lineItems: [{
-      name: formatTicketLineName(input.title, input.groupSize),
-      quantity: String(input.groupSize),
-      ...(dateNote ? { note: dateNote } : {}),
+      name: formatTicketCheckoutTitle(input),
+      quantity: "1",
       basePriceMoney: {
-        amount: BigInt(input.amountPence),
+        amount: BigInt(input.amountPence * input.groupSize),
         currency: input.currency ?? "GBP",
       },
     }],
@@ -86,6 +126,25 @@ export function buildCheckoutOptions(input: {
   return {
     redirectUrl: input.redirectUrl,
     merchantSupportEmail: input.supportEmail?.trim() || DEFAULT_CONTACT_EMAIL,
+  };
+}
+
+export function buildTicketCheckoutOptions(input: {
+  redirectUrl: string;
+  supportEmail?: string | null;
+}): Square.CheckoutOptions {
+  return {
+    ...buildCheckoutOptions(input),
+    allowTipping: false,
+    enableCoupon: false,
+    enableLoyalty: false,
+    askForShippingAddress: false,
+    acceptedPaymentMethods: {
+      applePay: true,
+      googlePay: true,
+      cashAppPay: false,
+      afterpayClearpay: false,
+    },
   };
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { settlePaidBooking } from "@/lib/settle-paid-booking";
+import { manageBookingPath } from "@/lib/booking-links";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
@@ -149,15 +150,15 @@ export async function POST(req: NextRequest) {
     const eventRaw = booking.events;
     const eventRow = (Array.isArray(eventRaw) ? eventRaw[0] : eventRaw) as { date: string; title: string } | null;
     if (contact?.email) {
-      const manageUrl = `${APP_URL}/book/bingo/manage-booking/${booking.id}`;
+      const manageUrl = `${APP_URL}${manageBookingPath(booking.id)}`;
 
       const partySize = `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`;
 
-      const slots = await renderTemplate(supabase, "booking.bingo.confirmed", {
+      const slots = await renderTemplate(supabase, "booking.event.confirmed", {
         customerName: contact.full_name,
-        eventTitle: eventRow?.title ?? "Music Bingo",
+        eventTitle: eventRow?.title ?? "Event",
         eventDate: formatEventDate(eventRow?.date ?? null),
-        groupName: contact.full_name,
+        groupName: "",
         groupSize: partySize,
         bookingId: String(booking.id),
         contactEmail: await getContactEmail(),

@@ -8,6 +8,9 @@ import {
   buildCheckoutOptions,
   buildPrePopulatedData,
   buildPaymentNote,
+  buildTicketCheckoutOptions,
+  truncateText,
+  PAYMENT_NOTE_MAX,
   formatBookingTicketName,
   type EventOrderInput,
 } from "@/lib/square-order";
@@ -99,17 +102,17 @@ describe("buildEventOrder", () => {
     const order = buildEventOrder(baseInput);
     expect(order.referenceId).toBe("42");
     expect(order.metadata).toEqual({ booking_id: "42", event_id: "7" });
-    expect(order.lineItems?.[0].name).toBe("Boxing Day Bash - 3 tickets");
+    expect(order.lineItems?.[0].name).toBe("Boxing Day Bash - 3 tickets - Sat 26 Dec 2026");
     expect(order.lineItems?.[0].name).not.toContain("42");
   });
 
-  it("prices per ticket with quantity = group size (Square multiplies)", () => {
+  it("charges the group as one line at the total, so checkout shows a single item", () => {
     const order = buildEventOrder(baseInput);
+    expect(order.lineItems).toHaveLength(1);
     const line = order.lineItems![0];
-    expect(line.quantity).toBe("3");
-    expect(line.basePriceMoney?.amount).toBe(BigInt(1500));
+    expect(line.quantity).toBe("1");
+    expect(line.basePriceMoney?.amount).toBe(BigInt(4500));
     expect(line.basePriceMoney?.currency).toBe("GBP");
-    expect(line.basePriceMoney?.amount).not.toBe(BigInt(4500));
   });
 
   it("sends no fulfillment, which Square rejects alongside prePopulatedData", () => {
@@ -120,9 +123,8 @@ describe("buildEventOrder", () => {
     expect(buildEventOrder(baseInput).ticketName).toBe("Booking #42 - Jane Doe");
   });
 
-  it("notes the event date on the line, and leaves it off when unknown", () => {
-    expect(buildEventOrder(baseInput).lineItems?.[0].note).toBe("Sat 26 Dec 2026");
-    expect(buildEventOrder({ ...baseInput, eventDate: null }).lineItems?.[0]).not.toHaveProperty("note");
+  it("leaves the date out of the line name when unknown", () => {
+    expect(buildEventOrder({ ...baseInput, eventDate: null }).lineItems?.[0].name).toBe("Boxing Day Bash - 3 tickets");
   });
 
   it("defaults the currency to GBP but honours an override", () => {
@@ -139,14 +141,65 @@ describe("formatBookingTicketName", () => {
   });
 });
 
+describe("buildTicketCheckoutOptions", () => {
+  it("strips coupon, loyalty, tipping and shipping and puts wallets on", () => {
+    const options = buildTicketCheckoutOptions({ redirectUrl: "https://example.com/r", supportEmail: "hi@bar.co.uk" });
+    expect(options).toMatchObject({
+      redirectUrl: "https://example.com/r",
+      merchantSupportEmail: "hi@bar.co.uk",
+      allowTipping: false,
+      enableCoupon: false,
+      enableLoyalty: false,
+      askForShippingAddress: false,
+      acceptedPaymentMethods: { applePay: true, googlePay: true, cashAppPay: false, afterpayClearpay: false },
+    });
+  });
+});
+
 describe("buildPaymentNote", () => {
-  it("joins booking, title and date", () => {
-    expect(buildPaymentNote({ bookingId: 42, title: "Music Bingo", eventDate: "2026-10-09" }))
-      .toBe("Booking #42 - Music Bingo - Fri 9 Oct 2026");
+  const note = { bookingId: 128, title: "The 1975 Night", groupSize: 2, fullName: "Jane Doe", eventDate: "2026-11-06" };
+
+  it("leads with booking, tickets and name, then event and date", () => {
+    expect(buildPaymentNote(note)).toBe("Booking #128 - 2 tickets - Jane Doe - The 1975 Night - 6 Nov");
+  });
+
+  it("says ticket for one", () => {
+    expect(buildPaymentNote({ ...note, groupSize: 1 })).toContain("1 ticket - ");
   });
 
   it("drops the date when there isn't one", () => {
-    expect(buildPaymentNote({ bookingId: 42, title: "Music Bingo" })).toBe("Booking #42 - Music Bingo");
+    expect(buildPaymentNote({ ...note, eventDate: null })).toBe("Booking #128 - 2 tickets - Jane Doe - The 1975 Night");
+  });
+
+  it("never exceeds the cap, shortening the event title and keeping booking, tickets and name whole", () => {
+    const long = buildPaymentNote({
+      bookingId: 99999,
+      title: "An Evening Of Extremely Long Event Titles That Go On And On Forever",
+      groupSize: 12,
+      fullName: "Bartholomew Fitzgerald",
+      eventDate: "2026-12-26",
+    });
+    expect(long.length).toBeLessThanOrEqual(PAYMENT_NOTE_MAX);
+    expect(long.startsWith("Booking #99999 - 12 tickets - Bartholomew Fitzger… - ")).toBe(true);
+    expect(long).toContain("An Evening");
+    expect(long).toMatch(/…/);
+  });
+
+  it("keeps every note well inside Square's 500-character limit", () => {
+    const huge = buildPaymentNote({ ...note, title: "x".repeat(600), fullName: "y".repeat(600) });
+    expect(huge.length).toBeLessThanOrEqual(PAYMENT_NOTE_MAX);
+  });
+});
+
+describe("truncateText", () => {
+  it("leaves short text alone and collapses whitespace", () => {
+    expect(truncateText("  The   1975  Night ", 20)).toBe("The 1975 Night");
+  });
+
+  it("cuts long text to the limit with an ellipsis", () => {
+    const cut = truncateText("Bartholomew Fitzgerald", 12);
+    expect(cut).toBe("Bartholomew…");
+    expect(cut.length).toBe(12);
   });
 });
 
@@ -161,7 +214,7 @@ describe("buildCheckoutOptions", () => {
   });
 
   it("falls back to the default when the company email is missing or blank", () => {
-    const redirectUrl = "https://example.com/book/bingo/success?bookingId=42";
+    const redirectUrl = "https://example.com/book/event/7/success?bookingId=42";
     expect(buildCheckoutOptions({ redirectUrl }).merchantSupportEmail).toBe(
       DEFAULT_CONTACT_EMAIL
     );

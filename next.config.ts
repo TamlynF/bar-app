@@ -38,6 +38,20 @@ const config = (phase: string): NextConfig => {
       "192.168.0.*",
       "172.21.240.1",
     ],
+    async redirects() {
+      return [
+        {
+          source: "/book/bingo/manage-booking/:id",
+          destination: "/manage-booking/:id",
+          permanent: true,
+        },
+        {
+          source: "/book/bingo/:path*",
+          destination: "/book",
+          permanent: true,
+        },
+      ];
+    },
   };
 
   return nextConfig;

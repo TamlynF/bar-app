@@ -77,7 +77,7 @@ If you think a new dependency is needed, **stop and ask** before installing.
 ```
 src/app/
 ├── (public)/              # No auth required, public-facing
-│   ├── book/              # Hub → quiz/band/private/bingo + per-event pages
+│   ├── book/              # Hub → quiz/band/private + per-event and grouped pages
 │   ├── gallery/
 │   ├── menu/
 │   ├── contact/
@@ -232,12 +232,12 @@ Design skills are installed project-side. Load them with the Skill tool at the r
 
 The booking pages share a public dark theme but each has its own logic:
 
-- `/book` - hub, lists quiz/bingo/band/private + upcoming bookable events
+- `/book` - hub, lists quiz/band/private + upcoming bookable events
 - `/book/quiz` - Thursday quiz booking form (free, lazy event creation, waitlist when full)
-- `/book/bingo` - Music Bingo (paid via Square, pay upfront)
 - `/book/band` - band/artist stage application (review queue)
 - `/book/private` - private hire enquiry (review queue)
 - `/book/event/[id]` - generic ticketed event booking (paid via Square)
+- `/book/group/[scope]/[id]` - grouped booking (pick a date within a type or sub-type); Music Bingo books here. The old `/book/bingo` pages are gone and `next.config.ts` redirects them (`/book/bingo/manage-booking/:id` → `/manage-booking/:id`, anything else → `/book`)
 - `/manage-booking/[id]` - public self-service (view, modify, cancel)
 
 ---

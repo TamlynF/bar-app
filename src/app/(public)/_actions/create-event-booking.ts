@@ -1,9 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { squareClient, squareErrorDetail } from "@/lib/square";
 import { SquareError } from "square";
-import { randomUUID } from "crypto";
 import { format } from "date-fns";
 import { hasVenueSpaceFor, updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
@@ -14,13 +12,8 @@ import {
 } from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import {
-  buildBuyerPhone,
-  buildCheckoutOptions,
-  buildEventOrder,
-  buildPaymentNote,
-  buildPrePopulatedData,
-} from "@/lib/square-order";
+import { buildBuyerPhone } from "@/lib/square-order";
+import { startBookingCheckout } from "@/lib/start-booking-checkout";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
 import {
@@ -247,61 +240,46 @@ export async function createEventBooking(formData: FormData) {
       return { success: true };
     }
 
-    const buyerPhone = buildBuyerPhone(countryCode, phoneNo);
+    const checkout = await startBookingCheckout({
+      bookingId: newBooking.id,
+      eventId: event.id,
+      title: event.title || "Event",
+      eventDate: event.date,
+      amountPence: paymentAmountPence,
+      groupSize,
+      fullName,
+      email,
+      buyerPhone: buildBuyerPhone(countryCode, phoneNo),
+      successPath: checkoutReturnPath({ eventId, bookingId: newBooking.id }),
+    });
 
-    let checkoutUrl: string | undefined;
-    let orderId: string | undefined;
-    try {
-      const { paymentLink } = await squareClient.checkout.paymentLinks.create({
-        idempotencyKey: randomUUID(),
-        paymentNote: buildPaymentNote({ bookingId: newBooking.id, title: event.title || "Event", eventDate: event.date }),
-        order: buildEventOrder({
-          locationId: process.env.SQUARE_LOCATION_ID!,
-          bookingId: newBooking.id,
-          eventId: event.id,
-          title: event.title || "Event",
-          eventDate: event.date,
-          amountPence: paymentAmountPence,
-          groupSize,
-          fullName,
-        }),
-        checkoutOptions: buildCheckoutOptions({
-          redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: newBooking.id })}`,
-          supportEmail: await getContactEmail(),
-        }),
-        prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
-      });
-      checkoutUrl = paymentLink?.url;
-      orderId = paymentLink?.orderId;
-    } catch (squareErr) {
+    if (!checkout.ok) {
       await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
       await supabase.from("bookings").delete().eq("id", newBooking.id);
 
-      if (isSquareAuthError(squareErr)) {
+      if (isSquareAuthError(checkout.error)) {
         const env = process.env.SQUARE_ENVIRONMENT || "sandbox (default)";
         console.error(
-          `[createEventBooking] Square rejected the payment-link request (HTTP ${squareErr.statusCode ?? "?"}, ` +
+          `[createEventBooking] Square rejected the request (HTTP ${checkout.error.statusCode ?? "?"}, ` +
             `AUTHENTICATION_ERROR). SQUARE_ENVIRONMENT=${env}, SQUARE_LOCATION_ID=${process.env.SQUARE_LOCATION_ID}. ` +
             `If Orders/Payments work but only checkout fails, the Online Checkout API is not enabled for this ` +
             `Square app/test account - enable it (or use a full-capability sandbox test account) in the Square ` +
             `Developer Dashboard. Otherwise verify SQUARE_ACCESS_TOKEN matches SQUARE_ENVIRONMENT and restart the dev server.`
         );
-      } else {
-        console.error("[createEventBooking] Square payment link error:", squareErrorDetail(squareErr));
       }
       return { error: "We couldn't start checkout. Please try again in a moment." };
     }
 
-    if (!checkoutUrl) {
-      await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
-      await supabase.from("bookings").delete().eq("id", newBooking.id);
-      throw new Error("Failed to create payment link. Please try again.");
-    }
-
     await supabase
       .from("bookings")
-      .update({ square_order_id: orderId })
+      .update({ square_order_id: checkout.orderId })
       .eq("id", newBooking.id);
+
+    revalidatePath("/dashboard");
+
+    if ("payment" in checkout) {
+      return { payment: checkout.payment };
+    }
 
     await sendPaymentPendingEmail(supabase, {
       bookingId: newBooking.id,
@@ -314,9 +292,7 @@ export async function createEventBooking(formData: FormData) {
       amountDue: totalPence / 100,
     });
 
-    revalidatePath("/dashboard");
-
-    return { checkoutUrl };
+    return { checkoutUrl: checkout.checkoutUrl };
   } catch (err) {
     console.error("createEventBooking error:", err);
     return {
