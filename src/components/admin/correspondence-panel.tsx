@@ -54,6 +54,10 @@ const KIND_LABELS: Record<string, string> = {
   enquiry: "Enquiry received",
   confirmed: "Booking confirmed",
   cancelled: "Cancelled",
+  proposed: "New time proposed",
+  approved: "Approved - deposit due",
+  deposit_reminder: "Deposit reminder",
+  expired: "Deposit expired",
 };
 
 const LONG_BODY_CHARS = 420;

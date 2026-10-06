@@ -100,12 +100,15 @@ const STATUS_TONES: Record<string, string> = {
   cancelled: "text-admin-error",
   canceled: "text-admin-error",
   rejected: "text-admin-error",
+  expired: "text-admin-error",
   new: "text-admin-warning",
   reviewing: "text-admin-warning",
   waitlisted: "text-admin-warning",
   offered: "text-admin-warning",
   pending: "text-admin-warning",
   pending_review: "text-admin-warning",
+  awaiting_customer: "text-admin-warning",
+  awaiting_deposit: "text-admin-warning",
 };
 
 function statusTone(status: string): string {

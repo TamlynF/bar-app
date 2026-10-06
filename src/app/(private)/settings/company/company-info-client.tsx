@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Image as ImageIcon,
   PoundSterling,
+  CalendarClock,
 } from "lucide-react";
 import { formatGBP } from "@/lib/events-display";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
@@ -63,6 +64,7 @@ interface CompanyInfo {
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;
+  private_hire_deposit_days: number | null;
   created_at?: string;
   created_by?: number | null;
   updated_at?: string | null;
@@ -297,6 +299,7 @@ export default function CompanyInfoClient({
     max_capacity: record?.max_capacity?.toString() ?? "",
     private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
     private_hire_deposit: record?.private_hire_deposit?.toString() ?? "",
+    private_hire_deposit_days: record?.private_hire_deposit_days?.toString() ?? "7",
   });
 
   const [form, setForm] = useState(() => emptyForm(initialData));
@@ -355,6 +358,7 @@ export default function CompanyInfoClient({
     fd.set("max_capacity", form.max_capacity);
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
     fd.set("private_hire_deposit", form.private_hire_deposit);
+    fd.set("private_hire_deposit_days", form.private_hire_deposit_days);
 
     setFormError(null);
     startTransition(async () => {
@@ -371,6 +375,7 @@ export default function CompanyInfoClient({
           max_capacity: parseInt(form.max_capacity) || null,
           private_hire_min_capacity: parseInt(form.private_hire_min_capacity) || null,
           private_hire_deposit: parseFloat(form.private_hire_deposit) || null,
+          private_hire_deposit_days: parseInt(form.private_hire_deposit_days) || 7,
           ...(res.audit ?? {}),
         });
         setIsEditing(false);
@@ -559,6 +564,11 @@ export default function CompanyInfoClient({
               icon={<PoundSterling className="h-3.5 w-3.5" />}
               label="Private hire deposit"
               value={data.private_hire_deposit ? formatGBP(Number(data.private_hire_deposit)) : "-"}
+            />
+            <Row
+              icon={<CalendarClock className="h-3.5 w-3.5" />}
+              label="Deposit due within"
+              value={`${data.private_hire_deposit_days ?? 7} days`}
             />
             <Row
               icon={<Shapes className="h-3.5 w-3.5" />}
@@ -856,6 +866,18 @@ export default function CompanyInfoClient({
                 onChange={(e) => update("private_hire_deposit", e.target.value)}
                 aria-label="Private hire deposit in pounds"
                 placeholder="e.g. 500"
+                className={cn(FIELD_INPUT, "tabular-nums")}
+              />
+            </FormRow>
+            <FormRow label="Deposit due within (days)">
+              <input
+                type="number"
+                min={1}
+                max={90}
+                value={form.private_hire_deposit_days}
+                onChange={(e) => update("private_hire_deposit_days", e.target.value)}
+                aria-label="Days a private hire customer has to pay the deposit"
+                placeholder="7"
                 className={cn(FIELD_INPUT, "tabular-nums")}
               />
             </FormRow>

@@ -2,6 +2,7 @@ import type { createClient } from "@/lib/supabase/server";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import type { BookingGrouping } from "@/lib/booking-grouping";
+import { normalizePrivateHireStatus } from "@/lib/private-hire-status";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -295,7 +296,7 @@ export async function readContactActivity(
       reason: row.reason_for_hire?.trim() || row.reason?.trim() || "Not given",
       date: row.selected_date,
       guests: row.guest_count ?? 0,
-      status: row.status?.trim() || "pending_review",
+      status: normalizePrivateHireStatus(row.status),
     });
   });
 

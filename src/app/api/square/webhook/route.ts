@@ -12,6 +12,7 @@ import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-
 import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
 import { catalogCopiedWithin } from "@/lib/square-catalog-sync";
 import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
+import { settleHireDeposit } from "@/lib/private-hire-flow";
 
 /* Every market price push fires this webhook too, so a live market would
    otherwise re-copy the whole catalog after each re-rank, competing with its
@@ -115,12 +116,23 @@ export async function POST(req: NextRequest) {
       .eq("square_order_id", orderId)
       .maybeSingle();
 
-    if (!booking || booking.payment_status === "paid") {
+    const amountPaid = payment.amount_money?.amount;
+    const paymentId = payment.id ?? null;
+
+    /* Not a ticket order - it may be a private hire deposit. */
+    if (!booking) {
+      await settleHireDeposit(
+        { supabase: createAdminClient(), resend: getResend(), actorId: null },
+        orderId,
+        typeof amountPaid === "number" ? amountPaid : null,
+        paymentId
+      );
       return NextResponse.json({ received: true });
     }
 
-    const amountPaid = payment.amount_money?.amount;
-    const paymentId = payment.id ?? null;
+    if (booking.payment_status === "paid") {
+      return NextResponse.json({ received: true });
+    }
 
     const settlement = await settlePaidBooking(supabase, {
       bookingId: booking.id,

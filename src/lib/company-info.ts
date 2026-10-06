@@ -20,6 +20,7 @@ export type CompanyInfoRow = {
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;
+  private_hire_deposit_days: number | null;
   description: string | null;
   opening_hours: OpeningHours | null;
   tagline: string | null;

@@ -222,6 +222,9 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
   pending_review: "Pending",
   confirmed: "Confirmed",
   cancelled: "Cancelled",
+  awaiting_customer: "With customer",
+  awaiting_deposit: "Deposit due",
+  expired: "Expired",
 };
 
 /* How a band booking or private hire is named in a thread: the date it's

@@ -75,6 +75,20 @@ const BAND_SLOTS: SlotKey[] = ["subject", "heading", "greeting", "intro", "outro
 const SIMPLE_SLOTS: SlotKey[] = ["subject", "greeting", "intro", "outro", "footnote"];
 /* The admin alerts carry a button through to the request in the portal. */
 const ALERT_SLOTS: SlotKey[] = [...SIMPLE_SLOTS, "ctaLabel"];
+/* Private hire emails that send the customer to their request page. */
+const HIRE_ACTION_SLOTS: SlotKey[] = ["subject", "greeting", "intro", "ctaLabel", "footnote"];
+
+const HIRE_DATE: MergeField = { token: "hireDate", label: "Hire date", sample: "Sat, 14 Nov 2026" };
+const HIRE_TIME: MergeField = { token: "hireTime", label: "Hire time", sample: "7:00pm - 11:00pm" };
+const HIRE_REASON: MergeField = { token: "hireReason", label: "Reason for hire", sample: "Birthday" };
+const DEPOSIT_AMOUNT: MergeField = { token: "depositAmount", label: "Deposit amount", sample: "£100.00" };
+const DEPOSIT_DUE: MergeField = { token: "depositDueDate", label: "Deposit due date", sample: "Fri, 16 Oct 2026" };
+const HIRE_RESPONSE: MergeField = {
+  token: "customerResponse",
+  label: "What the customer did",
+  sample: "accepted the proposed time",
+};
+const HIRE_FIELDS = [CUSTOMER_NAME, HIRE_DATE, HIRE_TIME, HIRE_REASON];
 
 export const EMAIL_SCENARIOS: EmailScenario[] = [
   /* ── Bookings ─────────────────────────────────────────────────────────── */
@@ -550,9 +564,10 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     key: "private_hire.enquiry.customer",
     label: "Private hire enquiry received",
     group: "Private hire",
-    description: "Sent to the enquirer when the public private-hire form is submitted.",
+    description:
+      "Sent to the enquirer when the public private-hire form is submitted. The button opens their request page.",
     recipient: "customer",
-    slots: SIMPLE_SLOTS,
+    slots: [...SIMPLE_SLOTS, "ctaLabel"],
     mergeFields: [CUSTOMER_NAME],
     defaults: slots({
       subject: "Private Hire Enquiry Received - Don Fenticas",
@@ -560,6 +575,7 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       intro:
         "Thank you for your private hire enquiry at <strong>Don Fenticas</strong>. We've received your request and our team will be in touch shortly to discuss availability and details.",
       outro: "🏠 Don Fenticas - Private Hire Enquiries",
+      ctaLabel: "View Your Request",
       footnote: "If you have any urgent questions, please reply to this email.",
     }),
   },
@@ -578,26 +594,81 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     }),
   },
   {
+    key: "private_hire.proposed",
+    label: "Private hire - new time proposed",
+    group: "Private hire",
+    description:
+      "Staff suggest a different date or time. The button opens the customer's request page, where they accept or turn it down.",
+    recipient: "customer",
+    slots: HIRE_ACTION_SLOTS,
+    mergeFields: HIRE_FIELDS,
+    defaults: slots({
+      subject: "We've Suggested a Time for Your Private Hire - Don Fenticas",
+      greeting: "Hi {{customerName}}!",
+      intro:
+        "Thanks for your private hire request. We can't do the exact time you asked for, but we'd love to host you on <strong>{{hireDate}}</strong>, {{hireTime}}.\n\nHave a look and let us know if it works for you.",
+      ctaLabel: "Review and Accept",
+      footnote: "Questions? Just reply to this email.",
+    }),
+  },
+  {
+    key: "private_hire.approved",
+    label: "Private hire approved - deposit due",
+    group: "Private hire",
+    description:
+      "The times are agreed. Asks the customer to pay the deposit; the button opens their request page with the payment link.",
+    recipient: "customer",
+    slots: HIRE_ACTION_SLOTS,
+    mergeFields: [...HIRE_FIELDS, DEPOSIT_AMOUNT, DEPOSIT_DUE],
+    defaults: slots({
+      subject: "Your Private Hire is Approved - Deposit Due",
+      greeting: "Hi {{customerName}}!",
+      intro:
+        "Good news - we can host you on <strong>{{hireDate}}</strong>, {{hireTime}}.\n\nTo secure the date, please pay your <strong>{{depositAmount}}</strong> deposit by <strong>{{depositDueDate}}</strong>. We'll hold the date for you until then.",
+      ctaLabel: "Pay Deposit",
+      footnote:
+        "If the deposit isn't paid by {{depositDueDate}} the date will be released. Questions? Just reply to this email.",
+    }),
+  },
+  {
+    key: "private_hire.deposit_reminder",
+    label: "Private hire deposit reminder",
+    group: "Private hire",
+    description: "Sent automatically two days before an unpaid deposit is due.",
+    recipient: "customer",
+    slots: HIRE_ACTION_SLOTS,
+    mergeFields: [...HIRE_FIELDS, DEPOSIT_AMOUNT, DEPOSIT_DUE],
+    defaults: slots({
+      subject: "Reminder: Your Private Hire Deposit is Due {{depositDueDate}}",
+      greeting: "Hi {{customerName}}!",
+      intro:
+        "Just a reminder that the <strong>{{depositAmount}}</strong> deposit for your private hire on <strong>{{hireDate}}</strong> is due by <strong>{{depositDueDate}}</strong>. Pay it now to keep your date.",
+      ctaLabel: "Pay Deposit",
+      footnote: "Already paid? Thank you - you can ignore this email.",
+    }),
+  },
+  {
     key: "private_hire.confirmed",
     label: "Private hire confirmed",
     group: "Private hire",
-    description: "Staff mark a private hire request confirmed.",
+    description: "The deposit is paid (or there was none), so the hire is confirmed and on the schedule.",
     recipient: "customer",
-    slots: SIMPLE_SLOTS,
-    mergeFields: [CUSTOMER_NAME],
+    slots: HIRE_ACTION_SLOTS,
+    mergeFields: [...HIRE_FIELDS, DEPOSIT_AMOUNT],
     defaults: slots({
-      subject: "Your Private Hire Enquiry Has Been Confirmed! 🎉",
+      subject: "Your Private Hire Has Been Confirmed! 🎉",
       greeting: "Hi {{customerName}}!",
       intro:
-        "We're delighted to confirm your private hire booking at Don Fenticas. Our team will be in touch shortly with the next steps.",
+        "We're delighted to confirm your private hire at Don Fenticas on <strong>{{hireDate}}</strong>, {{hireTime}}. We can't wait to host you!",
+      ctaLabel: "View Booking",
       footnote: "If you have questions, please reply to this email.",
     }),
   },
   {
-    key: "private_hire.cancelled",
+    key: "private_hire.declined",
     label: "Private hire declined",
     group: "Private hire",
-    description: "Staff mark a private hire request cancelled.",
+    description: "Staff turn a private hire request down.",
     recipient: "customer",
     slots: SIMPLE_SLOTS,
     mergeFields: [CUSTOMER_NAME],
@@ -607,6 +678,70 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       intro:
         "Thank you for your private hire enquiry. Unfortunately we're unable to accommodate your request at this time.",
       footnote: "If you have questions, please reply to this email.",
+    }),
+  },
+  {
+    key: "private_hire.cancelled",
+    label: "Private hire cancelled",
+    group: "Private hire",
+    description:
+      "A request is cancelled - by the customer from their request page, or by staff after the times were agreed.",
+    recipient: "customer",
+    slots: SIMPLE_SLOTS,
+    mergeFields: HIRE_FIELDS,
+    defaults: slots({
+      subject: "Your Private Hire Has Been Cancelled - Don Fenticas",
+      greeting: "Hi {{customerName}},",
+      intro: "Your private hire request for <strong>{{hireDate}}</strong> has been cancelled.",
+      footnote: "If this wasn't expected, please reply to this email.",
+    }),
+  },
+  {
+    key: "private_hire.expired",
+    label: "Private hire deposit expired",
+    group: "Private hire",
+    description: "Sent automatically when a deposit isn't paid by its due date and the date is released.",
+    recipient: "customer",
+    slots: SIMPLE_SLOTS,
+    mergeFields: [...HIRE_FIELDS, DEPOSIT_DUE],
+    defaults: slots({
+      subject: "Your Private Hire Date Has Been Released - Don Fenticas",
+      greeting: "Hi {{customerName}},",
+      intro:
+        "The deposit for your private hire on <strong>{{hireDate}}</strong> wasn't paid by {{depositDueDate}}, so we've released the date.\n\nIf you'd still like to book, just reply to this email and we'll see what we can do.",
+      footnote: "",
+    }),
+  },
+  {
+    key: "admin.private_hire.customer_response",
+    label: "Private hire - customer replied",
+    group: "Private hire",
+    description:
+      "Sent to the venue when a customer accepts or turns down proposed times, or cancels, from their request page.",
+    recipient: "admin",
+    slots: ALERT_SLOTS,
+    mergeFields: [CUSTOMER_NAME, HIRE_RESPONSE, HIRE_DATE],
+    defaults: slots({
+      subject: "Private Hire: {{customerName}} {{customerResponse}}",
+      greeting: "Private Hire Update",
+      intro: "{{customerName}} has {{customerResponse}} for {{hireDate}}.",
+      ctaLabel: "View Request",
+    }),
+  },
+  {
+    key: "admin.private_hire.deposit_paid",
+    label: "Private hire - deposit paid",
+    group: "Private hire",
+    description: "Sent to the venue when a private hire deposit is paid online and the hire is confirmed.",
+    recipient: "admin",
+    slots: ALERT_SLOTS,
+    mergeFields: [CUSTOMER_NAME, HIRE_DATE, DEPOSIT_AMOUNT],
+    defaults: slots({
+      subject: "Deposit Paid - {{customerName}}, {{hireDate}}",
+      greeting: "Private Hire Deposit Paid",
+      intro:
+        "{{customerName}} has paid the <strong>{{depositAmount}}</strong> deposit. The hire on {{hireDate}} is confirmed and on the schedule.",
+      ctaLabel: "View Request",
     }),
   },
 ];
@@ -646,7 +781,14 @@ const WIRED_SCENARIOS = new Set([
   "private_hire.enquiry.customer",
   "private_hire.enquiry.admin",
   "private_hire.confirmed",
+  "private_hire.declined",
   "private_hire.cancelled",
+  "private_hire.proposed",
+  "private_hire.approved",
+  "private_hire.deposit_reminder",
+  "private_hire.expired",
+  "admin.private_hire.customer_response",
+  "admin.private_hire.deposit_paid",
   "band.offered",
   "band.booked",
   "band.declined",
@@ -670,7 +812,14 @@ const PLAIN_SCENARIOS = new Set([
   "private_hire.enquiry.customer",
   "private_hire.enquiry.admin",
   "private_hire.confirmed",
+  "private_hire.declined",
   "private_hire.cancelled",
+  "private_hire.proposed",
+  "private_hire.approved",
+  "private_hire.deposit_reminder",
+  "private_hire.expired",
+  "admin.private_hire.customer_response",
+  "admin.private_hire.deposit_paid",
 ]);
 
 export function scenarioFamily(scenario: EmailScenario): "band" | "brand" | "plain" {

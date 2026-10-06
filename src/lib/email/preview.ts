@@ -14,6 +14,7 @@ import {
   detailRowsHtml,
   plainLayout,
   plainNote,
+  plainPanel,
 } from "./layout";
 import { renderSlots, type TemplateSlots } from "./render";
 import { sampleValues, scenarioFamily, type EmailScenario } from "./scenarios";
@@ -52,7 +53,57 @@ const ADMIN_ALERT_SCENARIOS = new Set([
   "enquiry.received.admin",
   "band.application.admin",
   "private_hire.enquiry.admin",
+  "admin.private_hire.customer_response",
+  "admin.private_hire.deposit_paid",
 ]);
+
+const SAMPLE_HIRE_DETAILS = [
+  ["Date", "Sat, 14 Nov 2026"],
+  ["Time", "7:00pm - 11:00pm"],
+  ["Guests", "40"],
+  ["Occasion", "Birthday"],
+]
+  .map(([label, value]) => `<p style="margin:4px 0;"><strong>${label}:</strong> ${value}</p>`)
+  .join("");
+
+const SAMPLE_DEPOSIT_DETAILS = [
+  ["Deposit", "£100.00"],
+  ["Deposit due", "Fri, 16 Oct 2026"],
+]
+  .map(([label, value]) => `<p style="margin:4px 0;"><strong>${label}:</strong> ${value}</p>`)
+  .join("");
+
+/* The private hire emails that carry the hire's details, and which also show
+   the deposit. */
+const HIRE_DETAIL_SCENARIOS = new Set([
+  "private_hire.proposed",
+  "private_hire.approved",
+  "private_hire.deposit_reminder",
+  "private_hire.confirmed",
+  "private_hire.cancelled",
+  "private_hire.expired",
+]);
+const HIRE_DEPOSIT_SCENARIOS = new Set([
+  "private_hire.approved",
+  "private_hire.deposit_reminder",
+  "private_hire.expired",
+]);
+
+function samplePlainBody(key: string): string | undefined {
+  if (HIRE_DETAIL_SCENARIOS.has(key)) {
+    const details = plainPanel(SAMPLE_HIRE_DETAILS + (HIRE_DEPOSIT_SCENARIOS.has(key) ? SAMPLE_DEPOSIT_DETAILS : ""));
+    const note =
+      key === "private_hire.proposed" || key === "private_hire.confirmed"
+        ? plainNote("We can hold the back room from 7pm.")
+        : "";
+    return details + note;
+  }
+  if (key === "private_hire.declined") return plainNote("We're fully booked that weekend.");
+  if (key === "enquiry.reply") {
+    return `<p style="white-space:pre-wrap;">Yes - we take birthday bookings any night except Thursdays. Give us a call and we'll sort it.</p>`;
+  }
+  return undefined;
+}
 
 function bandSampleCard(key: string, slots: RenderedSlots): string {
   const brand = slots.design?.brand;
@@ -110,14 +161,13 @@ export function previewHtml(scenario: EmailScenario, slots: TemplateSlots, desig
     const isAdminAlert = ADMIN_ALERT_SCENARIOS.has(scenario.key);
     return plainLayout({
       slots: filled,
-      panelHtml: isAdminAlert ? SAMPLE_FIELDS_PANEL : undefined,
-      bodyHtml:
-        scenario.key === "private_hire.confirmed" || scenario.key === "private_hire.cancelled"
-          ? plainNote("We can hold the back room from 7pm.")
-          : scenario.key === "enquiry.reply"
-            ? `<p style="white-space:pre-wrap;">Yes - we take birthday bookings any night except Thursdays. Give us a call and we'll sort it.</p>`
-            : undefined,
-      ctaUrl: isAdminAlert ? SAMPLE_URL : undefined,
+      panelHtml: isAdminAlert
+        ? scenario.key.startsWith("admin.private_hire.")
+          ? SAMPLE_HIRE_DETAILS + SAMPLE_DEPOSIT_DETAILS
+          : SAMPLE_FIELDS_PANEL
+        : undefined,
+      bodyHtml: samplePlainBody(scenario.key),
+      ctaUrl: isAdminAlert || filled.ctaLabel ? SAMPLE_URL : undefined,
       trailer: isAdminAlert ? "Enquiry ID: 3f0c1a92" : undefined,
     });
   }

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { statusValues } from "@/lib/private-hire-status";
 
 export type PendingRequestCounts = {
   band: number;
@@ -19,7 +20,7 @@ export async function getPendingRequestCounts(
       supabase
         .from("private_hire_requests")
         .select("id", { count: "exact", head: true })
-        .eq("status", "pending"),
+        .in("status", statusValues("new")),
       supabase
         .from("enquiries")
         .select("id", { count: "exact", head: true })

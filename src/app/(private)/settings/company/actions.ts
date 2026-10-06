@@ -53,6 +53,10 @@ export async function updateCompanyInfo(formData: FormData) {
     max_capacity: parseInt(formData.get("max_capacity")?.toString() || "0", 10) || null,
     private_hire_min_capacity: parseInt(formData.get("private_hire_min_capacity")?.toString() || "0", 10) || null,
     private_hire_deposit: parseFloat(formData.get("private_hire_deposit")?.toString() || "") || null,
+    private_hire_deposit_days: Math.min(
+      90,
+      Math.max(1, parseInt(formData.get("private_hire_deposit_days")?.toString() || "7", 10) || 7)
+    ),
     created_at: existing?.created_at ?? new Date().toISOString(),
     created_by: existing?.created_by ?? currentEmployeeId,
     updated_at: new Date().toISOString(),

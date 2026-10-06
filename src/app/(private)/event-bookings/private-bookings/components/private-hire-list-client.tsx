@@ -4,19 +4,27 @@ import React, { useCallback, useMemo, useState } from "react";
 import { Search, Inbox, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrivateHireCard, type PrivateHireRequest } from "./private-hire-card";
+import { isClosedPrivateHire, normalizePrivateHireStatus } from "@/lib/private-hire-status";
 
-const normStatus = (s?: string) => (s || "").trim().toLowerCase();
+const COLUMNS = ["new", "awaiting_customer", "awaiting_deposit", "confirmed", "closed"] as const;
+type Column = (typeof COLUMNS)[number];
 
-const COLUMNS = ["pending", "confirmed", "cancelled"] as const;
+/* Declined, cancelled and expired requests share one "Closed" column. */
+function columnOf(status: string): Column {
+  const s = normalizePrivateHireStatus(status);
+  return isClosedPrivateHire(s) ? "closed" : (s as Column);
+}
 
 const statusTheme: Record<
   string,
   { bg: string; text: string; border: string; dot: string; ring: string; label: string }
 > = {
   all: { bg: "bg-[#F4F1E8]", text: "text-[#20231A]", border: "border-[#D8D5C8]", dot: "bg-[#5E6654]", ring: "ring-slate-500/40", label: "Total" },
-  pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500", ring: "ring-amber-500/40", label: "Pending" },
+  new: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500", ring: "ring-amber-500/40", label: "New" },
+  awaiting_customer: { bg: "bg-admin-info-bg", text: "text-admin-info", border: "border-[#28608F]/25", dot: "bg-admin-info", ring: "ring-[#28608F]/30", label: "With customer" },
+  awaiting_deposit: { bg: "bg-admin-warning-bg", text: "text-admin-warning", border: "border-[#9A5B00]/25", dot: "bg-admin-warning", ring: "ring-[#9A5B00]/30", label: "Deposit due" },
   confirmed: { bg: "bg-green-50", text: "text-green-700", border: "border-green-200", dot: "bg-green-500", ring: "ring-green-500/40", label: "Confirmed" },
-  cancelled: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", dot: "bg-red-500", ring: "ring-red-500/40", label: "Rejected" },
+  closed: { bg: "bg-red-50", text: "text-red-700", border: "border-red-200", dot: "bg-red-500", ring: "ring-red-500/40", label: "Closed" },
 };
 
 function StatusCircle({
@@ -32,7 +40,7 @@ function StatusCircle({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const theme = statusTheme[status] || statusTheme.pending;
+  const theme = statusTheme[status] || statusTheme.new;
   return (
     <div className="flex min-w-14 shrink-0 flex-col items-center gap-1.5">
       <button
@@ -63,7 +71,13 @@ export default function PrivateHireListClient({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
-    () => new Set(initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean))
+    () =>
+      new Set(
+        initialStatuses
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean)
+          .map((s) => (s === "pending" ? "new" : s))
+      )
   );
   const [pinned, setPinned] = useState<{ id: string; status: string } | null>(null);
 
@@ -95,32 +109,30 @@ export default function PrivateHireListClient({
   const grouped = useMemo(() => {
     const map = new Map<string, PrivateHireRequest[]>(COLUMNS.map((c) => [c, []]));
     for (const r of searchedRequests) {
-      const status = pinned?.id === r.id ? pinned.status : normStatus(r.status);
-      map.get(status)?.push(r);
+      const column = pinned?.id === r.id ? pinned.status : columnOf(r.status);
+      map.get(column)?.push(r);
     }
     return map;
   }, [searchedRequests, pinned]);
 
   const pinWhileOpen = useCallback((req: PrivateHireRequest, open: boolean) => {
     setPinned((p) => {
-      if (open) return p?.id === req.id ? p : { id: req.id, status: normStatus(req.status) };
+      if (open) return p?.id === req.id ? p : { id: req.id, status: columnOf(req.status) };
       return p?.id === req.id ? null : p;
     });
   }, []);
 
   const totalShown = visibleColumns.reduce((n, c) => n + (grouped.get(c)?.length ?? 0), 0);
 
-  const spreadColumns = visibleColumns.length <= 2;
+  const spreadColumns = visibleColumns.length <= 3;
 
   const stats = useMemo(() => {
-    const countBy = (status: string) =>
-      initialRequests.filter((r) => normStatus(r.status) === status).length;
-    return {
-      total: initialRequests.length,
-      pending: countBy("pending"),
-      confirmed: countBy("confirmed"),
-      cancelled: countBy("cancelled"),
-    };
+    const counts = new Map<Column, number>(COLUMNS.map((c) => [c, 0]));
+    for (const r of initialRequests) {
+      const c = columnOf(r.status);
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return counts;
   }, [initialRequests]);
 
   return (
@@ -130,33 +142,22 @@ export default function PrivateHireListClient({
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:shrink-0 sm:pt-0">
             <div className="flex w-full min-w-max items-stretch gap-1 px-2 py-3">
               <StatusCircle
-                count={stats.total}
+                count={initialRequests.length}
                 status="all"
                 label="Total"
                 isActive={activeStatusFilters.size === 0}
                 onClick={() => setActiveStatusFilters(new Set())}
               />
-              <StatusCircle
-                count={stats.pending}
-                status="pending"
-                label="Pending"
-                isActive={activeStatusFilters.has("pending")}
-                onClick={() => toggleStatusFilter("pending")}
-              />
-              <StatusCircle
-                count={stats.confirmed}
-                status="confirmed"
-                label="Confirmed"
-                isActive={activeStatusFilters.has("confirmed")}
-                onClick={() => toggleStatusFilter("confirmed")}
-              />
-              <StatusCircle
-                count={stats.cancelled}
-                status="cancelled"
-                label="Rejected"
-                isActive={activeStatusFilters.has("cancelled")}
-                onClick={() => toggleStatusFilter("cancelled")}
-              />
+              {COLUMNS.map((c) => (
+                <StatusCircle
+                  key={c}
+                  count={stats.get(c) ?? 0}
+                  status={c}
+                  label={statusTheme[c].label}
+                  isActive={activeStatusFilters.has(c)}
+                  onClick={() => toggleStatusFilter(c)}
+                />
+              ))}
             </div>
           </div>
 

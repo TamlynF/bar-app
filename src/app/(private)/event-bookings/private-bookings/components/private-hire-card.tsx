@@ -3,7 +3,13 @@
 import React, { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  updatePrivateHireStatus,
+  approvePrivateHireAction,
+  proposePrivateHireAction,
+  markPrivateHireDepositPaidAction,
+  closePrivateHireAction,
+  reopenPrivateHireAction,
+  resendPrivateHireEmailAction,
+  privateHireDepositDefaultAction,
   updatePrivateHireFields,
   getPrivateEventOptions,
   getClashingEvents,
@@ -15,6 +21,8 @@ import {
 import {
   AlertCircle,
   AlertTriangle,
+  PoundSterling,
+  Send,
   ArrowRight,
   BellRing,
   CalendarDays,
@@ -56,7 +64,22 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { toHHMM, type ClashEvent } from "@/lib/event-clash";
 import { unwrapSubtype, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
-import { buildPrivateHireOutcomeEmail, type PrivateHireEmail } from "@/lib/private-hire-emails";
+import {
+  buildPrivateHireOutcomeEmail,
+  type PrivateHireEmail,
+  type PrivateHireEmailKey,
+} from "@/lib/private-hire-emails";
+import {
+  DEPOSIT_PAID_VIA_LABEL,
+  PRIVATE_HIRE_PIPELINE,
+  PRIVATE_HIRE_STATUS_LABEL,
+  isClosedPrivateHire,
+  normalizePrivateHireStatus,
+  type DepositPaidVia,
+  type PrivateHireStatus,
+} from "@/lib/private-hire-status";
+import { formatDeposit } from "@/lib/private-hire-details";
+import type { RenderedSlots } from "@/lib/email/design";
 
 type PrivateEventOptions = { types: { id: number; name: string }[]; subtypes: { id: number; name: string; event_types_id: number }[] };
 
@@ -92,6 +115,15 @@ export interface PrivateHireRequest {
   additional_requirements: string | null;
   status: string;
   admin_notes: string | null;
+  deposit_amount: number | null;
+  paid_amount: number | null;
+  deposit_due_date: string | null;
+  deposit_paid_at: string | null;
+  deposit_paid_via: string | null;
+  proposed_at: string | null;
+  approved_at: string | null;
+  confirmed_at: string | null;
+  closed_at: string | null;
   created_at: string;
   updated_at: string | null;
   updated_by: number | null;
@@ -104,21 +136,33 @@ type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_
   event_types?: { name: string } | { name: string }[] | null;
 };
 
-type PrivateStage = "pending" | "confirmed" | "cancelled";
-
-type PrivateAction = PrivateStage;
-
 const STATUS_THEME: Record<
-  string,
+  PrivateHireStatus,
   { bg: string; text: string; border: string; dot: string; icon: React.ReactNode; label: string }
 > = {
-  pending: {
+  new: {
     bg: "bg-amber-50",
     text: "text-amber-700",
     border: "border-amber-200",
     dot: "bg-amber-500",
     icon: <Clock className="h-5 w-5" />,
-    label: "Pending",
+    label: PRIVATE_HIRE_STATUS_LABEL.new,
+  },
+  awaiting_customer: {
+    bg: "bg-admin-info-bg",
+    text: "text-admin-info",
+    border: "border-[#28608F]/25",
+    dot: "bg-admin-info",
+    icon: <Mail className="h-5 w-5" />,
+    label: PRIVATE_HIRE_STATUS_LABEL.awaiting_customer,
+  },
+  awaiting_deposit: {
+    bg: "bg-admin-warning-bg",
+    text: "text-admin-warning",
+    border: "border-[#9A5B00]/25",
+    dot: "bg-admin-warning",
+    icon: <PoundSterling className="h-5 w-5" />,
+    label: PRIVATE_HIRE_STATUS_LABEL.awaiting_deposit,
   },
   confirmed: {
     bg: "bg-green-50",
@@ -126,7 +170,15 @@ const STATUS_THEME: Record<
     border: "border-green-200",
     dot: "bg-green-500",
     icon: <CheckCircle className="h-5 w-5" />,
-    label: "Confirmed",
+    label: PRIVATE_HIRE_STATUS_LABEL.confirmed,
+  },
+  declined: {
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+    dot: "bg-red-500",
+    icon: <XCircle className="h-5 w-5" />,
+    label: PRIVATE_HIRE_STATUS_LABEL.declined,
   },
   cancelled: {
     bg: "bg-red-50",
@@ -134,25 +186,41 @@ const STATUS_THEME: Record<
     border: "border-red-200",
     dot: "bg-red-500",
     icon: <XCircle className="h-5 w-5" />,
-    label: "Rejected",
+    label: PRIVATE_HIRE_STATUS_LABEL.cancelled,
+  },
+  expired: {
+    bg: "bg-admin-surface",
+    text: "text-admin-muted",
+    border: "border-admin-line",
+    dot: "bg-[#5E6654]",
+    icon: <Clock className="h-5 w-5" />,
+    label: PRIVATE_HIRE_STATUS_LABEL.expired,
   },
 };
 
-const PIPELINE: PrivateStage[] = ["pending", "confirmed"];
+/* Every step a staff member can take from the card. */
+type HireAction =
+  | "approve"
+  | "propose"
+  | "accept"
+  | "markPaid"
+  | "resend"
+  | "decline"
+  | "cancel"
+  | "reopen"
+  | "reopenDeposit";
 
-const TRANSITIONS: Record<PrivateStage, PrivateStage[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["cancelled"],
-  cancelled: ["pending"],
+const ACTION_TOAST: Record<HireAction, string> = {
+  approve: "Approved - deposit request emailed",
+  propose: "New time proposed - customer emailed",
+  accept: "Marked accepted - deposit request emailed",
+  markPaid: "Deposit recorded - hire confirmed",
+  resend: "Email sent again",
+  decline: "Request declined - customer emailed",
+  cancel: "Hire cancelled - customer emailed",
+  reopen: "Request reopened",
+  reopenDeposit: "Reopened - new deposit request emailed",
 };
-
-const STATUS_TOAST: Record<PrivateAction, string> = {
-  pending: "Enquiry reopened",
-  confirmed: "Booking confirmed",
-  cancelled: "Request rejected",
-};
-
-const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
 function formatTime12(t?: string | null): string {
   const hhmm = toHHMM(t);
@@ -222,7 +290,7 @@ function EditRow({
   );
 }
 
-function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType<{ className?: string }> }) {
+function ContactRow({ label, value, href, icon: Icon, external }: { label: string; value: string | null; href: string | null; icon: React.ElementType<{ className?: string }>; external?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
@@ -231,6 +299,7 @@ function ContactRow({ label, value, href, icon: Icon }: { label: string; value: 
         {href && (
           <a
             href={href}
+            {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             aria-label={`${label}: ${value}`}
             title={`Open ${label.toLowerCase()}`}
             onClick={(e) => e.stopPropagation()}
@@ -317,24 +386,45 @@ function Section({
   );
 }
 
-const STAGE_SOLID: Record<string, string> = {
-  pending: "bg-amber-600",
+const STAGE_SOLID: Record<PrivateHireStatus, string> = {
+  new: "bg-amber-600",
+  awaiting_customer: "bg-[#28608F]",
+  awaiting_deposit: "bg-[#9A5B00]",
   confirmed: "bg-green-600",
+  declined: "bg-red-600",
   cancelled: "bg-red-600",
+  expired: "bg-[#5E6654]",
 };
 
-function stageHint(status: string, blocker?: string): string {
+function formatDay(date: string | null | undefined): string {
+  return date ? format(new Date(date + "T00:00:00"), "EEE d MMM") : "";
+}
+
+function stageHint(request: PrivateHireRequest, status: PrivateHireStatus, blocker?: string): string {
   switch (status) {
-    case "pending":
+    case "new":
       return blocker
-        ? `New enquiry. ${blocker}`
-        : "New enquiry. Confirm it once the details are agreed, or reject it.";
-    case "confirmed":
-      return "Confirmed and on the schedule.";
+        ? `New request. ${blocker}`
+        : "New request. Approve their times to ask for the deposit, or propose different ones.";
+    case "awaiting_customer":
+      return `Waiting for ${request.full_name} to accept the proposed time${
+        request.proposed_at ? ` (sent ${formatDay(request.proposed_at.slice(0, 10))})` : ""
+      }. Mark it accepted if they reply by email.`;
+    case "awaiting_deposit":
+      return `Deposit of ${formatDeposit(request.deposit_amount)} due by ${formatDay(request.deposit_due_date) || "-"}. The date is held until then.`;
+    case "confirmed": {
+      const via = request.deposit_paid_via as DepositPaidVia | null;
+      if (!via || via === "none") return "Confirmed and on the schedule.";
+      return `Confirmed and on the schedule. Deposit of ${formatDeposit(request.paid_amount)} paid by ${DEPOSIT_PAID_VIA_LABEL[via].toLowerCase()}${
+        request.deposit_paid_at ? ` on ${formatDay(request.deposit_paid_at.slice(0, 10))}` : ""
+      }.`;
+    }
+    case "expired":
+      return `The deposit wasn't paid by ${formatDay(request.deposit_due_date) || "the due date"}, so the date was released. Reopen it to send a new deposit request.`;
+    case "declined":
+      return "Declined. Reopen it to review it again.";
     case "cancelled":
-      return "Rejected. Reopen it to move it back to pending.";
-    default:
-      return "";
+      return "Cancelled. Reopen it to review it again.";
   }
 }
 
@@ -342,28 +432,19 @@ function StepNode({
   stage,
   index,
   tone,
-  title,
-  onClick,
-  pending,
-  disabled,
 }: {
-  stage: PrivateStage;
+  stage: PrivateHireStatus;
   index: number;
   tone: "current" | "past" | "future";
-  title: string;
-  onClick?: () => void;
-  pending: boolean;
-  disabled: boolean;
 }) {
-  const label = STATUS_THEME[stage]?.label ?? stage;
+  const label = STATUS_THEME[stage].label;
 
   if (tone === "current") {
     return (
       <span
         aria-current="step"
-        title={title}
         className={cn(
-          "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold text-white shadow-sm",
+          "inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap text-white shadow-sm",
           STAGE_SOLID[stage]
         )}
       >
@@ -373,11 +454,9 @@ function StepNode({
     );
   }
 
-  const content = (
-    <>
-      {pending ? (
-        <Loader2 className="h-6 w-6 shrink-0 animate-spin p-0.5 text-[#34451F]" />
-      ) : tone === "past" ? (
+  return (
+    <span className="inline-flex shrink-0 items-center gap-2 px-1.5 py-1">
+      {tone === "past" ? (
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#34451F] text-white">
           <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />
         </span>
@@ -394,27 +473,7 @@ function StepNode({
       >
         {label}
       </span>
-    </>
-  );
-
-  if (!onClick) {
-    return (
-      <span title={title} className="inline-flex shrink-0 items-center gap-2 px-1.5 py-1">
-        {content}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-1.5 py-1 transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-60 sm:min-h-9 sm:pr-2.5"
-    >
-      {content}
-    </button>
+    </span>
   );
 }
 
@@ -423,51 +482,79 @@ function StepConnector({ done }: { done: boolean }) {
     <span
       aria-hidden="true"
       className={cn(
-        "w-3 shrink-0 sm:w-8",
+        "w-3 shrink-0 sm:w-6",
         done ? "h-0.5 rounded-full bg-[#34451F]" : "h-0 border-t-2 border-dashed border-[#D8D5C8]"
       )}
     />
   );
 }
 
+type ButtonSpec = { action: HireAction; label: string; needsSlot?: boolean };
+
+/* The buttons each stage offers: a quiet destructive one on the left, an
+   outline secondary and one solid primary (at most one per view). */
+const STAGE_BUTTONS: Record<
+  PrivateHireStatus,
+  { danger?: ButtonSpec; secondary?: ButtonSpec; primary?: ButtonSpec }
+> = {
+  new: {
+    danger: { action: "decline", label: "Decline" },
+    secondary: { action: "propose", label: "Propose new time", needsSlot: true },
+    primary: { action: "approve", label: "Approve times", needsSlot: true },
+  },
+  awaiting_customer: {
+    danger: { action: "decline", label: "Decline" },
+    secondary: { action: "resend", label: "Resend proposal" },
+    primary: { action: "accept", label: "Mark accepted", needsSlot: true },
+  },
+  awaiting_deposit: {
+    danger: { action: "cancel", label: "Cancel hire" },
+    secondary: { action: "resend", label: "Resend email" },
+    primary: { action: "markPaid", label: "Mark deposit paid" },
+  },
+  confirmed: {
+    danger: { action: "cancel", label: "Cancel hire" },
+  },
+  expired: {
+    danger: { action: "decline", label: "Decline" },
+    primary: { action: "reopenDeposit", label: "Reopen with new deadline", needsSlot: true },
+  },
+  declined: {
+    secondary: { action: "reopen", label: "Reopen" },
+  },
+  cancelled: {
+    secondary: { action: "reopen", label: "Reopen" },
+  },
+};
+
 function StageStepper({
+  request,
   status,
-  onSelect,
-  pendingStage,
-  blockers,
+  onAction,
+  pendingAction,
+  slotBlocker,
   onRevealSlot,
-  declineReason,
-  onDeclineReasonChange,
+  closedReason,
+  onClosedReasonChange,
 }: {
-  status: string;
-  onSelect: (next: PrivateStage) => void;
-  pendingStage: PrivateStage | null;
-  blockers: Partial<Record<PrivateStage, string | undefined>>;
+  request: PrivateHireRequest;
+  status: PrivateHireStatus;
+  onAction: (action: HireAction) => void;
+  pendingAction: HireAction | null;
+  slotBlocker?: string;
   onRevealSlot: () => void;
-  declineReason: string;
-  onDeclineReasonChange: (v: string) => void;
+  closedReason: string;
+  onClosedReasonChange: (v: string) => void;
 }) {
-  const transitions = TRANSITIONS[status as PrivateStage] ?? [];
-  const currentLabel = STATUS_THEME[status]?.label ?? status;
-  const reachable = (s: PrivateStage) => transitions.includes(s);
-  const idx = PIPELINE.indexOf(status as PrivateStage);
-  const isRejected = idx === -1;
-  const busy = !!pendingStage;
+  const idx = PRIVATE_HIRE_PIPELINE.indexOf(status);
+  const isClosed = isClosedPrivateHire(status);
+  const busy = !!pendingAction;
+  const buttons = STAGE_BUTTONS[status];
+  const primaryBlocked = !!buttons.primary?.needsSlot && !!slotBlocker;
+  const hint = stageHint(request, status, primaryBlocked ? slotBlocker : undefined);
 
-  const primaryNext: PrivateStage | undefined = isRejected
-    ? "pending"
-    : status === "pending"
-      ? "confirmed"
-      : undefined;
-  const primaryBlocker = primaryNext && !isRejected ? blockers[primaryNext] : undefined;
-  const hint = stageHint(status, primaryBlocker);
-
-  const stepAction = (s: PrivateStage) => {
-    if (!reachable(s)) return { title: `Not available from ${currentLabel}`, onClick: undefined };
-    const blocker = blockers[s];
-    if (blocker) return { title: blocker, onClick: onRevealSlot };
-    return { title: `Move to ${STATUS_THEME[s]?.label ?? s}`, onClick: () => onSelect(s) };
-  };
+  const spinner = (a?: ButtonSpec) =>
+    a && pendingAction === a.action ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : null;
 
   return (
     <div className="mt-3 rounded-2xl border border-admin-line bg-admin-surface/50 px-3 py-2.5 sm:px-4">
@@ -475,33 +562,33 @@ function StageStepper({
         <div className="flex min-w-0 items-center gap-3">
           <div className="shrink-0 leading-tight">
             <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
-              {isRejected ? "Status" : "Stage"}
+              {isClosed ? "Status" : "Stage"}
             </p>
             <p className="text-[13px] font-bold text-admin-ink tabular-nums">
-              {isRejected ? "Closed" : `${idx + 1} of ${PIPELINE.length}`}
+              {isClosed ? "Closed" : `${idx + 1} of ${PRIVATE_HIRE_PIPELINE.length}`}
             </p>
           </div>
 
           <ol
             className="no-scrollbar flex min-w-0 items-center gap-1 overflow-x-auto sm:gap-1.5"
-            aria-label={isRejected ? "Status: Rejected" : `Stage ${idx + 1} of ${PIPELINE.length}: ${currentLabel}`}
+            aria-label={isClosed ? `Status: ${STATUS_THEME[status].label}` : `Stage ${idx + 1} of ${PRIVATE_HIRE_PIPELINE.length}: ${STATUS_THEME[status].label}`}
           >
-            {isRejected ? (
+            {isClosed ? (
               <li className="flex items-center">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
                       aria-current="step"
-                      title="Rejection reason for the enquirer - click to view or edit"
+                      title="Reason given to the customer - click to view or edit"
                       className={cn(
                         "relative inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold text-white shadow-sm transition-all hover:brightness-95",
-                        STAGE_SOLID.cancelled
+                        STAGE_SOLID[status]
                       )}
                     >
                       <XCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      Rejected
-                      {declineReason.trim() && (
+                      {STATUS_THEME[status].label}
+                      {closedReason.trim() && (
                         <BellRing
                           aria-label="A reason has been recorded"
                           className="absolute -top-1.5 -right-1.5 h-4 w-4 fill-yellow-300 text-yellow-500"
@@ -512,15 +599,15 @@ function StageStepper({
                   <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0 sm:w-96">
                     <span className="flex items-center gap-1.5 border-b border-[#D8D5C8] bg-admin-surface px-4 py-2.5 text-[13px] font-bold text-admin-ink">
                       <MessageSquareQuote className="h-3.5 w-3.5" />
-                      Rejection reason for the enquirer
+                      Reason given to the customer
                     </span>
                     <div className="p-3">
                       <textarea
-                        aria-label="Rejection reason for the enquirer"
-                        value={declineReason}
-                        onChange={(e) => onDeclineReasonChange(e.target.value)}
+                        aria-label="Reason given to the customer"
+                        value={closedReason}
+                        onChange={(e) => onClosedReasonChange(e.target.value)}
                         rows={4}
-                        placeholder="The reason given to the enquirer when this was rejected..."
+                        placeholder="The reason given to the customer when this was closed..."
                         className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                       />
                       <p className="mt-1.5 text-[12px] leading-snug text-admin-muted">Saved when you hit Save.</p>
@@ -529,76 +616,90 @@ function StageStepper({
                 </Popover>
               </li>
             ) : (
-              PIPELINE.map((s, i) => {
-                const tone = i === idx ? "current" : i < idx ? "past" : "future";
-                const action = tone === "current" ? { title: "Current stage", onClick: undefined } : stepAction(s);
-                return (
-                  <li key={s} className="flex items-center gap-1 sm:gap-1.5">
-                    {i > 0 && <StepConnector done={i <= idx} />}
-                    <StepNode
-                      stage={s}
-                      index={i}
-                      tone={tone}
-                      title={action.title}
-                      onClick={action.onClick}
-                      pending={pendingStage === s}
-                      disabled={busy}
-                    />
-                  </li>
-                );
-              })
+              PRIVATE_HIRE_PIPELINE.map((s, i) => (
+                <li key={s} className="flex items-center gap-1 sm:gap-1.5">
+                  {i > 0 && <StepConnector done={i <= idx} />}
+                  <StepNode stage={s} index={i} tone={i === idx ? "current" : i < idx ? "past" : "future"} />
+                </li>
+              ))
             )}
           </ol>
         </div>
 
-        <div className="flex items-center gap-2 lg:ml-auto">
-          {reachable("cancelled") && (
+        <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap lg:ml-auto lg:flex-nowrap">
+          {buttons.danger && (
             <>
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => onSelect("cancelled")}
-                title="Reject this enquiry"
-                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold text-[#B33A32] transition-colors hover:bg-admin-error-bg disabled:pointer-events-none disabled:opacity-50 sm:h-9"
+                onClick={() => onAction(buttons.danger!.action)}
+                className={cn(
+                  "order-last inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold whitespace-nowrap text-[#B33A32] transition-colors hover:bg-admin-error-bg disabled:pointer-events-none disabled:opacity-50 sm:order-none sm:h-9",
+                  (buttons.secondary || buttons.primary) && "col-span-2"
+                )}
               >
-                {pendingStage === "cancelled" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Reject
+                {spinner(buttons.danger)}
+                {buttons.danger.label}
               </button>
-              {primaryNext && <span className="h-6 w-px shrink-0 bg-admin-line" aria-hidden="true" />}
+              {(buttons.secondary || buttons.primary) && (
+                <span className="hidden h-6 w-px shrink-0 bg-admin-line sm:block" aria-hidden="true" />
+              )}
             </>
           )}
 
-          {primaryNext &&
-            (primaryBlocker ? (
+          {buttons.secondary && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                buttons.secondary!.needsSlot && slotBlocker ? onRevealSlot() : onAction(buttons.secondary!.action)
+              }
+              title={buttons.secondary.needsSlot && slotBlocker ? slotBlocker : undefined}
+              className={cn(
+                "inline-flex h-11 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#34451F] px-3 text-[13px] font-semibold whitespace-nowrap text-[#34451F] transition-colors hover:bg-[#E5EBD8] disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:px-3.5 lg:flex-initial",
+                !buttons.primary && "col-span-2"
+              )}
+            >
+              {spinner(buttons.secondary) ??
+                (buttons.secondary.action === "reopen" ? (
+                  <Undo2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                ) : buttons.secondary.action === "resend" ? (
+                  <Send className="h-4 w-4 shrink-0" aria-hidden="true" />
+                ) : (
+                  <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
+                ))}
+              {buttons.secondary.label}
+            </button>
+          )}
+
+          {buttons.primary &&
+            (primaryBlocked ? (
               <button
                 type="button"
                 disabled={busy}
                 onClick={onRevealSlot}
-                title={primaryBlocker}
-                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 text-[13px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 lg:flex-initial"
+                title={slotBlocker}
+                className={cn(
+                  "inline-flex h-11 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 text-[13px] font-semibold whitespace-nowrap text-amber-800 transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:px-4 lg:flex-initial",
+                  !buttons.secondary && "col-span-2"
+                )}
               >
                 <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Pick a slot to confirm
+                Pick a slot first
               </button>
             ) : (
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => onSelect(primaryNext)}
+                onClick={() => onAction(buttons.primary!.action)}
                 className={cn(
-                  "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-[13px] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-9 lg:flex-initial",
-                  isRejected
-                    ? "border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8]"
-                    : "bg-[#34451F] text-white shadow-sm hover:bg-[#283719]"
+                  "inline-flex h-11 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-3 text-[13px] font-semibold whitespace-nowrap text-white shadow-sm transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:px-4 lg:flex-initial",
+                  !buttons.secondary && "col-span-2"
                 )}
               >
-                {pendingStage === primaryNext ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                ) : isRejected ? (
-                  <Undo2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                ) : null}
-                {isRejected ? "Reopen" : "Confirm booking"}
-                {!isRejected && pendingStage !== primaryNext && (
+                {spinner(buttons.primary)}
+                {buttons.primary.label}
+                {pendingAction !== buttons.primary.action && (
                   <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                 )}
               </button>
@@ -610,7 +711,7 @@ function StageStepper({
         <p
           className={cn(
             "mt-2 text-[12px] leading-snug",
-            primaryBlocker ? "font-semibold text-amber-800" : "text-admin-muted"
+            primaryBlocked ? "font-semibold text-amber-800" : "text-admin-muted"
           )}
         >
           {hint}
@@ -620,14 +721,17 @@ function StageStepper({
   );
 }
 
+/* The preview is plain text, so the bold markup the email copy carries is dropped. */
+const stripTags = (html: string) => html.replace(/<[^>]+>/g, "");
+
 function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
   return (
     <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
       <p className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">To: {to}</p>
-      <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
-      <p className="text-xs text-[#5E6654]">{email.greeting}</p>
+      <p className="font-black text-xs text-[#20231A]">{stripTags(email.subject)}</p>
+      <p className="text-xs text-[#5E6654]">{stripTags(email.greeting)}</p>
       {email.body.map((p, i) => (
-        <p key={i} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
+        <p key={i} className="text-xs leading-relaxed text-[#5E6654]">{stripTags(p)}</p>
       ))}
       {email.noteLabel && (
         <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
@@ -639,40 +743,112 @@ function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
   );
 }
 
-function EmailWithNote({
-  initialNote,
-  onNoteChange,
-  build,
+export type ActionDraft = { note: string; deposit: string; via: Exclude<DepositPaidVia, "square" | "none"> };
+
+const MANUAL_PAYMENT_METHODS: ActionDraft["via"][] = ["bank_transfer", "cash", "other"];
+
+const dialogInputClass =
+  "w-full rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-[13px] text-[#20231A] transition-all focus:border-[#34451F]/30 focus:outline-none";
+
+/* The body of an action's confirm dialog: optional deposit and payment-method
+   fields, the note for the customer, and a live preview of the email. The
+   approve dialog previews the confirmation instead when the deposit is £0,
+   since that is what will actually be sent. */
+function ActionDialogBody({
+  initial,
+  onChange,
+  emails,
+  depositLabel,
+  showVia,
   to,
-  label,
-  placeholder,
+  noteLabel,
+  notePlaceholder,
 }: {
-  initialNote: string;
-  onNoteChange: (v: string) => void;
-  build: (note: string) => PrivateHireEmail;
+  initial: ActionDraft;
+  onChange: (draft: ActionDraft) => void;
+  emails: { withDeposit: RenderedSlots | null; noDeposit?: RenderedSlots | null; previewAmount?: string };
+  depositLabel?: string;
+  showVia?: boolean;
   to: string;
-  label: string;
-  placeholder: string;
+  noteLabel: string;
+  notePlaceholder: string;
 }) {
-  const [note, setNote] = useState(initialNote);
+  const [draft, setDraft] = useState(initial);
+  const update = (patch: Partial<ActionDraft>) => {
+    const next = { ...draft, ...patch };
+    setDraft(next);
+    onChange(next);
+  };
+
+  const amount = Number(draft.deposit);
+  const noDeposit = depositLabel && emails.noDeposit !== undefined && draft.deposit.trim() !== "" && amount <= 0;
+  const slots = noDeposit ? emails.noDeposit : emails.withDeposit;
+  const shownAmount = Number.isFinite(amount) && amount > 0 ? formatDeposit(amount) : null;
+  const previewSlots =
+    slots && emails.previewAmount && shownAmount
+      ? {
+          ...slots,
+          subject: slots.subject.split(emails.previewAmount).join(shownAmount),
+          intro: slots.intro.split(emails.previewAmount).join(shownAmount),
+        }
+      : slots;
+
   return (
-    <div className="space-y-2 text-left">
+    <div className="space-y-3 text-left">
+      {(depositLabel || showVia) && (
+        <div className="flex gap-2">
+          {depositLabel && (
+            <label className="block flex-1">
+              <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{depositLabel}</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                value={draft.deposit}
+                onChange={(e) => update({ deposit: e.target.value })}
+                className={dialogInputClass}
+              />
+            </label>
+          )}
+          {showVia && (
+            <label className="block flex-1">
+              <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Paid by</span>
+              <select
+                value={draft.via}
+                onChange={(e) => update({ via: e.target.value as ActionDraft["via"] })}
+                className={cn(dialogInputClass, "cursor-pointer")}
+              >
+                {MANUAL_PAYMENT_METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {DEPOSIT_PAID_VIA_LABEL[m]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+      {noDeposit && (
+        <p className="rounded-lg bg-admin-info-bg px-3 py-2 text-[12px] font-semibold text-admin-info">
+          No deposit - this confirms the hire straight away and puts it on the schedule.
+        </p>
+      )}
       <label className="block">
-        <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-          {label}
-        </span>
+        <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{noteLabel}</span>
         <textarea
-          value={note}
+          value={draft.note}
           rows={3}
-          placeholder={placeholder}
-          onChange={(e) => {
-            setNote(e.target.value);
-            onNoteChange(e.target.value);
-          }}
-          className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-xs text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
+          placeholder={notePlaceholder}
+          onChange={(e) => update({ note: e.target.value })}
+          className={cn(dialogInputClass, "resize-none text-xs placeholder:text-[#5E6654]/50")}
         />
       </label>
-      <EmailPreview email={build(note)} to={to} />
+      {previewSlots ? (
+        <EmailPreview email={buildPrivateHireOutcomeEmail({ slots: previewSlots, notes: draft.note })} to={to} />
+      ) : (
+        <p className="text-[12px] text-admin-muted">This email is switched off, so nothing will be sent.</p>
+      )}
     </div>
   );
 }
@@ -716,7 +892,7 @@ export function PrivateHireCard({
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [pendingStage, setPendingStage] = useState<PrivateStage | null>(null);
+  const [pendingAction, setPendingAction] = useState<HireAction | null>(null);
   const [clashes, setClashes] = useState<ClashEvent[]>([]);
   const [slotFlash, setSlotFlash] = useState(false);
   const [confirmAttempted, setConfirmAttempted] = useState(false);
@@ -726,12 +902,13 @@ export function PrivateHireCard({
   const slotRowRef = useRef<HTMLDivElement>(null);
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
-  const noteDraft = useRef("");
+  const actionDraft = useRef<ActionDraft>({ note: "", deposit: "", via: "bank_transfer" });
 
-  const status = normStatus(request.status);
-  const theme = STATUS_THEME[status] ?? STATUS_THEME.pending;
-  const editable = status !== "cancelled";
-  const isCancelled = status === "cancelled";
+  const status = normalizePrivateHireStatus(request.status);
+  const theme = STATUS_THEME[status];
+  const editable = status !== "declined" && status !== "cancelled";
+  const isCancelled = !editable;
+  const depositEditable = status === "new" || status === "awaiting_customer" || status === "awaiting_deposit";
 
   const currentSub = unwrapSubtype(request.event_subtypes);
   const shortRef = request.id.slice(0, 8).toUpperCase();
@@ -742,6 +919,10 @@ export function PrivateHireCard({
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(
+    request.deposit_amount != null && request.deposit_amount > 0 ? String(request.deposit_amount) : ""
+  );
+  const [depositDue, setDepositDue] = useState(request.deposit_due_date || "");
 
   const joinedTypeName = unwrapSubtype(currentSub?.event_types)?.name;
 
@@ -772,17 +953,17 @@ export function PrivateHireCard({
   const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
   const eventIsActive = linkedEvent?.is_active === true;
 
-  const isWorkingStage = status === "pending";
+  const isWorkingStage = status === "new" || status === "awaiting_customer" || status === "expired";
   const showEventBadge = !!eventHref || !isWorkingStage;
   const needsDate = isWorkingStage && !selectedDate;
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
   const slotWarning =
     needsDate && needsTime
-      ? "Set a date and time to confirm this booking."
+      ? "Set a date and time before you approve or propose it."
       : needsDate
-        ? "Set a date to confirm this booking."
+        ? "Set a date before you approve or propose it."
         : needsTime
-          ? "Set a start and end time to confirm this booking."
+          ? "Set a start and end time before you approve or propose it."
           : undefined;
   const showSlotWarning = confirmAttempted && !!slotWarning;
 
@@ -804,7 +985,10 @@ export function PrivateHireCard({
     guestCount !== String(request.guest_count ?? "") ||
     subtypeId !== (request.event_subtypes_id != null ? String(request.event_subtypes_id) : "") ||
     adminNotes !== (request.admin_notes ?? "");
-  const hasChanges = detailsChanged || dateTimeChanged;
+  const origDeposit = request.deposit_amount != null && request.deposit_amount > 0 ? String(request.deposit_amount) : "";
+  const depositChanged =
+    Number(depositAmount || 0) !== Number(origDeposit || 0) || depositDue !== (request.deposit_due_date || "");
+  const hasChanges = detailsChanged || dateTimeChanged || depositChanged;
 
   const editFields = () => ({
     guest_count: guestCount.trim() === "" ? request.guest_count : Number(guestCount),
@@ -813,6 +997,12 @@ export function PrivateHireCard({
     selected_start_time: selectedStartTime || null,
     selected_end_time: selectedEndTime || null,
     admin_notes: adminNotes || null,
+    ...(depositChanged
+      ? {
+          deposit_amount: depositAmount.trim() === "" ? 0 : Math.max(0, Number(depositAmount)),
+          ...(status === "awaiting_deposit" && depositDue ? { deposit_due_date: depositDue } : {}),
+        }
+      : {}),
   });
 
   const applyDate = (d: string) => {
@@ -855,7 +1045,7 @@ export function PrivateHireCard({
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const list = await getClashingEvents(selectedDate, selectedStartTime, selectedEndTime, request.event_id);
+        const list = await getClashingEvents(selectedDate, selectedStartTime, selectedEndTime, request.event_id, request.id);
         if (!cancelled) setClashes(list);
       } catch {
         if (!cancelled) setClashes([]);
@@ -865,7 +1055,7 @@ export function PrivateHireCard({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isCancelled, selectedDate, selectedStartTime, selectedEndTime, request.event_id]);
+  }, [isCancelled, selectedDate, selectedStartTime, selectedEndTime, request.event_id, request.id]);
 
   async function findClashes(): Promise<ClashEvent[]> {
     if (!selectedDate) {
@@ -876,7 +1066,8 @@ export function PrivateHireCard({
       selectedDate,
       selectedStartTime || null,
       selectedEndTime || null,
-      request.event_id
+      request.event_id,
+      request.id
     );
     setClashes(list);
     return list;
@@ -907,6 +1098,8 @@ export function PrivateHireCard({
     setSelectedStartTime(toHHMM(request.selected_start_time));
     setSelectedEndTime(toHHMM(request.selected_end_time));
     setAdminNotes(request.admin_notes || "");
+    setDepositAmount(origDeposit);
+    setDepositDue(request.deposit_due_date || "");
     setClashes([]);
     setError(null);
   }
@@ -916,109 +1109,220 @@ export function PrivateHireCard({
     setSheetOpen(false);
   }
 
-  async function confirmEmail(newStatus: PrivateAction): Promise<{ ok: boolean; note: string }> {
-    const to = request.email;
-    const dialogs: Partial<
-      Record<
-        PrivateAction,
-        {
-          title: string;
-          description: string;
-          confirmLabel: string;
-          label: string;
-          placeholder: string;
-          destructive?: boolean;
-        }
-      >
-    > = {
-      confirmed: {
-        title: "Confirm & email enquirer?",
-        description: "This confirms the hire and puts the event on the schedule.",
-        confirmLabel: "Confirm & Email",
-        label: "Message to the enquirer (optional)",
-        placeholder: "Anything they should know before the day...",
-      },
-      cancelled: {
-        title: "Reject & email enquirer?",
-        description: "This turns the enquiry down and emails the enquirer.",
-        confirmLabel: "Reject & Email",
-        label: "Reason for rejecting (optional)",
-        placeholder: "Shared with the enquirer in the email. Leave blank to say nothing.",
-        destructive: true,
-      },
-    };
+  type DialogSpec = {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    destructive?: boolean;
+    email?: PrivateHireEmailKey;
+    noDepositEmail?: PrivateHireEmailKey;
+    deposit?: string;
+    via?: boolean;
+    noteLabel: string;
+    notePlaceholder: string;
+  };
 
-    const d = dialogs[newStatus];
-    if (!d) return { ok: true, note: adminNotes };
+  function dialogFor(action: HireAction): DialogSpec | null {
+    const approveLike = {
+      email: "private_hire.approved" as const,
+      noDepositEmail: "private_hire.confirmed" as const,
+      deposit: "Deposit (£)",
+      noteLabel: "Message to the customer (optional)",
+      notePlaceholder: "Anything they should know before paying...",
+    };
+    switch (action) {
+      case "approve":
+        return {
+          ...approveLike,
+          title: "Approve these times?",
+          description: "Emails the customer asking for the deposit. The date is held until it's due.",
+          confirmLabel: "Approve & Email",
+        };
+      case "accept":
+        return {
+          ...approveLike,
+          title: "Mark the proposed time accepted?",
+          description: "Use this when the customer agreed by email or phone. Emails them asking for the deposit.",
+          confirmLabel: "Mark Accepted & Email",
+        };
+      case "reopenDeposit":
+        return {
+          ...approveLike,
+          title: "Reopen with a new deadline?",
+          description: "Sends a fresh deposit request with a new due date and holds the date again.",
+          confirmLabel: "Reopen & Email",
+        };
+      case "propose":
+        return {
+          title: "Propose this time?",
+          description: "Emails the customer the selected date and time to accept or turn down.",
+          confirmLabel: "Propose & Email",
+          email: "private_hire.proposed",
+          noteLabel: "Message to the customer (optional)",
+          notePlaceholder: "Why you're suggesting this time...",
+        };
+      case "markPaid":
+        return {
+          title: "Record the deposit as paid?",
+          description: "Confirms the hire, puts it on the schedule and emails the customer.",
+          confirmLabel: "Confirm Hire & Email",
+          email: "private_hire.confirmed",
+          deposit: "Amount paid (£)",
+          via: true,
+          noteLabel: "Message to the customer (optional)",
+          notePlaceholder: "Anything they should know before the day...",
+        };
+      case "decline":
+        return {
+          title: "Decline & email the customer?",
+          description: "Turns the request down and emails the customer.",
+          confirmLabel: "Decline & Email",
+          destructive: true,
+          email: "private_hire.declined",
+          noteLabel: "Reason for declining (optional)",
+          notePlaceholder: "Shared with the customer in the email. Leave blank to say nothing.",
+        };
+      case "cancel":
+        return {
+          title: "Cancel this hire?",
+          description:
+            status === "confirmed"
+              ? "Takes the event off the schedule and emails the customer. Refund any deposit in Square by hand."
+              : "Releases the held date and emails the customer.",
+          confirmLabel: "Cancel Hire & Email",
+          destructive: true,
+          email: "private_hire.cancelled",
+          noteLabel: "Message to the customer (optional)",
+          notePlaceholder: "Shared with the customer in the email.",
+        };
+      default:
+        return null;
+    }
+  }
+
+  async function askForAction(action: HireAction): Promise<boolean> {
+    if (action === "reopen") {
+      return confirm({
+        title: "Reopen this request?",
+        description: "Moves it back to New so you can review it again. Nothing is emailed.",
+        confirmLabel: "Reopen",
+      });
+    }
+    if (action === "resend") {
+      return confirm({
+        title: "Send the email again?",
+        description:
+          status === "awaiting_customer"
+            ? "Resends the proposed time to the customer."
+            : "Resends the deposit request, with the link to pay.",
+        confirmLabel: "Send Again",
+      });
+    }
+
+    const d = dialogFor(action);
+    if (!d) return false;
 
     /* Fetched rather than composed here, so the preview is the copy that will
        actually be sent - including any wording changed on the settings page. */
-    const slots = await privateHireEmailSlotsAction(
-      newStatus === "confirmed" ? "confirmed" : "cancelled",
-      request.full_name
-    );
-    if (!slots) {
-      return {
-        ok: await confirm({
-          title: d.title,
-          description: `${d.description} This email is currently switched off, so nothing will be sent.`,
-          confirmLabel: d.confirmLabel,
-          variant: d.destructive ? "destructive" : undefined,
-        }),
-        note: adminNotes,
-      };
-    }
+    const [withDeposit, noDeposit, defaultDeposit] = await Promise.all([
+      d.email ? privateHireEmailSlotsAction(d.email, request.id) : Promise.resolve(null),
+      d.noDepositEmail ? privateHireEmailSlotsAction(d.noDepositEmail, request.id) : Promise.resolve(undefined),
+      d.deposit && !depositAmount ? privateHireDepositDefaultAction() : Promise.resolve(Number(depositAmount)),
+    ]);
 
-    const initial = newStatus === "cancelled" ? adminNotes : "";
-    noteDraft.current = initial;
-    const ok = await confirm({
+    const startingDeposit =
+      action === "markPaid"
+        ? String(request.deposit_amount ?? defaultDeposit ?? "")
+        : String(depositAmount || defaultDeposit || "");
+    const initial: ActionDraft = {
+      note: action === "decline" ? adminNotes : "",
+      deposit: d.deposit ? startingDeposit : "",
+      via: "bank_transfer",
+    };
+    actionDraft.current = initial;
+
+    return confirm({
       title: d.title,
-      description: `${d.description} Preview:`,
+      description: d.description,
       confirmLabel: d.confirmLabel,
       variant: d.destructive ? "destructive" : undefined,
       content: (
-        <EmailWithNote
-          initialNote={initial}
-          onNoteChange={(v) => {
-            noteDraft.current = v;
+        <ActionDialogBody
+          initial={initial}
+          onChange={(draft) => {
+            actionDraft.current = draft;
           }}
-          build={(note) => buildPrivateHireOutcomeEmail({ slots, notes: note })}
-          to={to}
-          label={d.label}
-          placeholder={d.placeholder}
+          emails={{
+            withDeposit,
+            noDeposit,
+            previewAmount: formatDeposit(Number(startingDeposit) || 0),
+          }}
+          depositLabel={d.deposit}
+          showVia={d.via}
+          to={request.email}
+          noteLabel={d.noteLabel}
+          notePlaceholder={d.notePlaceholder}
         />
       ),
     });
-    return { ok, note: noteDraft.current };
   }
 
-  function handleAction(next: PrivateStage) {
+  function handleAction(action: HireAction) {
     setError(null);
     setClashes([]);
     void attempt(async () => {
-      if (next === "confirmed") {
+      const usesSlot = action === "approve" || action === "propose" || action === "accept" || action === "reopenDeposit";
+      if (usesSlot) {
         const c = await findClashes();
         if (c.length) return;
       }
-      const { ok, note } = await confirmEmail(next);
-      if (!ok) return;
-      applyStatus(next, note);
+      if (!(await askForAction(action))) return;
+      runAction(action, actionDraft.current);
     }, () => setError("Failed to update. Please try again."));
   }
 
-  function applyStatus(newStatus: PrivateAction, note: string) {
-    setPendingStage(newStatus);
+  function runAction(action: HireAction, draft: ActionDraft) {
+    setPendingAction(action);
     startTransition(async () => {
-      await attempt(async () => {
-        if (hasChanges) {
-          await updatePrivateHireFields(request.id, { ...editFields(), admin_notes: note || null });
+      try {
+        if (hasChanges) await updatePrivateHireFields(request.id, editFields());
+        const note = draft.note.trim() || undefined;
+        const amount = draft.deposit.trim() === "" ? null : Math.max(0, Number(draft.deposit));
+        const check = (r: { ok: boolean; error?: string }) => {
+          if (!r.ok) throw new Error(r.error);
+        };
+        switch (action) {
+          case "approve":
+          case "accept":
+          case "reopenDeposit":
+            check(await approvePrivateHireAction(request.id, { depositAmount: amount, note }));
+            break;
+          case "propose":
+            check(await proposePrivateHireAction(request.id, { note }));
+            break;
+          case "markPaid":
+            check(await markPrivateHireDepositPaidAction(request.id, { via: draft.via, amount: amount ?? 0, note }));
+            break;
+          case "decline":
+            check(await closePrivateHireAction(request.id, "declined", note));
+            setAdminNotes(note ?? "");
+            break;
+          case "cancel":
+            check(await closePrivateHireAction(request.id, "cancelled", note));
+            break;
+          case "reopen":
+            check(await reopenPrivateHireAction(request.id));
+            break;
+          case "resend":
+            check(await resendPrivateHireEmailAction(request.id));
+            break;
         }
-        await updatePrivateHireStatus(request.id, newStatus, note || undefined);
-        setAdminNotes(note);
-        const label = STATUS_TOAST[newStatus];
-        toast.success(newStatus === "pending" ? label : `${label} - enquirer emailed`);
-      }, () => setError("Failed to update. Please try again."));
-      setPendingStage(null);
+        const zeroDeposit = (action === "approve" || action === "accept" || action === "reopenDeposit") && amount === 0;
+        toast.success(zeroDeposit ? "Confirmed with no deposit - customer emailed" : ACTION_TOAST[action]);
+      } catch (e) {
+        setError(e instanceof Error && e.message ? e.message : "Failed to update. Please try again.");
+      }
+      setPendingAction(null);
     });
   }
 
@@ -1064,7 +1368,7 @@ export function PrivateHireCard({
       setSheetOpen(false);
       return;
     }
-    if (askingToClose.current || !!pendingStage) return;
+    if (askingToClose.current || !!pendingAction) return;
     askingToClose.current = true;
     await attempt(askBeforeClose, () => {});
     askingToClose.current = false;
@@ -1437,13 +1741,14 @@ export function PrivateHireCard({
               </div>
             </div>
             <StageStepper
+              request={request}
               status={status}
-              onSelect={handleAction}
-              pendingStage={pendingStage}
-              blockers={{ confirmed: slotWarning ?? clashWarning }}
+              onAction={handleAction}
+              pendingAction={pendingAction}
+              slotBlocker={slotWarning ?? clashWarning}
               onRevealSlot={revealSlot}
-              declineReason={adminNotes}
-              onDeclineReasonChange={setAdminNotes}
+              closedReason={adminNotes}
+              onClosedReasonChange={setAdminNotes}
             />
           </div>
 
@@ -1701,6 +2006,46 @@ export function PrivateHireCard({
                       </div>
                     )}
                   </div>
+
+                  {status === "confirmed" ? (
+                    <SheetRow
+                      label="Deposit"
+                      value={
+                        request.deposit_paid_via && request.deposit_paid_via !== "none"
+                          ? `${formatDeposit(request.paid_amount)} · ${DEPOSIT_PAID_VIA_LABEL[request.deposit_paid_via as DepositPaidVia] ?? request.deposit_paid_via}${request.deposit_paid_at ? ` · ${formatDay(request.deposit_paid_at.slice(0, 10))}` : ""}`
+                          : "None taken"
+                      }
+                    />
+                  ) : (
+                    <EditRow
+                      label="Deposit (£)"
+                      value={depositAmount}
+                      onChange={setDepositAmount}
+                      editable={depositEditable}
+                      type="number"
+                      placeholder="Company default"
+                      readOnlyValue={request.deposit_amount ? formatDeposit(request.deposit_amount) : "-"}
+                    />
+                  )}
+
+                  {(status === "awaiting_deposit" || status === "expired") && (
+                    <EditRow
+                      label="Deposit due"
+                      value={depositDue}
+                      onChange={setDepositDue}
+                      editable={status === "awaiting_deposit"}
+                      type="date"
+                      readOnlyValue={formatDay(request.deposit_due_date) || "-"}
+                    />
+                  )}
+
+                  <ContactRow
+                    label="Customer page"
+                    value={status === "awaiting_customer" ? "Waiting for their answer" : status === "awaiting_deposit" ? "Pay deposit link" : "Request status"}
+                    href={`/private-hire/${request.id}`}
+                    icon={ExternalLink}
+                    external
+                  />
                 </Section>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
@@ -1710,15 +2055,15 @@ export function PrivateHireCard({
                   <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
                 </Section>
 
-                {isCancelled && (
-                  <Section title="Cancellation Reason for Applicant">
+                {status === "declined" && (
+                  <Section title="Reason Given to the Customer">
                     <div className="p-4 sm:p-5">
                       <textarea
-                        aria-label="Cancellation reason for applicant"
+                        aria-label="Reason given to the customer"
                         value={adminNotes}
                         onChange={(e) => setAdminNotes(e.target.value)}
                         rows={4}
-                        placeholder="The reason given to the enquirer when this was rejected..."
+                        placeholder="The reason given to the customer when this was declined..."
                         className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                       />
                       <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">

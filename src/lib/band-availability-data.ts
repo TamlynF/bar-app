@@ -1,4 +1,7 @@
 import { createClient } from "./supabase/server";
+import { createAdminClient } from "./supabase/admin";
+import { heldPrivateHireSlots } from "./private-hire-flow";
+import { heldSlotsAsEvents } from "./private-hire-details";
 import { getCompanyInfo } from "./company-info";
 import { computeAvailableBandDates } from "./band-availability";
 import type { EventClashCandidate } from "./event-form-validation";
@@ -17,16 +20,19 @@ export async function getAvailableBandDates(): Promise<string[]> {
   const supabase = await createClient();
   const companyInfo = await getCompanyInfo();
 
-  const { data: eventRows } = await supabase
-    .from("events")
-    .select("id, title, date, start_time, end_time, is_active")
-    .gte("date", from)
-    .lte("date", to);
+  const [{ data: eventRows }, held] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, title, date, start_time, end_time, is_active")
+      .gte("date", from)
+      .lte("date", to),
+    heldPrivateHireSlots(createAdminClient(), { from, to }),
+  ]);
 
   return computeAvailableBandDates({
     from,
     to,
     openingHours: (companyInfo?.opening_hours ?? null) as OpeningHours | null,
-    events: (eventRows ?? []) as EventClashCandidate[],
+    events: [...((eventRows ?? []) as EventClashCandidate[]), ...heldSlotsAsEvents(held)],
   });
 }

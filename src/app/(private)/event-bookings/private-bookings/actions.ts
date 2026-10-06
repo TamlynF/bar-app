@@ -2,17 +2,32 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
-import { sendCorrespondenceEmail } from "@/lib/email/correspondence-data";
 import { revalidatePath } from "next/cache";
-import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
-import { planPrivateEventSync } from "@/lib/private-event-sync";
-import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
-import { eventSlotIsComplete } from "@/lib/event-active";
-import { privateHireScenarioKey } from "@/lib/private-hire-emails";
 import { renderTemplate } from "@/lib/email/resolve";
-import { plainLayout, plainNote } from "@/lib/email/layout";
-import { escapeHtml } from "@/lib/email/escape";
+import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
+import {
+  approvePrivateHire,
+  closePrivateHire,
+  confirmPrivateHire,
+  heldPrivateHireSlots,
+  loadHire,
+  proposePrivateHireTimes,
+  reopenPrivateHire,
+  resendPrivateHireEmail,
+  syncHireEvent,
+  venueToday,
+  type FlowContext,
+  type FlowResult,
+} from "@/lib/private-hire-flow";
+import {
+  depositDueDate,
+  normalizePrivateHireStatus,
+  resolveDepositAmount,
+  type DepositPaidVia,
+} from "@/lib/private-hire-status";
+import { formatDeposit, formatHireDate, formatHireTime, heldSlotsOnDate } from "@/lib/private-hire-details";
+import type { PrivateHireEmailKey } from "@/lib/private-hire-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -22,34 +37,6 @@ async function currentEmployeeId(): Promise<number | null> {
   if (!user?.email) return null;
   const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
   return emp?.id ?? null;
-}
-
-async function eventTypeBookingFields(eventTypeId: number) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("event_types")
-    .select("is_bookable, booking_config, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge")
-    .eq("id", eventTypeId)
-    .maybeSingle();
-  return {
-    is_bookable: data?.is_bookable ?? false,
-    booking_config: data?.booking_config ?? null,
-    booking_card_title: data?.booking_card_title ?? null,
-    booking_card_tagline: data?.booking_card_tagline ?? null,
-    booking_card_icon: data?.booking_card_icon ?? null,
-    booking_card_badge: data?.booking_card_badge ?? null,
-  };
-}
-
-export async function getPrivateHireById(id: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("private_hire_requests")
-    .select("*, event_subtypes:event_subtypes_id ( name, default_event_title )")
-    .eq("id", id)
-    .single();
-  if (error || !data) throw new Error("Private hire request not found");
-  return data;
 }
 
 export async function getPrivateEventOptions() {
@@ -68,7 +55,8 @@ export async function getClashingEvents(
   date: string,
   startTime: string | null,
   endTime: string | null,
-  excludeEventId?: number | null
+  excludeEventId?: number | null,
+  excludeRequestId?: string | null
 ): Promise<ClashEvent[]> {
   if (!date) return [];
   const supabase = await createClient();
@@ -80,8 +68,14 @@ export async function getClashingEvents(
     .eq("is_active", true);
   if (excludeEventId != null) query = query.neq("id", excludeEventId);
 
-  const { data } = await query;
-  return findEventClashes({ start: startTime, end: endTime }, (data ?? []) as ClashEventInput[]);
+  const [{ data }, held] = await Promise.all([
+    query,
+    heldPrivateHireSlots(supabase, { from: date, to: date }, excludeRequestId),
+  ]);
+  return findEventClashes({ start: startTime, end: endTime }, [
+    ...((data ?? []) as ClashEventInput[]),
+    ...heldSlotsOnDate(held, date),
+  ]);
 }
 
 export async function updatePrivateHireFields(
@@ -94,191 +88,116 @@ export async function updatePrivateHireFields(
     selected_end_time?: string | null;
     event_subtypes_id?: number | null;
     admin_notes?: string | null;
+    deposit_amount?: number | null;
+    deposit_due_date?: string | null;
   }
 ) {
   const supabase = await createClient();
   const empId = await currentEmployeeId();
+  const before = await loadHire(supabase, id);
+  if (!before) throw new Error("Request not found.");
 
-  const { data: record, error } = await supabase
+  /* A new amount or slot means the customer's existing checkout is out of
+     date, so the next "Pay deposit" click makes a fresh one. */
+  const checkoutChanged =
+    (fields.deposit_amount !== undefined && Number(fields.deposit_amount) !== Number(before.deposit_amount)) ||
+    (fields.selected_date !== undefined && fields.selected_date !== before.selected_date);
+
+  const { error } = await supabase
     .from("private_hire_requests")
-    .update({ ...fields, updated_by: empId, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select(
-      "full_name, status, event_id, selected_date, selected_start_time, selected_end_time, reason, reason_for_hire, deposit_amount, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )"
-    )
-    .single();
-
-  if (error || !record) throw new Error("Failed to save changes.");
-
-  if ((record.status || "").toLowerCase() === "confirmed" && record.event_id) {
-    const sub = unwrapSubtype(
-      record.event_subtypes as { id: number; name: string; default_event_title: string | null; event_types_id: number } | { id: number; name: string; default_event_title: string | null; event_types_id: number }[] | null
-    );
-    const label = sub
-      ? privateHireSubtypeLabel(sub, record.reason_for_hire || "Private Hire")
-      : record.reason || record.reason_for_hire || "Private Hire";
-    const eventUpdate: Record<string, unknown> = {
-      title: `${record.full_name} - ${label}`,
-      date: record.selected_date,
-      start_time: record.selected_start_time,
-      end_time: record.selected_end_time,
-      payment_amount: 0,
+    .update({
+      ...fields,
+      ...(checkoutChanged ? { payment_link_url: null, square_order_id: null } : {}),
       updated_by: empId,
       updated_at: new Date().toISOString(),
-      ...(eventSlotIsComplete({
-        date: record.selected_date,
-        startTime: record.selected_start_time,
-        endTime: record.selected_end_time,
-      })
-        ? {}
-        : { is_active: false }),
-    };
-    if (sub) {
-      eventUpdate.event_types_id = sub.event_types_id;
-      eventUpdate.event_subtypes_id = sub.id;
-      Object.assign(eventUpdate, await eventTypeBookingFields(sub.event_types_id));
-    }
-    await supabase.from("events").update(eventUpdate).eq("id", record.event_id);
+    })
+    .eq("id", id);
+  if (error) throw new Error("Failed to save changes.");
+
+  const after = await loadHire(supabase, id);
+  if (after && normalizePrivateHireStatus(after.status) === "confirmed" && after.event_id) {
+    await syncHireEvent({ supabase, resend, actorId: empId }, after);
   }
 
+  revalidatePrivateHire();
+}
+
+function revalidatePrivateHire() {
   revalidatePath("/event-bookings/private-bookings");
   revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
 }
 
-export async function updatePrivateHireStatus(
+async function flowContext(): Promise<FlowContext> {
+  return { supabase: await createClient(), resend, actorId: await currentEmployeeId() };
+}
+
+/* Returned rather than thrown: a thrown message is hidden from the browser in
+   production, and these ones tell staff why a step didn't happen. */
+async function finish(result: FlowResult): Promise<FlowResult> {
+  if (result.ok) revalidatePrivateHire();
+  return result;
+}
+
+export async function approvePrivateHireAction(id: string, opts: { depositAmount: number | null; note?: string }) {
+  return finish(await approvePrivateHire(await flowContext(), id, opts));
+}
+
+export async function proposePrivateHireAction(id: string, opts: { note?: string }) {
+  return finish(await proposePrivateHireTimes(await flowContext(), id, opts));
+}
+
+export async function markPrivateHireDepositPaidAction(
   id: string,
-  status: "pending" | "confirmed" | "cancelled",
-  adminNotes?: string
+  opts: { via: Exclude<DepositPaidVia, "square" | "none">; amount: number; note?: string }
 ) {
-  const supabase = await createClient();
-  const empId = await currentEmployeeId();
-
-  const { data: record, error } = await supabase
-    .from("private_hire_requests")
-    .update({ status, admin_notes: adminNotes || null, updated_by: empId, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount, event_id, event_subtypes_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )")
-    .single();
-
-  if (error || !record) {
-    console.log("Supabase error:", error);
-    throw new Error("Failed to update status.");
-  }
-
-  const plan = planPrivateEventSync({
-    status,
-    selectedDate: record.selected_date,
-    eventId: record.event_id,
-  });
-
-  if (plan.action === "insert" || plan.action === "update") {
-    const sub = unwrapSubtype(
-      record.event_subtypes as { id: number; name: string; default_event_title: string | null; event_types_id: number } | { id: number; name: string; default_event_title: string | null; event_types_id: number }[] | null
-    );
-
-    let eventTypeId: number;
-    let eventSubtypeId: number;
-    let label: string;
-    if (sub) {
-      eventTypeId = sub.event_types_id;
-      eventSubtypeId = sub.id;
-      label = privateHireSubtypeLabel(sub, record.reason_for_hire || "Private Hire");
-    } else {
-      const reason = record.reason?.toLowerCase() || record.reason_for_hire?.toLowerCase() || "other";
-      ({ eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason, "private"));
-      label = record.reason || record.reason_for_hire || "Private Hire";
-    }
-
-    const now = new Date().toISOString();
-    const eventFields = {
-      title: `${record.full_name} - ${label}`,
-      date: record.selected_date,
-      start_time: record.selected_start_time,
-      end_time: record.selected_end_time,
-      event_types_id: eventTypeId,
-      event_subtypes_id: eventSubtypeId,
-      payment_amount: 0,
-      is_active: eventSlotIsComplete({
-        date: record.selected_date,
-        startTime: record.selected_start_time,
-        endTime: record.selected_end_time,
-      }),
-      ...(await eventTypeBookingFields(eventTypeId)),
-      updated_by: empId,
-      updated_at: now,
-    };
-
-    if (plan.action === "update") {
-      await supabase.from("events").update(eventFields).eq("id", plan.eventId);
-    } else {
-      const { data: newEvent } = await supabase
-        .from("events")
-        .insert({
-          ...eventFields,
-          creation_method: "private_hire_request",
-          creation_source_id: id,
-          created_by: empId,
-          created_at: now,
-        })
-        .select("id")
-        .single();
-      if (newEvent) {
-        await supabase
-          .from("private_hire_requests")
-          .update({ event_id: newEvent.id })
-          .eq("id", id);
-      }
-    }
-  } else if (plan.action === "deactivate") {
-    await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
-  }
-
-  if (status !== "pending") {
-    await sendOutcomeEmail(supabase, id, empId, record.full_name, record.email, status, adminNotes);
-  }
-
-  revalidatePath("/event-bookings/private-bookings");
-  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
-  revalidatePath("/dashboard");
-  revalidatePath("/event-setups/events");
+  return finish(
+    await confirmPrivateHire(await flowContext(), id, { via: opts.via, paidAmount: opts.amount, note: opts.note })
+  );
 }
 
-/* Lets the status dialog preview exactly what will be sent, rather than an
+export async function closePrivateHireAction(id: string, to: "declined" | "cancelled", note?: string) {
+  return finish(await closePrivateHire(await flowContext(), id, to, { note }));
+}
+
+export async function reopenPrivateHireAction(id: string) {
+  return finish(await reopenPrivateHire(await flowContext(), id));
+}
+
+export async function resendPrivateHireEmailAction(id: string) {
+  return finish(await resendPrivateHireEmail(await flowContext(), id));
+}
+
+/* Lets the action dialogs preview exactly what will be sent, rather than an
    approximation built from copy compiled into the page. */
-export async function privateHireEmailSlotsAction(
-  outcome: "confirmed" | "cancelled",
-  name: string
-) {
+export async function privateHireEmailSlotsAction(key: PrivateHireEmailKey, id: string) {
   const supabase = await createClient();
-  return renderTemplate(supabase, privateHireScenarioKey(outcome), { customerName: name });
+  const row = await loadHire(supabase, id);
+  if (!row) return null;
+  const settings = await supabase
+    .from("company_information")
+    .select("private_hire_deposit, private_hire_deposit_days")
+    .limit(1)
+    .maybeSingle();
+  /* Before approval there's no due date yet - preview the one approving now would set. */
+  const dueDate =
+    row.deposit_due_date ??
+    depositDueDate(venueToday(), Number(settings.data?.private_hire_deposit_days) || 7, row.selected_date);
+  return renderTemplate(supabase, key, {
+    customerName: row.full_name,
+    hireDate: formatHireDate(row.selected_date),
+    hireTime: formatHireTime(row.selected_start_time, row.selected_end_time),
+    hireReason: privateHireSubtypeLabel(unwrapSubtype(row.event_subtypes), row.reason || row.reason_for_hire || "Private Hire"),
+    depositAmount: formatDeposit(resolveDepositAmount(row.deposit_amount, settings.data?.private_hire_deposit)),
+    depositDueDate: formatHireDate(dueDate),
+  });
 }
 
-async function sendOutcomeEmail(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  requestId: string,
-  sentBy: number | null,
-  name: string,
-  email: string,
-  status: "confirmed" | "cancelled",
-  notes?: string | null
-) {
-  const slots = await renderTemplate(supabase, privateHireScenarioKey(status), {
-    customerName: name,
-  });
-  if (!slots) return;
-
-  await sendCorrespondenceEmail({
-    resend,
-    links: { privateHireRequestId: requestId },
-    to: email,
-    subject: slots.subject,
-    templateSlots: slots,
-    html: plainLayout({ slots, bodyHtml: plainNote(escapeHtml(notes?.trim() || "")) }),
-    kind: status,
-    sentBy,
-  });
+export async function privateHireDepositDefaultAction(): Promise<number> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("company_information").select("private_hire_deposit").limit(1).maybeSingle();
+  return resolveDepositAmount(null, data?.private_hire_deposit);
 }
 
 function revalidatePrivateHireNotes() {

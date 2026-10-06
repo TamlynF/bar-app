@@ -23,6 +23,10 @@
     {
       "path": "/api/band-invoice-requests?utc=9",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/private-hire/deposits",
+      "schedule": "0 7 * * *"
     }
   ]
 }

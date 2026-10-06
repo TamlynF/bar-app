@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   client: null as unknown,
   sendMock: vi.fn(),
   settle: vi.fn(),
+  settleHire: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -17,6 +18,10 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/settle-paid-booking", () => ({ settlePaidBooking: h.settle }));
+
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ admin: true })) }));
+
+vi.mock("@/lib/private-hire-flow", () => ({ settleHireDeposit: h.settleHire }));
 
 vi.mock("resend", () => ({
   Resend: vi.fn(() => ({ emails: { send: h.sendMock } })),
@@ -96,6 +101,7 @@ beforeAll(async () => {
 beforeEach(() => {
   h.sendMock.mockReset().mockResolvedValue({ error: null });
   h.settle.mockReset().mockResolvedValue({ outcome: "settled", status: "confirmed" });
+  h.settleHire.mockReset().mockResolvedValue(false);
 });
 
 describe("square webhook - completed payment settlement", () => {
@@ -170,6 +176,26 @@ describe("square webhook - completed payment settlement", () => {
     expect(res.status).toBe(200);
     expect(h.settle).not.toHaveBeenCalled();
     expect(h.sendMock).not.toHaveBeenCalled();
+  });
+
+  it("hands an order with no booking to the private hire deposit check", async () => {
+    h.client = makeSupabase(null).client;
+    h.settleHire.mockResolvedValue(true);
+
+    const res = await POST(makeRequest(paymentCompleted({ orderId: "order_hire", paymentId: "pay_hire", amount: 10000 })));
+
+    expect(res.status).toBe(200);
+    expect(h.settleHire).toHaveBeenCalledTimes(1);
+    expect(h.settleHire.mock.calls[0].slice(1)).toEqual(["order_hire", 10000, "pay_hire"]);
+    expect(h.settle).not.toHaveBeenCalled();
+  });
+
+  it("never treats a ticket order as a private hire deposit", async () => {
+    h.client = makeSupabase({ ...pendingBooking }).client;
+
+    await POST(makeRequest(paymentCompleted({})));
+
+    expect(h.settleHire).not.toHaveBeenCalled();
   });
 });
 

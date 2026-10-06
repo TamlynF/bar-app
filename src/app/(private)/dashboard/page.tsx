@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import { statusValues } from "@/lib/private-hire-status";
 
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 import { finishedEventOrFilter } from "@/lib/events-finished";
@@ -186,7 +187,7 @@ export default async function DashboardPage() {
     supabase
       .from("private_hire_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
+      .in("status", statusValues("new")),
     supabase
       .from("band_booking_requests")
       .select("*", { count: "exact", head: true })
@@ -442,7 +443,7 @@ export default async function DashboardPage() {
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
       href: isPrivate && ph
-            ? `/event-bookings/private-bookings/${ph.id}`
+            ? `/event-bookings/private-bookings?open=${ph.id}`
             : isMusic && bb
               ? `/event-bookings/music-bookings/${bb.id}`
               : `/event-bookings/event/${ev.id}`,
@@ -486,7 +487,7 @@ export default async function DashboardPage() {
     { key: "quiz-winner", label: "Past events missing quiz winner", count: quizzesMissingWinner, href: `/event-setups/events?quick=historic,needs-winner&to=${todayStr}`, color: "bg-yellow-600" },
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Band requests pending", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=new,reviewing", color: "bg-purple-700" },
-    { key: "hires", label: "Private requests pending", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
+    { key: "hires", label: "Private requests pending", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=new", color: "bg-blue-600" },
     { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
     { key: "quizzes", label: "Events missing quiz questions", count: quizzesMissingQuestions, href: `/event-setups/events?quick=quiz,active&from=${todayStr}`, color: "bg-green-700" },
   ];

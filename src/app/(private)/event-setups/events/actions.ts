@@ -13,6 +13,21 @@ import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { pickCategoryPlaylist, type CategoryPlaylistRow } from "@/lib/quiz/category-playlist";
 import { buildHostCopy, type HostCopy, type HostCopyCategory, type HostCopyQuestion } from "@/lib/quiz/host-copy";
 import { siteUrl } from "@/lib/site-url";
+import { heldPrivateHireSlots } from "@/lib/private-hire-flow";
+import { heldSlotsAsEvents } from "@/lib/private-hire-details";
+
+/* Events on a date plus private hires waiting on their deposit, which hold
+   their slot until it's paid or released. */
+async function sameDayCandidates(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  date: string
+): Promise<EventClashCandidate[]> {
+  const [{ data }, held] = await Promise.all([
+    supabase.from("events").select("id, title, start_time, end_time, date, is_active").eq("date", date),
+    heldPrivateHireSlots(supabase, { from: date, to: date }),
+  ]);
+  return [...((data ?? []) as EventClashCandidate[]), ...heldSlotsAsEvents(held)];
+}
 
 /* Questions the generator produced but nobody added to a round. Once a quiz
    that has been and gone is switched off they are scrap, and they are heavy -
@@ -74,10 +89,7 @@ export async function saveEventAction(formData: FormData) {
     ...(isBookable ? {} : { booking_qr_url: null }),
   };
 
-  const { data: sameDay } = await supabase
-    .from("events")
-    .select("id, title, start_time, end_time, date, is_active")
-    .eq("date", date);
+  const sameDay = await sameDayCandidates(supabase, date);
 
   const validation = validateEventForm(
     {
@@ -88,7 +100,7 @@ export async function saveEventAction(formData: FormData) {
       startTime: formData.get("start_time")?.toString() ?? "",
       endTime: formData.get("end_time")?.toString() ?? "",
     },
-    (sameDay ?? []) as EventClashCandidate[],
+    sameDay,
     id ?? null
   );
   if (!validation.ok) {
@@ -252,13 +264,10 @@ export async function setEventActiveAction(id: number, isActive: boolean) {
     }
 
     if (isActive) {
-      const { data: sameDay } = await supabase
-        .from("events")
-        .select("id, title, start_time, end_time, date, is_active")
-        .eq("date", event.date);
+      const sameDay = await sameDayCandidates(supabase, event.date as string);
       const clashes = findActiveEventClashes(
         { id, date: event.date as string, start: event.start_time as string, end: event.end_time as string },
-        (sameDay ?? []) as EventClashCandidate[]
+        sameDay
       );
       if (clashes.length > 0) {
         const c = clashes[0];
@@ -307,13 +316,10 @@ export async function moveEventDateAction(
     if (event.date === date && !times) return { success: true };
 
     if (start && end) {
-      const { data: sameDay } = await supabase
-        .from("events")
-        .select("id, title, start_time, end_time, date, is_active")
-        .eq("date", date);
+      const sameDay = await sameDayCandidates(supabase, date);
       const clashes = findActiveEventClashes(
         { id, date, start, end },
-        (sameDay ?? []) as EventClashCandidate[]
+        sameDay
       );
       if (clashes.length > 0) {
         const c = clashes[0];

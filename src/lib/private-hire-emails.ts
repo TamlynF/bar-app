@@ -8,11 +8,15 @@ export type PrivateHireEmail = {
   noteLabel?: string;
 };
 
-export const privateHireScenarioKey = (outcome: "confirmed" | "cancelled") =>
-  outcome === "confirmed" ? "private_hire.confirmed" : "private_hire.cancelled";
+export type PrivateHireEmailKey =
+  | "private_hire.approved"
+  | "private_hire.proposed"
+  | "private_hire.confirmed"
+  | "private_hire.declined"
+  | "private_hire.cancelled";
 
 /* Turns resolved copy into the shape the admin preview renders. The note is
-   typed by staff when they change the status, so it never lives in the
+   typed by staff when they take the action, so it never lives in the
    template - only the wording around it does. */
 export function buildPrivateHireOutcomeEmail(p: {
   slots: TemplateSlots;

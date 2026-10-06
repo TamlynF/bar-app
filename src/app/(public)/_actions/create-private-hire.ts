@@ -10,6 +10,7 @@ import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { getCompanyInfo } from "@/lib/company-info";
 import { describeOpenSessionClash, openSessionClash, toMinutes } from "@/lib/opening-hours";
+import { requestPageUrl } from "@/lib/private-hire-flow";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -69,7 +70,7 @@ export async function createPrivateHire(data: PrivateHireData) {
         event_subtypes_id: data.event_subtypes_id,
         reason_for_hire: data.reason_for_hire,
         additional_requirements: data.additional_requirements || null,
-        status: "pending",
+        status: "new",
       },
     ])
     .select("id")
@@ -100,7 +101,7 @@ async function sendBookerEmail(supabase: ServerClient, requestId: string, name: 
     to: email,
     subject: slots.subject,
     templateSlots: slots,
-    html: plainLayout({ slots }),
+    html: plainLayout({ slots, ctaUrl: requestPageUrl(requestId) }),
     kind: "enquiry",
   });
 }

@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
+import { heldPrivateHireSlots } from "@/lib/private-hire-flow";
+import { heldSlotsOnDate } from "@/lib/private-hire-details";
 import { eventSlotIsComplete } from "@/lib/event-active";
 import {
   bandMergeValues,
@@ -248,8 +250,11 @@ export async function getClashingEvents(
     .eq("is_active", true);
   if (excludeEventId != null) query = query.neq("id", excludeEventId);
 
-  const { data } = await query;
-  return findEventClashes({ start: startTime, end: endTime }, (data ?? []) as ClashEventInput[]);
+  const [{ data }, held] = await Promise.all([query, heldPrivateHireSlots(supabase, { from: date, to: date })]);
+  return findEventClashes({ start: startTime, end: endTime }, [
+    ...((data ?? []) as ClashEventInput[]),
+    ...heldSlotsOnDate(held, date),
+  ]);
 }
 
 export async function rescheduleConfirmedBooking(
