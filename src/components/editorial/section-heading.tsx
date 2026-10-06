@@ -61,6 +61,7 @@ export function SectionHeading({
   id,
   actionOnMobile = true,
   actionInline = false,
+  note,
 }: {
   eyebrow?: string;
   title: string;
@@ -70,13 +71,15 @@ export function SectionHeading({
   actionOnMobile?: boolean;
   /* true = on phones the action sits beside the title as a text link */
   actionInline?: boolean;
+  /* a short fact that sits where an action would, e.g. how to buy */
+  note?: React.ReactNode;
 }) {
   return (
     <div
       id={id}
       className={cn(
         "mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4",
-        actionInline && "flex-row items-end justify-between"
+        (actionInline || note) && "flex-row items-end justify-between"
       )}
     >
       <div className="min-w-0 max-w-full">
@@ -89,6 +92,9 @@ export function SectionHeading({
           {title}
         </h2>
       </div>
+      {note && (
+        <p className="flex shrink-0 items-center gap-1.5 pb-0.5 text-right text-meta text-ink-2">{note}</p>
+      )}
       {action && actionInline && (
         <SectionTextAction href={action.href} className="-mb-3 sm:hidden">
           {action.label}

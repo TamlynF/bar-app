@@ -40,7 +40,17 @@ export function MerchGrid({ items, className }: { items: MerchandiseRow[]; class
 
   return (
     <section id="merch" aria-labelledby="merch-heading" className={cn("scroll-mt-24", className)}>
-      <SectionHeading eyebrow="Take a little noise home" title="DF merch" id="merch-heading" />
+      <SectionHeading
+        eyebrow="Take a little noise home"
+        title="DF merch"
+        id="merch-heading"
+        note={
+          <>
+            <Store className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+            Sold at the bar
+          </>
+        }
+      />
 
       <Carousel opts={{ align: "start", containScroll: "trimSnaps" }} className="-mx-4 md:hidden">
         <CarouselContent viewportClassName="px-4" className="-ml-2.5">
@@ -68,11 +78,6 @@ export function MerchGrid({ items, className }: { items: MerchandiseRow[]; class
           </li>
         ))}
       </ul>
-
-      <p className="mt-2.5 flex items-center gap-2.5 border border-hairline bg-canvas-2 px-3.5 py-3 text-meta text-ink-2">
-        <Store className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
-        Sold at the bar. No online checkout, just ask at the counter.
-      </p>
     </section>
   );
 }

@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { Clock, Music2 } from "lucide-react";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { entryText, parseDate, ticketAvailability, type EventSpace, type SerializedEvent } from "@/lib/events-display";
-import { countdownLabel, nightLabel } from "@/lib/home-schedule";
+import { countdownLabel } from "@/lib/home-schedule";
 import { cn } from "@/lib/utils";
 
 /* The next dated night on the stage, as a gig ticket: poster with a date
@@ -50,9 +50,9 @@ export function NextUpTicket({
           className="flex flex-wrap items-baseline gap-y-1 border-l-3 border-gold pl-2.25 sm:block sm:border-l-0 sm:pl-0 sm:font-black sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold"
         >
           <span className="font-black text-xl leading-none tracking-[-0.02em] text-ink uppercase sm:hidden">
-            {nightLabel(event.date, today)}
+            Next up on Stage
           </span>
-          <span className="hidden sm:inline">Next up on the stage</span>
+          <span className="hidden sm:inline">Next up on Stage</span>
         </h2>
         <span className="hidden shrink-0 text-ink-2 sm:block sm:text-pill sm:font-bold sm:tracking-wide sm:uppercase">
           {countdownLabel(event.date, today)}

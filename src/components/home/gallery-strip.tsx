@@ -24,7 +24,7 @@ export function GalleryStrip({ images, className }: { images: GalleryStripRow[];
     <section id="gallery" aria-labelledby="gallery-heading" className={cn("scroll-mt-24", className)}>
       <SectionHeading
         eyebrow="Photos & videos"
-        title="Bar nights"
+        title="Gallery"
         id="gallery-heading"
         action={{ href: "/gallery", label: "View gallery" }}
         actionInline
