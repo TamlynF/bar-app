@@ -456,9 +456,9 @@ export default function FloorPlanClient({
   });
 
   const selectedTable = selectedId != null ? tablesWithChairs.find((t) => t.mappingId === selectedId) ?? null : null;
-  const placementsById = useMemo(() => new Map(result.placements.map((p) => [p.mappingId, p])), [result.placements]);
+  const placementsById = new Map(result.placements.map((p) => [p.mappingId, p]));
 
-  const tableVisuals = useMemo(() => {
+  const tableVisuals = (() => {
     const benchBoxes = features
       .filter((f) => f.kind === "bench")
       .map((f) => ({
@@ -498,7 +498,7 @@ export default function FloorPlanClient({
     }
     const usedBenchSeats = benchBoxes.filter((b) => usedBenchIds.has(b.id)).reduce((s, b) => s + b.seats, 0);
     return { byMapping, usedBenchIds, usedBenchSeats };
-  }, [result.placements, features, chairZone]);
+  })();
 
   const displayedTotalSeats = result.stats.totalSeats - tableVisuals.usedBenchSeats;
   const standaloneBenchSeats = benchSeats - tableVisuals.usedBenchSeats;

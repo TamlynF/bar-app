@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "ds-bundle/**",
     ".ds-sync/**",
+    "design_handoff_event_categories/**",
+    ".agents/**",
+    ".claude/**",
   ]),
   {
     plugins: {

@@ -77,7 +77,7 @@ export default function CancelButton({
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
 
   const [isCheckingName, setIsCheckingName] = useState(false);
-  const [nameError, setNameError] = useState("");
+  const [takenError, setTakenError] = useState("");
 
   const eventDateStr = booking.events?.event_date;
   const eventDate = eventDateStr ? new Date(eventDateStr) : null;
@@ -121,11 +121,11 @@ export default function CancelButton({
     return () => clearTimeout(timer);
   }, [teamSize, isEditing, booking]);
 
+  const nameUnchanged = teamName.trim().toLowerCase() === (booking.group_name || "").toLowerCase();
+  const nameError = !isEditing || nameUnchanged ? "" : takenError;
+
   useEffect(() => {
-    if (!isEditing || teamName.trim().toLowerCase() === (booking.group_name || "").toLowerCase()) {
-      setNameError("");
-      return;
-    }
+    if (!isEditing || nameUnchanged) return;
 
     const validateName = async () => {
       if (teamName.trim().length < 2) return;
@@ -135,9 +135,9 @@ export default function CancelButton({
       try {
         const { isAvailable } = await checkTeamName(teamName, eventDateStr, booking.id);
         if (!isAvailable) {
-          setNameError("This team name is already taken for this night.");
+          setTakenError("This team name is already taken for this night.");
         } else {
-          setNameError("");
+          setTakenError("");
         }
       } catch (err) {
         console.error("Validation error:", err);
@@ -148,7 +148,7 @@ export default function CancelButton({
 
     const timer = setTimeout(validateName, 500);
     return () => clearTimeout(timer);
-  }, [teamName, isEditing, eventDateStr, booking.id, booking.group_name]);
+  }, [teamName, isEditing, nameUnchanged, eventDateStr, booking.id]);
 
   const handleCancel = async () => {
     const ok = await confirm({
@@ -343,7 +343,7 @@ export default function CancelButton({
                 setTeamName(booking.group_name || "");
                 setTeamSize(booking.group_size || 4);
                 setSpecialRequests(booking.special_requests || "");
-                setNameError("");
+                setTakenError("");
                 setSeatingWarning(null);
                 setBlockedMsg("");
               }}

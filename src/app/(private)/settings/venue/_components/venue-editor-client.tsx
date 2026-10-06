@@ -518,6 +518,23 @@ export default function VenueEditorClient({
     svgRef.current?.setPointerCapture(e.pointerId);
   };
 
+  const beginRotate = (e: React.PointerEvent, box: EditableBox, centre: Point) => {
+    beginDrag(
+      e,
+      box.points
+        ? {
+            kind: "rotatePoly",
+            entity: box.entity,
+            id: box.id,
+            centre,
+            startBearing: bearingTo(centre, eventToWorldRaw(e)),
+            points: box.points,
+          }
+        : { kind: "rotate", entity: box.entity, id: box.id, cx: centre.x, cy: centre.y },
+      selection
+    );
+  };
+
   const patchEntity = (entity: EntityKind, id: string, patch: BoxPatch) => {
     if (entity === "obstacle") updateObstacle(id, patch);
     else if (entity === "fixture") updateFixture(id, patch);
@@ -1011,117 +1028,14 @@ export default function VenueEditorClient({
             )}
           </g>
 
-          {editableBox && (() => {
-            const box = editableBox;
-            const centre = boxCentre(box);
-            const spin = handleR * 3;
-            const pivot = rotateAbout({ x: centre.x, y: box.y - spin }, centre, box.rotation);
-            const topEdge = rotateAbout({ x: centre.x, y: box.y }, centre, box.rotation);
-            const handles = box.circular ? RESIZE_HANDLES.filter((h) => h.dx !== 0 && h.dy !== 0) : RESIZE_HANDLES;
-            const size = handleR * 1.5;
-            const poly = box.points;
-            // Polygons already show a handle on every vertex, so nudge the box handles clear of them.
-            const pad = poly ? handleR * 1.4 : 0;
-            const outer: EditableBox = poly
-              ? { ...box, x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, length: box.length + pad * 2 }
-              : box;
-            return (
-              <g>
-                <polygon
-                  points={rectCorners(box.x, box.y, box.width, box.length)
-                    .map((p) => rotateAbout(p, centre, box.rotation))
-                    .map((p) => `${round(p.x, 3)},${round(p.y, 3)}`)
-                    .join(" ")}
-                  fill="none"
-                  stroke="#9A5B00"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  vectorEffect="non-scaling-stroke"
-                />
-                <line x1={topEdge.x} y1={topEdge.y} x2={pivot.x} y2={pivot.y} stroke="#9A5B00" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-                <circle
-                  cx={pivot.x}
-                  cy={pivot.y}
-                  r={handleR}
-                  fill="#FDCC4B"
-                  stroke="#9A5B00"
-                  strokeWidth={2}
-                  vectorEffect="non-scaling-stroke"
-                  className="cursor-grab"
-                  onPointerDown={(e) =>
-                    beginDrag(
-                      e,
-                      poly
-                        ? {
-                            kind: "rotatePoly",
-                            entity: box.entity,
-                            id: box.id,
-                            centre,
-                            startBearing: bearingTo(centre, eventToWorldRaw(e)),
-                            points: poly,
-                          }
-                        : { kind: "rotate", entity: box.entity, id: box.id, cx: centre.x, cy: centre.y },
-                      selection
-                    )
-                  }
-                >
-                  <title>Drag to rotate</title>
-                </circle>
-                {handles.map((h) => {
-                  const at = cornerAt(outer, h.dx, h.dy);
-                  const anchor = cornerAt(box, -h.dx, -h.dy);
-                  return (
-                    <rect
-                      key={h.id}
-                      x={at.x - size / 2}
-                      y={at.y - size / 2}
-                      width={size}
-                      height={size}
-                      rx={size * 0.2}
-                      transform={box.rotation ? `rotate(${box.rotation} ${round(at.x, 3)} ${round(at.y, 3)})` : undefined}
-                      fill="#FFFFFF"
-                      stroke={box.stroke}
-                      strokeWidth={2}
-                      vectorEffect="non-scaling-stroke"
-                      className={handleCursor(h.dx, h.dy, box.rotation)}
-                      onPointerDown={(e) =>
-                        beginDrag(
-                          e,
-                          poly
-                            ? {
-                                kind: "resizePoly",
-                                entity: box.entity,
-                                id: box.id,
-                                dx: h.dx,
-                                dy: h.dy,
-                                anchor,
-                                width: box.width,
-                                length: box.length,
-                                points: poly,
-                              }
-                            : {
-                                kind: "resize",
-                                entity: box.entity,
-                                id: box.id,
-                                dx: h.dx,
-                                dy: h.dy,
-                                anchor,
-                                rotation: box.rotation,
-                                width: box.width,
-                                length: box.length,
-                                circular: box.circular,
-                              },
-                          selection
-                        )
-                      }
-                    >
-                      <title>Drag to resize</title>
-                    </rect>
-                  );
-                })}
-              </g>
-            );
-          })()}
+          {editableBox && (
+            <EditHandles
+              box={editableBox}
+              handleR={handleR}
+              onRotateStart={beginRotate}
+              onResizeStart={(e, drag) => beginDrag(e, drag, selection)}
+            />
+          )}
 
           {mode === "outline" &&
             points.map((p, i) => {
@@ -1521,5 +1435,112 @@ function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id
         className={cn(FIELD_BOX, "tabular-nums")}
       />
     </div>
+  );
+}
+
+/* The dashed outline, rotate knob and resize handles around the selected
+   item. Drags start in the editor, which owns the pointer capture. */
+function EditHandles({
+  box,
+  handleR,
+  onRotateStart,
+  onResizeStart,
+}: {
+  box: EditableBox;
+  handleR: number;
+  onRotateStart: (e: React.PointerEvent, box: EditableBox, centre: Point) => void;
+  onResizeStart: (e: React.PointerEvent, drag: DragState) => void;
+}) {
+  const centre = boxCentre(box);
+  const spin = handleR * 3;
+  const pivot = rotateAbout({ x: centre.x, y: box.y - spin }, centre, box.rotation);
+  const topEdge = rotateAbout({ x: centre.x, y: box.y }, centre, box.rotation);
+  const handles = box.circular ? RESIZE_HANDLES.filter((h) => h.dx !== 0 && h.dy !== 0) : RESIZE_HANDLES;
+  const size = handleR * 1.5;
+  const poly = box.points;
+  // Polygons already show a handle on every vertex, so nudge the box handles clear of them.
+  const pad = poly ? handleR * 1.4 : 0;
+  const outer: EditableBox = poly
+    ? { ...box, x: box.x - pad, y: box.y - pad, width: box.width + pad * 2, length: box.length + pad * 2 }
+    : box;
+  return (
+    <g>
+      <polygon
+        points={rectCorners(box.x, box.y, box.width, box.length)
+          .map((p) => rotateAbout(p, centre, box.rotation))
+          .map((p) => `${round(p.x, 3)},${round(p.y, 3)}`)
+          .join(" ")}
+        fill="none"
+        stroke="#9A5B00"
+        strokeWidth={1.5}
+        strokeDasharray="4 3"
+        vectorEffect="non-scaling-stroke"
+      />
+      <line x1={topEdge.x} y1={topEdge.y} x2={pivot.x} y2={pivot.y} stroke="#9A5B00" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+      <circle
+        cx={pivot.x}
+        cy={pivot.y}
+        r={handleR}
+        fill="#FDCC4B"
+        stroke="#9A5B00"
+        strokeWidth={2}
+        vectorEffect="non-scaling-stroke"
+        className="cursor-grab"
+        onPointerDown={(e) => onRotateStart(e, box, centre)}
+      >
+        <title>Drag to rotate</title>
+      </circle>
+      {handles.map((h) => {
+        const at = cornerAt(outer, h.dx, h.dy);
+        const anchor = cornerAt(box, -h.dx, -h.dy);
+        return (
+          <rect
+            key={h.id}
+            x={at.x - size / 2}
+            y={at.y - size / 2}
+            width={size}
+            height={size}
+            rx={size * 0.2}
+            transform={box.rotation ? `rotate(${box.rotation} ${round(at.x, 3)} ${round(at.y, 3)})` : undefined}
+            fill="#FFFFFF"
+            stroke={box.stroke}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            className={handleCursor(h.dx, h.dy, box.rotation)}
+            onPointerDown={(e) =>
+              onResizeStart(
+                e,
+                poly
+                  ? {
+                      kind: "resizePoly",
+                      entity: box.entity,
+                      id: box.id,
+                      dx: h.dx,
+                      dy: h.dy,
+                      anchor,
+                      width: box.width,
+                      length: box.length,
+                      points: poly,
+                    }
+                  : {
+                      kind: "resize",
+                      entity: box.entity,
+                      id: box.id,
+                      dx: h.dx,
+                      dy: h.dy,
+                      anchor,
+                      rotation: box.rotation,
+                      width: box.width,
+                      length: box.length,
+                      circular: box.circular,
+                    }
+              )
+            }
+          >
+            <title>Drag to resize</title>
+          </rect>
+        );
+      })}
+    </g>
   );
 }

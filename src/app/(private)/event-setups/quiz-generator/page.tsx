@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import {
@@ -74,6 +74,9 @@ interface CategoryStat extends QuizCategoryConfig {
   progress: number;
 }
 
+
+const noSubscribe = () => () => {}
+
 export default function QuizGeneratorPage() {
   const { confirm, ConfirmDialogUI } = useConfirm()
   const router = useRouter()
@@ -104,25 +107,34 @@ export default function QuizGeneratorPage() {
 
   const [musicSnippets, setMusicSnippets] = useState<MusicSnippetCandidate[]>([])
   const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
-  const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
-  const [spotifyConnected, setSpotifyConnected] = useState(false)
+  const [loadedSnippets, setLoadedSnippets] = useState<SavedMusicSnippet[]>([])
+  const spotifyConnected = useSyncExternalStore(
+    noSubscribe,
+    () => isSpotifyConnected() || new URLSearchParams(window.location.search).get('spotify_connected') === 'true',
+    () => false
+  )
 
   const [pictureItems, setPictureItems] = useState<PictureRoundItem[]>([])
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
-  const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
+  const [topicSyncedFor, setTopicSyncedFor] = useState<{ config: unknown; history: unknown } | null>(null)
+  const [suggestedFor, setSuggestedFor] = useState('')
   const [previousPictureAnswers, setPreviousPictureAnswers] = useState<string[]>([])
   // The model that produced the drafts on screen, so what gets saved records
   // that rather than whatever the settings say by the time Save is pressed.
   const [draftModel, setDraftModel] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(true)
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    if (isSpotifyConnected() || urlParams.get('spotify_connected') === 'true') {
-      setSpotifyConnected(true)
-    }
-  }, [])
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const loadEventHistory = async (eventId: string) => {
+    if (!eventId) return;
+    try {
+      const history = await getFullQuestionHistoryAction(eventId);
+      setEventHistory(history);
+    } catch (err) {
+      console.error("Failed to load history for event:", err);
+    }
+  };
 
   useEffect(() => {
     async function loadInitialData() {
@@ -169,16 +181,6 @@ export default function QuizGeneratorPage() {
     }
   }, [viewingCategory]);
 
-  const loadEventHistory = async (eventId: string) => {
-    if (!eventId) return;
-    try {
-      const history = await getFullQuestionHistoryAction(eventId);
-      setEventHistory(history);
-    } catch (err) {
-      console.error("Failed to load history for event:", err);
-    }
-  };
-
   const categoryStats = useMemo((): CategoryStat[] => {
     if (!categories.length) return [];
     return categories.map(config => {
@@ -209,12 +211,12 @@ export default function QuizGeneratorPage() {
     ? Math.min(remainingQuestions + 2, 10)
     : 0;
 
-  useEffect(() => {
+  const suggestionKey = [category, selectedEventId, suggestedQuestionCount, questions.length, musicSnippets.length, pictureItems.length].join('|');
+  if (suggestedFor !== suggestionKey) {
+    setSuggestedFor(suggestionKey);
     const hasDrafts = questions.length > 0 || musicSnippets.length > 0 || pictureItems.length > 0;
-    if (!hasDrafts && suggestedQuestionCount > 0) {
-      setNumQuestions(suggestedQuestionCount);
-    }
-  }, [category, selectedEventId, suggestedQuestionCount, questions.length, musicSnippets.length, pictureItems.length]);
+    if (!hasDrafts && suggestedQuestionCount > 0) setNumQuestions(suggestedQuestionCount);
+  }
 
   const approveExceedsCapacity = (selectedCount: number) => {
     if (!currentCategoryStat) return false;
@@ -238,30 +240,24 @@ export default function QuizGeneratorPage() {
   const isHigherOrLower = isMusicSnippets && (selectedCategoryConfig?.is_higher_lower ?? false)
   const isPictureRound = selectedCategoryConfig?.is_picture ?? false
 
+  const snippetsApply = Boolean(selectedEventId && selectedCategoryConfig?.include_spotify)
+  const savedSnippets = snippetsApply ? loadedSnippets : []
+
   useEffect(() => {
     if (selectedEventId && selectedCategoryConfig?.include_spotify) {
-      getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {});
-    } else {
-      setSavedSnippets([])
+      getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setLoadedSnippets).catch(() => {});
     }
   }, [selectedEventId, selectedCategoryConfig])
 
-  useEffect(() => {
-    if (!selectedCategoryConfig?.is_picture) {
-      setPictureTopicLocked(false)
-      return
-    }
-    const existing = eventHistory.find(
-      q => q.quiz_category_configs_id === selectedCategoryConfig.id && q.question_text
-    )
-    if (existing) {
-      setTopic(existing.question_text)
-      setPictureTopicLocked(true)
-    } else {
-      setTopic('')
-      setPictureTopicLocked(false)
-    }
-  }, [selectedCategoryConfig, eventHistory])
+  // A picture round keeps the topic it was first generated with for the night.
+  const lockedTopic = selectedCategoryConfig?.is_picture
+    ? eventHistory.find(q => q.quiz_category_configs_id === selectedCategoryConfig.id && q.question_text)?.question_text ?? null
+    : null
+  const pictureTopicLocked = lockedTopic != null
+  if (topicSyncedFor?.config !== selectedCategoryConfig || topicSyncedFor?.history !== eventHistory) {
+    setTopicSyncedFor({ config: selectedCategoryConfig, history: eventHistory })
+    if (selectedCategoryConfig?.is_picture) setTopic(lockedTopic ?? '')
+  }
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,7 +412,7 @@ export default function QuizGeneratorPage() {
         setMusicSnippets([])
         setSelectedSnippetIndices(new Set())
         await finishApproval(selectedData.length)
-        getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig!.id).then(setSavedSnippets).catch(() => {})
+        getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig!.id).then(setLoadedSnippets).catch(() => {})
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to save to database.'
         toast.error(message)
@@ -1168,7 +1164,7 @@ export default function QuizGeneratorPage() {
                         toast.success("Song removed")
                         loadEventHistory(selectedEventId)
                         if (selectedCategoryConfig) {
-                          getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {})
+                          getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setLoadedSnippets).catch(() => {})
                           syncCategoryPlaylistAction(parseInt(selectedEventId), selectedCategoryConfig.id).catch(() => {})
                         }
                       }

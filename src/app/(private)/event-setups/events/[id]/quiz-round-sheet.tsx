@@ -1102,7 +1102,7 @@ export default function QuizRoundSheet({
   const connectSpotify = () => {
     const popup = window.open(spotifyLoginHref, "spotify-connect", "width=520,height=720");
     if (!popup) {
-      window.location.href = spotifyLoginHref;
+      window.location.assign(new URL(spotifyLoginHref, window.location.origin).href);
       return;
     }
 

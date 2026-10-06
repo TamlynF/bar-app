@@ -213,9 +213,12 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     }));
   }, [bookings, applied, taxonomy, period, isPhone]);
 
-  useEffect(() => {
+  const selectionKey = `${range}|${view}|${applied}`;
+  const [shownKey, setShownKey] = useState(selectionKey);
+  if (shownKey !== selectionKey) {
+    setShownKey(selectionKey);
     setActiveIdx(null);
-  }, [range, view, applied]);
+  }
 
   const isDetail = view === "detail";
 
