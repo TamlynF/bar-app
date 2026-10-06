@@ -24,7 +24,7 @@ export function uploadVideoResumable(
     retryDelays: [0, 1000, 3000, 5000],
     headers: {
       authorization: `Bearer ${ANON_KEY}`,
-      "x-upsert": "true",
+      "x-upsert": "false",
     },
     uploadDataDuringCreation: true,
     removeFingerprintOnSuccess: true,
