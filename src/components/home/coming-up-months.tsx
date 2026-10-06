@@ -71,7 +71,7 @@ export function ComingUpMonths({
                       <span className="text-pill font-bold tracking-wide text-ink-2 uppercase">
                         {day.dayShort}
                       </span>
-                      <span className="font-bold font-stretch-condensed text-4xl leading-none text-ink tabular-nums">
+                      <span className="font-bold font-stretch-condensed text-4xl leading-none text-gold tabular-nums">
                         {day.dayNumber.padStart(2, "0")}
                       </span>
                     </div>

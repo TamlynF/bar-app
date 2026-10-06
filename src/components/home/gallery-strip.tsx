@@ -26,7 +26,7 @@ export function GalleryStrip({ images, className }: { images: GalleryStripRow[];
         eyebrow="Photos & videos"
         title="Gallery"
         id="gallery-heading"
-        action={{ href: "/gallery", label: "View gallery" }}
+        action={{ href: "/gallery", label: "View all" }}
         actionInline
       />
 
