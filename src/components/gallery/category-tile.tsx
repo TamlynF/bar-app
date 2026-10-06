@@ -43,12 +43,16 @@ export function CategoryCard({ group, sizes, className }: { group: GalleryGroup;
     >
       <span className="relative block aspect-square w-full overflow-hidden bg-canvas">
         <CategoryCover group={group} sizes={sizes} />
-      </span>
-      <span className="flex flex-col gap-1 p-3">
-        <span className="truncate font-black text-btn leading-tight tracking-tight text-ink uppercase group-hover:text-gold">
-          {group.name}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-canvas via-canvas/70 to-transparent"
+        />
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
+          <span className="truncate font-black text-btn leading-tight tracking-tight text-ink uppercase drop-shadow-sm group-hover:text-gold">
+            {group.name}
+          </span>
+          <span className="text-meta text-ink/80 drop-shadow-sm">{countLabel(group)}</span>
         </span>
-        <span className="text-meta text-ink-2">{countLabel(group)}</span>
       </span>
     </Link>
   );
