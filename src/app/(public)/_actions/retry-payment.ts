@@ -3,11 +3,12 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { squareClient } from "@/lib/square";
+import { squareClient, squareErrorDetail } from "@/lib/square";
 import {
   buildBuyerPhone,
   buildCheckoutOptions,
   buildEventOrder,
+  buildPaymentNote,
   buildPrePopulatedData,
 } from "@/lib/square-order";
 import { getContactEmail } from "@/lib/company-info";
@@ -122,16 +123,16 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
   try {
     const { paymentLink } = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: randomUUID(),
+      paymentNote: buildPaymentNote({ bookingId: Number(booking.id), title, eventDate: event.date }),
       order: buildEventOrder({
         locationId: process.env.SQUARE_LOCATION_ID!,
         bookingId: Number(booking.id),
         eventId,
         title,
+        eventDate: event.date,
         amountPence: paymentAmountPence,
         groupSize,
         fullName: contact.full_name,
-        email: contact.email,
-        buyerPhone,
       }),
       checkoutOptions: buildCheckoutOptions({
         redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: booking.id })}`,
@@ -146,7 +147,7 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
     checkoutUrl = paymentLink?.url;
     orderId = paymentLink?.orderId;
   } catch (err) {
-    console.error("[retryBookingPayment] Square payment link error:", err);
+    console.error("[retryBookingPayment] Square payment link error:", squareErrorDetail(err));
   }
 
   if (!checkoutUrl) {

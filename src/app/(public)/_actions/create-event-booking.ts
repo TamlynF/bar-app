@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { squareClient } from "@/lib/square";
+import { squareClient, squareErrorDetail } from "@/lib/square";
 import { SquareError } from "square";
 import { randomUUID } from "crypto";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ import {
   buildBuyerPhone,
   buildCheckoutOptions,
   buildEventOrder,
+  buildPaymentNote,
   buildPrePopulatedData,
 } from "@/lib/square-order";
 import { getContactEmail } from "@/lib/company-info";
@@ -89,15 +90,6 @@ export async function checkEventGroupName(
 }
 
 export async function createEventBooking(formData: FormData) {
-  console.log("createEventBooking called with formData:", Object.fromEntries(formData.entries()));
-  console.log("Environment variables:", {
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-    VERCEL_URL: process.env.VERCEL_URL,
-    SQUARE_ENVIRONMENT: process.env.SQUARE_ENVIRONMENT,
-    SQUARE_ACCESS_TOKEN_present: !!process.env.SQUARE_ACCESS_TOKEN,
-    SQUARE_LOCATION_ID: process.env.SQUARE_LOCATION_ID,
-  });
-  console.log(formData.get("event_id"), formData.get("full_name"), formData.get("email"), formData.get("group_size"));
   const supabase = await createClient();
 
   const eventId = parseInt(formData.get("event_id") as string, 10);
@@ -262,16 +254,16 @@ export async function createEventBooking(formData: FormData) {
     try {
       const { paymentLink } = await squareClient.checkout.paymentLinks.create({
         idempotencyKey: randomUUID(),
+        paymentNote: buildPaymentNote({ bookingId: newBooking.id, title: event.title || "Event", eventDate: event.date }),
         order: buildEventOrder({
           locationId: process.env.SQUARE_LOCATION_ID!,
           bookingId: newBooking.id,
           eventId: event.id,
           title: event.title || "Event",
+          eventDate: event.date,
           amountPence: paymentAmountPence,
           groupSize,
           fullName,
-          email,
-          buyerPhone,
         }),
         checkoutOptions: buildCheckoutOptions({
           redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: newBooking.id })}`,
@@ -295,7 +287,7 @@ export async function createEventBooking(formData: FormData) {
             `Developer Dashboard. Otherwise verify SQUARE_ACCESS_TOKEN matches SQUARE_ENVIRONMENT and restart the dev server.`
         );
       } else {
-        console.error("[createEventBooking] Square payment link error:", squareErr);
+        console.error("[createEventBooking] Square payment link error:", squareErrorDetail(squareErr));
       }
       return { error: "We couldn't start checkout. Please try again in a moment." };
     }

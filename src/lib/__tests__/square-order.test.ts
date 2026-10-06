@@ -7,6 +7,8 @@ import {
   buildEventOrder,
   buildCheckoutOptions,
   buildPrePopulatedData,
+  buildPaymentNote,
+  formatBookingTicketName,
   type EventOrderInput,
 } from "@/lib/square-order";
 import { DEFAULT_CONTACT_EMAIL } from "@/lib/email";
@@ -56,8 +58,21 @@ describe("buildBuyerPhone", () => {
     expect(buildBuyerPhone(null, undefined)).toBeUndefined();
   });
 
-  it("tolerates a missing country code", () => {
-    expect(buildBuyerPhone(null, "7123456789")).toBe("7123456789");
+  it("assumes the UK when no country code is given", () => {
+    expect(buildBuyerPhone(null, "7123456789")).toBe("+447123456789");
+  });
+
+  it("drops the trunk zero that Square rejects", () => {
+    expect(buildBuyerPhone("+44", "07123 456789")).toBe("+447123456789");
+    expect(buildBuyerPhone("+353", "087 123 4567")).toBe("+353871234567");
+  });
+
+  it("keeps a number typed in international form whatever the country code", () => {
+    expect(buildBuyerPhone("+44", "+33 6 12 34 56 78")).toBe("+33612345678");
+  });
+
+  it("leaves out a number too short to be real", () => {
+    expect(buildBuyerPhone("+44", "123")).toBeUndefined();
   });
 });
 
@@ -75,9 +90,8 @@ const baseInput: EventOrderInput = {
   title: "Boxing Day Bash",
   amountPence: 1500,
   groupSize: 3,
+  eventDate: "2026-12-26",
   fullName: "Jane Doe",
-  email: "jane@example.com",
-  buyerPhone: "+447123456789",
 };
 
 describe("buildEventOrder", () => {
@@ -98,20 +112,17 @@ describe("buildEventOrder", () => {
     expect(line.basePriceMoney?.amount).not.toBe(BigInt(4500));
   });
 
-  it("sets a PICKUP fulfillment recipient to the real booker", () => {
-    const order = buildEventOrder(baseInput);
-    const recipient = order.fulfillments?.[0].pickupDetails?.recipient;
-    expect(order.fulfillments?.[0].type).toBe("PICKUP");
-    expect(recipient?.displayName).toBe("Jane Doe");
-    expect(recipient?.emailAddress).toBe("jane@example.com");
-    expect(recipient?.phoneNumber).toBe("+447123456789");
+  it("sends no fulfillment, which Square rejects alongside prePopulatedData", () => {
+    expect(buildEventOrder(baseInput)).not.toHaveProperty("fulfillments");
   });
 
-  it("omits the recipient phone when the booker gave no number", () => {
-    const order = buildEventOrder({ ...baseInput, buyerPhone: undefined });
-    const recipient = order.fulfillments?.[0].pickupDetails?.recipient;
-    expect(recipient).not.toHaveProperty("phoneNumber");
-    expect(recipient?.displayName).toBe("Jane Doe");
+  it("names the ticket after the booking and booker so staff can find it in Square", () => {
+    expect(buildEventOrder(baseInput).ticketName).toBe("Booking #42 - Jane Doe");
+  });
+
+  it("notes the event date on the line, and leaves it off when unknown", () => {
+    expect(buildEventOrder(baseInput).lineItems?.[0].note).toBe("Sat 26 Dec 2026");
+    expect(buildEventOrder({ ...baseInput, eventDate: null }).lineItems?.[0]).not.toHaveProperty("note");
   });
 
   it("defaults the currency to GBP but honours an override", () => {
@@ -119,6 +130,23 @@ describe("buildEventOrder", () => {
     expect(
       buildEventOrder({ ...baseInput, currency: "USD" }).lineItems?.[0].basePriceMoney?.currency
     ).toBe("USD");
+  });
+});
+
+describe("formatBookingTicketName", () => {
+  it("trims the name", () => {
+    expect(formatBookingTicketName(7, "  Sam Lee ")).toBe("Booking #7 - Sam Lee");
+  });
+});
+
+describe("buildPaymentNote", () => {
+  it("joins booking, title and date", () => {
+    expect(buildPaymentNote({ bookingId: 42, title: "Music Bingo", eventDate: "2026-10-09" }))
+      .toBe("Booking #42 - Music Bingo - Fri 9 Oct 2026");
+  });
+
+  it("drops the date when there isn't one", () => {
+    expect(buildPaymentNote({ bookingId: 42, title: "Music Bingo" })).toBe("Booking #42 - Music Bingo");
   });
 });
 

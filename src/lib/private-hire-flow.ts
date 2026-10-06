@@ -12,7 +12,8 @@ import { siteUrl } from "@/lib/site-url";
 import { getContactEmail } from "@/lib/company-info";
 import { venueStamp } from "@/lib/band-invoice";
 import { squareClient } from "@/lib/square";
-import { buildBuyerPhone, buildCheckoutOptions, buildPrePopulatedData, poundsToPence } from "@/lib/square-order";
+import { buildCheckoutOptions, buildPrePopulatedData, poundsToPence } from "@/lib/square-order";
+import { toE164 } from "@/lib/phone";
 import {
   canMovePrivateHire,
   depositDueDate,
@@ -539,12 +540,13 @@ export async function depositCheckoutUrl(
     return { error: "Online payments are unavailable right now. Please reply to your email and we'll help." };
   }
 
-  const buyerPhone = buildBuyerPhone(null, row.phone_no);
-  try {
-    const { paymentLink } = await squareClient.checkout.paymentLinks.create({
+  const locationId = process.env.SQUARE_LOCATION_ID;
+  const supportEmail = await getContactEmail();
+  const createLink = (buyerPhone: string | undefined) =>
+    squareClient.checkout.paymentLinks.create({
       idempotencyKey: randomUUID(),
       order: {
-        locationId: process.env.SQUARE_LOCATION_ID,
+        locationId,
         referenceId: row.id,
         metadata: { private_hire_request_id: row.id },
         lineItems: [
@@ -555,12 +557,22 @@ export async function depositCheckoutUrl(
           },
         ],
       },
-      checkoutOptions: buildCheckoutOptions({
-        redirectUrl: `${requestPageUrl(row.id)}?paid=1`,
-        supportEmail: await getContactEmail(),
-      }),
+      checkoutOptions: buildCheckoutOptions({ redirectUrl: `${requestPageUrl(row.id)}?paid=1`, supportEmail }),
       prePopulatedData: buildPrePopulatedData({ email: row.email, fullName: row.full_name, buyerPhone }),
     });
+
+  try {
+    /* Square only takes international numbers, and a phone it still refuses
+       shouldn't stop anyone paying - so the second try leaves it out. */
+    const phone = toE164(row.phone_no);
+    let response;
+    try {
+      response = await createLink(phone);
+    } catch (err) {
+      if (!phone || squareErrorCode(err) !== "INVALID_PHONE_NUMBER") throw err;
+      response = await createLink(undefined);
+    }
+    const { paymentLink } = response;
     if (!paymentLink?.url || !paymentLink.orderId) throw new Error("Square returned no link");
     await ctx.supabase
       .from("private_hire_requests")
@@ -568,9 +580,23 @@ export async function depositCheckoutUrl(
       .eq("id", row.id);
     return { url: paymentLink.url };
   } catch (err) {
-    console.error("[private hire] Square payment link error:", err);
+    console.error("[private hire] Square payment link error:", squareErrorDetail(err));
     return { error: "We couldn't start the payment just now. Please try again in a minute." };
   }
+}
+
+function squareErrors(err: unknown): { code?: string; detail?: string; field?: string }[] {
+  const errors = (err as { errors?: unknown })?.errors;
+  return Array.isArray(errors) ? errors : [];
+}
+
+function squareErrorCode(err: unknown): string | undefined {
+  return squareErrors(err)[0]?.code;
+}
+
+function squareErrorDetail(err: unknown): string {
+  const errors = squareErrors(err);
+  return errors.length ? JSON.stringify(errors) : err instanceof Error ? err.message : String(err);
 }
 
 /* The Square webhook's half: a completed payment whose order belongs to a

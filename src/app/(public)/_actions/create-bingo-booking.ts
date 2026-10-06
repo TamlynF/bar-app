@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { squareClient } from "@/lib/square";
+import { squareClient, squareErrorDetail } from "@/lib/square";
 import { randomUUID } from "crypto";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
@@ -20,7 +20,13 @@ import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-email
 import { renderTemplate } from "@/lib/email/resolve";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
-import { buildCheckoutOptions } from "@/lib/square-order";
+import {
+  buildBuyerPhone,
+  buildCheckoutOptions,
+  buildEventOrder,
+  buildPaymentNote,
+  buildPrePopulatedData,
+} from "@/lib/square-order";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
 import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
@@ -144,56 +150,40 @@ export async function createBingoBooking(formData: FormData) {
       return { success: true };
     }
 
-    const [firstName, ...restName] = fullName.trim().split(/\s+/);
-    const lastName = restName.join(" ") || undefined;
-    const buyerPhone = phoneNo ? `${countryCode ?? ""}${phoneNo}`.trim() : undefined;
+    const buyerPhone = buildBuyerPhone(countryCode, phoneNo);
 
-    const { paymentLink } = await squareClient.checkout.paymentLinks.create({
-      idempotencyKey: randomUUID(),
-      order: {
-        locationId: process.env.SQUARE_LOCATION_ID!,
-        referenceId: String(newBooking.id),
-        metadata: { booking_id: String(newBooking.id), event_id: String(eventId) },
-        lineItems: [{
-          name: `Music Bingo - ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
-          quantity: String(groupSize),
-          basePriceMoney: {
-            amount: BigInt(paymentAmount),
-            currency: "GBP",
-          },
-        }],
-        fulfillments: [{
-          type: "PICKUP",
-          state: "PROPOSED",
-          pickupDetails: {
-            scheduleType: "ASAP",
-            recipient: {
-              displayName: fullName,
-              emailAddress: email,
-              ...(buyerPhone ? { phoneNumber: buyerPhone } : {}),
-            },
-          },
-        }],
-      },
-      checkoutOptions: buildCheckoutOptions({
-        redirectUrl: `${appUrl}/book/bingo/success?bookingId=${newBooking.id}`,
-        supportEmail: await getContactEmail(),
-      }),
-      prePopulatedData: {
-        buyerEmail: email,
-        ...(buyerPhone ? { buyerPhoneNumber: buyerPhone } : {}),
-        buyerAddress: { firstName, lastName },
-      },
-    });
-
-    console.log("Square Payment Link created:", paymentLink); 
-    const checkoutUrl = paymentLink?.url;
-    const orderId = paymentLink?.orderId;
+    let checkoutUrl: string | undefined;
+    let orderId: string | undefined;
+    try {
+      const { paymentLink } = await squareClient.checkout.paymentLinks.create({
+        idempotencyKey: randomUUID(),
+        paymentNote: buildPaymentNote({ bookingId: newBooking.id, title: "Music Bingo", eventDate }),
+        order: buildEventOrder({
+          locationId: process.env.SQUARE_LOCATION_ID!,
+          bookingId: newBooking.id,
+          eventId,
+          title: "Music Bingo",
+          eventDate,
+          amountPence: paymentAmount,
+          groupSize,
+          fullName,
+        }),
+        checkoutOptions: buildCheckoutOptions({
+          redirectUrl: `${appUrl}/book/bingo/success?bookingId=${newBooking.id}`,
+          supportEmail: await getContactEmail(),
+        }),
+        prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
+      });
+      checkoutUrl = paymentLink?.url;
+      orderId = paymentLink?.orderId;
+    } catch (squareErr) {
+      console.error("[createBingoBooking] Square payment link error:", squareErrorDetail(squareErr));
+    }
 
     if (!checkoutUrl) {
       await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
       await supabase.from("bookings").delete().eq("id", newBooking.id);
-      throw new Error("Failed to create payment link. Please try again.");
+      return { error: "We couldn't start checkout. Please try again in a moment." };
     }
 
     await supabase
