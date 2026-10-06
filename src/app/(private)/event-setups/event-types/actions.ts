@@ -108,6 +108,7 @@ export async function saveSubtypeAction(formData: FormData) {
   const is_bookable = formData.get("is_bookable") === "on";
   const host_required = formData.get("host_required") === "on";
   const seating_required = formData.get("seating_required") === "on";
+  const show_on_enquiry_form = behavior !== "private" || formData.get("show_on_enquiry_form") === "on";
   const payment_required = formData.get("payment_required") === "on";
   const default_payment_amount = parseFloat(formData.get("default_payment_amount")?.toString() || "0");
   const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
@@ -137,6 +138,7 @@ export async function saveSubtypeAction(formData: FormData) {
     is_bookable,
     host_required,
     seating_required,
+    show_on_enquiry_form,
     payment_required,
     default_payment_amount,
     booking_config,

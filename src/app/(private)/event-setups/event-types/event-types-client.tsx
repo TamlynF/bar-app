@@ -74,6 +74,7 @@ const HELP = {
   bookable: "On: customers can reserve a place online. Off: they must ring or turn up (you can still add bookings by hand).",
   host: "Tick if someone has to run this night. You will be asked who is hosting each time you schedule one.",
   seating: "Tick if guests are given tables. Leave it off for stand-up nights so you are not asked to allocate seats.",
+  enquiryForm: "On: customers can pick this as their reason on the private hire enquiry form. Off: it is hidden from the form, but enquiries already made with it keep it.",
   payment: "Tick if people pay when booking. You then set the price below.",
   price: "What one person pays to book. Leave at 0 if the night is free but you still want names.",
   grouping: "How these events are shown on the website: one page each, one page per sub-category, or one page for the whole category.",
@@ -130,6 +131,7 @@ export type Subtype = {
   is_bookable: boolean;
   host_required: boolean;
   seating_required: boolean;
+  show_on_enquiry_form: boolean;
   payment_required: boolean;
   default_payment_amount: number | null;
   booking_config: BookingConfig | null;
@@ -184,6 +186,7 @@ type SubForm = {
   is_bookable: boolean;
   host_required: boolean;
   seating_required: boolean;
+  show_on_enquiry_form: boolean;
   payment_required: boolean;
   default_payment_amount: string;
   booking_config: ResolvedBookingConfig;
@@ -283,7 +286,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubForm({
       isNew: true, event_types_id: t.id, name: "", title: "", default_event_title: "", default_image_url: "",
       tagline: "", color: null, behavior: "standard", is_bookable: false, host_required: false,
-      seating_required: true, payment_required: false, default_payment_amount: "",
+      seating_required: true, show_on_enquiry_form: true, payment_required: false, default_payment_amount: "",
       booking_config: normalizeBookingConfig(null), origBookingConfig: null, badges: [],
       ...cardFromRecord({ booking_card_title: null, booking_card_tagline: null, booking_card_icon: null, booking_card_badge: null }),
     });
@@ -293,7 +296,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       id: s.id, isNew: false, event_types_id: s.event_types_id, name: toTitleCase(s.name), title: s.title ?? "",
       default_event_title: s.default_event_title ?? "", default_image_url: s.default_image_url ?? "",
       tagline: s.tagline ?? "", color: s.color ?? null, behavior: s.behavior, is_bookable: s.is_bookable,
-      host_required: s.host_required, seating_required: s.seating_required, payment_required: s.payment_required,
+      host_required: s.host_required, seating_required: s.seating_required,
+      show_on_enquiry_form: s.show_on_enquiry_form ?? true, payment_required: s.payment_required,
       default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
       booking_config: normalizeBookingConfig(s.booking_config), origBookingConfig: s.booking_config,
       badges: (s.event_subtype_badges ?? []).map((b) => ({ id: b.id, title: b.title, description: b.description ?? "", icon: b.icon })),
@@ -347,6 +351,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     if (subForm.is_bookable) fd.set("is_bookable", "on");
     if (subForm.host_required) fd.set("host_required", "on");
     if (subForm.seating_required) fd.set("seating_required", "on");
+    if (subForm.show_on_enquiry_form) fd.set("show_on_enquiry_form", "on");
     if (subForm.payment_required) fd.set("payment_required", "on");
     fd.set("default_payment_amount", subForm.default_payment_amount || "0");
     fd.set("booking_config", ownsPage && subForm.is_bookable ? configToJson(subForm.booking_config) : JSON.stringify(subForm.origBookingConfig ?? {}));
@@ -624,6 +629,9 @@ function FactChips({ sub }: { sub: Subtype }) {
   ];
   if (sub.host_required) chips.push({ key: "host", Icon: User, text: "Needs a host" });
   if (sub.seating_required) chips.push({ key: "seat", Icon: Armchair, text: "Table seating" });
+  if (sub.behavior === "private" && sub.show_on_enquiry_form === false) {
+    chips.push({ key: "enquiry", Icon: EyeOff, text: "Hidden from enquiry form" });
+  }
   chips.push(
     sub.payment_required
       ? { key: "price", Icon: Banknote, text: `£${money(sub.default_payment_amount)} per person` }
@@ -854,6 +862,14 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
                 onText="Yes - seated" onSub="Tables are allocated when people book."
                 offText="No - standing"
               />
+              {form.behavior === "private" && (
+                <BigToggle
+                  label="Offer it on the private hire form?" help={HELP.enquiryForm}
+                  on={form.show_on_enquiry_form} onChange={(v) => set({ show_on_enquiry_form: v })}
+                  onText="Yes - customers can pick it" onSub="Listed as a reason on the enquiry form."
+                  offText="No - hidden from the form" offSub="Old enquiries that used it keep it."
+                />
+              )}
               <BigToggle
                 label="Do people pay to book?" help={HELP.payment}
                 on={form.payment_required} onChange={(v) => set({ payment_required: v })}

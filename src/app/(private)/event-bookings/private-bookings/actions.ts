@@ -82,12 +82,11 @@ export async function updatePrivateHireFields(
   id: string,
   fields: {
     guest_count?: number;
-    reason?: string | null;
     selected_date?: string | null;
     selected_start_time?: string | null;
     selected_end_time?: string | null;
-    event_subtypes_id?: number | null;
-    admin_notes?: string | null;
+    event_subtypes_id?: number;
+    decline_reason?: string | null;
     deposit_amount?: number | null;
     deposit_due_date?: string | null;
   }
@@ -188,7 +187,7 @@ export async function privateHireEmailSlotsAction(key: PrivateHireEmailKey, id: 
     customerName: row.full_name,
     hireDate: formatHireDate(row.selected_date),
     hireTime: formatHireTime(row.selected_start_time, row.selected_end_time),
-    hireReason: privateHireSubtypeLabel(unwrapSubtype(row.event_subtypes), row.reason || row.reason_for_hire || "Private Hire"),
+    hireReason: privateHireSubtypeLabel(unwrapSubtype(row.event_subtypes), "Private Hire"),
     depositAmount: formatDeposit(resolveDepositAmount(row.deposit_amount, settings.data?.private_hire_deposit)),
     depositDueDate: formatHireDate(dueDate),
   });

@@ -5,6 +5,7 @@ import { Search, Inbox, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PrivateHireCard, type PrivateHireRequest } from "./private-hire-card";
 import { isClosedPrivateHire, normalizePrivateHireStatus } from "@/lib/private-hire-status";
+import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 
 const COLUMNS = ["new", "awaiting_customer", "awaiting_deposit", "confirmed", "closed"] as const;
 type Column = (typeof COLUMNS)[number];
@@ -96,7 +97,8 @@ export default function PrivateHireListClient({
           q === "" ||
           (r.full_name || "").toLowerCase().includes(q) ||
           (r.email || "").toLowerCase().includes(q) ||
-          (r.reason_for_hire || "").toLowerCase().includes(q)
+          privateHireSubtypeLabel(unwrapSubtype(r.event_subtypes)).toLowerCase().includes(q) ||
+          (unwrapSubtype(r.event_subtypes)?.name || "").toLowerCase().includes(q)
       )
       .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
   }, [initialRequests, searchQuery]);

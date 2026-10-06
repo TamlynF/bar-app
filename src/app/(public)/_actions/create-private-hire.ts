@@ -11,6 +11,7 @@ import { escapeHtml } from "@/lib/email/escape";
 import { getCompanyInfo } from "@/lib/company-info";
 import { describeOpenSessionClash, openSessionClash, toMinutes } from "@/lib/opening-hours";
 import { requestPageUrl } from "@/lib/private-hire-flow";
+import { privateHireSubtypeLabel } from "@/lib/private-hire-subtype";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -31,8 +32,7 @@ export interface PrivateHireData {
   preferred_date?: string;
   preferred_start_time?: string;
   preferred_end_time?: string;
-  event_subtypes_id: number | null;
-  reason_for_hire: string;
+  event_subtypes_id: number;
   additional_requirements?: string;
 }
 
@@ -46,6 +46,15 @@ export async function createPrivateHire(data: PrivateHireData) {
   }
 
   const supabase = await createClient();
+
+  const { data: subtype } = await supabase
+    .from("event_subtypes")
+    .select("id, name, default_event_title")
+    .eq("id", data.event_subtypes_id)
+    .eq("behavior", "private")
+    .eq("show_on_enquiry_form", true)
+    .maybeSingle();
+  if (!subtype) throw new Error("Please select a reason for hire.");
 
   // Ties the enquiry to a person rather than to whatever address they typed,
   // and creates the contact when this is their first dealing with the venue.
@@ -67,8 +76,7 @@ export async function createPrivateHire(data: PrivateHireData) {
         preferred_date: data.preferred_date || null,
         preferred_start_time: data.preferred_start_time || null,
         preferred_end_time: data.preferred_end_time || null,
-        event_subtypes_id: data.event_subtypes_id,
-        reason_for_hire: data.reason_for_hire,
+        event_subtypes_id: subtype.id,
         additional_requirements: data.additional_requirements || null,
         status: "new",
       },
@@ -83,7 +91,7 @@ export async function createPrivateHire(data: PrivateHireData) {
 
   await Promise.allSettled([
     sendBookerEmail(supabase, record.id, data.full_name, data.email),
-    sendAdminEmail(supabase, data, record.id),
+    sendAdminEmail(supabase, data, privateHireSubtypeLabel(subtype, "Private Hire"), record.id),
   ]);
 
   return { success: true, id: record.id };
@@ -106,7 +114,7 @@ async function sendBookerEmail(supabase: ServerClient, requestId: string, name: 
   });
 }
 
-async function sendAdminEmail(supabase: ServerClient, data: PrivateHireData, id: string) {
+async function sendAdminEmail(supabase: ServerClient, data: PrivateHireData, reasonForHire: string, id: string) {
   const slots = await renderTemplate(supabase, "private_hire.enquiry.admin", {
     customerName: data.full_name,
   });
@@ -124,7 +132,7 @@ async function sendAdminEmail(supabase: ServerClient, data: PrivateHireData, id:
     `<p><strong>Preferred Date:</strong> ${escapeHtml(data.preferred_date || "Not specified")}</p>`,
     `<p><strong>Start Time:</strong> ${escapeHtml(data.preferred_start_time || "Not specified")}</p>`,
     `<p><strong>End Time:</strong> ${escapeHtml(data.preferred_end_time || "Not specified")}</p>`,
-    `<p><strong>Reason for Hire:</strong> ${escapeHtml(data.reason_for_hire)}</p>`,
+    `<p><strong>Reason for Hire:</strong> ${escapeHtml(reasonForHire)}</p>`,
     data.additional_requirements
       ? `<p><strong>Additional Requirements:</strong> ${escapeHtml(data.additional_requirements)}</p>`
       : "",

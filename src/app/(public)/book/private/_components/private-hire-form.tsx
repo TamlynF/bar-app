@@ -123,7 +123,6 @@ export default function PrivateHireForm({
   const [eventSubtypeId, setEventSubtypeId] = useState("");
   const [additionalReqs, setAdditionalReqs] = useState("");
 
-  const selectedSubtype = subtypes.find((s) => String(s.id) === eventSubtypeId);
   const openClash =
     preferredDate && preferredStartTime && preferredEndTime
       ? openSessionClash(openingHours, preferredDate, toMinutes(preferredStartTime), toMinutes(preferredEndTime))
@@ -262,8 +261,7 @@ export default function PrivateHireForm({
           preferred_date: preferredDate || undefined,
           preferred_start_time: preferredStartTime || undefined,
           preferred_end_time: preferredEndTime || undefined,
-          event_subtypes_id: selectedSubtype ? selectedSubtype.id : null,
-          reason_for_hire: privateHireSubtypeLabel(selectedSubtype, "Private Hire"),
+          event_subtypes_id: Number(eventSubtypeId),
           additional_requirements: additionalReqs || undefined,
         });
         setSubmitted(true);

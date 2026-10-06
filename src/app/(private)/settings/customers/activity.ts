@@ -70,6 +70,7 @@ type EventRow = {
 type SubtypeRow = {
   id: number;
   name: string | null;
+  default_event_title: string | null;
   behavior: string | null;
   booking_config: BookingConfig | null;
 };
@@ -132,15 +133,13 @@ type HireRow = {
   id: string;
   email: string | null;
   contact_id: number | null;
-  reason_for_hire: string | null;
-  reason: string | null;
   guest_count: number | null;
   status: string | null;
   created_at: string;
   selected_date: string | null;
   preferred_date: string | null;
   event_id: number | null;
-  event_subtypes_id: number | null;
+  event_subtypes_id: number;
 };
 
 function bucket(map: ActivityByContact, contactId: number): ContactActivity {
@@ -171,7 +170,7 @@ export async function readContactActivity(
     fetchAll<SubtypeRow>("event subtypes", (from, to) =>
       supabase
         .from("event_subtypes")
-        .select("id, name, behavior, booking_config")
+        .select("id, name, default_event_title, behavior, booking_config")
         .range(from, to),
     ),
     fetchAll<TypeRow>("event types", (from, to) =>
@@ -204,7 +203,7 @@ export async function readContactActivity(
       supabase
         .from("private_hire_requests")
         .select(
-          "id, email, contact_id, reason_for_hire, reason, guest_count, status, created_at, selected_date, preferred_date, event_id, event_subtypes_id",
+          "id, email, contact_id, guest_count, status, created_at, selected_date, preferred_date, event_id, event_subtypes_id",
         )
         .range(from, to),
     ),
@@ -286,14 +285,13 @@ export async function readContactActivity(
   hireRows.forEach((row) => {
     const contactId = ownerOf(row);
     if (contactId == null) return;
-    const subtype =
-      subtypeById.get(row.event_subtypes_id ?? -1) ?? subtypeOf(row.event_id) ?? undefined;
+    const subtype = subtypeById.get(row.event_subtypes_id);
     bucket(map, contactId).privateHires.push({
       id: row.id,
       eventId: row.event_id,
       subtype: subtype?.name?.trim() || "Private hire",
       title: eventTitle(row.event_id),
-      reason: row.reason_for_hire?.trim() || row.reason?.trim() || "Not given",
+      reason: subtype?.default_event_title?.trim() || subtype?.name?.trim() || "Private hire",
       date: row.selected_date,
       guests: row.guest_count ?? 0,
       status: normalizePrivateHireStatus(row.status),

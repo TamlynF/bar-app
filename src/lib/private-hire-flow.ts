@@ -7,7 +7,6 @@ import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout, plainNote, plainPanel } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { eventSlotIsComplete } from "@/lib/event-active";
-import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { siteUrl } from "@/lib/site-url";
 import { getContactEmail } from "@/lib/company-info";
@@ -61,9 +60,7 @@ export type HireRow = {
   guest_count: number;
   status: string;
   event_id: number | null;
-  event_subtypes_id: number | null;
-  reason: string | null;
-  reason_for_hire: string | null;
+  event_subtypes_id: number;
   selected_date: string | null;
   selected_start_time: string | null;
   selected_end_time: string | null;
@@ -78,7 +75,7 @@ export type HireRow = {
 };
 
 const HIRE_SELECT =
-  "id, full_name, email, phone_no, guest_count, status, event_id, event_subtypes_id, reason, reason_for_hire, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_due_date, deposit_reminded_at, payment_link_url, square_order_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
+  "id, full_name, email, phone_no, guest_count, status, event_id, event_subtypes_id, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_due_date, deposit_reminded_at, payment_link_url, square_order_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
 
 const STALE = "This request has moved on since you opened it - refresh to see where it is now.";
 
@@ -113,7 +110,7 @@ async function depositSettings(supabase: Db): Promise<{ amount: number | null; d
 
 function reasonLabel(row: HireRow): string {
   const sub = unwrapSubtype(row.event_subtypes);
-  return privateHireSubtypeLabel(sub, row.reason || row.reason_for_hire || "Private Hire");
+  return privateHireSubtypeLabel(sub, "Private Hire");
 }
 
 function slotIsSet(row: HireRow): boolean {
@@ -232,15 +229,12 @@ async function eventTypeBookingFields(supabase: Db, eventTypeId: number) {
 export async function syncHireEvent(ctx: FlowContext, row: HireRow): Promise<void> {
   if (!row.selected_date) return;
   const sub = unwrapSubtype(row.event_subtypes);
-  let eventTypeId: number;
-  let eventSubtypeId: number;
-  if (sub) {
-    eventTypeId = sub.event_types_id;
-    eventSubtypeId = sub.id;
-  } else {
-    const reason = row.reason?.toLowerCase() || row.reason_for_hire?.toLowerCase() || "other";
-    ({ eventTypeId, eventSubtypeId } = await resolveEventSubtype(ctx.supabase, "private", reason, "private"));
+  if (!sub) {
+    console.error(`[private hire] ${row.id} has no event subtype, so no event was placed`);
+    return;
   }
+  const eventTypeId = sub.event_types_id;
+  const eventSubtypeId = sub.id;
 
   const now = new Date().toISOString();
   const eventFields = {
@@ -427,7 +421,7 @@ export async function closePrivateHire(
   const moved = await moveRow(ctx, row, to, {
     closed_at: new Date().toISOString(),
     payment_link_url: null,
-    ...(to === "declined" && opts.note?.trim() ? { admin_notes: opts.note.trim() } : {}),
+    ...(to !== "expired" && opts.note?.trim() ? { decline_reason: opts.note.trim() } : {}),
   });
   if (!moved) return { ok: false, error: STALE };
 
@@ -448,7 +442,7 @@ export async function reopenPrivateHire(ctx: FlowContext, id: string): Promise<F
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
   if (!canMovePrivateHire(normalizePrivateHireStatus(row.status), "new")) return { ok: false, error: STALE };
-  const moved = await moveRow(ctx, row, "new", { closed_at: null });
+  const moved = await moveRow(ctx, row, "new", { closed_at: null, decline_reason: null });
   return moved ? { ok: true, status: "new" } : { ok: false, error: STALE };
 }
 

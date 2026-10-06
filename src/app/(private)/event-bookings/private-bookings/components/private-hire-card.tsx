@@ -107,14 +107,12 @@ export interface PrivateHireRequest {
   selected_date: string | null;
   selected_start_time: string | null;
   selected_end_time: string | null;
-  reason_for_hire: string;
-  reason: string | null;
   event_id: number | null;
-  event_subtypes_id: number | null;
+  event_subtypes_id: number;
   event_subtypes: PrivateHireSubtypeJoin | PrivateHireSubtypeJoin[] | null;
   additional_requirements: string | null;
   status: string;
-  admin_notes: string | null;
+  decline_reason: string | null;
   deposit_amount: number | null;
   paid_amount: number | null;
   deposit_due_date: string | null;
@@ -889,7 +887,7 @@ export function PrivateHireCard({
     return ok;
   }
 
-  const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
+  const [declineReasonText, setDeclineReasonText] = useState(request.decline_reason || "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<HireAction | null>(null);
@@ -914,7 +912,7 @@ export function PrivateHireCard({
   const shortRef = request.id.slice(0, 8).toUpperCase();
 
   const [guestCount, setGuestCount] = useState(String(request.guest_count ?? ""));
-  const [subtypeId, setSubtypeId] = useState(request.event_subtypes_id != null ? String(request.event_subtypes_id) : "");
+  const [subtypeId, setSubtypeId] = useState(String(request.event_subtypes_id));
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
@@ -943,7 +941,7 @@ export function PrivateHireCard({
   const bookingNote = (request.additional_requirements ?? "").trim();
   const internalNotes = request.internal_notes ?? [];
 
-  const declineReason = adminNotes.trim();
+  const declineReason = declineReasonText.trim();
   const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
   const declineHead = declineReason.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
 
@@ -983,8 +981,8 @@ export function PrivateHireCard({
     selectedEndTime !== origEnd;
   const detailsChanged =
     guestCount !== String(request.guest_count ?? "") ||
-    subtypeId !== (request.event_subtypes_id != null ? String(request.event_subtypes_id) : "") ||
-    adminNotes !== (request.admin_notes ?? "");
+    subtypeId !== String(request.event_subtypes_id) ||
+    declineReasonText !== (request.decline_reason ?? "");
   const origDeposit = request.deposit_amount != null && request.deposit_amount > 0 ? String(request.deposit_amount) : "";
   const depositChanged =
     Number(depositAmount || 0) !== Number(origDeposit || 0) || depositDue !== (request.deposit_due_date || "");
@@ -992,11 +990,11 @@ export function PrivateHireCard({
 
   const editFields = () => ({
     guest_count: guestCount.trim() === "" ? request.guest_count : Number(guestCount),
-    event_subtypes_id: subtypeId ? Number(subtypeId) : null,
+    event_subtypes_id: subtypeId ? Number(subtypeId) : request.event_subtypes_id,
     selected_date: selectedDate || null,
     selected_start_time: selectedStartTime || null,
     selected_end_time: selectedEndTime || null,
-    admin_notes: adminNotes || null,
+    decline_reason: declineReasonText || null,
     ...(depositChanged
       ? {
           deposit_amount: depositAmount.trim() === "" ? 0 : Math.max(0, Number(depositAmount)),
@@ -1093,11 +1091,11 @@ export function PrivateHireCard({
 
   function discardChanges() {
     setGuestCount(String(request.guest_count ?? ""));
-    setSubtypeId(request.event_subtypes_id != null ? String(request.event_subtypes_id) : "");
+    setSubtypeId(String(request.event_subtypes_id));
     setSelectedDate(request.selected_date || "");
     setSelectedStartTime(toHHMM(request.selected_start_time));
     setSelectedEndTime(toHHMM(request.selected_end_time));
-    setAdminNotes(request.admin_notes || "");
+    setDeclineReasonText(request.decline_reason || "");
     setDepositAmount(origDeposit);
     setDepositDue(request.deposit_due_date || "");
     setClashes([]);
@@ -1235,7 +1233,7 @@ export function PrivateHireCard({
         ? String(request.deposit_amount ?? defaultDeposit ?? "")
         : String(depositAmount || defaultDeposit || "");
     const initial: ActionDraft = {
-      note: action === "decline" ? adminNotes : "",
+      note: action === "decline" || action === "cancel" ? declineReasonText : "",
       deposit: d.deposit ? startingDeposit : "",
       via: "bank_transfer",
     };
@@ -1305,13 +1303,15 @@ export function PrivateHireCard({
             break;
           case "decline":
             check(await closePrivateHireAction(request.id, "declined", note));
-            setAdminNotes(note ?? "");
+            if (note?.trim()) setDeclineReasonText(note.trim());
             break;
           case "cancel":
             check(await closePrivateHireAction(request.id, "cancelled", note));
+            if (note?.trim()) setDeclineReasonText(note.trim());
             break;
           case "reopen":
             check(await reopenPrivateHireAction(request.id));
+            setDeclineReasonText("");
             break;
           case "resend":
             check(await resendPrivateHireEmailAction(request.id));
@@ -1408,7 +1408,7 @@ export function PrivateHireCard({
     selectedStartTime === preferredStart &&
     selectedEndTime === preferredEnd;
 
-  const subtypeBadge = toTitleCase(currentSub?.name) || toTitleCase(request.reason_for_hire);
+  const subtypeBadge = toTitleCase(currentSub?.name);
 
   const selectedTimeLabel = [toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)]
     .filter(Boolean)
@@ -1512,9 +1512,12 @@ export function PrivateHireCard({
               <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">
                 {request.full_name}
               </p>
-              {request.admin_notes && (
-                <span className="shrink-0 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 font-black text-[10px] text-purple-700 uppercase">
-                  ADMIN
+              {isCancelled && request.decline_reason && (
+                <span
+                  title={request.decline_reason}
+                  className="shrink-0 rounded border border-admin-line bg-admin-surface px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-admin-muted uppercase"
+                >
+                  Reason given
                 </span>
               )}
             </div>
@@ -1701,16 +1704,16 @@ export function PrivateHireCard({
                     {(isCancelled || !!declineReason) && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                         <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                          Decline Reason
+                          {status === "cancelled" ? "Cancel Reason" : "Decline Reason"}
                         </span>
                         {declineReasonOpen ? (
                           <textarea
                             aria-label="Decline reason"
-                            value={adminNotes}
+                            value={declineReasonText}
                             rows={3}
                             autoFocus
                             placeholder="Why was this rejected?"
-                            onChange={(e) => setAdminNotes(e.target.value)}
+                            onChange={(e) => setDeclineReasonText(e.target.value)}
                             className="min-w-0 flex-1 resize-none rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-[13px] text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                           />
                         ) : (
@@ -1747,8 +1750,8 @@ export function PrivateHireCard({
               pendingAction={pendingAction}
               slotBlocker={slotWarning ?? clashWarning}
               onRevealSlot={revealSlot}
-              closedReason={adminNotes}
-              onClosedReasonChange={setAdminNotes}
+              closedReason={declineReasonText}
+              onClosedReasonChange={setDeclineReasonText}
             />
           </div>
 
@@ -1837,8 +1840,6 @@ export function PrivateHireCard({
                       </div>
                     )}
                   </div>
-
-                  <SheetRow label="Reason" value={toTitleCase(request.reason_for_hire)} />
 
                   <EditRow
                     label="Guests"
@@ -2055,15 +2056,15 @@ export function PrivateHireCard({
                   <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
                 </Section>
 
-                {status === "declined" && (
+                {isCancelled && (
                   <Section title="Reason Given to the Customer">
                     <div className="p-4 sm:p-5">
                       <textarea
                         aria-label="Reason given to the customer"
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
+                        value={declineReasonText}
+                        onChange={(e) => setDeclineReasonText(e.target.value)}
                         rows={4}
-                        placeholder="The reason given to the customer when this was declined..."
+                        placeholder="The reason given to the customer when this was closed..."
                         className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                       />
                       <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">

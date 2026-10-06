@@ -41,8 +41,6 @@ type PrivateHireRow = {
   selected_date: string;
   selected_start_time: string | null;
   selected_end_time: string | null;
-  reason_for_hire: string;
-  reason: string | null;
   event_subtypes: { name: string; default_event_title: string | null } | { name: string; default_event_title: string | null }[] | null;
   full_name: string;
   email: string;
@@ -260,7 +258,7 @@ export default async function DashboardPage() {
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
-      .select("id, event_id, selected_date, selected_start_time, selected_end_time, reason_for_hire, reason, event_subtypes:event_subtypes_id ( name, default_event_title ), full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
+      .select("id, event_id, selected_date, selected_start_time, selected_end_time, event_subtypes:event_subtypes_id ( name, default_event_title ), full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -419,7 +417,7 @@ export default async function DashboardPage() {
       outstanding: ph.deposit_amount !== null && ph.paid_amount !== null
         ? Math.max(0, ph.deposit_amount - ph.paid_amount)
         : null,
-      reasonForHire: privateHireSubtypeLabel(unwrapSubtype(ph.event_subtypes), ph.reason_for_hire),
+      reasonForHire: privateHireSubtypeLabel(unwrapSubtype(ph.event_subtypes), "Private Hire"),
     } : undefined;
 
     const bb = bandByEventId.get(ev.id);

@@ -77,7 +77,7 @@ export default async function PrivateHireRequestPage({
   const { data: row } = await createAdminClient()
     .from("private_hire_requests")
     .select(
-      "id, full_name, status, guest_count, reason, reason_for_hire, preferred_date, preferred_start_time, preferred_end_time, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, deposit_due_date, deposit_paid_via, event_subtypes:event_subtypes_id ( name, default_event_title )"
+      "id, full_name, status, guest_count, preferred_date, preferred_start_time, preferred_end_time, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, deposit_due_date, deposit_paid_via, event_subtypes:event_subtypes_id ( name, default_event_title )"
     )
     .eq("id", id)
     .maybeSingle();
@@ -90,7 +90,7 @@ export default async function PrivateHireRequestPage({
   );
   const reason = privateHireSubtypeLabel(
     unwrapSubtype(row.event_subtypes as SubtypeJoin | SubtypeJoin[] | null),
-    row.reason || row.reason_for_hire || "Private hire"
+    "Private hire"
   );
   const hasSlot = !!row.selected_date;
   const showDeposit = status === "awaiting_deposit" || status === "expired";

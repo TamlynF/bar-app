@@ -20,9 +20,9 @@ export default async function PrivateHirePage() {
 
   const { data: subtypeRows } = await supabase
     .from("event_subtypes")
-    .select("id, name, default_event_title, event_types!inner(name)")
+    .select("id, name, default_event_title")
     .eq("behavior", "private")
-    .eq("event_types.name", "private")
+    .eq("show_on_enquiry_form", true)
     .order("name");
 
   const subtypes = (subtypeRows ?? []).map((s) => ({
