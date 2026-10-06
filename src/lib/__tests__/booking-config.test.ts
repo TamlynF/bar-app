@@ -62,4 +62,28 @@ describe("normalizeBookingConfig", () => {
     expect(cfg.tag_line).toBe("new");
     expect(cfg.fields.phone.visible).toBe(false);
   });
+
+  it("defaults the country code to +44, shown and optional", () => {
+    expect(normalizeBookingConfig({}).fields.country_code).toEqual({
+      visible: true,
+      label: "Country Code",
+      required: false,
+      default_value: "+44",
+    });
+  });
+
+  it("keeps a blank country code default and lets it be required", () => {
+    const cfg = normalizeBookingConfig({
+      fields: { country_code: { visible: true, label: "Code", required: true, default_value: "" } },
+    });
+    expect(cfg.fields.country_code).toEqual({ visible: true, label: "Code", required: true, default_value: "" });
+  });
+
+  it("drops required on the country code when a default is set", () => {
+    const cfg = normalizeBookingConfig({
+      fields: { country_code: { visible: true, label: "Code", required: true, default_value: " +353 " } },
+    });
+    expect(cfg.fields.country_code.required).toBe(false);
+    expect(cfg.fields.country_code.default_value).toBe("+353");
+  });
 });

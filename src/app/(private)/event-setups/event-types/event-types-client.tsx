@@ -29,6 +29,7 @@ import {
   deleteSubtypeAction,
 } from "./actions";
 import { randomId } from "@/lib/random-id";
+import { COUNTRY_CODES } from "@/lib/country-codes";
 
 const storageClient = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -86,6 +87,7 @@ const HELP = {
   wording: "What the customer reads next to the box. Plain words work best.",
   smallest: "The fewest people you will take on one booking.",
   biggest: "The most people allowed on one booking. Bigger parties must ring you.",
+  countryCode: "Filled in for the customer before they start. Choose No default to make them pick one - then you can make it required.",
 };
 
 const HINT = {
@@ -936,10 +938,11 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
 
 /* ---------------------------------------------------------------- booking form editor (tab 5 / per_type) */
 
-const BOOK_FIELDS: { key: FieldKey; label: string; locked?: boolean; size?: boolean }[] = [
+const BOOK_FIELDS: { key: FieldKey; label: string; locked?: boolean; size?: boolean; code?: boolean }[] = [
   { key: "name", label: "Their name", locked: true },
   { key: "email", label: "Email address", locked: true },
   { key: "phone", label: "Phone number" },
+  { key: "country_code", label: "Country code", code: true },
   { key: "group_size", label: "How many people", size: true },
   { key: "group_name", label: "Team or group name" },
   { key: "special_requests", label: "Anything else we should know" },
@@ -995,6 +998,14 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
         </p>
         {BOOK_FIELDS.map((fd) => {
           const v = config.fields[fd.key];
+          if (fd.code && !config.fields.phone.visible) {
+            return (
+              <p key={fd.key} className="rounded-xl border border-dashed border-[#D8D5C8] bg-[#ECE9DE] px-2.75 py-2.5 text-[12px] text-[#5E6654]">
+                <b className="font-bold text-[#20231A]">{fd.label}</b> can be set once Phone number is shown.
+              </p>
+            );
+          }
+          const hasDefault = !!fd.code && config.fields.country_code.default_value !== "";
           const shown = fd.locked ? true : v.visible;
           const required = fd.locked ? true : v.required;
           return (
@@ -1007,7 +1018,7 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
                 </span>
                 <span className={cn("flex items-center justify-end gap-1.75", !shown && "opacity-40")}>
                   <span className={cn("w-18.5 text-right font-bold text-[12px]", required ? "text-[#34451F]" : "text-[#5E6654]")}>{required ? "Required" : "Optional"}</span>
-                  <MiniSw on={required} tone="req" disabled={fd.locked || !shown} label={`Make ${fd.label} required`} onClick={() => setField(fd.key, { required: !v.required })} />
+                  <MiniSw on={required} tone="req" disabled={fd.locked || !shown || hasDefault} label={`Make ${fd.label} required`} onClick={() => setField(fd.key, { required: !v.required })} />
                 </span>
               </div>
               {shown && (
@@ -1015,6 +1026,32 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
                   <Field label="Wording on the form" help={HELP.wording}>
                     <TextIn value={v.label} ariaLabel={`Wording for ${fd.label}`} onChange={(val) => setField(fd.key, { label: val })} />
                   </Field>
+                  {fd.code && (
+                    <Field
+                      label="Default code"
+                      help={HELP.countryCode}
+                      hint={hasDefault ? "Required only applies when there is no default." : undefined}
+                    >
+                      <select
+                        aria-label="Default country code"
+                        value={config.fields.country_code.default_value}
+                        onChange={(e) =>
+                          setField("country_code", {
+                            default_value: e.target.value,
+                            required: e.target.value === "" && config.fields.country_code.required,
+                          })
+                        }
+                        className="h-11 w-full cursor-pointer rounded-[10px] border border-[#D8D5C8] bg-white px-3 text-[14.5px] text-[#20231A] outline-none transition-colors focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#34451F]/12"
+                      >
+                        <option value="">No default</option>
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.iso + c.code} value={c.code}>
+                            {c.country} ({c.code})
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
                   {fd.size && (
                     <div className="flex flex-wrap gap-2.25">
                       <span className="flex-[1_1_120px]">

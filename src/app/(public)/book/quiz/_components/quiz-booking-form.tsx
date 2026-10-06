@@ -412,7 +412,7 @@ export default function BookingForm({ events }: Props) {
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <span className="flex items-center">Book now <ChevronRight className="ml-2 h-4 w-4" /></span>}
           </button>
         </div>
-        <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
+        <p className="mt-4 px-4 text-center text-meta text-ink-2">
           By booking, you agree to show up or cancel at least 24 hours in advance.
         </p>
       </div>

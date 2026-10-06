@@ -75,7 +75,7 @@ export default function EventBookingForm({ event, config }: Props) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    countryCode: "+44",
+    countryCode: f.country_code.default_value,
     phoneNo: "",
     groupName: "",
     groupSize: "1",
@@ -89,6 +89,7 @@ export default function EventBookingForm({ event, config }: Props) {
     if (!formData.fullName.trim()) errors.fullName = "Please enter your name.";
     if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = "Please enter a valid email address.";
     if (f.phone.visible && f.phone.required && !formData.phoneNo.trim()) errors.phoneNo = "Please enter your phone number.";
+    if (f.phone.visible && f.country_code.visible && f.country_code.required && !formData.countryCode) errors.countryCode = "Please choose a country code.";
     if (f.group_name.visible && f.group_name.required && !formData.groupName.trim()) errors.groupName = `Please enter a ${f.group_name.label.toLowerCase()}.`;
     if (f.special_requests.visible && f.special_requests.required && !formData.specialRequests.trim()) errors.specialRequests = "Please fill in this field.";
     return errors;
@@ -208,7 +209,7 @@ export default function EventBookingForm({ event, config }: Props) {
         <Button
           onClick={() => {
             setBooked(false);
-            setFormData({ fullName: "", email: "", countryCode: "+44", phoneNo: "", groupName: "", groupSize: "1", specialRequests: "" });
+            setFormData({ fullName: "", email: "", countryCode: f.country_code.default_value, phoneNo: "", groupName: "", groupSize: "1", specialRequests: "" });
           }}
           className="h-14 w-full rounded-2xl bg-white font-black tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:bg-stone-200"
         >
@@ -253,7 +254,7 @@ export default function EventBookingForm({ event, config }: Props) {
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input type="hidden" name="group_name" value={f.group_name.visible ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
       <input type="hidden" name="group_size" value={formData.groupSize} />
-      <input type="hidden" name="country_code" value={formData.countryCode} />
+      <input type="hidden" name="country_code" value={f.phone.visible && f.country_code.visible ? formData.countryCode : f.country_code.default_value} />
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
@@ -304,13 +305,21 @@ export default function EventBookingForm({ event, config }: Props) {
       {f.phone.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
-            {f.phone.label} {f.phone.required && <span className="text-red-500">*</span>}
+            {f.phone.label} {(f.phone.required || f.country_code.required) && <span className="text-red-500">*</span>}
           </label>
           <div className="flex gap-2">
-            <CountryCodeSelect
-              value={formData.countryCode}
-              onChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
-            />
+            {f.country_code.visible && (
+              <CountryCodeSelect
+                value={formData.countryCode}
+                label={f.country_code.label}
+                allowEmpty={!f.country_code.required}
+                invalid={!!fieldErrors.countryCode}
+                onChange={(code) => {
+                  setFormData((prev) => ({ ...prev, countryCode: code }));
+                  setFieldErrors(({ countryCode: _cleared, ...rest }) => rest);
+                }}
+              />
+            )}
             <div className="group relative flex-1">
               <div className={iconContainerClasses}>
                 <Phone className={iconClasses} />
@@ -327,6 +336,7 @@ export default function EventBookingForm({ event, config }: Props) {
               />
             </div>
           </div>
+          <FieldError message={fieldErrors.countryCode} />
           <FieldError message={fieldErrors.phoneNo} />
         </div>
       )}

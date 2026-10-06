@@ -9,9 +9,15 @@ import { COUNTRY_CODES } from "@/lib/country-codes";
 export function CountryCodeSelect({
   value,
   onChange,
+  label = "Country Code",
+  allowEmpty = false,
+  invalid = false,
 }: {
   value: string;
   onChange: (code: string) => void;
+  label?: string;
+  allowEmpty?: boolean;
+  invalid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -50,23 +56,24 @@ export function CountryCodeSelect({
     : TEN_ROWS;
 
   return (
-    <div className="group relative w-24 shrink-0">
-      <span className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3.5">
+    <div className="group relative w-22 shrink-0">
+      <span className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
         <Flag className={cn("h-4 w-4 transition-colors duration-200", open ? "text-[#fdcc4b]" : "text-(--ev-fg,#57534e)")} />
       </span>
       <button
         ref={btnRef}
         type="button"
-        title="Country Code"
+        title={label}
+        aria-label={value ? `${label}: ${value}` : label}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "w-full cursor-pointer rounded-2xl border bg-black/40 py-4 pr-2 pl-11 text-center text-sm font-bold text-white tabular-nums transition-all duration-300",
-          open ? "border-[#fdcc4b] ring-1 ring-[#fdcc4b]" : "border-white/10"
+          "w-full cursor-pointer rounded-2xl border bg-black/40 py-4 pr-2 pl-8 text-center text-sm font-bold text-white tabular-nums transition-all duration-300",
+          open ? "border-[#fdcc4b] ring-1 ring-[#fdcc4b]" : invalid ? "border-red-500/60" : "border-white/10"
         )}
       >
-        {value}
+        {value || <span className="font-semibold text-(--ev-fg-dim,#78716c)">Code</span>}
       </button>
 
       {open && rect && typeof document !== "undefined" && createPortal(
@@ -77,6 +84,23 @@ export function CountryCodeSelect({
           style={{ "--x": `${rect.left}px`, "--y": `${rect.bottom + 6}px`, "--w": `${rect.width}px`, "--mh": `${maxH}px` } as React.CSSProperties}
           className="fixed top-(--y) left-(--x) z-100 max-h-(--mh) w-max min-w-(--w) overflow-y-scroll rounded-2xl border border-white/15 bg-[#26300D] py-1 shadow-2xl [scrollbar-color:rgba(255,255,255,0.4)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-track]:bg-transparent"
         >
+          {allowEmpty && (
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === ""}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+              className={cn(
+                "block w-full px-5 py-2 text-center text-xs font-bold tracking-wide whitespace-nowrap transition-colors",
+                value === "" ? "bg-[#fdcc4b] text-[#26300D]" : "text-stone-400 hover:bg-white/10"
+              )}
+            >
+              None
+            </button>
+          )}
           {COUNTRY_CODES.map((c) => {
             const isSel = c.code === value;
             return (

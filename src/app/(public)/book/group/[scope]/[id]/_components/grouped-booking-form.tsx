@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CountryCodeSelect } from "@/components/country-code-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatTime } from "@/lib/events-display";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
@@ -59,7 +60,7 @@ const NO_SEATING_SPACE_ERROR = "Not enough space for this group size on the sele
 const emptyForm = {
   fullName: "",
   email: "",
-  countryCode: "+44",
+  countryCode: "",
   phoneNo: "",
   groupName: "",
   groupSize: "1",
@@ -83,7 +84,10 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       ? defaultEventId!
       : String(events[0]?.id ?? "")
   );
-  const [formData, setFormData] = useState(emptyForm);
+  const [formData, setFormData] = useState(() => ({
+    ...emptyForm,
+    countryCode: normalizeBookingConfig(config).fields.country_code.default_value,
+  }));
 
   function eventOptionLabel(ev: GroupedEvent) {
     const time = formatTime(ev.start_time);
@@ -115,6 +119,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
     if (!formData.fullName.trim()) errors.fullName = "Please enter your name.";
     if (!EMAIL_PATTERN.test(formData.email.trim())) errors.email = "Please enter a valid email address.";
     if (f.phone.visible && f.phone.required && !formData.phoneNo.trim()) errors.phoneNo = "Please enter your phone number.";
+    if (f.phone.visible && f.country_code.visible && f.country_code.required && !formData.countryCode) errors.countryCode = "Please choose a country code.";
     if (f.group_name.visible && f.group_name.required && !formData.groupName.trim()) errors.groupName = `Please enter a ${f.group_name.label.toLowerCase()}.`;
     if (f.special_requests.visible && f.special_requests.required && !formData.specialRequests.trim()) errors.specialRequests = "Please fill in this field.";
     return errors;
@@ -214,6 +219,10 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   const inputBaseClasses =
     "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder:text-(--ev-fg-dim,#44403c) focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold autofill:transition-[background-color] autofill:duration-[600000s] autofill:filter-none autofill:[-webkit-text-fill-color:#fff] autofill:caret-white";
+  const selectTriggerClasses = cn(
+    inputBaseClasses,
+    "h-auto cursor-pointer gap-2 text-left data-[state=open]:border-[#fdcc4b] data-[state=open]:ring-1 data-[state=open]:ring-[#fdcc4b]"
+  );
   const labelClasses = "block text-[10px] font-black text-(--ev-fg,#78716c) mb-2 uppercase tracking-[0.15em] ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-(--ev-fg,#57534e) transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
@@ -249,7 +258,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         <Button
           onClick={() => {
             setBooked(false);
-            setFormData(emptyForm);
+            setFormData({ ...emptyForm, countryCode: f.country_code.default_value });
           }}
           className="h-14 w-full rounded-2xl bg-white font-black tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:bg-stone-200"
         >
@@ -305,7 +314,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         value={f.group_name.visible ? formData.groupName.trim() || formData.fullName : formData.fullName}
       />
       <input type="hidden" name="group_size" value={formData.groupSize} />
-      <input type="hidden" name="country_code" value={formData.countryCode} />
+      <input type="hidden" name="country_code" value={f.phone.visible && f.country_code.visible ? formData.countryCode : f.country_code.default_value} />
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
@@ -318,24 +327,25 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
             <div className={iconContainerClasses}>
               <CalendarDays className={iconClasses} />
             </div>
-            <select
-              title="Event Date"
+            <Select
               value={eventId}
-              onChange={(e) => {
+              onValueChange={(value) => {
                 setError(null);
-                setEventId(e.target.value);
+                setEventId(value);
                 setFieldErrors(({ eventId: _cleared, ...rest }) => rest);
               }}
-              required
-              className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10")}
             >
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {eventOptionLabel(ev)}
-                </option>
-              ))}
-            </select>
-            <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+              <SelectTrigger aria-label="Event Date" className={selectTriggerClasses}>
+                <SelectValue placeholder="Choose a date" />
+              </SelectTrigger>
+              <SelectContent>
+                {events.map((ev) => (
+                  <SelectItem key={ev.id} value={String(ev.id)}>
+                    {eventOptionLabel(ev)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <FieldError message={fieldErrors.eventId} />
         </div>
@@ -349,24 +359,30 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               <div className={iconContainerClasses}>
                 <Users className={iconClasses} />
               </div>
-              <select
-                title={f.group_size.label}
-                name="groupSize"
-                required={f.group_size.required}
-                value={formData.groupSize}
-                onChange={handleInputChange}
-                className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10", seatingError && "border-red-500/50")}
+              <Select
+                value={String(formData.groupSize)}
+                onValueChange={(value) => {
+                  setError(null);
+                  setFormData((prev) => ({ ...prev, groupSize: value }));
+                  setFieldErrors(({ groupSize: _cleared, ...rest }) => rest);
+                }}
               >
-                {groupSizeOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n} {n === 1 ? "person" : "people"}
-                  </option>
-                ))}
-              </select>
-              {isCheckingSeating ? (
-                <Loader2 className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-[#fdcc4b]" />
-              ) : (
-                <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+                <SelectTrigger
+                  aria-label={f.group_size.label}
+                  className={cn(selectTriggerClasses, seatingError && "border-red-500/50")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {groupSizeOptions.map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n} {n === 1 ? "person" : "people"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isCheckingSeating && (
+                <Loader2 className="pointer-events-none absolute top-1/2 right-9 h-4 w-4 -translate-y-1/2 animate-spin text-[#fdcc4b]" />
               )}
             </div>
             {seatingError && (
@@ -423,13 +439,21 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       {f.phone.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
-            {f.phone.label} {f.phone.required && <span className="text-red-500">*</span>}
+            {f.phone.label} {(f.phone.required || f.country_code.required) && <span className="text-red-500">*</span>}
           </label>
           <div className="flex gap-2">
-            <CountryCodeSelect
-              value={formData.countryCode}
-              onChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
-            />
+            {f.country_code.visible && (
+              <CountryCodeSelect
+                value={formData.countryCode}
+                label={f.country_code.label}
+                allowEmpty={!f.country_code.required}
+                invalid={!!fieldErrors.countryCode}
+                onChange={(code) => {
+                  setFormData((prev) => ({ ...prev, countryCode: code }));
+                  setFieldErrors(({ countryCode: _cleared, ...rest }) => rest);
+                }}
+              />
+            )}
             <div className="group relative flex-1">
               <div className={iconContainerClasses}>
                 <Phone className={iconClasses} />
@@ -446,6 +470,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               />
             </div>
           </div>
+          <FieldError message={fieldErrors.countryCode} />
           <FieldError message={fieldErrors.phoneNo} />
         </div>
       )}
@@ -558,11 +583,11 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
           </button>
         </div>
         {hasPricing ? (
-          <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
+          <p className="mt-4 px-4 text-center text-meta text-ink-2">
             You&apos;ll be taken to a secure Square checkout to complete payment.
           </p>
         ) : (
-          <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
+          <p className="mt-4 px-4 text-center text-meta text-ink-2">
             By booking, you agree to show up or cancel at least 24 hours in advance.
           </p>
         )}

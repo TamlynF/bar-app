@@ -8,9 +8,11 @@ import {
   normalizeBookingConfig,
   type BookingConfig,
   type FieldConfig,
+  type FieldKey,
   type GroupSizeFieldConfig,
 } from "@/lib/booking-config";
 import { randomId } from "@/lib/random-id";
+import { COUNTRY_CODES } from "@/lib/country-codes";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,22 +71,25 @@ function Switch({ value, onChange, locked, color = "green", label }: {
   );
 }
 
-const FIELD_META: { key: "name" | "email" | "phone" | "group_size" | "group_name" | "special_requests"; name: string; locked?: boolean }[] = [
+const FIELD_META: { key: FieldKey; name: string; locked?: boolean }[] = [
   { key: "name", name: "Name", locked: true },
   { key: "email", name: "Email", locked: true },
   { key: "phone", name: "Phone" },
+  { key: "country_code", name: "Country Code" },
   { key: "group_size", name: "Group Size" },
   { key: "group_name", name: "Group Name" },
   { key: "special_requests", name: "Special Requests" },
 ];
 
-function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }: {
+function FormFieldCard({ name, locked, requiredLocked, field, isGroupSize, editable, onChange, children }: {
   name: string;
   locked?: boolean;
+  requiredLocked?: boolean;
   field: FieldConfig | GroupSizeFieldConfig;
   isGroupSize?: boolean;
   editable: boolean;
   onChange: (patch: Partial<GroupSizeFieldConfig>) => void;
+  children?: React.ReactNode;
 }) {
   return (
     <div className={cn("overflow-hidden rounded-xl border border-[#D8D5C8] bg-white", !field.visible && "opacity-60")}>
@@ -102,7 +107,7 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
           <span className={cn("font-black text-[10px] tracking-wide whitespace-nowrap uppercase", field.required ? "text-[#C2410C]" : "text-[#5E6654]/60")}>
             {field.required ? "Required" : "Not Required"}
           </span>
-          {editable && <Switch label={`${name} required`} color="orange" value={field.required} locked={locked} onChange={!locked ? (v) => onChange({ required: v }) : undefined} />}
+          {editable && <Switch label={`${name} required`} color="orange" value={field.required} locked={locked || requiredLocked} onChange={!locked && !requiredLocked ? (v) => onChange({ required: v }) : undefined} />}
         </div>
       </div>
 
@@ -121,6 +126,8 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
               <span className="min-w-0 truncate text-right text-[13px] font-semibold text-[#20231A]">{field.label || "-"}</span>
             )}
           </div>
+
+          {children}
 
           {isGroupSize && (
             <div className="flex gap-3 border-t border-[#D8D5C8] px-4 py-3">
@@ -269,17 +276,74 @@ export function BookingConfigEditor({
 
       <SectionCard title="Form Fields">
         <div className="flex flex-col gap-2 bg-[#F4F1E8] p-3.5">
-          {FIELD_META.map(({ key, name, locked }) => (
-            <FormFieldCard
-              key={key}
-              name={name}
-              locked={locked}
-              field={cfg.fields[key]}
-              isGroupSize={key === "group_size"}
-              editable={editable}
-              onChange={(patch) => setField(key, patch)}
-            />
-          ))}
+          {FIELD_META.map(({ key, name, locked }) =>
+            key === "country_code" ? (
+              cfg.fields.phone.visible ? (
+                <FormFieldCard
+                  key={key}
+                  name={name}
+                  requiredLocked={cfg.fields.country_code.default_value !== ""}
+                  field={cfg.fields.country_code}
+                  editable={editable}
+                  onChange={(patch) => setField(key, patch)}
+                >
+                  <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Default</span>
+                    {editable ? (
+                      <select
+                        aria-label="Default country code"
+                        value={cfg.fields.country_code.default_value}
+                        onChange={(e) =>
+                          onChange?.({
+                            ...cfg,
+                            fields: {
+                              ...cfg.fields,
+                              country_code: {
+                                ...cfg.fields.country_code,
+                                default_value: e.target.value,
+                                required: e.target.value === "" && cfg.fields.country_code.required,
+                              },
+                            },
+                          })
+                        }
+                        className="min-w-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none"
+                      >
+                        <option value="">No default</option>
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.iso + c.code} value={c.code}>
+                            {c.iso} {c.code}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-right text-[13px] font-semibold text-[#20231A]">
+                        {cfg.fields.country_code.default_value || "No default"}
+                      </span>
+                    )}
+                  </div>
+                  {cfg.fields.country_code.default_value !== "" && (
+                    <p className="border-t border-[#D8D5C8] px-4 py-2 text-[11px] text-[#5E6654]">
+                      Required only applies when there is no default.
+                    </p>
+                  )}
+                </FormFieldCard>
+              ) : (
+                <p key={key} className="rounded-xl border border-dashed border-[#D8D5C8] bg-white px-4 py-2.5 text-[12px] text-[#5E6654]">
+                  Country code can be set once Phone is shown.
+                </p>
+              )
+            ) : (
+              <FormFieldCard
+                key={key}
+                name={name}
+                locked={locked}
+                field={cfg.fields[key]}
+                isGroupSize={key === "group_size"}
+                editable={editable}
+                onChange={(patch) => setField(key, patch)}
+              />
+            )
+          )}
         </div>
       </SectionCard>
     </div>

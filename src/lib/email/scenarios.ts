@@ -92,6 +92,8 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       greeting: "Hey {{customerName}}!",
       intro: `Great news! Your team "{{groupName}}" is locked in.`,
       ctaLabel: "Manage Booking",
+      footnote:
+        "Can't make it? Please cancel at least 24 hours in advance using Manage Booking, so we can offer your place to someone else.",
     }),
   },
   {
@@ -125,6 +127,8 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       greeting: "Hey {{customerName}}!",
       intro: "Your spot for <strong>{{eventTitle}}</strong> is officially secured for {{groupSize}}.",
       ctaLabel: "Manage Booking",
+      footnote:
+        "Can't make it? Please cancel at least 24 hours in advance using Manage Booking, so we can offer your place to someone else.",
     }),
   },
   {
@@ -160,7 +164,8 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       intro:
         "Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for {{groupSize}}.",
       ctaLabel: "Manage Booking",
-      footnote: "Questions? Email us at {{contactEmail}}",
+      footnote:
+        "Can't make it? Please cancel at least 24 hours in advance using Manage Booking, so we can offer your place to someone else. Questions? Email us at {{contactEmail}}",
     }),
   },
   {
