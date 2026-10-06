@@ -2,10 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, Music2 } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import { format } from "date-fns";
 import {
   formatGBP,
-  parseDate,
   type SerializedEvent,
 } from "@/lib/events-display";
 import { groupSchedule } from "@/lib/home-schedule";
@@ -63,24 +61,23 @@ export function ComingUpMonths({
         </p>
       ) : (
         <>
-          <ul className="-mt-6 flex flex-col divide-y divide-hairline border-b border-hairline sm:hidden">
+          <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-2xl border border-gold bg-white/8 sm:hidden">
             {months.flatMap((month) =>
               month.days.map((day) => {
                 const [lead, ...rest] = day.events;
-                const monthShort = format(parseDate(day.date), "MMM");
                 return (
-                  <li
-                    key={day.date}
-                    className="relative grid grid-cols-[4rem_1fr] gap-3 py-4"
-                  >
-                    <span className="font-bold font-stretch-condensed text-5xl leading-none text-ink-2 tabular-nums">
-                      {day.dayNumber.padStart(2, "0")}
-                    </span>
-                    <div className="flex min-w-0 flex-col gap-1">
+                  <li key={day.date} className="relative flex">
+                    <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 border-r border-dashed border-white/20 py-4">
+                      <span className="text-pill font-bold tracking-wide text-ink-2 uppercase">
+                        {day.dayShort}
+                      </span>
+                      <span className="font-bold font-stretch-condensed text-4xl leading-none text-ink tabular-nums">
+                        {day.dayNumber.padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 py-4">
                       <span className="text-pill font-bold tracking-wide text-neon uppercase">
-                        {[day.dayShort, monthShort, lead.startTimeLabel]
-                          .filter(Boolean)
-                          .join(" · ")}
+                        {lead.startTimeLabel}
                       </span>
                       <Link
                         href={`/whats-on/${lead.id}`}
