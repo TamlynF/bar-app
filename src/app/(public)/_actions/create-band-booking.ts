@@ -10,6 +10,7 @@ import { plainLayout } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
 import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/correspondence-data";
+import { isValidPhone, PHONE_ERROR } from "@/lib/phone";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -44,6 +45,7 @@ export interface BandBookingData {
 }
 
 export async function createBandBooking(data: BandBookingData) {
+  if (data.phone_no?.trim() && !isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
   const videoUrls = data.video_urls.map((u) => u.trim()).filter(Boolean);
   if (videoUrls.length === 0) {
     throw new Error("Please add at least one performance video.");

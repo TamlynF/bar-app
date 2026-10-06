@@ -26,6 +26,7 @@ import {
 import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
 import { describeOpenSessionClash, openSessionClash, type OpeningHours } from "@/lib/opening-hours";
 import { formatGBP } from "@/lib/events-display";
+import { cleanPhoneInput, isValidPhone, PHONE_ERROR } from "@/lib/phone";
 
 const inputBaseClass =
   "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
@@ -61,6 +62,7 @@ const DEFAULT_DURATION_MINUTES = 4 * 60;
 type FieldKey =
   | "fullName"
   | "email"
+  | "phone"
   | "guestCount"
   | "preferredDate"
   | "preferredStartTime"
@@ -145,6 +147,7 @@ export default function PrivateHireForm({
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errors.email = "Please enter a valid email address.";
     }
+    if (phone.trim() && !isValidPhone(phone)) errors.phone = PHONE_ERROR;
     return errors;
   }
 
@@ -324,6 +327,8 @@ export default function PrivateHireForm({
                 </div>
                 <input
                   id="ph-full-name"
+                  name="name"
+                  autoComplete="name"
                   value={fullName}
                   onChange={(e) => {
                     setFullName(e.target.value);
@@ -347,7 +352,10 @@ export default function PrivateHireForm({
                   </div>
                   <input
                     id="ph-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    inputMode="email"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -370,13 +378,22 @@ export default function PrivateHireForm({
                   </div>
                   <input
                     id="ph-phone"
+                    name="phone"
                     type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    maxLength={24}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      setPhone(cleanPhoneInput(e.target.value));
+                      clearFieldError("phone");
+                    }}
                     placeholder="+44 7700 000000"
-                    className={inputClass(false)}
+                    aria-invalid={!!fieldErrors.phone}
+                    className={inputClass(!!fieldErrors.phone)}
                   />
                 </div>
+                <FieldError message={fieldErrors.phone} />
               </div>
             </div>
           </>

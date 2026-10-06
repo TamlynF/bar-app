@@ -11,6 +11,7 @@ import { escapeHtml } from "@/lib/email/escape";
 import { getCompanyInfo } from "@/lib/company-info";
 import { describeOpenSessionClash, openSessionClash, toMinutes } from "@/lib/opening-hours";
 import { requestPageUrl } from "@/lib/private-hire-flow";
+import { isValidPhone, PHONE_ERROR } from "@/lib/phone";
 import { privateHireSubtypeLabel } from "@/lib/private-hire-subtype";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -37,6 +38,7 @@ export interface PrivateHireData {
 }
 
 export async function createPrivateHire(data: PrivateHireData) {
+  if (data.phone_no?.trim() && !isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
   const start = toMinutes(data.preferred_start_time);
   const end = toMinutes(data.preferred_end_time);
   if (data.preferred_date && start != null && end != null) {

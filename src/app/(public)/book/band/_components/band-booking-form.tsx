@@ -22,6 +22,7 @@ import { socialUrl, type SocialPlatform } from "@/lib/social-links";
 import type { SpotifyArtist } from "@/lib/spotify-artists";
 import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
 import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
+import { cleanPhoneInput, isValidPhone, PHONE_ERROR } from "@/lib/phone";
 
 interface VideoFile {
   id: string;
@@ -114,6 +115,7 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
     if (step === 2) {
       if (!name.trim()) errors.name = "Please enter your name.";
       if (!EMAIL_PATTERN.test(email.trim())) errors.email = "Please enter a valid email address.";
+      if (phone.trim() && !isValidPhone(phone)) errors.phone = PHONE_ERROR;
     }
     return errors;
   }
@@ -365,8 +367,11 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
         {step === 2 && (
           <>
             <div>
-              <label className={labelClass}>Your Name <span className="text-red-400">*</span></label>
+              <label htmlFor="band-booker-name" className={labelClass}>Your Name <span className="text-red-400">*</span></label>
               <input
+                id="band-booker-name"
+                name="name"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
                 placeholder="Booker or contact name"
@@ -377,9 +382,13 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className={labelClass}>Email <span className="text-red-400">*</span></label>
+                <label htmlFor="band-email" className={labelClass}>Email <span className="text-red-400">*</span></label>
                 <input
+                  id="band-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
                   placeholder="your@email.com"
@@ -389,14 +398,21 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
                 <FieldError message={fieldErrors.email} />
               </div>
               <div>
-                <label className={labelClass}>Phone</label>
+                <label htmlFor="band-phone" className={labelClass}>Phone</label>
                 <input
+                  id="band-phone"
+                  name="phone"
                   type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={24}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => { setPhone(cleanPhoneInput(e.target.value)); clearFieldError("phone"); }}
                   placeholder="+44 7700 000000"
+                  aria-invalid={!!fieldErrors.phone}
                   className={inputClass}
                 />
+                <FieldError message={fieldErrors.phone} />
               </div>
             </div>
           </>
