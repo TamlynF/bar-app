@@ -17,11 +17,13 @@ export function HomeHero({
   featuredSpace,
   today,
   hours,
+  karaokeUrl,
 }: {
   featured: SerializedEvent | null;
   featuredSpace?: EventSpace | null;
   today: Date;
   hours?: OpeningHours | null;
+  karaokeUrl?: string | null;
 }) {
   return (
     <section aria-labelledby="home-heading" className="relative isolate w-full">
@@ -104,8 +106,8 @@ export function HomeHero({
             )}
           </div>
 
-          <div className="px-4 pt-8 max-sm:pb-8 sm:px-6 sm:pt-2 sm:pb-8 lg:px-10 lg:pt-4 lg:pb-12">
-            <WeeklyStrip hours={hours} />
+          <div className="px-4 pt-8 max-sm:pb-12 sm:px-6 sm:pt-2 sm:pb-8 lg:px-10 lg:pt-4 lg:pb-12">
+            <WeeklyStrip hours={hours} karaokeUrl={karaokeUrl} />
           </div>
         </div>
 

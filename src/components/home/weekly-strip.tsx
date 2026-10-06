@@ -13,7 +13,50 @@ function closingTime(listing: WeeklyListing, hours: OpeningHours | null | undefi
   return close == null ? null : formatClock(close);
 }
 
-export function WeeklyStrip({ hours, className }: { hours?: OpeningHours | null; className?: string }) {
+const STUB =
+  "group flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 pt-3 pb-2.5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold";
+
+function StubContent({
+  listing,
+  close,
+  action,
+  external = false,
+}: {
+  listing: WeeklyListing;
+  close: string | null;
+  action: string;
+  external?: boolean;
+}) {
+  return (
+    <>
+      <span className="text-pill font-black tracking-wide text-ink-2 uppercase">{listing.day}</span>
+      <span className={cn("font-pirata text-[26px] leading-[0.95]", listing.accentText)}>{listing.shortTitle}</span>
+      <span className="flex flex-col items-center gap-0.5 tabular-nums">
+        <span className="text-[15px] leading-none font-bold text-ink">{listing.time}</span>
+        {close && <span className="text-xs leading-none text-ink-2">till {close}</span>}
+      </span>
+      <span
+        className={cn(
+          "mt-auto flex h-9 w-full items-center justify-center gap-1 rounded-lg text-[13px] font-extrabold text-on-gold transition-transform group-active:scale-95",
+          listing.accentBg
+        )}
+      >
+        {action}
+        <span aria-hidden="true">{external ? "↗" : "→"}</span>
+      </span>
+    </>
+  );
+}
+
+export function WeeklyStrip({
+  hours,
+  karaokeUrl,
+  className,
+}: {
+  hours?: OpeningHours | null;
+  karaokeUrl?: string | null;
+  className?: string;
+}) {
   return (
     <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-2 sm:gap-3", className)}>
       <div className="flex items-center justify-between gap-3">
@@ -25,31 +68,37 @@ export function WeeklyStrip({ hours, className }: { hours?: OpeningHours | null;
           <span className="hidden sm:inline">What’s on</span>
         </h2>
       </div>
-      <ul className="grid grid-cols-[auto_1fr_auto] divide-y divide-hairline border-y border-hairline sm:hidden">
-        {WEEKLY_LISTINGS.map((listing) => (
-          <li key={listing.key} className="col-span-3 grid grid-cols-subgrid">
-            <Link
-              href={listing.href}
-              className="group col-span-3 grid min-h-13 grid-cols-subgrid items-center gap-x-1 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+      <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-gold bg-white/8 sm:hidden">
+        {WEEKLY_LISTINGS.map((listing, i) => {
+          const sing = listing.key === "karaoke" && karaokeUrl ? karaokeUrl : null;
+          const close = closingTime(listing, hours);
+          return (
+            <li
+              key={listing.key}
+              className={cn("flex min-w-0", i > 0 && "border-l border-dashed border-white/20")}
             >
-              <span className="pr-2 font-black text-[13px] leading-none tracking-[0.02em] text-ink uppercase">{listing.day}</span>
-              <span
-                className={cn(
-                  "pr-1 font-pirata text-[length:clamp(24px,calc((100vw_-_154px)*0.118),28px)] leading-none tracking-[0.01em] transition-opacity group-hover:opacity-80",
-                  listing.accentText
-                )}
-              >
-                {listing.title}
-              </span>
-              <span className="flex flex-col items-end gap-1 pl-2 whitespace-nowrap tabular-nums">
-                <span className="text-[15px] leading-none font-bold text-ink">{listing.time}</span>
-                {closingTime(listing, hours) && (
-                  <span className="text-xs leading-none text-ink-2">till {closingTime(listing, hours)}</span>
-                )}
-              </span>
-            </Link>
-          </li>
-        ))}
+              {sing ? (
+                <a
+                  href={sing}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`${listing.title}, ${listing.day} ${listing.time}: request a song on Singa`}
+                  className={STUB}
+                >
+                  <StubContent listing={listing} close={close} action="Sing" external />
+                </a>
+              ) : (
+                <Link
+                  href={listing.href}
+                  aria-label={`${listing.title}, ${listing.day} ${listing.time}: ${listing.key === "quiz" ? "book a team" : "see what's on"}`}
+                  className={STUB}
+                >
+                  <StubContent listing={listing} close={close} action={listing.actionLabel} />
+                </Link>
+              )}
+            </li>
+          );
+        })}
       </ul>
       <ol className="hidden grid-cols-3 gap-2 sm:grid lg:hidden">
         {WEEKLY_NIGHTS.map((night) => {

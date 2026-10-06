@@ -74,6 +74,10 @@ async function HomeContent() {
       getCompanyInfo(),
     ]);
 
+  const karaokeUrl =
+    ((rawEvents ?? []) as EventRow[]).map((e) => serializeEvent(e)).find((e) => e.isKaraoke && e.karaokeRequestUrl)
+      ?.karaokeRequestUrl ?? null;
+
   const events = ((rawEvents ?? []) as EventRow[])
     .filter((e) => {
       const behavior = getEventType(e)?.behavior;
@@ -100,7 +104,7 @@ async function HomeContent() {
       <PublicNav currentPath="/" ticker />
       <MarqueeTicker items={tickerItems} />
 
-      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} />
+      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} karaokeUrl={karaokeUrl} />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>
