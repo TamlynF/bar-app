@@ -14,6 +14,8 @@ import {
   Upload,
 } from "lucide-react";
 import { saveGalleryImageAction, deleteGalleryImageAction } from "./actions";
+import { GalleryCategoriesPanel } from "./gallery-categories-panel";
+import type { GalleryCategory } from "@/lib/gallery-categories";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -59,7 +61,10 @@ export type GalleryImage = {
   updated_at?: string | null;
   created_by?: number | null;
   updated_by?: number | null;
+  category_ids: number[];
 };
+
+const UNCATEGORISED = "none";
 
 export type EmployeeOption = { id: number; full_name: string };
 
@@ -103,9 +108,11 @@ function measureMedia(file: File, kind: MediaKind): Promise<{ width: number; hei
 export default function GalleryClient({
   initialImages = [],
   employees = [],
+  categories = [],
 }: {
   initialImages: GalleryImage[];
   employees?: EmployeeOption[];
+  categories?: GalleryCategory[];
 }) {
   const sheet = useRecordSheet<GalleryImage>({
     records: initialImages,
@@ -120,6 +127,13 @@ export default function GalleryClient({
   const [mediaSizes, setMediaSizes] = useState<Record<number, MeasuredMedia>>({});
   const [isActive, setIsActive] = useState(true);
   const [position, setPosition] = useState(1);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [chosenCategories, setChosenCategories] = useState<number[]>([]);
+
+  const categoryNames = (ids: number[]) =>
+    categories.filter((c) => ids.includes(c.id)).map((c) => c.name);
+  const toggleCategory = (id: number) =>
+    setChosenCategories((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const orderRows: OrderRow[] = initialImages.map((img) => ({
     id: img.id,
@@ -160,13 +174,17 @@ export default function GalleryClient({
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return initialImages;
-    return initialImages.filter((img) =>
-      [img.title, img.description ?? "", img.media_type].some((field) =>
+    return initialImages.filter((img) => {
+      if (categoryFilter === UNCATEGORISED && img.category_ids.length > 0) return false;
+      if (categoryFilter && categoryFilter !== UNCATEGORISED && !img.category_ids.includes(Number(categoryFilter))) {
+        return false;
+      }
+      if (!needle) return true;
+      return [img.title, img.description ?? "", img.media_type].some((field) =>
         field.toLowerCase().includes(needle),
-      ),
-    );
-  }, [initialImages, query]);
+      );
+    });
+  }, [initialImages, query, categoryFilter]);
 
   const openAdd = () => {
     setImageUrl("");
@@ -174,6 +192,9 @@ export default function GalleryClient({
     setMediaWarning(null);
     setIsActive(true);
     setPosition(nextPosition(orderRows));
+    setChosenCategories(
+      categoryFilter && categoryFilter !== UNCATEGORISED ? [Number(categoryFilter)] : [],
+    );
     sheet.openAdd();
   };
 
@@ -184,6 +205,7 @@ export default function GalleryClient({
     setMediaWarning(null);
     setIsActive(selected.is_active);
     setPosition(selected.display_order || nextPosition(orderRows));
+    setChosenCategories(selected.category_ids);
     sheet.startEdit();
   };
 
@@ -296,6 +318,8 @@ export default function GalleryClient({
 
   return (
     <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+      <GalleryCategoriesPanel categories={categories} media={initialImages} />
+
       {initialImages.length === 0 ? (
         <EmptyState
           icon={ImageIcon}
@@ -320,12 +344,28 @@ export default function GalleryClient({
           onAdd={openAdd}
           addLabel="Upload"
           toolbar={
-            <ListSearchInput
-              value={query}
-              onChange={setQuery}
-              label="Search gallery images"
-              placeholder="Search by title, description or type"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <ListSearchInput
+                value={query}
+                onChange={setQuery}
+                label="Search gallery images"
+                placeholder="Search by title, description or type"
+              />
+              <select
+                aria-label="Filter by category"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="h-11 shrink-0 rounded-xl border border-admin-line bg-white px-3 text-[13px] font-semibold text-admin-ink outline-none focus:border-admin-primary sm:h-9"
+              >
+                <option value="">All categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+                <option value={UNCATEGORISED}>Uncategorised</option>
+              </select>
+            </div>
           }
         >
           {shown.length === 0 ? (
@@ -439,9 +479,7 @@ export default function GalleryClient({
                       )}
                     </div>
 
-                    <p className="hidden truncate text-[11px] font-medium text-admin-muted sm:block">
-                      {img.description || "No description"}
-                    </p>
+                    <CategoryChips names={categoryNames(img.category_ids)} />
                   </div>
                 </ListRow>
               );
@@ -543,6 +581,11 @@ export default function GalleryClient({
             <DetailCard>
               <DetailCell dense label="Title" value={selected.title} />
               <DetailCell dense label="Description" value={selected.description || "-"} />
+              <DetailCell
+                dense
+                label="Categories"
+                value={categoryNames(selected.category_ids).join(", ") || "Uncategorised (shows under Everything else)"}
+              />
               <DetailCell
                 dense
                 label="Type"
@@ -666,6 +709,42 @@ export default function GalleryClient({
                 />
               </FormRow>
 
+              <div className="px-4 py-3 sm:px-5">
+                <p className="mb-2 text-[12px] font-bold text-admin-muted">Categories</p>
+                {chosenCategories.map((id) => (
+                  <input key={id} type="hidden" name="category_ids" value={id} />
+                ))}
+                {categories.length === 0 ? (
+                  <p className="text-[12px] text-admin-muted">Add categories in the panel above first.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map((c) => {
+                      const on = chosenCategories.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggleCategory(c.id)}
+                          className={cn(
+                            "flex min-h-9 items-center gap-1 rounded-full border px-3 text-[12px] font-semibold transition-colors",
+                            on
+                              ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                              : "border-admin-line bg-white text-admin-muted hover:border-admin-primary/50",
+                          )}
+                        >
+                          {on && <Check className="h-3 w-3" aria-hidden="true" />}
+                          {c.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-2 text-[11px] text-admin-muted opacity-70">
+                  Pick as many as fit. With none it shows under Everything else.
+                </p>
+              </div>
+
               <FormRow label="Status">
                 <select
                   name="is_active"
@@ -719,6 +798,24 @@ export default function GalleryClient({
           </form>
         )}
       </RecordSheet>
+    </div>
+  );
+}
+
+function CategoryChips({ names }: { names: string[] }) {
+  if (names.length === 0) {
+    return <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted italic sm:mt-0">Uncategorised</p>;
+  }
+  return (
+    <div className="mt-1 flex min-w-0 flex-wrap gap-1 sm:mt-0">
+      {names.map((name) => (
+        <span
+          key={name}
+          className="rounded-md bg-admin-primary-soft px-1.5 py-0.5 text-[11px] font-semibold text-admin-primary"
+        >
+          {name}
+        </span>
+      ))}
     </div>
   );
 }

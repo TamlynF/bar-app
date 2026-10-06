@@ -268,6 +268,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
 | `ai_settings` | One row: `providers` and `areas` jsonb maps keyed by the code registries in `src/lib/ai/`, each entry carrying label, model, optional `api_base_url`, `active` and audit stamps. Reconciled against the code on every load/save of Settings → AI settings, so removed areas show as inactive rather than vanishing |
 | `gallery_images` | Media on the public gallery and homepage |
+| `gallery_categories` / `gallery_image_categories` | Gallery groupings (Outside, Karaoke nights, ...). An item can be in several categories (link table) and shows in each; items with no active category show under "Everything else" (`/gallery/everything-else`, a reserved slug). The home page shows one tile per non-empty active category, each opening `/gallery/<slug>`; grouping lives in `src/lib/gallery-categories.ts`, loading in `src/lib/gallery-data.ts`. `cover_image_id` picks the tile image, null = newest photo |
 | `specials` | Drink deals on the homepage |
 | `merchandise` | Branded goods shown on the homepage - display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
 | `promo_content` | Social-style promo cards on the homepage |

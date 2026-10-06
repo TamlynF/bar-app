@@ -14,7 +14,8 @@ import { HomeHero } from "@/components/home/home-hero";
 import { ComingUpMonths } from "@/components/home/coming-up-months";
 import { DealsStrip } from "@/components/home/deals-strip";
 import { MerchGrid } from "@/components/home/merch-grid";
-import { GalleryStrip, type GalleryStripRow } from "@/components/home/gallery-strip";
+import { GalleryStrip } from "@/components/home/gallery-strip";
+import { loadGalleryGroups } from "@/lib/gallery-data";
 import { HomeFindUs } from "@/components/home/home-find-us";
 import type { SpecialRow } from "@/components/specials-section";
 import type { MerchandiseRow } from "@/components/merchandise-section";
@@ -31,7 +32,6 @@ import { endOfMonth, format } from "date-fns";
 export const revalidate = 300;
 
 const SCHEDULE_EVENTS = 12;
-const GALLERY_TILES = 6;
 
 /* Weekly nights (quiz, karaoke) are shown in the hero's weekly strip, so the
    dated schedule only carries one-off nights. */
@@ -42,7 +42,7 @@ async function HomeContent() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, { data: rawGallery }, info] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, galleryGroups, info] =
     await Promise.all([
       supabase
         .from("events")
@@ -64,13 +64,7 @@ async function HomeContent() {
         .eq("is_active", true)
         .order("display_order", { ascending: true })
         .limit(8),
-      supabase
-        .from("gallery_images")
-        .select("id, title, image_url")
-        .eq("is_active", true)
-        .eq("media_type", "image")
-        .order("display_order", { ascending: true })
-        .limit(GALLERY_TILES),
+      loadGalleryGroups(supabase),
       getCompanyInfo(),
     ]);
 
@@ -95,7 +89,6 @@ async function HomeContent() {
     (s) => (!s.start_date || s.start_date <= todayStr) && (!s.end_date || s.end_date >= todayStr)
   );
   const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
-  const gallery = (rawGallery ?? []) as GalleryStripRow[];
   const tickerItems = taglineItems(info?.tagline);
   const hasMap = Boolean(process.env.GOOGLE_MAPS_API_KEY && info?.address);
 
@@ -114,7 +107,7 @@ async function HomeContent() {
           <DealsStrip specials={specials} />
         </Reveal>
         <Reveal index={2}>
-          <GalleryStrip images={gallery} />
+          <GalleryStrip groups={galleryGroups} />
         </Reveal>
         <Reveal index={3}>
           <MerchGrid items={merchandise} />

@@ -1,9 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { Camera } from "lucide-react";
+import { SectionHeading } from "@/components/editorial/section-heading";
 import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
-import GalleryGrid, { type GalleryItem } from "./gallery-grid";
-import { format } from "date-fns";
+import GalleryGrid from "./gallery-grid";
+import { CategoryCard, galleryHref } from "@/components/gallery/category-tile";
+import { countLabel } from "@/lib/gallery-categories";
+import { dateLabel, loadGalleryGroups } from "@/lib/gallery-data";
 import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
@@ -14,25 +17,7 @@ export const metadata = {
 export default async function GalleryPage() {
   const supabase = await createClient();
 
-  const { data: images } = await supabase
-    .from("gallery_images")
-    .select("id, title, description, image_url, media_type, created_at")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
-
-  const galleryItems: GalleryItem[] = (
-    (images ?? []) as {
-      id: number;
-      title: string;
-      description: string | null;
-      image_url: string;
-      media_type: string;
-      created_at: string;
-    }[]
-  ).map(({ created_at, ...item }) => ({
-    ...item,
-    created_label: format(new Date(created_at), "d MMM yyyy"),
-  }));
+  const groups = await loadGalleryGroups(supabase);
 
   return (
     <main className="flex min-h-dvh w-full flex-col bg-[#1a2008] text-stone-300 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
@@ -54,7 +39,7 @@ export default async function GalleryPage() {
       <div className="mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
         <PageHeader eyebrow="Photos & videos" title="Gallery" />
 
-        {galleryItems.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-white/3 py-20 text-center">
             <Camera className="mx-auto mb-3 h-8 w-8 text-stone-700" />
             <p className="font-black text-sm tracking-tight text-stone-500 uppercase">
@@ -63,7 +48,31 @@ export default async function GalleryPage() {
             <p className="mt-1 text-xs text-stone-600">Check back soon</p>
           </div>
         ) : (
-          <GalleryGrid items={galleryItems} />
+          <div className="flex flex-col gap-12">
+            <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-6">
+              {groups.map((group) => (
+                <li key={group.slug}>
+                  <CategoryCard
+                    group={group}
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 17vw"
+                  />
+                </li>
+              ))}
+            </ul>
+
+            {groups.map((group) => (
+              <section key={group.slug} aria-labelledby={`gallery-${group.slug}`}>
+                <SectionHeading
+                  eyebrow={countLabel(group)}
+                  title={group.name}
+                  id={`gallery-${group.slug}`}
+                  action={{ href: galleryHref(group.slug), label: "Open" }}
+                  actionInline
+                />
+                <GalleryGrid items={group.items.map((item) => ({ ...item, created_label: dateLabel(item) }))} />
+              </section>
+            ))}
+          </div>
         )}
 
         <div className="mt-8 flex flex-col items-center gap-4 pt-12">
