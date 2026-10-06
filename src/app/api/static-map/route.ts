@@ -20,7 +20,6 @@ export async function GET() {
     maptype: "roadmap",
     key,
   });
-  params.append("markers", `color:0xFDCC4B|${address}`);
   params.append("style", "feature:poi|visibility:off");
   params.append("style", "feature:transit|visibility:off");
 

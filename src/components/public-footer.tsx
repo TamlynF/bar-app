@@ -11,7 +11,7 @@ const FOOTER_LINKS = [
 
 export function PublicFooter() {
   return (
-    <footer className="border-t border-hairline pt-10">
+    <footer className="pt-10">
       <nav aria-label="Footer">
         <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">
           Explore

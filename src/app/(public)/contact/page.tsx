@@ -11,7 +11,7 @@ import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
 import { toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import EnquiryForm from "./_components/enquiry-form";
-import CopyAddressButton from "./_components/copy-address-button";
+import { VenueMapCard } from "@/components/venue-map-card";
 import { CompanyWordmark } from "@/components/company-wordmark";
 
 export const metadata = {
@@ -170,32 +170,10 @@ function SectionLabel({
 }
 
 function MapCard({ address }: { address: string }) {
-  const query = encodeURIComponent(address);
-
   return (
     <section>
       <SectionLabel icon={MapPin} label="Find Us" />
-      <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-        <iframe
-          src={`https://www.google.com/maps?q=${query}&z=17&output=embed`}
-          title={`Map showing Don Fenticas at ${address}`}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          className="h-56 w-full border-0 sm:h-64"
-        />
-
-        <div className="flex items-start gap-3 border-t border-white/10 p-4 sm:p-5">
-          <div className="min-w-0 flex-1">
-            <p className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase">
-              Address
-            </p>
-            <p className="mt-1 text-sm font-medium whitespace-pre-line text-white select-all">
-              {address}
-            </p>
-          </div>
-          <CopyAddressButton address={address} />
-        </div>
-      </div>
+      <VenueMapCard address={address} hasMap={Boolean(process.env.GOOGLE_MAPS_API_KEY)} className="mt-3" />
     </section>
   );
 }
