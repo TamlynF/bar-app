@@ -91,6 +91,23 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-10-07 re-sync (bundled skill 2.1.286) - UPLOADED, Button API changed.** Staged
+  scripts already matched 2.1.286. Upstream `button.tsx` had gained two public-surface
+  variants (`gold`, `goldOutline`) and a `cta` size (commit `6224c088` era) - the
+  poc-src copy, `build-minipkg.mjs`'s `.d.ts` and `cfg.dtsPropsFor.Button` were all three
+  updated by hand (see the `dtsPropsFor` rule above - a new enum member has to be added in
+  config.json or it never reaches the contract). `previews/Button.tsx` gained a
+  `PublicSurface` cell (both gold variants at `cta` size on a `#14180a` dark cell, since
+  `goldOutline` uses `bg-canvas/70` and only reads on the public canvas) and `xs`/`cta` in
+  `Sizes`. Driver: Button **changed** (sourceKey moved), captured and graded 4/4 good; Input
+  verification-unchanged. styles.css **415 KB → 489 KB** (Tailwind 4.3.1). Conventions header:
+  token table re-validated by definition grep (all 10 rows still hold); the Button bullet,
+  the public-surface bullet and the public snippet were rewritten to use `variant="gold"`
+  instead of the old "override colour with arbitrary hex" advice - that advice is now wrong
+  because the component carries the public colours itself. Second driver run after the header
+  edit per the rebuild rule, Button carried forward. Uploaded all 18 DS files on the atomic
+  path (`deletes:[]`), `report_validate` 2/0/0/0/2. `[TOKENS_MISSING]` **51 vars** (new
+  members `--top`/`--h`, same inline-runtime family), `[FONT_MISSING] Cambria` - both known.
 - **2026-09-07 re-sync, second run (bundled skill 2.1.263) - UPLOADED.** After `/design-login`
   from an interactive session, `DesignSync` worked again. Re-fetched the remote anchor: it was
   exactly the 2026-08-03 upload (`scriptsSha` `0f1e261b…`, `styleSha` `43850e9d…`), i.e. the
@@ -276,7 +293,10 @@ as a known warn, do not chase.**
   someone adds it to `dtsPropsFor` by hand. Check both when `src/components/ui/
   {button,input}.tsx` change.
 - `.d.ts` props are hand-written, not extracted from source - verify against the
-  real component if the API changes. (Checked 2026-06-22: upstream button/input
+  real component if the API changes. **Quick drift check each sync:** `diff <(tr -d '' <
+  src/components/ui/button.tsx) .design-sync/poc-src/button.tsx` - anything beyond the
+  import-path line means the enum in `dtsPropsFor`, `build-minipkg.mjs` and
+  `previews/Button.tsx` all need touching (2026-10-07: gold/goldOutline/cta). (Checked 2026-06-22: upstream button/input
   variant+size enums unchanged - the only diff vs poc-src is the `@/lib/utils` →
   `../../src/lib/utils` import-path rewrite, which is intentional. `.d.ts` still current.)
 - The token layer flip already happened (see RESOLVED above). The remaining risk is

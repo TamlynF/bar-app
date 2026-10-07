@@ -39,9 +39,9 @@ writeFileSync(
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     /** Visual style. \`default\` = espresso admin button; override colour on the public surface. */
-    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "gold" | "goldOutline";
     /** Control height / icon sizing. */
-    size?: "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg";
+    size?: "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg" | "cta";
     /** Render as the single child element (Radix Slot) instead of a <button>. */
     asChild?: boolean;
 }

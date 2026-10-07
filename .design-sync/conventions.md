@@ -38,16 +38,17 @@ bar-app has two intentionally-separate surfaces:
   `variant` props match the surface: use `Button` / `Button variant="secondary"` /
   `variant="destructive"` as-is; they already carry the right colours.
 - **Public site** ("gritty bar") - deep olive `#26300D`/`#14180a`, gold accent
-  `#FDCC4B`. The token layer is admin-only, so on this surface **override colour with
-  explicit classes** rather than relying on `variant` - e.g.
-  `className="bg-[#FDCC4B] text-[#26300D] hover:bg-[#FDCC4B]/90"`.
+  `#FDCC4B`. Use the two public variants here: `variant="gold"` (solid gold CTA,
+  `bg-gold text-on-gold`) and `variant="goldOutline"` (gold hairline on the dark
+  canvas), usually with `size="cta"`. Do not use the admin variants on this surface.
 
 Never mix the two palettes on one surface.
 
 ## Components
 
 - **`Button`** - `variant`: `default | destructive | outline | secondary | ghost |
-  link`; `size`: `default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg`;
+  link | gold | goldOutline`; `size`: `default | xs | sm | lg | icon | icon-xs | icon-sm |
+  icon-lg | cta`;
   `asChild`; plus the native `<button>` attributes declared in `Button.d.ts`
   (`type`, `disabled`, `onClick`, `name`, `value`, `form`, `title`, `aria-label`,
   `tabIndex`). Both axes render fully (sizing **and** colour).
@@ -75,10 +76,9 @@ import { Button, Input } from "bar-app-ds";
 </form>
 ```
 
-Public surface - override colour to gold-on-olive:
+Public surface - the gold variants carry the colour:
 
 ```tsx
-<Button className="bg-[#FDCC4B] text-[#26300D] hover:bg-[#FDCC4B]/90">
-  Book now
-</Button>
+<Button variant="gold" size="cta">Book for the quiz</Button>
+<Button variant="goldOutline" size="cta">See the menu</Button>
 ```
