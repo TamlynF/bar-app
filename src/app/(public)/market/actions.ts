@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normaliseUkMobile } from "@/lib/sms/phone";
-import { checkSmsVerification, smsAlertsEnabled, startSmsVerification } from "@/lib/sms/twilio";
+import { checkSmsVerification, smsAlertsEnabled, startSmsVerification, whatsappAlertsEnabled } from "@/lib/sms/twilio";
 import { emailAlertsEnabled, sendVerificationEmail } from "@/lib/market/email-alerts";
 import { VERIFICATION_CODE_TTL_MIN } from "@/lib/market/email-copy";
 import {
@@ -318,6 +318,98 @@ export async function stopEmailAlerts(input: unknown): Promise<MarketPushActionR
   if (error) {
     console.error("[market] email stop failed:", error);
     return { ok: false, error: "Couldn't turn emails off. Try again in a moment." };
+  }
+  return { ok: true };
+}
+
+export type WhatsappSubscriptionHandle = { phone: string; token: string };
+
+export type StartWhatsappAlertsResult = { ok: true; phone: string } | { ok: false; error: string };
+export type ConfirmWhatsappAlertsResult = { ok: true; handle: WhatsappSubscriptionHandle } | { ok: false; error: string };
+
+const WHATSAPP_UNAVAILABLE = "WhatsApp alerts aren't switched on right now.";
+
+export async function startWhatsappAlerts(input: unknown): Promise<StartWhatsappAlertsResult> {
+  if (!whatsappAlertsEnabled()) return { ok: false, error: WHATSAPP_UNAVAILABLE };
+  const parsed = startSmsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: SMS_BAD_NUMBER };
+  const phone = normaliseUkMobile(parsed.data.phone);
+  if (!phone) return { ok: false, error: SMS_BAD_NUMBER };
+
+  const result = await startSmsVerification(phone, "whatsapp");
+  if (!result.ok) {
+    console.error("[market] whatsapp verification start failed:", result.message);
+    return { ok: false, error: "Couldn't send the code on WhatsApp. Check the number is on WhatsApp and try again." };
+  }
+  return { ok: true, phone };
+}
+
+export async function confirmWhatsappAlerts(input: unknown): Promise<ConfirmWhatsappAlertsResult> {
+  if (!whatsappAlertsEnabled()) return { ok: false, error: WHATSAPP_UNAVAILABLE };
+  const parsed = confirmSmsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter the code from the WhatsApp message." };
+  const phone = normaliseUkMobile(parsed.data.phone);
+  if (!phone) return { ok: false, error: SMS_BAD_NUMBER };
+
+  const check = await checkSmsVerification(phone, parsed.data.code);
+  if (!check.ok) {
+    console.error("[market] whatsapp verification check failed:", check.message);
+    return { ok: false, error: "Couldn't check that code. Try again in a moment." };
+  }
+  if (!check.approved) return { ok: false, error: "That code didn't match. Check the message and try again." };
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("market_whatsapp_subscriptions")
+    .upsert(
+      {
+        phone,
+        watched_instrument_ids: parsed.data.watchedInstrumentIds,
+        opted_out_at: null,
+        last_error: null,
+        failed_at: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "phone" }
+    )
+    .select("manage_token")
+    .single();
+  if (error || !data) {
+    console.error("[market] whatsapp subscription save failed:", error);
+    return { ok: false, error: "Couldn't save your alerts. Try again in a moment." };
+  }
+  return { ok: true, handle: { phone, token: data.manage_token as string } };
+}
+
+export async function updateWhatsappWatched(input: unknown): Promise<MarketPushActionResult> {
+  const parsed = updateSmsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Unknown subscription." };
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("market_whatsapp_subscriptions")
+    .update({ watched_instrument_ids: parsed.data.watchedInstrumentIds, updated_at: new Date().toISOString() })
+    .eq("phone", parsed.data.phone)
+    .eq("manage_token", parsed.data.token);
+  if (error) {
+    console.error("[market] whatsapp watched update failed:", error);
+    return { ok: false, error: "Couldn't update your alerts. Try again in a moment." };
+  }
+  return { ok: true };
+}
+
+export async function stopWhatsappAlerts(input: unknown): Promise<MarketPushActionResult> {
+  const parsed = manageSmsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Unknown subscription." };
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("market_whatsapp_subscriptions")
+    .update({ opted_out_at: now, updated_at: now })
+    .eq("phone", parsed.data.phone)
+    .eq("manage_token", parsed.data.token);
+  if (error) {
+    console.error("[market] whatsapp stop failed:", error);
+    return { ok: false, error: "Couldn't turn WhatsApp alerts off. Try again in a moment." };
   }
   return { ok: true };
 }

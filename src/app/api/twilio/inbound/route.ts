@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normaliseUkMobile } from "@/lib/sms/phone";
 import { readTwilioEnv, verifyTwilioSignature } from "@/lib/sms/twilio";
+import { PHONE_CHANNEL_TABLE } from "@/lib/market/alert-stop";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +33,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  const phone = normaliseUkMobile(params.From ?? "");
+  const from = params.From ?? "";
+  const channel = from.startsWith("whatsapp:") ? "whatsapp" : "sms";
+  const phone = normaliseUkMobile(from.replace(/^whatsapp:/, ""));
   const word = (params.Body ?? "").trim().toUpperCase();
   if (phone && (STOP_WORDS.has(word) || START_WORDS.has(word))) {
     const supabase = createAdminClient();
     const now = new Date().toISOString();
     const { error } = await supabase
-      .from("market_sms_subscriptions")
+      .from(PHONE_CHANNEL_TABLE[channel])
       .update({ opted_out_at: STOP_WORDS.has(word) ? now : null, updated_at: now })
       .eq("phone", phone);
-    if (error) console.error("[market] sms opt-out update failed:", error);
+    if (error) console.error(`[market] ${channel} opt-out update failed:`, error);
   }
 
   return new NextResponse(EMPTY_TWIML, { headers: { "content-type": "text/xml" } });

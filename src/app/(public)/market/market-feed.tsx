@@ -16,10 +16,13 @@ import {
   saveMarketPushSubscription,
   stopEmailAlerts,
   stopSmsAlerts,
+  stopWhatsappAlerts,
   updateEmailWatched,
   updateSmsWatched,
+  updateWhatsappWatched,
   type EmailSubscriptionHandle,
   type SmsSubscriptionHandle,
+  type WhatsappSubscriptionHandle,
 } from "./actions";
 import { formatUkMobile } from "@/lib/sms/phone";
 import { AlertSignup, type AlertChannel, type AlertHandle } from "./alert-signup";
@@ -189,6 +192,8 @@ const SMS_KEY = "df-market-sms";
 const SMS_EVENT = "df-market-sms-change";
 const EMAIL_KEY = "df-market-email";
 const EMAIL_EVENT = "df-market-email-change";
+const WHATSAPP_KEY = "df-market-whatsapp";
+const WHATSAPP_EVENT = "df-market-whatsapp-change";
 const WATCH_KEY = "df-market-watch";
 const WATCH_EVENT = "df-market-watch-change";
 const MUTE_KEY = "df-market-alerts-muted";
@@ -322,6 +327,12 @@ function parseStoredHandle(raw: string): StoredHandle | null {
 const CHANNEL_STORE: Record<AlertChannel, { key: string; subscribe: (onChange: () => void) => () => void; read: () => string; eventName: string }> = {
   sms: { key: SMS_KEY, eventName: SMS_EVENT, subscribe: subscribeStored(SMS_EVENT), read: () => readStoredRaw(SMS_KEY) },
   email: { key: EMAIL_KEY, eventName: EMAIL_EVENT, subscribe: subscribeStored(EMAIL_EVENT), read: () => readStoredRaw(EMAIL_KEY) },
+  whatsapp: {
+    key: WHATSAPP_KEY,
+    eventName: WHATSAPP_EVENT,
+    subscribe: subscribeStored(WHATSAPP_EVENT),
+    read: () => readStoredRaw(WHATSAPP_KEY),
+  },
 };
 
 /* The verified number or address plus the token that lets this browser
@@ -369,12 +380,16 @@ export default function MarketFeed({
   footer,
   smsAvailable,
   emailAvailable,
+  whatsappAvailable,
+  whatsappSandboxJoin,
   whatsappUrl,
 }: {
   header: ReactNode;
   footer: ReactNode;
   smsAvailable: boolean;
   emailAvailable: boolean;
+  whatsappAvailable: boolean;
+  whatsappSandboxJoin: string | null;
   whatsappUrl: string | null;
 }) {
   const { state, fresh } = useMarketState(6000, true);
@@ -390,9 +405,11 @@ export default function MarketFeed({
   const [pushState, setPushState] = useState<PushState>("unknown");
   const [smsHandle, setSmsHandle] = useChannelHandle("sms");
   const [emailHandle, setEmailHandle] = useChannelHandle("email");
+  const [whatsappHandle, setWhatsappHandle] = useChannelHandle("whatsapp");
   const [signingUp, setSigningUp] = useState<AlertChannel | null>(null);
   const smsOn = smsAvailable && smsHandle != null;
   const emailOn = emailAvailable && emailHandle != null;
+  const whatsappOn = whatsappAvailable && whatsappHandle != null;
   const installed = useSyncExternalStore(subscribeNever, readInstalled, () => false);
   const notifyUndecided = useSyncExternalStore(subscribeNever, readNotifyUndecided, () => false);
   const freshInstall = installed && notifyUndecided && !justGranted;
@@ -444,6 +461,13 @@ export default function MarketFeed({
       updateEmailWatched({ email: emailHandle.address, token: emailHandle.token, watchedInstrumentIds: next }).then((result) => {
         if (!result.ok) toast.error("Couldn't update your email alerts - check your connection.");
       });
+    }
+    if (whatsappOn && whatsappHandle) {
+      updateWhatsappWatched({ phone: whatsappHandle.address, token: whatsappHandle.token, watchedInstrumentIds: next }).then(
+        (result) => {
+          if (!result.ok) toast.error("Couldn't update your WhatsApp alerts - check your connection.");
+        }
+      );
     }
   };
   const watchedNamesKey = instruments
@@ -517,9 +541,22 @@ export default function MarketFeed({
 
   function finishSignup(channel: AlertChannel, handle: AlertHandle) {
     if (channel === "sms") setSmsHandle(handle);
-    else setEmailHandle(handle);
+    else if (channel === "email") setEmailHandle(handle);
+    else setWhatsappHandle(handle);
     setSigningUp(null);
     setWantsAlerts(false);
+  }
+
+  async function disableWhatsapp() {
+    if (!whatsappHandle) return;
+    const input: WhatsappSubscriptionHandle = { phone: whatsappHandle.address, token: whatsappHandle.token };
+    const result = await stopWhatsappAlerts(input);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setWhatsappHandle(null);
+    toast("WhatsApp alerts off.");
   }
 
   async function disableSms() {
@@ -610,7 +647,7 @@ export default function MarketFeed({
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
   const alertsOff = !alertsAllowed;
-  const showPushControls = !alertsOff && !smsOn && !emailOn;
+  const showPushControls = !alertsOff && !smsOn && !emailOn && !whatsappOn;
   const watchedLine =
     watchedCount > 0
       ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
@@ -650,6 +687,24 @@ export default function MarketFeed({
           <button
             type="button"
             onClick={disableSms}
+            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
+          >
+            Turn off
+          </button>
+        </div>
+      )}
+
+      {whatsappOn && whatsappHandle && (
+        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <SiWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+          <p className="min-w-0 text-[12px] leading-relaxed text-stone-400">
+            <span className="font-black text-xs tracking-widest text-ink uppercase">WhatsApp on</span>
+            {` - to ${formatUkMobile(whatsappHandle.address)}, a few a night at most. `}
+            {watchedLine}
+          </p>
+          <button
+            type="button"
+            onClick={disableWhatsapp}
             className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
           >
             Turn off
@@ -700,6 +755,7 @@ export default function MarketFeed({
             <AlertSignup
               channel={signingUp}
               watched={watched}
+              sandboxJoin={whatsappSandboxJoin}
               onDone={(handle) => finishSignup(signingUp, handle)}
               onCancel={() => setSigningUp(null)}
             />
@@ -707,10 +763,12 @@ export default function MarketFeed({
             <NotifyMethod
               smsAvailable={smsAvailable}
               emailAvailable={emailAvailable}
+              whatsappAvailable={whatsappAvailable}
               whatsappUrl={whatsappUrl}
               onPush={choosePush}
               onSms={() => setSigningUp("sms")}
               onEmail={() => setSigningUp("email")}
+              onWhatsapp={() => setSigningUp("whatsapp")}
             />
           ) : (
             <button

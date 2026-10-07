@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { readTwilioEnv, smsAlertsEnabled, twilioSignature, verifyTwilioSignature } from "../twilio";
+import {
+  readTwilioEnv,
+  readWhatsappEnv,
+  smsAlertsEnabled,
+  twilioSignature,
+  verifyTwilioSignature,
+  whatsappAlertsEnabled,
+} from "../twilio";
 
 const KEYS = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID", "TWILIO_SMS_FROM"] as const;
 
@@ -45,5 +52,21 @@ describe("twilioSignature", () => {
     expect(verifyTwilioSignature(token, url, params, "0/KCTR6DLpKmkAf8muzZqo1nDgQ=")).toBe(true);
     expect(verifyTwilioSignature(token, url, { ...params, Digits: "9999" }, "0/KCTR6DLpKmkAf8muzZqo1nDgQ=")).toBe(false);
     expect(verifyTwilioSignature(token, url, params, "short")).toBe(false);
+  });
+});
+
+describe("whatsappAlertsEnabled", () => {
+  it("needs the base Twilio keys plus a WhatsApp sender", () => {
+    process.env.TWILIO_WHATSAPP_FROM = "+14155238886";
+    expect(whatsappAlertsEnabled()).toBe(false);
+    process.env.TWILIO_ACCOUNT_SID = "AC123";
+    process.env.TWILIO_AUTH_TOKEN = "secret";
+    process.env.TWILIO_VERIFY_SERVICE_SID = "VA123";
+    process.env.TWILIO_SMS_FROM = "DonFenticas";
+    expect(whatsappAlertsEnabled()).toBe(true);
+    expect(readWhatsappEnv()).toEqual({ from: "whatsapp:+14155238886", templateSid: null, sandboxJoin: null });
+    process.env.TWILIO_WHATSAPP_FROM = "MG123";
+    expect(readWhatsappEnv()?.from).toBe("MG123");
+    delete process.env.TWILIO_WHATSAPP_FROM;
   });
 });

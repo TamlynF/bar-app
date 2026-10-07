@@ -2,17 +2,26 @@
 
 import { useState, type FormEvent, type InputHTMLAttributes } from "react";
 import { Mail, MessageSquare, type LucideIcon } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
+import type { IconType } from "react-icons";
 import { toast } from "sonner";
 import { formatUkMobile } from "@/lib/sms/phone";
-import { confirmEmailAlerts, confirmSmsAlerts, startEmailAlerts, startSmsAlerts } from "./actions";
+import {
+  confirmEmailAlerts,
+  confirmSmsAlerts,
+  confirmWhatsappAlerts,
+  startEmailAlerts,
+  startSmsAlerts,
+  startWhatsappAlerts,
+} from "./actions";
 
-export type AlertChannel = "sms" | "email";
+export type AlertChannel = "sms" | "email" | "whatsapp";
 export type AlertHandle = { address: string; token: string };
 
 type Step = { kind: "address" } | { kind: "code"; address: string };
 
 type ChannelCopy = {
-  icon: LucideIcon;
+  icon: LucideIcon | IconType;
   title: string;
   prompt: string;
   input: InputHTMLAttributes<HTMLInputElement>;
@@ -67,6 +76,26 @@ const CHANNELS: Record<AlertChannel, ChannelCopy> = {
       return result.ok ? { ok: true, handle: { address: result.handle.email, token: result.handle.token } } : result;
     },
   },
+  whatsapp: {
+    icon: SiWhatsapp,
+    title: "WhatsApp alerts",
+    prompt: "The mobile number you use on WhatsApp. We'll message a code to check it's yours.",
+    input: { id: "alert-whatsapp", type: "tel", inputMode: "tel", autoComplete: "tel", placeholder: "07700 900123" },
+    sendLabel: "Message me a code",
+    sentTo: (address) => `Enter the code we sent on WhatsApp to ${formatUkMobile(address)}.`,
+    wrongAddress: "Wrong number?",
+    smallPrint: "A few messages a night at most, only on market nights. Every message has a link to turn them off, and so does this page.",
+    onLabel: "Turn on WhatsApp alerts",
+    success: "WhatsApp alerts on - we'll message you when prices drop.",
+    start: async (address, watched) => {
+      const result = await startWhatsappAlerts({ phone: address, watchedInstrumentIds: watched });
+      return result.ok ? { ok: true, address: result.phone } : result;
+    },
+    confirm: async (address, code, watched) => {
+      const result = await confirmWhatsappAlerts({ phone: address, code, watchedInstrumentIds: watched });
+      return result.ok ? { ok: true, handle: { address: result.handle.phone, token: result.handle.token } } : result;
+    },
+  },
 };
 
 const inputClass =
@@ -81,11 +110,13 @@ const quietClass =
 export function AlertSignup({
   channel,
   watched,
+  sandboxJoin,
   onDone,
   onCancel,
 }: {
   channel: AlertChannel;
   watched: number[];
+  sandboxJoin?: string | null;
   onDone: (handle: AlertHandle) => void;
   onCancel: () => void;
 }) {
@@ -142,6 +173,12 @@ export function AlertSignup({
           <label htmlFor={copy.input.id} className="block text-meta text-stone-400">
             {copy.prompt}
           </label>
+          {channel === "whatsapp" && sandboxJoin && (
+            <p className="rounded-xl border border-[#FDCC4B]/30 bg-[#FDCC4B]/5 px-3 py-2 text-meta text-stone-300">
+              Testing mode: first send <span className="font-semibold text-ink">{sandboxJoin}</span> to the Twilio
+              sandbox number in WhatsApp, then come back here.
+            </p>
+          )}
           <input
             {...copy.input}
             value={address}

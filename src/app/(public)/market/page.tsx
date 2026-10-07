@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { MonitorPlay } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
-import { smsAlertsEnabled } from "@/lib/sms/twilio";
+import { readWhatsappEnv, smsAlertsEnabled, whatsappAlertsEnabled } from "@/lib/sms/twilio";
 import { emailAlertsEnabled } from "@/lib/market/email-alerts";
 import { getCompanyInfo } from "@/lib/company-info";
 import { normaliseWhatsappLink } from "@/lib/whatsapp-link";
@@ -41,6 +41,8 @@ export default async function MarketPage() {
         <MarketFeed
           smsAvailable={smsAlertsEnabled()}
           emailAvailable={emailAlertsEnabled()}
+          whatsappAvailable={whatsappAlertsEnabled()}
+          whatsappSandboxJoin={readWhatsappEnv()?.sandboxJoin ?? null}
           whatsappUrl={whatsappUrl}
           header={
             <PageHeader

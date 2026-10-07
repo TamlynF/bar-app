@@ -16,6 +16,7 @@ import {
 import { sendMarketPushAlerts } from "./push-alerts";
 import { sendMarketSmsAlerts } from "./sms-alerts";
 import { sendMarketEmailAlerts } from "./email-alerts";
+import { sendMarketWhatsappAlerts } from "./whatsapp-alerts";
 import { normaliseClock } from "./stock-market-events";
 import { mergeUnits, sumPendingUnits, type SimSaleRow } from "./simulate";
 
@@ -625,6 +626,11 @@ export async function maybeRunMarketTick(
           await sendMarketEmailAlerts(supabase, servedEvents);
         } catch (err) {
           console.error("[market] email alerts failed:", err);
+        }
+        try {
+          await sendMarketWhatsappAlerts(supabase, servedEvents);
+        } catch (err) {
+          console.error("[market] whatsapp alerts failed:", err);
         }
       }
     }
