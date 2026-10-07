@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Bell, BellRing, Mail, MessageSquare, TrendingUp } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
+import { whatsappLinkKind } from "@/lib/whatsapp-link";
 import { toast } from "sonner";
 import { ArrowCta } from "@/components/ui/arrow-cta";
 import { formatGbp } from "@/lib/price";
@@ -367,11 +369,13 @@ export default function MarketFeed({
   footer,
   smsAvailable,
   emailAvailable,
+  whatsappUrl,
 }: {
   header: ReactNode;
   footer: ReactNode;
   smsAvailable: boolean;
   emailAvailable: boolean;
+  whatsappUrl: string | null;
 }) {
   const { state, fresh } = useMarketState(6000, true);
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
@@ -703,6 +707,7 @@ export default function MarketFeed({
             <NotifyMethod
               smsAvailable={smsAvailable}
               emailAvailable={emailAvailable}
+              whatsappUrl={whatsappUrl}
               onPush={choosePush}
               onSms={() => setSigningUp("sms")}
               onEmail={() => setSigningUp("email")}
@@ -725,6 +730,20 @@ export default function MarketFeed({
             </p>
           )}
         </>
+      )}
+      {whatsappUrl && !alertsOff && !(wantsAlerts && !notifyEnabled) && (
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <SiWhatsapp className="h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-[12px] leading-relaxed text-stone-400">
+            <span className="font-black text-xs tracking-widest text-ink uppercase">WhatsApp</span>
+            {whatsappLinkKind(whatsappUrl) === "channel"
+              ? " - follow the channel for the big drops on market nights."
+              : " - join the group for the big drops on market nights."}
+          </p>
+          <ArrowCta href={whatsappUrl} external variant="goldOutline" size="sm" className="shrink-0 rounded-full">
+            Join
+          </ArrowCta>
+        </div>
       )}
       <InstallDialog target={installTarget} open={installOpen} onOpenChange={setInstallOpen} />
 

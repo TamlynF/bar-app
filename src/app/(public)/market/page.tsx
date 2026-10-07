@@ -5,6 +5,8 @@ import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
 import { smsAlertsEnabled } from "@/lib/sms/twilio";
 import { emailAlertsEnabled } from "@/lib/market/email-alerts";
+import { getCompanyInfo } from "@/lib/company-info";
+import { normaliseWhatsappLink } from "@/lib/whatsapp-link";
 import MarketFeed from "./market-feed";
 
 /* iOS bakes the manifest and app title into the home-screen icon at install
@@ -22,7 +24,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function MarketPage() {
+export default async function MarketPage() {
+  const info = await getCompanyInfo();
+  const whatsappUrl = normaliseWhatsappLink(info?.whatsapp_url);
   return (
     <main className="flex min-h-dvh w-full flex-col bg-[#1a2008] text-white antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <style
@@ -37,6 +41,7 @@ export default function MarketPage() {
         <MarketFeed
           smsAvailable={smsAlertsEnabled()}
           emailAvailable={emailAlertsEnabled()}
+          whatsappUrl={whatsappUrl}
           header={
             <PageHeader
               eyebrow="Live from the bar"

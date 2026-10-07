@@ -17,6 +17,7 @@ export type CompanyInfoRow = {
   twitter: string | null;
   tiktok: string | null;
   youtube: string | null;
+  whatsapp_url?: string | null;
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { normaliseWhatsappLink } from "@/lib/whatsapp-link";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { bandDateRules } from "@/lib/band-availability";
@@ -56,6 +57,7 @@ export async function updateCompanyInfo(formData: FormData) {
     twitter: formData.get("twitter")?.toString() || null,
     tiktok: formData.get("tiktok")?.toString() || null,
     youtube: formData.get("youtube")?.toString() || null,
+    whatsapp_url: normaliseWhatsappLink(formData.get("whatsapp_url")?.toString()),
     tagline: formData.get("tagline")?.toString() || null,
     tagline_accent: formData.get("tagline_accent")?.toString() || null,
     description: formData.get("description")?.toString() || null,

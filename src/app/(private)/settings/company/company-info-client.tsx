@@ -27,7 +27,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { bandDateRules, describeBandNights } from "@/lib/band-availability";
 import { formatGBP } from "@/lib/events-display";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX, SiWhatsapp } from "react-icons/si";
+import { normaliseWhatsappLink } from "@/lib/whatsapp-link";
 import Link from "next/link";
 import { updateCompanyInfo } from "./actions";
 import { createClient } from "@/lib/supabase/client";
@@ -75,6 +76,7 @@ interface CompanyInfo {
   twitter: string | null;
   tiktok: string | null;
   youtube: string | null;
+  whatsapp_url?: string | null;
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;
@@ -352,6 +354,7 @@ export default function CompanyInfoClient({
     twitter: socialPath(record?.twitter, "twitter"),
     tiktok: socialPath(record?.tiktok, "tiktok"),
     youtube: socialPath(record?.youtube, "youtube"),
+    whatsapp_url: record?.whatsapp_url ?? "",
     max_capacity: record?.max_capacity?.toString() ?? "",
     private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
     private_hire_deposit: record?.private_hire_deposit?.toString() ?? "",
@@ -413,6 +416,10 @@ export default function CompanyInfoClient({
       setFormError("Pick at least one night bands can request, or include bank holiday nights.");
       return;
     }
+    if (form.whatsapp_url.trim() && !normaliseWhatsappLink(form.whatsapp_url)) {
+      setFormError("The WhatsApp link needs to be a group invite (chat.whatsapp.com/…) or a channel link (whatsapp.com/channel/…).");
+      return;
+    }
 
     const fd = new FormData();
     fd.set("id", String(data.id));
@@ -430,6 +437,7 @@ export default function CompanyInfoClient({
     fd.set("twitter", socialPath(form.twitter, "twitter"));
     fd.set("tiktok", socialPath(form.tiktok, "tiktok"));
     fd.set("youtube", socialPath(form.youtube, "youtube"));
+    fd.set("whatsapp_url", form.whatsapp_url);
     fd.set("max_capacity", form.max_capacity);
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
     fd.set("private_hire_deposit", form.private_hire_deposit);
@@ -449,6 +457,7 @@ export default function CompanyInfoClient({
           twitter: socialPath(form.twitter, "twitter"),
           tiktok: socialPath(form.tiktok, "tiktok"),
           youtube: socialPath(form.youtube, "youtube"),
+          whatsapp_url: normaliseWhatsappLink(form.whatsapp_url),
           max_capacity: parseInt(form.max_capacity) || null,
           private_hire_min_capacity: parseInt(form.private_hire_min_capacity) || null,
           private_hire_deposit: parseFloat(form.private_hire_deposit) || null,
@@ -619,6 +628,18 @@ export default function CompanyInfoClient({
               icon={<SiYoutube className="h-3.5 w-3.5" />}
               label="YouTube"
               value={socialValue(data.youtube, "youtube")}
+            />
+            <Row
+              icon={<SiWhatsapp className="h-3.5 w-3.5" />}
+              label="WhatsApp group"
+              value={
+                normaliseWhatsappLink(data.whatsapp_url)
+                  ? linkValue(
+                      normaliseWhatsappLink(data.whatsapp_url)!.includes("/channel/") ? "Channel link" : "Group invite",
+                      normaliseWhatsappLink(data.whatsapp_url)!
+                    )
+                  : "-"
+              }
             />
           </SectionCard>
 
@@ -926,6 +947,24 @@ export default function CompanyInfoClient({
             <p className={cn(HINT, "px-4 pb-3 sm:px-5")}>
               Paste a profile link or type the handle - either way only the handle is
               kept.
+            </p>
+            <FormRow label="WhatsApp group">
+              <input
+                value={form.whatsapp_url}
+                onChange={(e) => update("whatsapp_url", e.target.value)}
+                onBlur={() => {
+                  const clean = normaliseWhatsappLink(form.whatsapp_url);
+                  if (clean) update("whatsapp_url", clean);
+                }}
+                aria-label="WhatsApp group invite link"
+                placeholder="https://chat.whatsapp.com/…"
+                inputMode="url"
+                className={FIELD_INPUT}
+              />
+            </FormRow>
+            <p className={cn(HINT, "px-4 pb-3 sm:px-5")}>
+              The group&apos;s invite link (or a Channel link). When set, the Market Night page
+              offers &quot;Join the WhatsApp group&quot; next to the other alert options.
             </p>
           </SectionCard>
 
