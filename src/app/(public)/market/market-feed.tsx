@@ -476,13 +476,14 @@ export default function MarketFeed({
     .join("\u0000");
 
   const alertsAllowed = state?.pushAlertsEnabled !== false;
+  const anyChannelOn = notifyEnabled || smsOn || emailOn || whatsappOn;
 
   useEffect(() => {
     if (fresh.length === 0) return;
     const newest = fresh[fresh.length - 1];
     if (newest.id <= announcedRef.current) return;
     announcedRef.current = newest.id;
-    if (!notifyEnabled || !alertsAllowed) return;
+    if (!anyChannelOn || !alertsAllowed) return;
 
     const watchedNames = new Set(watchedNamesKey ? watchedNamesKey.split("\u0000") : []);
     const relevant =
@@ -500,11 +501,11 @@ export default function MarketFeed({
         toast(eventCopy(event));
       }
     }
-    void systemNotify(relevant);
+    if (notifyEnabled) void systemNotify(relevant);
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       navigator.vibrate?.(150);
     }
-  }, [fresh, watchedNamesKey, notifyEnabled, alertsAllowed]);
+  }, [fresh, watchedNamesKey, notifyEnabled, anyChannelOn, alertsAllowed]);
 
   function choosePush() {
     if (installTarget.needsInstall) {
