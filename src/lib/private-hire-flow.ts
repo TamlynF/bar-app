@@ -22,10 +22,17 @@ import {
   dueDateForNewHireDate,
   effectivePrivateHireStatus,
   normalizePrivateHireStatus,
+  renewedDepositDue,
   resolveDepositAmount,
   shouldSendDepositReminder,
   DEPOSIT_PAID_VIA_LABEL,
+  PRIVATE_HIRE_STATUS_LABEL,
+  REFUND_VIA_LABEL,
+  canRefundToCard,
+  paymentStatusAfterRefund,
+  refundableAmount,
   statusValues,
+  type RefundVia,
   DEFAULT_DEPOSIT_DAYS,
   type DepositPaidVia,
   type PrivateHireStatus,
@@ -54,7 +61,7 @@ export type FlowContext = {
   now?: Date;
 };
 
-export type FlowResult = { ok: true; status: PrivateHireStatus } | { ok: false; error: string };
+export type FlowResult = { ok: true; status: PrivateHireStatus; warning?: string } | { ok: false; error: string };
 
 type SubtypeJoin = { id: number; name: string; default_event_title: string | null; event_types_id: number };
 
@@ -82,11 +89,16 @@ export type HireRow = {
   square_order_id: string | null;
   square_payment_id: string | null;
   superseded_square_order_ids: string[] | null;
+  refunded_amount: number | null;
+  refunded_at: string | null;
+  refunded_via: string | null;
+  square_refund_id: string | null;
+  refund_status: string | null;
   event_subtypes: SubtypeJoin | SubtypeJoin[] | null;
 };
 
 const HIRE_SELECT =
-  "id, full_name, email, contact_id, phone_no, guest_count, status, event_id, event_subtypes_id, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_paid_via, deposit_due_date, deposit_reminded_at, payment_link_url, square_payment_link_id, square_order_id, square_payment_id, superseded_square_order_ids, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
+  "id, full_name, email, contact_id, phone_no, guest_count, status, event_id, event_subtypes_id, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_paid_via, deposit_due_date, deposit_reminded_at, payment_link_url, square_payment_link_id, square_order_id, square_payment_id, superseded_square_order_ids, refunded_amount, refunded_at, refunded_via, square_refund_id, refund_status, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
 
 const STALE = "This request has moved on since you opened it - refresh to see where it is now.";
 
@@ -126,6 +138,14 @@ function reasonLabel(row: HireRow): string {
 
 function slotIsSet(row: HireRow): boolean {
   return !!row.selected_date && !!row.selected_start_time && !!row.selected_end_time;
+}
+
+/* A slot can't be offered or agreed once its date has gone - the sheet stops
+   this too, but a request left open overnight gets here with a stale date. */
+function slotProblem(row: HireRow, now?: Date): string | null {
+  if (!slotIsSet(row)) return "Set a date, start and end time first.";
+  if (row.selected_date! < venueToday(now)) return "That date has already passed - pick another.";
+  return null;
 }
 
 /* Square payment links stay payable until they're deleted, so a checkout the
@@ -191,9 +211,9 @@ async function sendCustomerEmail(
   row: HireRow,
   key: string,
   kind: string,
-  opts: { note?: string | null; deposit?: boolean; details?: boolean } = {}
+  opts: { note?: string | null; deposit?: boolean; details?: boolean; extra?: Record<string, string> } = {}
 ): Promise<void> {
-  const slots = await renderTemplate(ctx.supabase, key, mergeValues(row));
+  const slots = await renderTemplate(ctx.supabase, key, mergeValues(row, opts.extra));
   if (!slots) return;
   const note = opts.note?.trim() ? plainNote(escapeHtml(opts.note.trim())) : "";
   const details = opts.details === false ? "" : plainPanel(detailsHtml(row, !!opts.deposit));
@@ -305,25 +325,65 @@ async function deactivateHireEvent(ctx: FlowContext, row: HireRow) {
 
 /* ── Steps ──────────────────────────────────────────────────────────────── */
 
+/* How the slot came to be agreed, for the team note. The customer accepting on
+   their own page writes its own note where the response is handled. */
+export type ApprovalSource = "approved" | "accepted_by_staff" | "reopened" | "customer";
+
+const APPROVAL_NOTE: Record<Exclude<ApprovalSource, "customer">, string> = {
+  approved: "Times approved",
+  accepted_by_staff: "Customer accepted the proposed time by email or phone (recorded by staff)",
+  reopened: "Reopened with a new deadline",
+};
+
+async function approvalNote(
+  ctx: FlowContext,
+  row: HireRow,
+  source: ApprovalSource,
+  deposit: { amount: number; due: string | null },
+  message?: string | null
+) {
+  if (source === "customer") return;
+  const slot = `${formatHireDate(row.selected_date)}, ${formatHireTime(row.selected_start_time, row.selected_end_time)}`;
+  const text = message?.trim();
+  const { error } = await ctx.supabase.from("private_hire_notes").insert({
+    request_id: row.id,
+    created_by: ctx.actorId,
+    body: [
+      `${APPROVAL_NOTE[source]}: ${slot}.`,
+      deposit.amount > 0
+        ? `Deposit of ${formatDeposit(deposit.amount)} requested, due ${formatHireDate(deposit.due)}.`
+        : "No deposit needed - hire confirmed.",
+      text ? `Message to the customer: "${text}"` : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+  });
+  if (error) console.error("[private hire] approval note not saved:", error);
+}
+
 /* Agrees the selected times and asks for the deposit. A £0 deposit skips
    straight to confirmed. */
 export async function approvePrivateHire(
   ctx: FlowContext,
   id: string,
-  opts: { depositAmount?: number | null; note?: string | null } = {}
+  opts: { depositAmount?: number | null; note?: string | null; source?: ApprovalSource } = {}
 ): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
-  if (!slotIsSet(row)) return { ok: false, error: "Set a date, start and end time first." };
+  const problem = slotProblem(row, ctx.now);
+  if (problem) return { ok: false, error: problem };
 
   const settings = await depositSettings(ctx.supabase);
   const amount =
     opts.depositAmount != null && opts.depositAmount >= 0
       ? Math.round(opts.depositAmount * 100) / 100
       : resolveDepositAmount(row.deposit_amount, settings.amount);
+  const source = opts.source ?? "approved";
 
   if (amount <= 0) {
-    return confirmPrivateHire(ctx, id, { via: "none", paidAmount: 0, note: opts.note });
+    const result = await confirmPrivateHire(ctx, id, { via: "none", paidAmount: 0, note: opts.note });
+    if (result.ok) await approvalNote(ctx, row, source, { amount: 0, due: null }, opts.note);
+    return result;
   }
 
   const from = normalizePrivateHireStatus(row.status);
@@ -341,6 +401,7 @@ export async function approvePrivateHire(
   });
   if (!moved) return { ok: false, error: STALE };
   await switchOffCheckout(row);
+  await approvalNote(ctx, row, source, { amount, due }, opts.note);
 
   await sendCustomerEmail(
     ctx,
@@ -360,7 +421,8 @@ export async function proposePrivateHireTimes(
 ): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
-  if (!slotIsSet(row)) return { ok: false, error: "Set a date, start and end time first." };
+  const problem = slotProblem(row, ctx.now);
+  if (problem) return { ok: false, error: problem };
   if (!canMovePrivateHire(normalizePrivateHireStatus(row.status), "awaiting_customer")) {
     return { ok: false, error: STALE };
   }
@@ -399,6 +461,9 @@ export async function changeAgreedHire(
   const slot = change.slot ?? null;
   if (slot && (!slot.date || !slot.start || !slot.end)) {
     return { ok: false, error: "Set a date, start and end time first." };
+  }
+  if (slot && slot.date < venueToday(ctx.now)) {
+    return { ok: false, error: "That date has already passed - pick another." };
   }
   const slotChanged =
     !!slot &&
@@ -536,7 +601,7 @@ export async function confirmPrivateHire(
 function closeNote(
   row: HireRow,
   to: "declined" | "cancelled" | "expired",
-  opts: { note?: string | null; byStaff?: boolean }
+  opts: { note?: string | null; byStaff?: boolean; refunding?: boolean }
 ): string | null {
   const message = opts.note?.trim();
   if (to === "declined") {
@@ -545,14 +610,27 @@ function closeNote(
       : "Request declined. No reason was given to the customer.";
   }
   if (to !== "cancelled" || !opts.byStaff) return null;
-  const paid = Number(row.paid_amount) || 0;
+  const owed = refundableAmount(row.paid_amount, row.refunded_amount);
   return [
     "Hire cancelled.",
     message ? `Message to the customer: "${message}"` : "No message was given to the customer.",
-    paid > 0 ? `${formatDeposit(paid)} was paid - refund it in Square.` : "",
+    owed > 0 && !opts.refunding ? `${formatDeposit(owed)} of the deposit is still held - use Refund deposit to give it back.` : "",
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/* The deposit line in the cancellation email: what's been refunded in this
+   same step, or that something is still to come back. */
+export function depositOutcome(
+  row: Pick<HireRow, "paid_amount" | "refunded_amount">,
+  refund: { amount: number; via: RefundVia } | null
+): string {
+  if (refund) {
+    return `Your ${formatDeposit(refund.amount)} deposit has been refunded ${REFUND_METHOD_PHRASE[refund.via]}.`;
+  }
+  const owed = refundableAmount(row.paid_amount, row.refunded_amount);
+  return owed > 0 ? `We'll be in touch about refunding your ${formatDeposit(owed)} deposit.` : "";
 }
 
 const CLOSE_EMAIL: Record<"declined" | "cancelled" | "expired", { key: string; kind: string }> = {
@@ -565,7 +643,12 @@ export async function closePrivateHire(
   ctx: FlowContext,
   id: string,
   to: "declined" | "cancelled" | "expired",
-  opts: { note?: string | null; notify?: boolean; byStaff?: boolean } = {}
+  opts: {
+    note?: string | null;
+    notify?: boolean;
+    byStaff?: boolean;
+    refund?: { amount: number; via: RefundVia } | null;
+  } = {}
 ): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
@@ -582,7 +665,15 @@ export async function closePrivateHire(
 
   await switchOffCheckout(row);
   await deactivateHireEvent(ctx, row);
-  const noteBody = closeNote(row, to, opts);
+
+  /* The refund rides on the cancellation email rather than sending its own,
+     so the customer hears about both in one message. */
+  const refund = opts.refund
+    ? await refundHireDeposit(ctx, id, { ...opts.refund, notify: false })
+    : null;
+
+  const refunded = refund?.ok ? { amount: refund.amount, via: refund.via } : null;
+  const noteBody = closeNote(row, to, { ...opts, refunding: !!refunded });
   if (noteBody) {
     const { error } = await ctx.supabase
       .from("private_hire_notes")
@@ -596,32 +687,270 @@ export async function closePrivateHire(
       note: opts.note,
       details: to !== "declined" && !!row.selected_date,
       deposit: to === "expired",
+      extra: { depositOutcome: depositOutcome(row, refunded) },
     });
+  }
+  if (refund && !refund.ok) {
+    return { ok: true, status: to, warning: `Cancelled, but the refund didn't go through: ${refund.error}` };
   }
   return { ok: true, status: to };
 }
 
-/* Puts a declined or cancelled request back in the review queue. */
+/* ── Refunds ────────────────────────────────────────────────────────────── */
+
+export const REFUND_METHOD_PHRASE: Record<RefundVia, string> = {
+  square: "to the card you paid with - allow 5-10 working days for it to show",
+  bank_transfer: "by bank transfer",
+  cash: "in cash",
+  other: "",
+};
+
+type RefundOutcome = { ok: true; amount: number; via: RefundVia } | { ok: false; error: string };
+
+/* Gives some or all of the deposit back. A card refund goes through Square
+   against the payment it came from and completes later (the webhook closes it
+   off); any other method is staff recording money already handed back. The
+   amount is capped at what's still held so a retry can't refund twice. */
+export async function refundHireDeposit(
+  ctx: FlowContext,
+  id: string,
+  opts: { amount: number; via: RefundVia; reason?: string | null; note?: string | null; notify?: boolean }
+): Promise<RefundOutcome> {
+  const row = await loadHire(ctx.supabase, id);
+  if (!row) return { ok: false, error: "Request not found." };
+  if (row.refund_status === "pending") {
+    return { ok: false, error: "A card refund is already on its way - wait for Square to finish it." };
+  }
+  const left = refundableAmount(row.paid_amount, row.refunded_amount);
+  const amount = Math.round(opts.amount * 100) / 100;
+  if (!(amount > 0)) return { ok: false, error: "Enter an amount to refund." };
+  if (amount > left) return { ok: false, error: `Only ${formatDeposit(left)} of the deposit is still held.` };
+  if (opts.via === "square" && !canRefundToCard({ paidVia: row.deposit_paid_via, squarePaymentId: row.square_payment_id })) {
+    return { ok: false, error: "This deposit wasn't paid by card through Square, so it can't be refunded to a card." };
+  }
+
+  const now = (ctx.now ?? new Date()).toISOString();
+  let squareRefundId: string | null = null;
+  let status: "pending" | "completed" = "completed";
+  if (opts.via === "square") {
+    try {
+      const { refund } = await squareClient.refunds.refundPayment({
+        idempotencyKey: `hire-${id}-${Math.round((Number(row.refunded_amount) || 0) * 100)}-${Math.round(amount * 100)}`,
+        paymentId: row.square_payment_id!,
+        amountMoney: { amount: BigInt(Math.round(amount * 100)), currency: "GBP" },
+        reason: [`Private hire deposit refund - ${row.full_name}`, opts.reason?.trim()].filter(Boolean).join(" - ").slice(0, 192),
+      });
+      squareRefundId = refund?.id ?? null;
+      status = refund?.status === "COMPLETED" ? "completed" : "pending";
+    } catch (err) {
+      console.error(`[private hire] Square refund for ${id} failed:`, squareErrorDetail(err));
+      return { ok: false, error: `Square didn't accept the refund: ${squareFailureText(err)}` };
+    }
+  }
+
+  const refundedTotal = Math.round(((Number(row.refunded_amount) || 0) + amount) * 100) / 100;
+  const { error } = await ctx.supabase
+    .from("private_hire_requests")
+    .update({
+      refunded_amount: refundedTotal,
+      refunded_at: now,
+      refunded_via: opts.via,
+      square_refund_id: squareRefundId,
+      refund_status: status,
+      payment_status: paymentStatusAfterRefund(row.payment_status, row.paid_amount, refundedTotal),
+      updated_by: ctx.actorId,
+      updated_at: now,
+    })
+    .eq("id", id);
+  if (error) {
+    console.error("[private hire] refund not recorded:", error);
+    return {
+      ok: false,
+      error: squareRefundId
+        ? "Square accepted the refund but it couldn't be recorded here - check Square before trying again."
+        : "The refund couldn't be recorded. Please try again.",
+    };
+  }
+
+  const reason = opts.reason?.trim();
+  const message = opts.note?.trim();
+  const { error: noteError } = await ctx.supabase.from("private_hire_notes").insert({
+    request_id: id,
+    created_by: ctx.actorId,
+    body: [
+      opts.via === "square"
+        ? `${formatDeposit(amount)} refunded to the customer's card${status === "pending" ? " (Square is processing it)" : ""}.`
+        : `${formatDeposit(amount)} refund recorded - paid back by ${REFUND_VIA_LABEL[opts.via].toLowerCase()}.`,
+      refundedTotal < (Number(row.paid_amount) || 0)
+        ? `${formatDeposit(refundableAmount(row.paid_amount, refundedTotal))} of the ${formatDeposit(row.paid_amount)} paid is still held.`
+        : "",
+      reason ? `Reason: ${reason}` : "",
+      squareRefundId ? `Square refund ${squareRefundId}.` : "",
+      message ? `Message to the customer: "${message}"` : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+  });
+  if (noteError) console.error("[private hire] refund note not saved:", noteError);
+
+  if (opts.notify !== false) {
+    await sendCustomerEmail(ctx, row, "private_hire.deposit_refunded", "deposit_refunded", {
+      note: opts.note,
+      details: !!row.selected_date,
+      extra: { refundAmount: formatDeposit(amount), refundMethod: REFUND_METHOD_PHRASE[opts.via] },
+    });
+  }
+  return { ok: true, amount, via: opts.via };
+}
+
+/* The webhook's half: Square finishing (or failing) a card refund made from
+   the app. Returns false when the refund isn't one of ours. */
+export async function settleHireRefund(
+  ctx: FlowContext,
+  refundId: string,
+  status: string | undefined,
+  failure?: string | null
+): Promise<boolean> {
+  const { data } = await ctx.supabase
+    .from("private_hire_requests")
+    .select("id, refund_status")
+    .eq("square_refund_id", refundId)
+    .maybeSingle();
+  if (!data) return false;
+  const next = status === "COMPLETED" ? "completed" : status === "FAILED" || status === "REJECTED" ? "failed" : null;
+  if (!next || data.refund_status === next) return true;
+
+  const row = await loadHire(ctx.supabase, data.id);
+  if (!row) return true;
+  const amount = Number(row.refunded_amount) || 0;
+  const { error } = await ctx.supabase
+    .from("private_hire_requests")
+    .update(
+      next === "completed"
+        ? { refund_status: next }
+        : {
+            refund_status: next,
+            refunded_amount: 0,
+            refunded_at: null,
+            refunded_via: null,
+            payment_status: paymentStatusAfterRefund(row.payment_status, row.paid_amount, 0),
+          }
+    )
+    .eq("id", data.id);
+  if (error) console.error("[private hire] refund status not saved:", error);
+  if (next === "failed") {
+    const why = failure?.trim() || "Square didn't say why.";
+    await ctx.supabase.from("private_hire_notes").insert({
+      request_id: data.id,
+      body: `The ${formatDeposit(amount)} card refund failed in Square (${why}) - the deposit is still held. Refund it in Square and let the customer know.`,
+    });
+    await sendAdminAlert(ctx, row, "admin.private_hire.refund_failed", {
+      refundAmount: formatDeposit(amount),
+      refundFailure: why,
+    });
+  }
+  return true;
+}
+
+/* Puts a declined or cancelled request back in the review queue. The agreed
+   slot and deposit amount stay so the sheet opens where it left off, but the
+   approval and payment stamps from the earlier run are cleared - approving it
+   again asks for the deposit afresh, so an earlier payment is kept in the notes
+   rather than read as paid. */
 export async function reopenPrivateHire(ctx: FlowContext, id: string): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
-  if (!canMovePrivateHire(normalizePrivateHireStatus(row.status), "new")) return { ok: false, error: STALE };
-  const moved = await moveRow(ctx, row, "new", { closed_at: null, decline_reason: null });
-  return moved ? { ok: true, status: "new" } : { ok: false, error: STALE };
+  const from = normalizePrivateHireStatus(row.status);
+  if (!canMovePrivateHire(from, "new")) return { ok: false, error: STALE };
+  const paid = Number(row.paid_amount) || 0;
+  const via = row.deposit_paid_via as DepositPaidVia | null;
+  const moved = await moveRow(ctx, row, "new", {
+    closed_at: null,
+    decline_reason: null,
+    proposed_at: null,
+    approved_at: null,
+    confirmed_at: null,
+    deposit_due_date: null,
+    deposit_reminded_at: null,
+    paid_amount: 0,
+    payment_status: "unpaid",
+    deposit_paid_at: null,
+    deposit_paid_via: null,
+    square_payment_id: null,
+  });
+  if (!moved) return { ok: false, error: STALE };
+
+  const { error } = await ctx.supabase.from("private_hire_notes").insert({
+    request_id: id,
+    created_by: ctx.actorId,
+    body: [
+      `Request reopened from ${PRIVATE_HIRE_STATUS_LABEL[from].toLowerCase()} and moved back to new.`,
+      paid > 0
+        ? `${formatDeposit(paid)}${via && via !== "none" ? ` by ${DEPOSIT_PAID_VIA_LABEL[via].toLowerCase()}` : ""} was paid on the earlier booking${row.square_payment_id ? ` (Square payment ${row.square_payment_id})` : ""} - the request now shows no deposit paid, so refund it in Square if that hasn't been done, or mark the deposit paid again once the hire is approved.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+  });
+  if (error) console.error("[private hire] reopen note not saved:", error);
+  return { ok: true, status: "new" };
 }
 
-/* Sends the current stage's email again - the proposal or the deposit request. */
-export async function resendPrivateHireEmail(ctx: FlowContext, id: string): Promise<FlowResult> {
+/* Sends the current stage's email again - the proposal or the deposit request.
+   A deposit request whose deadline has passed goes out with a fresh one, since
+   the nightly job hasn't expired it yet and staff are choosing to keep waiting. */
+export async function resendPrivateHireEmail(
+  ctx: FlowContext,
+  id: string,
+  opts: { note?: string | null } = {}
+): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
   const status = normalizePrivateHireStatus(row.status);
+  const message = opts.note?.trim();
+  let noteBody: string;
+
   if (status === "awaiting_customer") {
-    await sendCustomerEmail(ctx, row, "private_hire.proposed", "proposed");
+    await sendCustomerEmail(ctx, row, "private_hire.proposed", "proposed", { note: opts.note });
+    noteBody = "Proposal emailed again.";
   } else if (status === "awaiting_deposit") {
-    await sendCustomerEmail(ctx, row, "private_hire.approved", "approved", { deposit: true });
+    const now = ctx.now ?? new Date();
+    const settings = await depositSettings(ctx.supabase);
+    const renewed = renewedDepositDue(row.deposit_due_date, venueToday(now), settings.days, row.selected_date);
+    if (renewed) {
+      const { error } = await ctx.supabase
+        .from("private_hire_requests")
+        .update({
+          deposit_due_date: renewed,
+          deposit_reminded_at: null,
+          updated_by: ctx.actorId,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", id)
+        .eq("status", row.status);
+      if (error) {
+        console.error("[private hire] new deadline not saved:", error);
+        return { ok: false, error: "Couldn't set the new deadline. Please try again." };
+      }
+    }
+    const due = renewed ?? row.deposit_due_date;
+    await sendCustomerEmail(ctx, { ...row, deposit_due_date: due }, "private_hire.approved", "approved", {
+      note: opts.note,
+      deposit: true,
+    });
+    noteBody = renewed
+      ? `Deposit request emailed again with a new deadline of ${formatHireDate(renewed)} - the earlier one (${formatHireDate(row.deposit_due_date)}) had passed.`
+      : "Deposit request emailed again.";
   } else {
     return { ok: false, error: "There's nothing waiting on the customer at this stage." };
   }
+
+  const { error } = await ctx.supabase.from("private_hire_notes").insert({
+    request_id: id,
+    created_by: ctx.actorId,
+    body: message ? `${noteBody} Message to the customer: "${message}"` : noteBody,
+  });
+  if (error) console.error("[private hire] resend note not saved:", error);
   return { ok: true, status };
 }
 
@@ -669,7 +998,7 @@ export async function respondAsCustomer(
   let result: FlowResult;
   if (response === "accept") {
     if (status !== "awaiting_customer") return { ok: false, error: STALE };
-    result = await approvePrivateHire(ctx, id);
+    result = await approvePrivateHire(ctx, id, { source: "customer" });
   } else if (response === "reject") {
     if (status !== "awaiting_customer") return { ok: false, error: STALE };
     const moved = await moveRow(ctx, row, "new");
@@ -795,6 +1124,14 @@ function squareErrorCode(err: unknown): string | undefined {
 function squareErrorDetail(err: unknown): string {
   const errors = squareErrors(err);
   return errors.length ? JSON.stringify(errors) : err instanceof Error ? err.message : String(err);
+}
+
+/* The one line of a Square error worth showing staff. */
+function squareFailureText(err: unknown): string {
+  const first = squareErrors(err)[0];
+  if (first?.detail) return first.detail;
+  if (first?.code) return first.code.toLowerCase().replace(/_/g, " ");
+  return err instanceof Error ? err.message : "no reason given";
 }
 
 /* The Square webhook's half: a completed payment whose order belongs to a

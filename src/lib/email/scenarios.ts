@@ -88,6 +88,22 @@ const EARLIER_PAYMENT: MergeField = {
   sample: "£500.00 by bank transfer",
 };
 const DEPOSIT_AMOUNT: MergeField = { token: "depositAmount", label: "Deposit amount", sample: "£100.00" };
+const REFUND_AMOUNT: MergeField = { token: "refundAmount", label: "Refund amount", sample: "£100.00" };
+const REFUND_METHOD: MergeField = {
+  token: "refundMethod",
+  label: "How it was refunded",
+  sample: "back to the card you paid with",
+};
+const REFUND_FAILURE: MergeField = {
+  token: "refundFailure",
+  label: "Why Square couldn't refund it",
+  sample: "The payment is too old to refund online.",
+};
+const DEPOSIT_OUTCOME: MergeField = {
+  token: "depositOutcome",
+  label: "What's happening with the deposit",
+  sample: "Your £100.00 deposit has been refunded to the card you paid with - allow 5-10 working days for it to show.",
+};
 const DEPOSIT_DUE: MergeField = { token: "depositDueDate", label: "Deposit due date", sample: "Fri, 16 Oct 2026" };
 const HIRE_RESPONSE: MergeField = {
   token: "customerResponse",
@@ -691,15 +707,32 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     label: "Private hire booking cancelled",
     group: "Private hire",
     description:
-      "Staff cancel a private hire that was already confirmed. Any deposit is refunded by hand in Square, so the email only says we'll be in touch about it.",
+      "Staff cancel a private hire that was already confirmed. The deposit line says it's been refunded when the refund was made in the same step, otherwise that we'll be in touch about it.",
     recipient: "customer",
     slots: SIMPLE_SLOTS,
-    mergeFields: HIRE_FIELDS,
+    mergeFields: [...HIRE_FIELDS, DEPOSIT_OUTCOME],
     defaults: slots({
       subject: "Your Private Hire Booking Has Been Cancelled - Don Fenticas",
       greeting: "Hi {{customerName}},",
       intro:
-        "We're sorry - your private hire booking for your <strong>{{hireReason}}</strong> on <strong>{{hireDate}}</strong>, {{hireTime}}, has been cancelled.\n\nIf you paid a deposit, we'll be in touch about refunding it.",
+        "We're sorry - your private hire booking for your <strong>{{hireReason}}</strong> on <strong>{{hireDate}}</strong>, {{hireTime}}, has been cancelled.\n\n{{depositOutcome}}",
+      footnote: "If you have any questions, please reply to this email.",
+    }),
+  },
+  {
+    key: "private_hire.deposit_refunded",
+    label: "Private hire deposit refunded",
+    group: "Private hire",
+    description:
+      "Sent to the customer when staff refund some or all of their deposit - back to their card through Square, or recorded after paying it back another way.",
+    recipient: "customer",
+    slots: SIMPLE_SLOTS,
+    mergeFields: [...HIRE_FIELDS, REFUND_AMOUNT, REFUND_METHOD],
+    defaults: slots({
+      subject: "Your Private Hire Deposit Refund - Don Fenticas",
+      greeting: "Hi {{customerName}},",
+      intro:
+        "We've refunded <strong>{{refundAmount}}</strong> of the deposit for your <strong>{{hireReason}}</strong> on {{hireDate}}, {{refundMethod}}.",
       footnote: "If you have any questions, please reply to this email.",
     }),
   },
@@ -785,6 +818,23 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
       ctaLabel: "View Request",
     }),
   },
+  {
+    key: "admin.private_hire.refund_failed",
+    label: "Private hire - card refund failed",
+    group: "Private hire",
+    description:
+      "Sent to the venue when Square reports that a deposit refund made from the app didn't go through. The request shows the refund as failed; sort it out in Square.",
+    recipient: "admin",
+    slots: ALERT_SLOTS,
+    mergeFields: [CUSTOMER_NAME, HIRE_DATE, REFUND_AMOUNT, REFUND_FAILURE],
+    defaults: slots({
+      subject: "Refund Failed - {{customerName}}, {{hireDate}}",
+      greeting: "A Deposit Refund Didn't Go Through",
+      intro:
+        "Square couldn't complete the <strong>{{refundAmount}}</strong> refund to {{customerName}} for their private hire on {{hireDate}}.\n\n{{refundFailure}}\n\nThe customer has already been told it was on its way, so refund it in Square and let them know.",
+      ctaLabel: "View Request",
+    }),
+  },
 ];
 
 export const EMAIL_SCENARIO_GROUPS = [
@@ -832,6 +882,8 @@ const WIRED_SCENARIOS = new Set([
   "admin.private_hire.deposit_paid",
   "admin.private_hire.closed_payment",
   "admin.private_hire.extra_payment",
+  "private_hire.deposit_refunded",
+  "admin.private_hire.refund_failed",
   "band.offered",
   "band.booked",
   "band.declined",
@@ -869,6 +921,8 @@ const PLAIN_SCENARIOS = new Set([
   "admin.private_hire.deposit_paid",
   "admin.private_hire.closed_payment",
   "admin.private_hire.extra_payment",
+  "private_hire.deposit_refunded",
+  "admin.private_hire.refund_failed",
 ]);
 
 export function scenarioFamily(scenario: EmailScenario): "band" | "brand" | "plain" {

@@ -10,6 +10,10 @@ import {
   isClosedPrivateHire,
   isDepositOverdue,
   normalizePrivateHireStatus,
+  paymentStatusAfterRefund,
+  refundableAmount,
+  canRefundToCard,
+  renewedDepositDue,
   resolveDepositAmount,
   shouldSendDepositReminder,
   statusValues,
@@ -127,6 +131,37 @@ describe("deposit deadline", () => {
     expect(isDepositOverdue("2026-10-14", "2026-10-14")).toBe(false);
     expect(isDepositOverdue("2026-10-14", "2026-10-15")).toBe(true);
     expect(isDepositOverdue(null, "2026-10-15")).toBe(false);
+  });
+
+  it("knows how much of a deposit can still be refunded", () => {
+    expect(refundableAmount(100, 0)).toBe(100);
+    expect(refundableAmount(100, 40)).toBe(60);
+    expect(refundableAmount(100, 100)).toBe(0);
+    expect(refundableAmount(100, 120)).toBe(0);
+    expect(refundableAmount(null, null)).toBe(0);
+    expect(refundableAmount(0.3, 0.1)).toBe(0.2);
+  });
+
+  it("reads as refunded only once the whole deposit is back", () => {
+    expect(paymentStatusAfterRefund("paid", 100, 100)).toBe("refunded");
+    expect(paymentStatusAfterRefund("paid", 100, 40)).toBe("paid");
+    expect(paymentStatusAfterRefund("partially_paid", 60, 20)).toBe("partially_paid");
+    expect(paymentStatusAfterRefund("partially_paid", 60, 60)).toBe("refunded");
+    expect(paymentStatusAfterRefund("paid", 100, 0)).toBe("paid");
+  });
+
+  it("only refunds to a card when the deposit came through Square", () => {
+    expect(canRefundToCard({ paidVia: "square", squarePaymentId: "pay_1" })).toBe(true);
+    expect(canRefundToCard({ paidVia: "square", squarePaymentId: null })).toBe(false);
+    expect(canRefundToCard({ paidVia: "bank_transfer", squarePaymentId: "pay_1" })).toBe(false);
+  });
+
+  it("gives a resent deposit request a fresh deadline only when the old one has passed", () => {
+    expect(renewedDepositDue("2026-10-14", "2026-10-15", 7, "2026-11-20")).toBe("2026-10-22");
+    expect(renewedDepositDue("2026-10-14", "2026-10-15", 7, "2026-10-18")).toBe("2026-10-17");
+    expect(renewedDepositDue("2026-10-14", "2026-10-14", 7, "2026-11-20")).toBeNull();
+    expect(renewedDepositDue("2026-10-20", "2026-10-15", 7, "2026-11-20")).toBeNull();
+    expect(renewedDepositDue(null, "2026-10-15", 7, "2026-11-20")).toBeNull();
   });
 
   it("shows an unpaid request past its date as expired before the nightly job runs", () => {

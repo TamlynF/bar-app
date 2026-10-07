@@ -11,14 +11,18 @@ import {
   changeAgreedHire,
   closePrivateHire,
   confirmPrivateHire,
+  depositOutcome,
   heldPrivateHireSlots,
+  REFUND_METHOD_PHRASE,
   loadHire,
   proposePrivateHireTimes,
+  refundHireDeposit,
   reopenPrivateHire,
   resendPrivateHireEmail,
   switchOffCheckout,
   syncHireEvent,
   venueToday,
+  type ApprovalSource,
   type FlowContext,
   type FlowResult,
   type HireSlot,
@@ -27,8 +31,11 @@ import {
   depositDueDate,
   dueDateForNewHireDate,
   normalizePrivateHireStatus,
+  renewedDepositDue,
   resolveDepositAmount,
+  refundableAmount,
   type DepositPaidVia,
+  type RefundVia,
 } from "@/lib/private-hire-status";
 import {
   formatDeposit,
@@ -169,7 +176,10 @@ async function finish(result: FlowResult): Promise<FlowResult> {
   return result;
 }
 
-export async function approvePrivateHireAction(id: string, opts: { depositAmount: number | null; note?: string }) {
+export async function approvePrivateHireAction(
+  id: string,
+  opts: { depositAmount: number | null; note?: string; source?: Exclude<ApprovalSource, "customer"> }
+) {
   return finish(await approvePrivateHire(await flowContext(), id, opts));
 }
 
@@ -186,16 +196,30 @@ export async function markPrivateHireDepositPaidAction(
   );
 }
 
-export async function closePrivateHireAction(id: string, to: "declined" | "cancelled", note?: string) {
-  return finish(await closePrivateHire(await flowContext(), id, to, { note, byStaff: true }));
+export async function closePrivateHireAction(
+  id: string,
+  to: "declined" | "cancelled",
+  note?: string,
+  refund?: { amount: number; via: RefundVia } | null
+) {
+  return finish(await closePrivateHire(await flowContext(), id, to, { note, byStaff: true, refund }));
+}
+
+export async function refundPrivateHireDepositAction(
+  id: string,
+  opts: { amount: number; via: RefundVia; reason?: string; note?: string }
+) {
+  const result = await refundHireDeposit(await flowContext(), id, opts);
+  if (result.ok) revalidatePrivateHire();
+  return result.ok ? { ok: true as const } : { ok: false as const, error: result.error };
 }
 
 export async function reopenPrivateHireAction(id: string) {
   return finish(await reopenPrivateHire(await flowContext(), id));
 }
 
-export async function resendPrivateHireEmailAction(id: string) {
-  return finish(await resendPrivateHireEmail(await flowContext(), id));
+export async function resendPrivateHireEmailAction(id: string, opts: { note?: string } = {}) {
+  return finish(await resendPrivateHireEmail(await flowContext(), id, opts));
 }
 
 export async function changeAgreedHireAction(
@@ -217,6 +241,8 @@ export async function privateHireEmailSlotsAction(
     end: string | null;
     subtypeId: number | null;
     deposit?: number | null;
+    renewOverdueDue?: boolean;
+    refund?: { amount: number; via: RefundVia } | null;
   }
 ) {
   const supabase = await createClient();
@@ -248,9 +274,12 @@ export async function privateHireEmailSlotsAction(
     .limit(1)
     .maybeSingle();
   /* Before approval there's no due date yet - preview the one approving now would set. */
+  const today = venueToday();
+  const days = Number(settings.data?.private_hire_deposit_days) || 7;
   const dueDate =
-    dueDateForNewHireDate(row.deposit_due_date, row.selected_date, venueToday()) ??
-    depositDueDate(venueToday(), Number(settings.data?.private_hire_deposit_days) || 7, row.selected_date);
+    (unsaved?.renewOverdueDue ? renewedDepositDue(row.deposit_due_date, today, days, row.selected_date) : null) ??
+    dueDateForNewHireDate(row.deposit_due_date, row.selected_date, today) ??
+    depositDueDate(today, days, row.selected_date);
   return renderTemplate(supabase, key, {
     customerName: row.full_name,
     hireDate: formatHireDate(row.selected_date),
@@ -258,6 +287,9 @@ export async function privateHireEmailSlotsAction(
     hireReason: privateHireSubtypeLabel(unwrapSubtype(row.event_subtypes), "Private Hire"),
     depositAmount: formatDeposit(resolveDepositAmount(row.deposit_amount, settings.data?.private_hire_deposit)),
     depositDueDate: formatHireDate(dueDate),
+    depositOutcome: depositOutcome(row, unsaved?.refund ?? null),
+    refundAmount: formatDeposit(unsaved?.refund?.amount ?? refundableAmount(row.paid_amount, row.refunded_amount)),
+    refundMethod: REFUND_METHOD_PHRASE[unsaved?.refund?.via ?? "square"],
   });
 }
 

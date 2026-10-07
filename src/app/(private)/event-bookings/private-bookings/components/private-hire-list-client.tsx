@@ -67,10 +67,12 @@ export default function PrivateHireListClient({
   initialRequests,
   initialStatuses = [],
   square,
+  maxCapacity,
 }: {
   initialRequests: PrivateHireRequest[];
   initialStatuses?: string[];
   square: SquareDashboard;
+  maxCapacity: number | null;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
@@ -246,7 +248,7 @@ export default function PrivateHireListClient({
                   </p>
                 ) : (
                   items.map((req) => (
-                    <PrivateHireCard key={req.id} request={req} square={square} onSheetOpenChange={pinWhileOpen} />
+                    <PrivateHireCard key={req.id} request={req} square={square} maxCapacity={maxCapacity} onSheetOpenChange={pinWhileOpen} />
                   ))
                 )}
               </section>

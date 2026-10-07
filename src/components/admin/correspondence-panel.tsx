@@ -60,6 +60,7 @@ const KIND_LABELS: Record<string, string> = {
   expired: "Deposit expired",
   deposit_updated: "Deposit updated",
   time_turned_down: "Time turned down",
+  deposit_refunded: "Deposit refunded",
   page_response: "From their request page",
 };
 

@@ -13,7 +13,7 @@ import { CATALOG_VERSION_EVENT, confirmCatalogWrite } from "@/lib/market/square-
 import { refreshSessionFromSquare } from "@/lib/market/session-square-refresh";
 import { catalogCopiedWithin } from "@/lib/square-catalog-sync";
 import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
-import { settleHireDeposit } from "@/lib/private-hire-flow";
+import { settleHireDeposit, settleHireRefund } from "@/lib/private-hire-flow";
 
 /* Every market price push fires this webhook too, so a live market would
    otherwise re-copy the whole catalog after each re-rank, competing with its
@@ -37,7 +37,14 @@ type SquarePayment = {
   amount_money?: { amount?: number };
 };
 
+type SquareRefund = {
+  id?: string;
+  status?: string;
+  reason?: string;
+};
+
 const PAYMENT_EVENT_TYPES = new Set(["payment.created", "payment.updated"]);
+const REFUND_EVENT_TYPES = new Set(["refund.created", "refund.updated"]);
 
 const WEBHOOK_SIGNATURE_KEY = process.env.SQUARE_WEBHOOK_SIGNATURE_KEY ?? "";
 const WEBHOOK_URL =
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let event: { type: string; data?: { object?: { payment?: SquarePayment } } };
+  let event: { type: string; data?: { object?: { payment?: SquarePayment; refund?: SquareRefund } } };
   try {
     event = JSON.parse(body);
   } catch {
@@ -88,6 +95,22 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error("[market] catalog refresh failed:", err);
+    }
+    return NextResponse.json({ received: true });
+  }
+
+  if (REFUND_EVENT_TYPES.has(event.type)) {
+    const refund = event.data?.object?.refund;
+    if (refund?.id) {
+      try {
+        await settleHireRefund(
+          { supabase: createAdminClient(), resend: getResend(), actorId: null },
+          refund.id,
+          refund.status
+        );
+      } catch (err) {
+        console.error("[square] refund webhook failed:", err);
+      }
     }
     return NextResponse.json({ received: true });
   }

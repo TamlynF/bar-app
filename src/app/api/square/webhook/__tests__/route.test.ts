@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   sendMock: vi.fn(),
   settle: vi.fn(),
   settleHire: vi.fn(),
+  settleRefund: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -21,7 +22,7 @@ vi.mock("@/lib/settle-paid-booking", () => ({ settlePaidBooking: h.settle }));
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ admin: true })) }));
 
-vi.mock("@/lib/private-hire-flow", () => ({ settleHireDeposit: h.settleHire }));
+vi.mock("@/lib/private-hire-flow", () => ({ settleHireDeposit: h.settleHire, settleHireRefund: h.settleRefund }));
 
 vi.mock("resend", () => ({
   Resend: vi.fn(() => ({ emails: { send: h.sendMock } })),
@@ -104,6 +105,36 @@ beforeEach(() => {
   h.sendMock.mockReset().mockResolvedValue({ error: null });
   h.settle.mockReset().mockResolvedValue({ outcome: "settled", status: "confirmed" });
   h.settleHire.mockReset().mockResolvedValue(false);
+  h.settleRefund.mockReset().mockResolvedValue(false);
+});
+
+describe("square webhook - refund updates", () => {
+  it("hands a refund update to the private hire refund check", async () => {
+    h.client = makeSupabase(null).client;
+    h.settleRefund.mockResolvedValue(true);
+
+    const body = JSON.stringify({
+      type: "refund.updated",
+      data: { object: { refund: { id: "ref_1", status: "COMPLETED", payment_id: "pay_1" } } },
+    });
+    const res = await POST(makeRequest(body));
+
+    expect(res.status).toBe(200);
+    expect(h.settleRefund).toHaveBeenCalledTimes(1);
+    expect(h.settleRefund.mock.calls[0].slice(1)).toEqual(["ref_1", "COMPLETED"]);
+    expect(h.settle).not.toHaveBeenCalled();
+    expect(h.settleHire).not.toHaveBeenCalled();
+  });
+
+  it("still answers 200 when the refund check throws", async () => {
+    h.client = makeSupabase(null).client;
+    h.settleRefund.mockRejectedValue(new Error("db down"));
+
+    const body = JSON.stringify({ type: "refund.updated", data: { object: { refund: { id: "ref_2", status: "FAILED" } } } });
+    const res = await POST(makeRequest(body));
+
+    expect(res.status).toBe(200);
+  });
 });
 
 describe("square webhook - completed payment settlement", () => {

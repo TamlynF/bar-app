@@ -11,6 +11,7 @@ import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
 import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
 import { squareDashboardConfig } from "@/lib/square";
+import { getCompanyInfo } from "@/lib/company-info";
 
 function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -61,13 +62,15 @@ export default async function GeneralEventBookingsPage({
     );
   }
   if (requestKind === "private") {
-    const requests = (await getPrivateHireRequestsForType()) as unknown as PrivateHireRequest[];
+    const [rawRequests, company] = await Promise.all([getPrivateHireRequestsForType(), getCompanyInfo()]);
+    const requests = rawRequests as unknown as PrivateHireRequest[];
     return (
       <RequestsShell title="Private hire" subtitle="Review and respond to venue hire enquiries">
         <PrivateHireListClient
           initialRequests={requests}
           initialStatuses={initialStatuses}
           square={squareDashboardConfig()}
+          maxCapacity={company?.max_capacity ?? null}
         />
       </RequestsShell>
     );

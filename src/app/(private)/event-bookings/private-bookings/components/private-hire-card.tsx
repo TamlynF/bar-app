@@ -4,6 +4,7 @@ import React, { useDeferredValue, useEffect, useRef, useState, useSyncExternalSt
 import { useSearchParams } from "next/navigation";
 import {
   approvePrivateHireAction,
+  refundPrivateHireDepositAction,
   proposePrivateHireAction,
   markPrivateHireDepositPaidAction,
   closePrivateHireAction,
@@ -76,10 +77,14 @@ import {
   DEPOSIT_PAID_VIA_LABEL,
   PRIVATE_HIRE_PIPELINE,
   PRIVATE_HIRE_STATUS_LABEL,
+  REFUND_VIA_LABEL,
+  canRefundToCard,
   isClosedPrivateHire,
   normalizePrivateHireStatus,
+  refundableAmount,
   type DepositPaidVia,
   type PrivateHireStatus,
+  type RefundVia,
 } from "@/lib/private-hire-status";
 import { formatDeposit } from "@/lib/private-hire-details";
 import type { RenderedSlots } from "@/lib/email/design";
@@ -126,6 +131,11 @@ export interface PrivateHireRequest {
   square_payment_id: string | null;
   square_order_id: string | null;
   payment_link_url: string | null;
+  refunded_amount: number | null;
+  refunded_at: string | null;
+  refunded_via: string | null;
+  square_refund_id: string | null;
+  refund_status: string | null;
   proposed_at: string | null;
   approved_at: string | null;
   confirmed_at: string | null;
@@ -218,9 +228,11 @@ type HireAction =
   | "reopen"
   | "reopenDeposit"
   | "changeDeposit"
-  | "reschedule";
+  | "reschedule"
+  | "refund";
 
 const ACTION_TOAST: Record<HireAction, string> = {
+  refund: "Deposit refunded - customer emailed",
   approve: "Approved - deposit request emailed",
   propose: "New time proposed - customer emailed",
   accept: "Marked accepted - deposit request emailed",
@@ -306,16 +318,29 @@ function EditRow({
   );
 }
 
-function PaymentStatusPill({ status }: { status: string | null }) {
+function PaymentStatusPill({ status, refund }: { status: string | null; refund?: { amount: number; status: string | null } }) {
   if (!status) return <>-</>;
+  const refundPending = refund?.status === "pending";
+  const partRefund = status !== "refunded" && (refund?.amount ?? 0) > 0;
   return (
     <span
       className={cn(
         "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
-        status === "paid" ? "bg-admin-success-bg text-admin-success" : "bg-admin-warning-bg text-admin-warning"
+        refundPending
+          ? "bg-admin-info-bg text-admin-info"
+          : status === "paid"
+            ? "bg-admin-success-bg text-admin-success"
+            : status === "refunded"
+              ? "bg-admin-surface text-admin-muted"
+              : "bg-admin-warning-bg text-admin-warning"
       )}
     >
-      {status === "partially_paid" ? "part paid" : status.replace(/_/g, " ")}
+      {refundPending
+        ? "refund pending"
+        : status === "partially_paid"
+          ? "part paid"
+          : status.replace(/_/g, " ")}
+      {partRefund && !refundPending ? ` · ${formatDeposit(refund!.amount)} refunded` : ""}
     </span>
   );
 }
@@ -516,7 +541,7 @@ function stageHint(
     case "awaiting_customer":
       return `Waiting for ${request.full_name} to accept the proposed time${
         request.proposed_at ? ` (sent ${formatDay(request.proposed_at.slice(0, 10))})` : ""
-      }. Mark it accepted if they reply by email.`;
+      }. Their Accept link does this for them; mark it accepted if they say yes by email or phone instead.`;
     case "awaiting_deposit":
       return `Deposit of ${formatDeposit(request.deposit_amount)} due by ${formatDay(request.deposit_due_date) || "-"}. The date is held until then.`;
     case "confirmed": {
@@ -906,9 +931,17 @@ function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
   );
 }
 
-export type ActionDraft = { note: string; deposit: string; via: Exclude<DepositPaidVia, "square" | "none"> };
+export type ActionDraft = {
+  note: string;
+  deposit: string;
+  via: Exclude<DepositPaidVia, "square" | "none">;
+  reason: string;
+  refundVia: RefundVia;
+  refundNow: boolean;
+};
 
 const MANUAL_PAYMENT_METHODS: ActionDraft["via"][] = ["bank_transfer", "cash", "other"];
+const REFUND_METHODS: RefundVia[] = ["square", "bank_transfer", "cash", "other"];
 
 const dialogInputClass =
   "w-full rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-[13px] text-[#20231A] transition-all focus:border-[#34451F]/30 focus:outline-none";
@@ -923,6 +956,8 @@ function ActionDialogBody({
   emails,
   depositLabel,
   showVia,
+  refund,
+  refundOffer,
   to,
   noteLabel,
   notePlaceholder,
@@ -930,9 +965,16 @@ function ActionDialogBody({
 }: {
   initial: ActionDraft;
   onChange: (draft: ActionDraft) => void;
-  emails: { withDeposit: RenderedSlots | null; noDeposit?: RenderedSlots | null; previewAmount?: string };
+  emails: {
+    withDeposit: RenderedSlots | null;
+    noDeposit?: RenderedSlots | null;
+    whenRefunding?: RenderedSlots | null;
+    previewAmount?: string;
+  };
   depositLabel?: string;
   showVia?: boolean;
+  refund?: { cardAllowed: boolean; max: number };
+  refundOffer?: { amount: number };
   to: string;
   noteLabel: string;
   notePlaceholder: string;
@@ -947,7 +989,12 @@ function ActionDialogBody({
 
   const amount = Number(draft.deposit);
   const noDeposit = depositLabel && emails.noDeposit !== undefined && draft.deposit.trim() !== "" && amount <= 0;
-  const slots = noDeposit ? emails.noDeposit : emails.withDeposit;
+  const slots = noDeposit
+    ? emails.noDeposit
+    : refundOffer && draft.refundNow && emails.whenRefunding !== undefined
+      ? emails.whenRefunding
+      : emails.withDeposit;
+  const refundTooMuch = !!refund && Number.isFinite(amount) && amount > refund.max;
   const shownAmount = Number.isFinite(amount) && amount > 0 ? formatDeposit(amount) : null;
   const previewSlots =
     slots && emails.previewAmount && shownAmount
@@ -992,7 +1039,58 @@ function ActionDialogBody({
               </select>
             </label>
           )}
+          {refund && (
+            <label className="block flex-1">
+              <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Paid back</span>
+              <select
+                value={draft.refundVia}
+                onChange={(e) => update({ refundVia: e.target.value as RefundVia })}
+                className={cn(dialogInputClass, "cursor-pointer")}
+              >
+                {REFUND_METHODS.filter((m) => m !== "square" || refund.cardAllowed).map((m) => (
+                  <option key={m} value={m}>
+                    {REFUND_VIA_LABEL[m]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
+      )}
+      {refund && (
+        <p className={cn("text-[12px]", refundTooMuch ? "font-semibold text-admin-error" : "text-admin-muted")}>
+          {refundTooMuch
+            ? `Only ${formatDeposit(refund.max)} is still held.`
+            : draft.refundVia === "square"
+              ? `Up to ${formatDeposit(refund.max)}. Goes back to the card through Square and usually shows within 5-10 working days.`
+              : `Up to ${formatDeposit(refund.max)}. Records a refund you've already paid back - nothing is sent to Square.`}
+        </p>
+      )}
+      {refund && (
+        <label className="block">
+          <span className="mb-1.5 block font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Reason (team only)</span>
+          <input
+            type="text"
+            value={draft.reason}
+            placeholder="Why it's being refunded..."
+            onChange={(e) => update({ reason: e.target.value })}
+            className={cn(dialogInputClass, "text-xs placeholder:text-[#5E6654]/50")}
+          />
+        </label>
+      )}
+      {refundOffer && (
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-admin-line bg-admin-surface/50 px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={draft.refundNow}
+            onChange={(e) => update({ refundNow: e.target.checked })}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[#34451F]"
+          />
+          <span className="text-[12px] leading-snug text-admin-ink">
+            <span className="font-semibold">Also refund the {formatDeposit(refundOffer.amount)} deposit to their card now.</span>{" "}
+            Goes back through Square and the email says so. Untick to sort the refund out later.
+          </span>
+        </label>
       )}
       {notice}
       {noDeposit && (
@@ -1024,10 +1122,12 @@ const LIST_HREF = "/event-bookings/private-bookings";
 export function PrivateHireCard({
   request,
   square,
+  maxCapacity,
   onSheetOpenChange,
 }: {
   request: PrivateHireRequest;
   square: SquareDashboard;
+  maxCapacity: number | null;
   onSheetOpenChange?: (request: PrivateHireRequest, open: boolean) => void;
 }) {
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
@@ -1070,7 +1170,14 @@ export function PrivateHireCard({
   const slotRowRef = useRef<HTMLDivElement>(null);
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const askingToClose = useRef(false);
-  const actionDraft = useRef<ActionDraft>({ note: "", deposit: "", via: "bank_transfer" });
+  const actionDraft = useRef<ActionDraft>({
+    note: "",
+    deposit: "",
+    via: "bank_transfer",
+    reason: "",
+    refundVia: "square",
+    refundNow: false,
+  });
 
   const status = normalizePrivateHireStatus(request.status);
   const theme = STATUS_THEME[status];
@@ -1141,14 +1248,17 @@ export function PrivateHireCard({
   const showEventBadge = !!eventHref || !isWorkingStage;
   const needsDate = isWorkingStage && !selectedDate;
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
+  const dateHasPassed = isWorkingStage && !!selectedDate && selectedDate < format(new Date(), "yyyy-MM-dd");
   const slotWarning =
     needsDate && needsTime
       ? "Set a date and time before you approve or propose it."
       : needsDate
         ? "Set a date before you approve or propose it."
-        : needsTime
-          ? "Set a start and end time before you approve or propose it."
-          : undefined;
+        : dateHasPassed
+          ? `${formatDay(selectedDate)} has passed - pick a new date before you approve or propose it.`
+          : needsTime
+            ? "Set a start and end time before you approve or propose it."
+            : undefined;
   const showSlotWarning = confirmAttempted && !!slotWarning;
 
   const clashCheckReady = !(isCancelled || !selectedDate || !selectedStartTime || !selectedEndTime);
@@ -1316,33 +1426,44 @@ export function PrivateHireCard({
     noteLabel: string;
     notePlaceholder: string;
     notice?: React.ReactNode;
+    refund?: { cardAllowed: boolean; max: number };
+    refundOffer?: { amount: number };
   };
 
-  const paidDeposit = Number(request.paid_amount) || 0;
+  const guestsOnScreen = guestCount.trim() === "" ? request.guest_count : Number(guestCount);
+  const overCapacity = maxCapacity != null && guestsOnScreen != null && guestsOnScreen > maxCapacity;
+  const capacityNotice = overCapacity ? (
+    <div className="rounded-lg border border-admin-warning/30 bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning">
+      <p className="font-semibold">
+        {guestsOnScreen} guests is over the venue&apos;s capacity of {maxCapacity}.
+      </p>
+      <p className="mt-0.5">Check the numbers with the customer, or change Guests on the sheet, before going ahead.</p>
+    </div>
+  ) : undefined;
+  const withCapacityNotice = (notice?: React.ReactNode) =>
+    notice && capacityNotice ? (
+      <div className="space-y-2">
+        {notice}
+        {capacityNotice}
+      </div>
+    ) : (notice ?? capacityNotice);
+
+  const depositOverdue =
+    !!request.deposit_due_date && request.deposit_due_date < format(new Date(), "yyyy-MM-dd");
+  const refundLeft = refundableAmount(request.paid_amount, request.refunded_amount);
+  const refundPending = request.refund_status === "pending";
+  const cardRefundAllowed =
+    canRefundToCard({ paidVia: request.deposit_paid_via, squarePaymentId: request.square_payment_id }) && !refundPending;
   const refundNotice =
-    paidDeposit > 0 ? (
+    refundLeft > 0 ? (
       <div className="rounded-lg border border-admin-warning/30 bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning">
         <p className="font-semibold">
-          {formatDeposit(paidDeposit)} deposit was paid - cancelling doesn&apos;t refund it.
+          {formatDeposit(refundLeft)} of the deposit is still held - cancelling doesn&apos;t give it back.
         </p>
         <p className="mt-0.5">
-          Refund it by hand in Square
-          {request.square_payment_id ? (
-            <>
-              :{" "}
-              <a
-                href={squareTransactionUrl(square.environment, request.square_payment_id, square.locationId)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
-              >
-                open the payment
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              </a>
-            </>
-          ) : (
-            "."
-          )}
+          {refundPending
+            ? "A card refund is already on its way through Square."
+            : `It was paid by ${(DEPOSIT_PAID_VIA_LABEL[request.deposit_paid_via as DepositPaidVia] ?? "another method").toLowerCase()}, so pay it back by hand and record it with Refund deposit.`}
         </p>
       </div>
     ) : undefined;
@@ -1362,6 +1483,7 @@ export function PrivateHireCard({
           title: "Approve these times?",
           description: "Emails the customer asking for the deposit. The date is held until it's due.",
           confirmLabel: "Approve & Email",
+          notice: capacityNotice,
         };
       case "accept":
         return {
@@ -1369,6 +1491,18 @@ export function PrivateHireCard({
           title: "Mark the proposed time accepted?",
           description: "Use this when the customer agreed by email or phone. Emails them asking for the deposit.",
           confirmLabel: "Mark Accepted & Email",
+          notice: withCapacityNotice(
+            dateTimeChanged ? (
+            <div className="rounded-lg border border-admin-warning/30 bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning">
+              <p className="font-semibold">This isn&apos;t the time the customer was offered.</p>
+              <p className="mt-0.5">
+                They were sent {formatDay(request.selected_date)}, {formatTimeRange(request.selected_start_time, request.selected_end_time)}.
+                Continuing approves {formatDay(selectedDate)}, {formatTimeRange(selectedStartTime, selectedEndTime)} instead, which
+                they haven&apos;t seen - only do this if they agreed to it by email or phone.
+              </p>
+            </div>
+          ) : undefined
+          ),
         };
       case "reopenDeposit":
         return {
@@ -1376,6 +1510,7 @@ export function PrivateHireCard({
           title: "Reopen with a new deadline?",
           description: "Sends a fresh deposit request with a new due date and holds the date again.",
           confirmLabel: "Reopen & Email",
+          notice: capacityNotice,
         };
       case "reschedule":
         return status === "awaiting_deposit"
@@ -1418,7 +1553,37 @@ export function PrivateHireCard({
           email: "private_hire.proposed",
           noteLabel: "Message to the customer (optional)",
           notePlaceholder: "Why you're suggesting this time...",
+          notice: capacityNotice,
         };
+      case "resend":
+        return status === "awaiting_customer"
+          ? {
+              title: "Send the proposal again?",
+              description: "Emails the customer the proposed date and time again, with the link to accept or turn it down.",
+              confirmLabel: "Send Again",
+              email: "private_hire.proposed",
+              noteLabel: "Message to the customer (optional)",
+              notePlaceholder: "Just checking you saw this...",
+            }
+          : {
+              title: "Send the deposit request again?",
+              description: "Emails the customer the deposit request again, with the link to pay.",
+              confirmLabel: "Send Again",
+              email: "private_hire.approved",
+              noteLabel: "Message to the customer (optional)",
+              notePlaceholder: "Just checking you saw this...",
+              notice: depositOverdue ? (
+                <div className="rounded-lg border border-admin-warning/30 bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning">
+                  <p className="font-semibold">
+                    The deadline of {formatDay(request.deposit_due_date)} has passed.
+                  </p>
+                  <p className="mt-0.5">
+                    Sending again sets a new one from today, shown in the email below, and keeps holding the date. To
+                    pick the deadline yourself, change Deposit due on the sheet first.
+                  </p>
+                </div>
+              ) : undefined,
+            };
       case "markPaid":
         return {
           title: "Record the deposit as paid?",
@@ -1440,19 +1605,35 @@ export function PrivateHireCard({
           noteLabel: "Reason for declining (optional)",
           notePlaceholder: "Shared with the customer in the email. Leave blank to say nothing.",
         };
-      case "cancel":
+      case "cancel": {
+        const offerRefund = refundLeft > 0 && cardRefundAllowed;
         return {
           title: "Cancel this hire?",
           description:
             status === "confirmed"
-              ? "Takes the event off the schedule and emails the customer. Refund any deposit in Square by hand."
+              ? "Takes the event off the schedule and emails the customer."
               : "Releases the held date and emails the customer.",
           confirmLabel: "Cancel Hire & Email",
           destructive: true,
           email: status === "confirmed" ? "private_hire.booking_cancelled" : "private_hire.cancelled",
           noteLabel: "Message to the customer (optional)",
           notePlaceholder: "Shared with the customer in the email.",
-          notice: refundNotice,
+          notice: offerRefund ? undefined : refundNotice,
+          refundOffer: offerRefund ? { amount: refundLeft } : undefined,
+        };
+      }
+      case "refund":
+        return {
+          title: "Refund the deposit?",
+          description: cardRefundAllowed
+            ? "Sends the money back through Square, or records a refund you've paid back another way, and emails the customer."
+            : "Records a refund you've paid back by hand and emails the customer. It wasn't paid by card, so Square isn't involved.",
+          confirmLabel: "Refund & Email",
+          email: "private_hire.deposit_refunded",
+          deposit: "Refund amount (£)",
+          refund: { cardAllowed: cardRefundAllowed, max: refundLeft },
+          noteLabel: "Message to the customer (optional)",
+          notePlaceholder: "Anything they should know about the refund...",
         };
       default:
         return null;
@@ -1463,21 +1644,13 @@ export function PrivateHireCard({
     if (action === "reopen") {
       return confirm({
         title: "Reopen this request?",
-        description: "Moves it back to New so you can review it again. Nothing is emailed.",
+        description:
+          (Number(request.paid_amount) || 0) > 0
+            ? `Moves it back to New so you can review it again, and clears the earlier approval and payment - the ${formatDeposit(request.paid_amount)} paid is kept in Team notes. Nothing is emailed.`
+            : "Moves it back to New so you can review it again. The earlier approval stamps are cleared. Nothing is emailed.",
         confirmLabel: "Reopen",
       });
     }
-    if (action === "resend") {
-      return confirm({
-        title: "Send the email again?",
-        description:
-          status === "awaiting_customer"
-            ? "Resends the proposed time to the customer."
-            : "Resends the deposit request, with the link to pay.",
-        confirmLabel: "Send Again",
-      });
-    }
-
     const d = dialogFor(action);
     if (!d) return false;
 
@@ -1489,23 +1662,41 @@ export function PrivateHireCard({
       end: selectedEndTime || null,
       subtypeId: subtypeId ? Number(subtypeId) : null,
       deposit: depositAmount.trim() ? Number(depositAmount) : null,
+      renewOverdueDue: action === "resend",
     };
-    const [withDeposit, noDeposit, defaultDeposit] = await Promise.all([
-      d.email ? privateHireEmailSlotsAction(d.email, request.id, slotOnScreen) : Promise.resolve(null),
+    const refundVia: RefundVia = d.refund?.cardAllowed ? "square" : "bank_transfer";
+    const previewRefund = d.refund
+      ? { amount: d.refund.max, via: refundVia }
+      : d.refundOffer
+        ? { amount: d.refundOffer.amount, via: "square" as const }
+        : null;
+    const [withDeposit, noDeposit, whenRefunding, defaultDeposit] = await Promise.all([
+      d.email
+        ? privateHireEmailSlotsAction(d.email, request.id, { ...slotOnScreen, refund: d.refund ? previewRefund : null })
+        : Promise.resolve(null),
       d.noDepositEmail
         ? privateHireEmailSlotsAction(d.noDepositEmail, request.id, slotOnScreen)
         : Promise.resolve(undefined),
-      d.deposit && !depositAmount ? privateHireDepositDefaultAction() : Promise.resolve(Number(depositAmount)),
+      d.email && d.refundOffer
+        ? privateHireEmailSlotsAction(d.email, request.id, { ...slotOnScreen, refund: previewRefund })
+        : Promise.resolve(undefined),
+      d.deposit && !depositAmount && !d.refund
+        ? privateHireDepositDefaultAction()
+        : Promise.resolve(Number(depositAmount)),
     ]);
 
-    const startingDeposit =
-      action === "markPaid"
+    const startingDeposit = d.refund
+      ? String(d.refund.max)
+      : action === "markPaid"
         ? String(request.deposit_amount ?? defaultDeposit ?? "")
         : String(depositAmount || defaultDeposit || "");
     const initial: ActionDraft = {
       note: action === "decline" || action === "cancel" ? declineReasonText : "",
       deposit: d.deposit ? startingDeposit : "",
       via: "bank_transfer",
+      reason: "",
+      refundVia,
+      refundNow: !!d.refundOffer,
     };
     actionDraft.current = initial;
 
@@ -1523,10 +1714,13 @@ export function PrivateHireCard({
           emails={{
             withDeposit,
             noDeposit,
+            whenRefunding,
             previewAmount: formatDeposit(Number(startingDeposit) || 0),
           }}
           depositLabel={d.deposit}
           showVia={d.via}
+          refund={d.refund}
+          refundOffer={d.refundOffer}
           notice={d.notice}
           to={request.email}
           noteLabel={d.noteLabel}
@@ -1565,11 +1759,18 @@ export function PrivateHireCard({
         const check = (r: { ok: boolean; error?: string }) => {
           if (!r.ok) throw new Error(r.error);
         };
+        let warning: string | null = null;
         switch (action) {
           case "approve":
           case "accept":
           case "reopenDeposit":
-            check(await approvePrivateHireAction(request.id, { depositAmount: amount, note }));
+            check(
+              await approvePrivateHireAction(request.id, {
+                depositAmount: amount,
+                note,
+                source: action === "accept" ? "accepted_by_staff" : action === "reopenDeposit" ? "reopened" : "approved",
+              })
+            );
             break;
           case "propose":
             check(await proposePrivateHireAction(request.id, { note }));
@@ -1581,16 +1782,34 @@ export function PrivateHireCard({
             check(await closePrivateHireAction(request.id, "declined", note));
             if (note?.trim()) setDeclineReasonText(note.trim());
             break;
-          case "cancel":
-            check(await closePrivateHireAction(request.id, "cancelled", note));
+          case "cancel": {
+            const closed = await closePrivateHireAction(
+              request.id,
+              "cancelled",
+              note,
+              draft.refundNow && refundLeft > 0 ? { amount: refundLeft, via: "square" } : null
+            );
+            check(closed);
+            if (closed.ok && closed.warning) warning = closed.warning;
             if (note?.trim()) setDeclineReasonText(note.trim());
+            break;
+          }
+          case "refund":
+            check(
+              await refundPrivateHireDepositAction(request.id, {
+                amount: amount ?? 0,
+                via: draft.refundVia,
+                reason: draft.reason.trim() || undefined,
+                note,
+              })
+            );
             break;
           case "reopen":
             check(await reopenPrivateHireAction(request.id));
             setDeclineReasonText("");
             break;
           case "resend":
-            check(await resendPrivateHireEmailAction(request.id));
+            check(await resendPrivateHireEmailAction(request.id, { note }));
             break;
           case "changeDeposit":
             check(await changeAgreedHireAction(request.id, { deposit: amount ?? 0 }, { note }));
@@ -1615,7 +1834,8 @@ export function PrivateHireCard({
             action === "changeDeposit" ||
             (action === "reschedule" && status === "awaiting_deposit")) &&
           amount === 0;
-        toast.success(zeroDeposit ? "Confirmed with no deposit - customer emailed" : ACTION_TOAST[action]);
+        if (warning) toast.warning(warning, { duration: 10000 });
+        else toast.success(zeroDeposit ? "Confirmed with no deposit - customer emailed" : ACTION_TOAST[action]);
       } catch (e) {
         setError(e instanceof Error && e.message ? e.message : "Failed to update. Please try again.");
       }
@@ -2172,6 +2392,24 @@ export function PrivateHireCard({
                     type="number"
                     placeholder="0"
                     readOnlyValue={request.guest_count}
+                    trailing={
+                      overCapacity ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`Over the venue capacity of ${maxCapacity}`}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-admin-warning hover:bg-admin-warning-bg"
+                            >
+                              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="top" align="end" className="w-64 text-[12px] leading-snug">
+                            {guestsOnScreen} guests is over the venue&apos;s capacity of {maxCapacity}, set in Company settings.
+                          </PopoverContent>
+                        </Popover>
+                      ) : undefined
+                    }
                   />
 
                   {hasPreferred && (
@@ -2278,7 +2516,7 @@ export function PrivateHireCard({
                         Selected Date &amp; Time
                       </span>
                       {editable ? (
-                        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
                           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                             <PopoverTrigger asChild>
                               <button
@@ -2407,7 +2645,12 @@ export function PrivateHireCard({
                   className="min-w-0"
                   title="Deposit"
                   headerRight={
-                    request.payment_status ? <PaymentStatusPill status={request.payment_status} /> : undefined
+                    request.payment_status ? (
+                      <PaymentStatusPill
+                        status={request.payment_status}
+                        refund={{ amount: Number(request.refunded_amount) || 0, status: request.refund_status }}
+                      />
+                    ) : undefined
                   }
                 >
                   <EditRow
@@ -2492,6 +2735,47 @@ export function PrivateHireCard({
                         href={request.payment_link_url}
                         title="Open the customer's Square payment link"
                       />
+                      {(Number(request.refunded_amount) || 0) > 0 || request.refund_status ? (
+                        <>
+                          <SheetRow
+                            label="Refunded"
+                            value={
+                              [
+                                formatDeposit(request.refunded_amount),
+                                request.refunded_at ? `on ${formatDateTime(request.refunded_at)}` : "",
+                                request.refunded_via
+                                  ? `via ${(REFUND_VIA_LABEL[request.refunded_via as RefundVia] ?? request.refunded_via).toLowerCase()}`
+                                  : "",
+                                request.refund_status === "pending"
+                                  ? "(Square is processing it)"
+                                  : request.refund_status === "failed"
+                                    ? "(failed in Square)"
+                                    : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")
+                            }
+                          />
+                          <SheetRow label="Square refund ID" value={request.square_refund_id} />
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+                  {refundLeft > 0 && !refundPending && (
+                    <div className="flex justify-end border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
+                      <button
+                        type="button"
+                        disabled={!!pendingAction}
+                        onClick={() => handleAction("refund")}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[#34451F] px-3.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 max-sm:h-11"
+                      >
+                        {pendingAction === "refund" ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Undo2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        )}
+                        Refund deposit
+                      </button>
                     </div>
                   )}
                   <ViewMoreButton

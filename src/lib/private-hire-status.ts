@@ -135,6 +135,18 @@ export function isDepositOverdue(dueDate: string | null | undefined, today: stri
   return !!dueDate && dueDate < today;
 }
 
+/* The deadline a deposit request sent again should carry: a fresh one when the
+   old has passed (asking for money "by" a date that's gone reads as a mistake),
+   otherwise null to keep the one the customer already has. */
+export function renewedDepositDue(
+  dueDate: string | null | undefined,
+  today: string,
+  days: number,
+  hireDate?: string | null
+): string | null {
+  return isDepositOverdue(dueDate, today) ? depositDueDate(today, days, hireDate) : null;
+}
+
 export function shouldSendDepositReminder(p: {
   status: PrivateHireStatus;
   dueDate: string | null | undefined;
@@ -176,3 +188,36 @@ export const DEPOSIT_PAID_VIA_LABEL: Record<DepositPaidVia, string> = {
   other: "Other",
   none: "No deposit",
 };
+
+export type RefundVia = Exclude<DepositPaidVia, "none">;
+export type RefundStatus = "pending" | "completed" | "failed";
+
+export const REFUND_VIA_LABEL: Record<RefundVia, string> = {
+  square: "Back to their card",
+  bank_transfer: "Bank transfer",
+  cash: "Cash",
+  other: "Other",
+};
+
+/* What can still be given back: everything paid less what's already gone. */
+export function refundableAmount(paid: number | null | undefined, refunded: number | null | undefined): number {
+  const left = (Number(paid) || 0) - (Number(refunded) || 0);
+  return Math.max(0, Math.round(left * 100) / 100);
+}
+
+/* Once the whole deposit is back the request reads as refunded; a part refund
+   leaves it paid, with the refunded amount shown beside it. */
+export function paymentStatusAfterRefund(
+  current: string | null | undefined,
+  paid: number | null | undefined,
+  refundedTotal: number
+): "unpaid" | "partially_paid" | "paid" | "refunded" {
+  if (refundedTotal > 0 && refundableAmount(paid, refundedTotal) === 0) return "refunded";
+  return current === "partially_paid" ? "partially_paid" : (Number(paid) || 0) > 0 ? "paid" : "unpaid";
+}
+
+/* A card refund is only possible against the Square payment it came from;
+   anything else is staff recording money they've already handed back. */
+export function canRefundToCard(p: { paidVia: string | null | undefined; squarePaymentId: string | null | undefined }): boolean {
+  return p.paidVia === "square" && !!p.squarePaymentId;
+}

@@ -1,6 +1,7 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { squareDashboardConfig } from "@/lib/square";
+import { getCompanyInfo } from "@/lib/company-info";
 import { type PrivateHireRequest } from "./components/private-hire-card";
 import PrivateHireListClient from "./components/private-hire-list-client";
 
@@ -32,7 +33,7 @@ export default async function PrivateBookingsPage({
 
   if (error) console.error("Private hire fetch error:", error);
 
-  const { data: unreadRows } = await unreadPromise;
+  const [{ data: unreadRows }, company] = await Promise.all([unreadPromise, getCompanyInfo()]);
   const unreadByRequest = new Map<string, number>();
   for (const r of unreadRows ?? []) {
     const id = r.private_hire_request_id as string;
@@ -50,6 +51,7 @@ export default async function PrivateBookingsPage({
         initialRequests={items}
         initialStatuses={initialStatuses}
         square={squareDashboardConfig()}
+        maxCapacity={company?.max_capacity ?? null}
       />
     </div>
   );
