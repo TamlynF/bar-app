@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { MonitorPlay } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
+import { smsAlertsEnabled } from "@/lib/sms/twilio";
+import { emailAlertsEnabled } from "@/lib/market/email-alerts";
 import MarketFeed from "./market-feed";
 
 /* iOS bakes the manifest and app title into the home-screen icon at install
@@ -33,6 +35,8 @@ export default function MarketPage() {
 
       <div className="mx-auto w-full flex-1 px-4 py-6 max-md:max-w-2xl sm:px-6 sm:py-10 md:max-w-6xl">
         <MarketFeed
+          smsAvailable={smsAlertsEnabled()}
+          emailAvailable={emailAlertsEnabled()}
           header={
             <PageHeader
               eyebrow="Live from the bar"

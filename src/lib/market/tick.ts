@@ -14,6 +14,8 @@ import {
   type StockState,
 } from "./types";
 import { sendMarketPushAlerts } from "./push-alerts";
+import { sendMarketSmsAlerts } from "./sms-alerts";
+import { sendMarketEmailAlerts } from "./email-alerts";
 import { normaliseClock } from "./stock-market-events";
 import { mergeUnits, sumPendingUnits, type SimSaleRow } from "./simulate";
 
@@ -600,21 +602,29 @@ export async function maybeRunMarketTick(
       const { error: eventError } = await supabase.from("market_events").insert(events);
       if (eventError) throw eventError;
       if (config.pushAlertsEnabled) {
+        const servedEvents = events.map((event) => ({
+          ...event,
+          payload: servedEventPayload(
+            event.kind,
+            event.payload,
+            event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.mixer_price),
+            event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.base_price)
+          ),
+        }));
         try {
-          await sendMarketPushAlerts(
-            supabase,
-            events.map((event) => ({
-              ...event,
-              payload: servedEventPayload(
-                event.kind,
-                event.payload,
-                event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.mixer_price),
-                event.instrument_id == null ? null : optionalNumber(byId.get(event.instrument_id)?.base_price)
-              ),
-            }))
-          );
+          await sendMarketPushAlerts(supabase, servedEvents);
         } catch (err) {
           console.error("[market] push alerts failed:", err);
+        }
+        try {
+          await sendMarketSmsAlerts(supabase, servedEvents);
+        } catch (err) {
+          console.error("[market] sms alerts failed:", err);
+        }
+        try {
+          await sendMarketEmailAlerts(supabase, servedEvents);
+        } catch (err) {
+          console.error("[market] email alerts failed:", err);
         }
       }
     }

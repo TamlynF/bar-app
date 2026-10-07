@@ -22,10 +22,10 @@ type SubscriptionRow = {
   watched_instrument_ids: number[] | null;
 };
 
-const PUSH_KINDS = new Set<MarketEventKind>(["price_drop", "crash", "low_stock", "out_of_stock", "tier_down"]);
+export const ALERT_KINDS = new Set<MarketEventKind>(["price_drop", "crash", "low_stock", "out_of_stock", "tier_down"]);
 const MAX_LINES = 3;
 
-function eventLine(event: MarketPushEvent): string {
+export function alertLine(event: MarketPushEvent): string {
   const name = [event.payload.name, event.payload.serve && event.payload.serve !== "each" ? event.payload.serve : null]
     .filter(Boolean)
     .join(" · ");
@@ -49,7 +49,10 @@ function eventLine(event: MarketPushEvent): string {
   }
 }
 
-function relevantTo(subscription: SubscriptionRow, events: MarketPushEvent[]): MarketPushEvent[] {
+export function relevantTo(
+  subscription: { watched_instrument_ids: number[] | null },
+  events: MarketPushEvent[]
+): MarketPushEvent[] {
   const watched = subscription.watched_instrument_ids ?? [];
   if (watched.length === 0) return events;
   return events.filter(
@@ -59,7 +62,7 @@ function relevantTo(subscription: SubscriptionRow, events: MarketPushEvent[]): M
 }
 
 function notificationFor(events: MarketPushEvent[]) {
-  const lines = events.map(eventLine);
+  const lines = events.map(alertLine);
   const shown = lines.slice(0, MAX_LINES);
   const extra = lines.length - shown.length;
   return {
@@ -78,7 +81,7 @@ export async function sendMarketPushAlerts(
   events: MarketPushEvent[]
 ): Promise<{ sent: number; removed: number; failed: number }> {
   const summary = { sent: 0, removed: 0, failed: 0 };
-  const alerts = events.filter((event) => PUSH_KINDS.has(event.kind));
+  const alerts = events.filter((event) => ALERT_KINDS.has(event.kind));
   if (alerts.length === 0) return summary;
 
   const keys = readVapidKeys();

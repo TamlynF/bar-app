@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Bell, BellRing, TrendingUp } from "lucide-react";
+import { Bell, BellRing, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { ArrowCta } from "@/components/ui/arrow-cta";
 import { formatGbp } from "@/lib/price";
@@ -9,7 +9,18 @@ import type { MarketEventPayload } from "@/lib/market/tick";
 import { detectInstallPlatform } from "@/lib/pwa-install";
 import { useMarketState } from "./use-market-state";
 import { TierBadge, formatDisplayPrice, sortForPhone } from "./market-ui";
-import { removeMarketPushSubscription, saveMarketPushSubscription } from "./actions";
+import {
+  removeMarketPushSubscription,
+  saveMarketPushSubscription,
+  stopEmailAlerts,
+  stopSmsAlerts,
+  updateEmailWatched,
+  updateSmsWatched,
+  type EmailSubscriptionHandle,
+  type SmsSubscriptionHandle,
+} from "./actions";
+import { formatUkMobile } from "@/lib/sms/phone";
+import { AlertSignup, type AlertChannel, type AlertHandle } from "./alert-signup";
 import { InstallDialog, useInstallTarget } from "./install-card";
 import { NotifyMethod } from "./notify-method";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
@@ -172,6 +183,10 @@ async function registerPush(watched: number[]): Promise<boolean> {
   return result.ok;
 }
 
+const SMS_KEY = "df-market-sms";
+const SMS_EVENT = "df-market-sms-change";
+const EMAIL_KEY = "df-market-email";
+const EMAIL_EVENT = "df-market-email-change";
 const WATCH_KEY = "df-market-watch";
 const WATCH_EVENT = "df-market-watch-change";
 const MUTE_KEY = "df-market-alerts-muted";
@@ -272,6 +287,59 @@ function parseWatched(raw: string): number[] {
   }
 }
 
+type StoredHandle = { address: string; token: string };
+
+function readStoredRaw(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function subscribeStored(eventName: string): (onChange: () => void) => () => void {
+  return (onChange) => {
+    window.addEventListener(eventName, onChange);
+    window.addEventListener("storage", onChange);
+    return () => {
+      window.removeEventListener(eventName, onChange);
+      window.removeEventListener("storage", onChange);
+    };
+  };
+}
+
+function parseStoredHandle(raw: string): StoredHandle | null {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed.address === "string" && typeof parsed.token === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+const CHANNEL_STORE: Record<AlertChannel, { key: string; subscribe: (onChange: () => void) => () => void; read: () => string; eventName: string }> = {
+  sms: { key: SMS_KEY, eventName: SMS_EVENT, subscribe: subscribeStored(SMS_EVENT), read: () => readStoredRaw(SMS_KEY) },
+  email: { key: EMAIL_KEY, eventName: EMAIL_EVENT, subscribe: subscribeStored(EMAIL_EVENT), read: () => readStoredRaw(EMAIL_KEY) },
+};
+
+/* The verified number or address plus the token that lets this browser
+   change or stop its own alerts; nothing else can touch the subscription
+   from the page. */
+function useChannelHandle(channel: AlertChannel): [StoredHandle | null, (handle: StoredHandle | null) => void] {
+  const store = CHANNEL_STORE[channel];
+  const raw = useSyncExternalStore(store.subscribe, store.read, () => "");
+  const setHandle = (handle: StoredHandle | null) => {
+    try {
+      if (handle) localStorage.setItem(store.key, JSON.stringify(handle));
+      else localStorage.removeItem(store.key);
+    } catch {
+      /* private mode - the event still updates this page load */
+    }
+    window.dispatchEvent(new Event(store.eventName));
+  };
+  return [parseStoredHandle(raw), setHandle];
+}
+
 /* Drinks the guest has tapped the bell on. Lives in localStorage so it
    survives reloads on the same phone; the raw string is the store snapshot
    so useSyncExternalStore sees a stable value between changes. */
@@ -294,7 +362,17 @@ function useWatchedDrinks(): [number[], (id: number) => void] {
    here so that from tablet up they can sit in a sticky side panel with the
    market status and alert controls, leaving the whole right column to the
    drinks. On a phone everything stacks in the same order as before. */
-export default function MarketFeed({ header, footer }: { header: ReactNode; footer: ReactNode }) {
+export default function MarketFeed({
+  header,
+  footer,
+  smsAvailable,
+  emailAvailable,
+}: {
+  header: ReactNode;
+  footer: ReactNode;
+  smsAvailable: boolean;
+  emailAvailable: boolean;
+}) {
   const { state, fresh } = useMarketState(6000, true);
   const alreadyGranted = useSyncExternalStore(subscribeNever, readNotifyGranted, () => false);
   const [justGranted, setJustGranted] = useState(false);
@@ -306,6 +384,11 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
   const announcedRef = useRef(0);
   const [watched, toggleWatched] = useWatchedDrinks();
   const [pushState, setPushState] = useState<PushState>("unknown");
+  const [smsHandle, setSmsHandle] = useChannelHandle("sms");
+  const [emailHandle, setEmailHandle] = useChannelHandle("email");
+  const [signingUp, setSigningUp] = useState<AlertChannel | null>(null);
+  const smsOn = smsAvailable && smsHandle != null;
+  const emailOn = emailAvailable && emailHandle != null;
   const installed = useSyncExternalStore(subscribeNever, readInstalled, () => false);
   const notifyUndecided = useSyncExternalStore(subscribeNever, readNotifyUndecided, () => false);
   const freshInstall = installed && notifyUndecided && !justGranted;
@@ -346,6 +429,16 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
     if (pushState === "on") {
       registerPush(next).catch(() => {
         toast.error("Couldn't update your alerts - check your connection.");
+      });
+    }
+    if (smsOn && smsHandle) {
+      updateSmsWatched({ phone: smsHandle.address, token: smsHandle.token, watchedInstrumentIds: next }).then((result) => {
+        if (!result.ok) toast.error("Couldn't update your text alerts - check your connection.");
+      });
+    }
+    if (emailOn && emailHandle) {
+      updateEmailWatched({ email: emailHandle.address, token: emailHandle.token, watchedInstrumentIds: next }).then((result) => {
+        if (!result.ok) toast.error("Couldn't update your email alerts - check your connection.");
       });
     }
   };
@@ -418,6 +511,37 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
     toast.success("You'll be pinged when prices drop while this page is open.");
   }
 
+  function finishSignup(channel: AlertChannel, handle: AlertHandle) {
+    if (channel === "sms") setSmsHandle(handle);
+    else setEmailHandle(handle);
+    setSigningUp(null);
+    setWantsAlerts(false);
+  }
+
+  async function disableSms() {
+    if (!smsHandle) return;
+    const input: SmsSubscriptionHandle = { phone: smsHandle.address, token: smsHandle.token };
+    const result = await stopSmsAlerts(input);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setSmsHandle(null);
+    toast("Texts off.");
+  }
+
+  async function disableEmail() {
+    if (!emailHandle) return;
+    const input: EmailSubscriptionHandle = { email: emailHandle.address, token: emailHandle.token };
+    const result = await stopEmailAlerts(input);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    setEmailHandle(null);
+    toast("Emails off.");
+  }
+
   async function disableNotifications() {
     setMuted(true);
     setWantsAlerts(false);
@@ -482,6 +606,11 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
   const alertsOff = !alertsAllowed;
+  const showPushControls = !alertsOff && !smsOn && !emailOn;
+  const watchedLine =
+    watchedCount > 0
+      ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
+      : "Tap the bell on a drink to only hear about that one.";
 
   return (
     <div className="md:grid md:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-14">
@@ -506,7 +635,43 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
         </div>
       )}
 
-      {alertsOff ? null : notifyEnabled ? (
+      {smsOn && smsHandle && (
+        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+          <p className="text-[12px] leading-relaxed text-stone-400">
+            <span className="font-black text-xs tracking-widest text-ink uppercase">Texts on</span>
+            {` - to ${formatUkMobile(smsHandle.address)}, a few a night at most. `}
+            {watchedLine}
+          </p>
+          <button
+            type="button"
+            onClick={disableSms}
+            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
+          >
+            Turn off
+          </button>
+        </div>
+      )}
+
+      {emailOn && emailHandle && (
+        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+          <p className="min-w-0 text-[12px] leading-relaxed text-stone-400">
+            <span className="font-black text-xs tracking-widest text-ink uppercase">Emails on</span>
+            {` - to ${emailHandle.address}, a few a night at most. `}
+            {watchedLine}
+          </p>
+          <button
+            type="button"
+            onClick={disableEmail}
+            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
+          >
+            Turn off
+          </button>
+        </div>
+      )}
+
+      {!showPushControls ? null : notifyEnabled ? (
         <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
           <p className="text-[12px] leading-relaxed text-stone-400">
@@ -527,8 +692,21 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
         </div>
       ) : (
         <>
-          {wantsAlerts ? (
-            <NotifyMethod onPush={choosePush} />
+          {wantsAlerts && signingUp ? (
+            <AlertSignup
+              channel={signingUp}
+              watched={watched}
+              onDone={(handle) => finishSignup(signingUp, handle)}
+              onCancel={() => setSigningUp(null)}
+            />
+          ) : wantsAlerts ? (
+            <NotifyMethod
+              smsAvailable={smsAvailable}
+              emailAvailable={emailAvailable}
+              onPush={choosePush}
+              onSms={() => setSigningUp("sms")}
+              onEmail={() => setSigningUp("email")}
+            />
           ) : (
             <button
               type="button"
