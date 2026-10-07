@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Bell, BellOff, BellRing, TrendingUp } from "lucide-react";
+import { Bell, BellRing, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { ArrowCta } from "@/components/ui/arrow-cta";
 import { formatGbp } from "@/lib/price";
@@ -535,7 +535,7 @@ export default function MarketFeed({ header, footer }: { header: ReactNode; foot
               onClick={() => setWantsAlerts(true)}
               className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 px-4 py-3 font-black text-xs tracking-widest text-[#FDCC4B] uppercase transition-colors hover:bg-[#FDCC4B]/20"
             >
-              <BellOff className="h-4 w-4" aria-hidden="true" />{" "}
+              <Bell className="h-4 w-4" aria-hidden="true" />{" "}
               {freshInstall ? "Turn on lock-screen alerts" : "Notify me on price drops"}
             </button>
           )}
