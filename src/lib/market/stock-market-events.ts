@@ -19,7 +19,7 @@ export type StockMarketEventRow = {
   leaderboard_rows?: number | string | null;
   mixer_price?: number | string | null;
   weekdays?: number[] | null;
-  bank_holiday_profile?: number | null;
+  skip_holidays?: boolean | null;
   exclude_market_nights?: boolean | null;
   is_active: boolean;
   created_at: string;
@@ -35,7 +35,7 @@ export type StockMarketEventSummary = {
   closeTime: string;
   config: MarketConfig;
   weekdays: number[];
-  bankHolidayProfile: number | null;
+  skipHolidays: boolean;
   excludeMarketNights: boolean;
   isActive: boolean;
   menuItemPriceIds: number[];
@@ -100,7 +100,7 @@ export function summariseEvent(
     closeTime: normaliseClock(row.close_time),
     config: eventConfig(row),
     weekdays: (row.weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6),
-    bankHolidayProfile: row.bank_holiday_profile ?? null,
+    skipHolidays: row.skip_holidays ?? true,
     excludeMarketNights: row.exclude_market_nights ?? true,
     isActive: row.is_active,
     menuItemPriceIds,

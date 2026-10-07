@@ -162,20 +162,11 @@ export function sampleNightDates(weekday: number, options: SampleOptions): Ymd[]
   return out;
 }
 
-/* A bank holiday eve trades like the configured profile weekday (a bank
-   holiday Sunday like a Saturday). Bank holidays and their eves are also kept
-   OUT of the ordinary samples so they do not inflate a normal weekday. */
+/* Bank holidays and their eves are kept OUT of the ordinary samples (when
+   the event's "skip bank holidays" is on) so they do not inflate a normal
+   weekday. */
 export function isBankHolidayNight(night: Ymd, bankHolidays: Set<Ymd>): boolean {
   return bankHolidays.has(night) || bankHolidays.has(addDays(night, 1));
-}
-
-export function profileWeekdayFor(
-  night: Ymd,
-  bankHolidays: Set<Ymd>,
-  bankHolidayProfile: number | null | undefined
-): number {
-  if (bankHolidayProfile != null && bankHolidays.has(addDays(night, 1))) return bankHolidayProfile;
-  return weekdayOf(night);
 }
 
 export type NightSample = {

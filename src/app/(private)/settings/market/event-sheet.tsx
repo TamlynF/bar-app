@@ -2,10 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, PowerOff } from "lucide-react";
+import { BookOpen, ChevronDown, Info, PowerOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { DetailCard, ErrorBox, FormRow, RecordSheet, StatusPill, type useRecordSheet } from "@/components/admin";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { DetailCard, ErrorBox, RecordSheet, StatusPill, type useRecordSheet } from "@/components/admin";
 import { formatGbp } from "@/lib/price";
 import { DEFAULT_MARKET_CONFIG, type MarketConfig } from "@/lib/market/types";
 import { formatTimeWindow, type StockMarketEventSummary } from "@/lib/market/stock-market-events";
@@ -15,59 +24,210 @@ import { serveMixerPrice, withMixer } from "@/lib/market/mixer";
 import type { EventReadiness } from "@/lib/market/event-readiness";
 import {
   CONFIG_FIELDS,
-  ConfigHelp,
   PUSH_ALERTS_FIELD,
   TIER_BANDS,
   TIER_FIELDS,
   TIER_PCT_FIELDS,
   configSummary,
+  type ConfigField,
 } from "./config-fields";
 import { StepMark, drinksStepText, linksStepText, normalsStepText } from "./readiness-ui";
 import type { EmployeeOption } from "./types";
-import { FIELD_INPUT, formatRunDate } from "./ui";
+import { formatRunDate } from "./ui";
 
+const INPUT =
+  "min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40";
 /* Every settings value sits in the same fixed column, with the browser's
    number spinners hidden so the digits line up down the card. */
 const CONFIG_VALUE =
   "w-20 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
-const SALES_HISTORY_DAYS_HELP = {
-  label: "Sales history days",
-  hint: "Which weekdays of past Square sales feed each drink's normal. None picked = every day.",
-  help: "A day runs from 9am to 6am the next morning, so Saturday covers 9am Saturday to 6am Sunday. This does not open or close the market.",
-};
+const HOURS_HELP =
+  "When the market opens and closes on a market night. The length of the night sets how many ticks it has, which the pace maths divides a drink's normal sales across. Opening and closing is still done by hand.";
+const SALES_HISTORY_DAYS_HELP =
+  "Which weekdays of past Square sales feed each drink's normal. None picked means every day. A day runs from 9am to 6am the next morning, so Saturday covers 9am Saturday to 6am Sunday. This does not open or close the market.";
+const SKIP_HOLIDAYS_HELP =
+  "Leave bank holidays and the nights before them out of the sales history, so one roaring bank holiday Sunday does not inflate what counts as a normal Sunday.";
+const SKIP_MARKET_NIGHTS_HELP =
+  "Leave earlier market nights out of the sales history, so moving prices do not feed back into what counts as normal.";
 
-function WeekdayPicker({ selected }: { selected: number[] }) {
+/* The band booking sheet's section: a soft olive header with the title and
+   a chevron, then rows that each read label left, value right. */
+function Section({
+  title,
+  hint,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
+      <div
+        className={cn(
+          "flex min-h-12 w-full items-center gap-3 bg-admin-primary-soft px-4 py-2 transition-colors sm:px-5",
+          open && "border-b border-[#D8D5C8]"
+        )}
+      >
+        <div className="flex flex-1 items-center gap-1.5">
+          <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center text-left transition-all hover:brightness-95">
+            <span className="font-bold text-[14px] text-admin-ink">{title}</span>
+          </button>
+          {hint && <RowHelp label={title} text={hint} />}
+          <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setOpen((o) => !o)} className="min-h-8 flex-1 self-stretch" />
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          className="shrink-0 transition-all hover:brightness-95 max-sm:flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center"
+        >
+          <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
+        </button>
+      </div>
+      <div className={cn(!open && "hidden")}>{children}</div>
+    </div>
+  );
+}
+
+function RowHelp({ label, text }: { label: string; text: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`About ${label}`}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-primary"
+        >
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" align="start" className="max-w-72 leading-snug">
+        {text}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function Row({
+  label,
+  required,
+  help,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  help?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="flex shrink-0 items-center gap-1">
+        <span className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
+        {required && <span className="text-[11px] font-semibold text-admin-error">*</span>}
+        {help && <RowHelp label={label} text={help} />}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function SkipToggle({
+  name,
+  label,
+  help,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  help: string;
+  defaultChecked: boolean;
+}) {
+  const id = `market-${name}`;
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <input type="hidden" name={name} value="off" />
+      <input
+        id={id}
+        type="checkbox"
+        name={name}
+        value="on"
+        defaultChecked={defaultChecked}
+        className="h-4 w-4 shrink-0 cursor-pointer accent-admin-primary"
+      />
+      <label htmlFor={id} className="cursor-pointer truncate font-bold text-[12px] text-[#5E6654]">
+        {label}
+      </label>
+      <RowHelp label={label} text={help} />
+    </span>
+  );
+}
+
+function weekdaysSummary(days: number[]): string {
+  if (days.length === 0 || days.length === 7) return "Every day";
+  return days.map((day) => WEEKDAY_NAMES[day].slice(0, 3)).join(", ");
+}
+
+/* One dropdown with a tick per weekday, in place of a row of seven pills. */
+function WeekdayDropdown({ selected }: { selected: number[] }) {
   const [days, setDays] = useState<number[]>(selected);
-  function toggle(day: number) {
-    setDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()));
+  function toggle(day: number, on: boolean) {
+    setDays((prev) => (on ? [...new Set([...prev, day])].sort() : prev.filter((d) => d !== day)));
   }
   return (
-    <span className="flex flex-1 flex-wrap justify-end gap-1.5">
+    <>
       {days.map((day) => (
         <input key={day} type="hidden" name="weekdays" value={day} />
       ))}
-      {WEEKDAY_NAMES.map((name, day) => {
-        const on = days.includes(day);
-        return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
-            key={name}
             type="button"
-            aria-pressed={on}
-            aria-label={name}
-            onClick={() => toggle(day)}
-            className={cn(
-              "h-9 min-w-11 rounded-full border px-3 text-[12px] font-semibold transition-colors sm:h-8",
-              on
-                ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
-                : "border-admin-line text-admin-muted hover:bg-admin-surface"
-            )}
+            aria-label="Sales history days"
+            className="flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 text-[13px] font-semibold text-[#20231A] transition-colors hover:bg-admin-surface"
           >
-            {name.slice(0, 3)}
+            <span className="truncate">{weekdaysSummary(days)}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" aria-hidden="true" />
           </button>
-        );
-      })}
-    </span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52 rounded-2xl border-2 border-[#D8D5C8] bg-white p-1.5 text-[#20231A]">
+          <DropdownMenuLabel className="text-[11px] font-semibold text-[#5E6654]">
+            {days.length === 0 ? "None picked - every day counts" : "Only these days count"}
+          </DropdownMenuLabel>
+          {WEEKDAY_NAMES.map((name, day) => (
+            <DropdownMenuCheckboxItem
+              key={name}
+              checked={days.includes(day)}
+              onCheckedChange={(on) => toggle(day, on === true)}
+              onSelect={(event) => event.preventDefault()}
+              className="min-h-9 cursor-pointer rounded-lg text-[13px] font-semibold focus:bg-admin-primary-soft focus:text-admin-primary"
+            >
+              {name}
+            </DropdownMenuCheckboxItem>
+          ))}
+          {days.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setDays([]);
+                }}
+                className="min-h-9 cursor-pointer rounded-lg text-[12px] font-semibold text-[#5E6654] focus:bg-admin-surface"
+              >
+                Clear - use every day
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }
 
@@ -87,7 +247,7 @@ function TierPctInputs({ field, values }: { field: { key: string; label: string;
             min="0"
             max="90"
             required
-            className={cn(FIELD_INPUT, "w-12 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
+            className={cn(INPUT, "w-12 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
           />
         </label>
       ))}
@@ -95,60 +255,48 @@ function TierPctInputs({ field, values }: { field: { key: string; label: string;
   );
 }
 
+function ConfigNumberRow({ field, value }: { field: ConfigField; value: number }) {
+  return (
+    <Row label={field.label} help={`${field.hint} ${field.help}`}>
+      <span className="flex flex-1 justify-end">
+        <input
+          type="number"
+          name={field.key}
+          aria-label={field.label}
+          defaultValue={value}
+          step={field.step}
+          min="0"
+          required
+          className={cn(INPUT, CONFIG_VALUE)}
+        />
+      </span>
+    </Row>
+  );
+}
+
 function ConfigFormRows({ config }: { config: MarketConfig }) {
   return (
-    <TooltipProvider>
+    <>
       {TIER_FIELDS.map((field) => (
-        <FormRow key={field.key} label={field.label} dense>
-          <ConfigHelp field={field} />
-          <span className="flex flex-1 justify-end">
-            <input
-              type="number"
-              name={field.key}
-              aria-label={field.label}
-              defaultValue={config[field.key]}
-              step={field.step}
-              min="0"
-              required
-              className={cn(FIELD_INPUT, CONFIG_VALUE)}
-            />
-          </span>
-        </FormRow>
+        <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
       ))}
-      <FormRow label={TIER_PCT_FIELDS.up.label} dense>
-        <ConfigHelp field={{ ...TIER_PCT_FIELDS.up, hint: "Ranks 1–5, 6–10, 11–15 from the top" }} />
+      <Row label={TIER_PCT_FIELDS.up.label} help={`Ranks 1–5, 6–10, 11–15 from the top. ${TIER_PCT_FIELDS.up.help}`}>
         <TierPctInputs field={TIER_PCT_FIELDS.up} values={config.tierPcts.up} />
-      </FormRow>
-      <FormRow label={TIER_PCT_FIELDS.down.label} dense>
-        <ConfigHelp field={{ ...TIER_PCT_FIELDS.down, hint: "Ranks 1–5, 6–10, 11–15 from the bottom" }} />
+      </Row>
+      <Row label={TIER_PCT_FIELDS.down.label} help={`Ranks 1–5, 6–10, 11–15 from the bottom. ${TIER_PCT_FIELDS.down.help}`}>
         <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
-      </FormRow>
+      </Row>
       <Link
         href="/settings/market/how-it-works"
-        className="flex min-h-11 items-center gap-1 text-[12px] font-semibold text-admin-primary hover:underline"
+        className="flex min-h-11 items-center gap-1 border-b border-[#D8D5C8] px-4 text-[12px] font-semibold text-admin-primary hover:underline sm:px-5"
       >
         <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
         How these dials set a price
       </Link>
       {CONFIG_FIELDS.map((field) => (
-        <FormRow key={field.key} label={field.label} dense>
-          <ConfigHelp field={field} />
-          <span className="flex flex-1 justify-end">
-            <input
-              type="number"
-              name={field.key}
-              aria-label={field.label}
-              defaultValue={config[field.key]}
-              step={field.step}
-              min="0"
-              required
-              className={cn(FIELD_INPUT, CONFIG_VALUE)}
-            />
-          </span>
-        </FormRow>
+        <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
       ))}
-      <FormRow label={PUSH_ALERTS_FIELD.label} dense>
-        <ConfigHelp field={PUSH_ALERTS_FIELD} />
+      <Row label={PUSH_ALERTS_FIELD.label} help={`${PUSH_ALERTS_FIELD.hint} ${PUSH_ALERTS_FIELD.help}`}>
         <span className="flex flex-1 justify-end">
           <span className={cn(CONFIG_VALUE, "flex justify-end")}>
             <input
@@ -160,8 +308,8 @@ function ConfigFormRows({ config }: { config: MarketConfig }) {
             />
           </span>
         </span>
-      </FormRow>
-    </TooltipProvider>
+      </Row>
+    </>
   );
 }
 
@@ -297,6 +445,7 @@ function EventForm({
   const config = event?.config ?? DEFAULT_MARKET_CONFIG;
 
   return (
+    <TooltipProvider>
     <form
       id="stock-market-event-form"
       action={onSubmit}
@@ -305,109 +454,68 @@ function EventForm({
       {event && <input type="hidden" name="id" value={event.id} />}
       <input type="hidden" name="menu_item_price_ids" value={JSON.stringify(selectedDrinks)} />
 
-      <DetailCard className="divide-y divide-admin-line/50">
-        <FormRow label="Name" required dense>
-          <input
-            name="name"
-            required
-            maxLength={80}
-            aria-label="Name"
-            placeholder="e.g. Friday floor"
-            defaultValue={event?.name ?? ""}
-            className={FIELD_INPUT}
-          />
-        </FormRow>
-        <FormRow label="Hours" required dense>
-          <span className="flex flex-1 items-center justify-end gap-2">
+      <div className="grid-cols-2 items-start gap-4 space-y-4 sm:space-y-5 lg:grid lg:space-y-0 lg:gap-5">
+        <Section title="Stock market details" className="min-w-0">
+          <Row label="Name" required>
             <input
-              type="time"
-              name="open_time"
+              name="name"
               required
-              aria-label="Opening time"
-              defaultValue={event?.openTime || "19:00"}
-              className={cn(FIELD_INPUT, "w-24 flex-none")}
+              maxLength={80}
+              aria-label="Name"
+              placeholder="e.g. Friday floor"
+              defaultValue={event?.name ?? ""}
+              className={INPUT}
             />
-            <span className="text-[11px] font-semibold text-admin-muted">to</span>
-            <input
-              type="time"
-              name="close_time"
-              required
-              aria-label="Closing time"
-              defaultValue={event?.closeTime || "23:30"}
-              className={cn(FIELD_INPUT, "w-24 flex-none")}
-            />
-          </span>
-        </FormRow>
-        <FormRow label="Sales history days" align="start" dense>
-          <TooltipProvider>
-            <ConfigHelp field={SALES_HISTORY_DAYS_HELP} />
-          </TooltipProvider>
-          <WeekdayPicker selected={event?.weekdays ?? []} />
-        </FormRow>
-        <FormRow label="Bank holiday eve" dense>
-          <select
-            name="bank_holiday_profile"
-            aria-label="Weekday profile to use on the eve of a bank holiday"
-            defaultValue={event?.bankHolidayProfile ?? "6"}
-            className={cn(FIELD_INPUT, "w-40 flex-none appearance-none")}
-          >
-            <option value="">Same as the actual day</option>
-            {WEEKDAY_NAMES.map((name, index) => (
-              <option key={name} value={index}>
-                Trades like a {name}
-              </option>
-            ))}
-          </select>
-        </FormRow>
-        <FormRow label="Skip market nights" dense>
-          <span className="flex flex-1 items-center justify-end">
-            <input type="hidden" name="exclude_market_nights" value="off" />
-            <input
-              type="checkbox"
-              name="exclude_market_nights"
-              value="on"
-              aria-label="Leave previous market nights out of the sales history"
-              defaultChecked={event?.excludeMarketNights ?? true}
-              className="h-4 w-4 cursor-pointer accent-admin-primary"
-            />
-          </span>
-        </FormRow>
-        <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
-          Sales history days pick which weekdays of past Square sales set each drink&rsquo;s &ldquo;normal&rdquo;: the
-          average of its last six nights on that weekday from the six months of orders synced every night. Leave every day
-          unselected to use them all. A Saturday runs from 9am Saturday to 6am Sunday, so sales after midnight count for the
-          night before. Bank holidays and their eves are left out.
-        </p>
-      </DetailCard>
-
-      {/* The seven tuning numbers are rarely touched, so they start folded
-          behind a one-line summary of what they currently say. */}
-      <DetailCard>
-        <details className="group">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none sm:px-5 [&::-webkit-details-marker]:hidden">
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-semibold tracking-wide text-admin-muted">
-                Market settings
-              </span>
-              <span className="mt-0.5 block truncate text-[12px] text-admin-ink group-open:hidden">
-                {configSummary(config)}
-              </span>
+          </Row>
+          <Row label="Hours" required help={HOURS_HELP}>
+            <span className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+              <input
+                type="time"
+                name="open_time"
+                required
+                aria-label="Opening time"
+                defaultValue={event?.openTime || "19:00"}
+                className={cn(INPUT, "w-22 flex-none")}
+              />
+              <span className="text-[11px] font-semibold text-[#5E6654]">to</span>
+              <input
+                type="time"
+                name="close_time"
+                required
+                aria-label="Closing time"
+                defaultValue={event?.closeTime || "23:30"}
+                className={cn(INPUT, "w-22 flex-none")}
+              />
             </span>
-            <ChevronDown
-              className="h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200 group-open:rotate-180"
-              aria-hidden="true"
+          </Row>
+          <Row label="Sales history days" help={SALES_HISTORY_DAYS_HELP}>
+            <WeekdayDropdown selected={event?.weekdays ?? []} />
+          </Row>
+          <div className="grid grid-cols-2 gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+            <SkipToggle
+              name="skip_holidays"
+              label="Skip bank holidays"
+              help={SKIP_HOLIDAYS_HELP}
+              defaultChecked={event?.skipHolidays ?? true}
             />
-          </summary>
-          <div className="divide-y divide-admin-line/50 border-t border-admin-line">
-            <ConfigFormRows config={config} />
+            <SkipToggle
+              name="exclude_market_nights"
+              label="Skip market nights"
+              help={SKIP_MARKET_NIGHTS_HELP}
+              defaultChecked={event?.excludeMarketNights ?? true}
+            />
           </div>
+        </Section>
+
+        <Section title="Market settings" hint={configSummary(config)} className="min-w-0">
+          <ConfigFormRows config={config} />
           {live && (
-            <p className="border-t border-admin-line px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
+            <p className="border-t border-[#D8D5C8] px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
               The market is live now. These changes apply the next time it opens.
             </p>
           )}
-        </details>
-      </DetailCard>
+        </Section>
+      </div>
 
       <DetailCard>
         <details open className="group/drinks">
@@ -436,6 +544,7 @@ function EventForm({
 
       {formError && <ErrorBox message={formError} />}
     </form>
+    </TooltipProvider>
   );
 }
 

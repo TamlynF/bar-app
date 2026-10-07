@@ -5,12 +5,12 @@ import {
   effectiveWeekdays,
   isBankHolidayNight,
   nightOf,
-  profileWeekdayFor,
   resolveNormalUnits,
   sampleNightDates,
   samplesFromLines,
   summariseSamples,
   toYmd,
+  weekdayOf,
   type NormalUnitsCache,
   type NormalUnitsRow,
   type SaleLineLike,
@@ -26,7 +26,7 @@ import type { MarketConfig } from "./types";
 export type NormalUnitsEventRow = {
   id: number;
   weekdays: number[] | null;
-  bank_holiday_profile: number | null;
+  skip_holidays: boolean | null;
   exclude_market_nights: boolean | null;
 };
 
@@ -100,7 +100,7 @@ export async function recalculateNormalUnits(
     .eq("event_id", event.id);
   const unmappedServes = Math.max(0, (serveCount ?? 0) - new Set(priceIdByVariation.values()).size);
 
-  const bankHolidays = await ensureBankHolidays(supabase, now);
+  const bankHolidays = event.skip_holidays === false ? new Set<Ymd>() : await ensureBankHolidays(supabase, now);
   const marketNights = event.exclude_market_nights === false ? new Set<Ymd>() : await previousMarketNights(supabase);
   const today = toYmd(now);
 
@@ -187,8 +187,7 @@ export async function resolveNormalsForOpen(
     supabase,
     serves.map((s) => s.menuItemPriceId)
   );
-  const bankHolidays = await ensureBankHolidays(supabase, now);
-  const weekday = profileWeekdayFor(toYmd(now), bankHolidays, event.bank_holiday_profile);
+  const weekday = weekdayOf(toYmd(now));
   const out: ResolvedNormals = new Map();
   for (const serve of serves) {
     const resolved = resolveNormalUnits(serve.menuItemPriceId, weekday, serve.override, cache, config);

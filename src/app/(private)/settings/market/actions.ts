@@ -384,13 +384,6 @@ function readWeekdays(formData: FormData): number[] {
   return [...new Set(formData.getAll("weekdays").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
 }
 
-function readOptionalWeekday(formData: FormData, key: string): number | null {
-  const raw = formData.get(key)?.toString() ?? "";
-  if (raw === "") return null;
-  const n = Number(raw);
-  return Number.isInteger(n) && n >= 0 && n <= 6 ? n : null;
-}
-
 function readMenuItemPriceIds(formData: FormData): number[] {
   try {
     const raw = JSON.parse(formData.get("menu_item_price_ids")?.toString() || "[]");
@@ -453,7 +446,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     tier_pcts: tier.tierPcts,
     pace_floor_units: tier.paceFloorUnits,
     weekdays: readWeekdays(formData),
-    bank_holiday_profile: readOptionalWeekday(formData, "bank_holiday_profile"),
+    skip_holidays: formData.get("skip_holidays") !== "off",
     exclude_market_nights: formData.get("exclude_market_nights") !== "off",
   };
 
@@ -545,7 +538,7 @@ function normalUnitsEventRow(row: StockMarketEventRow): NormalUnitsEventRow {
   return {
     id: row.id,
     weekdays: row.weekdays ?? [],
-    bank_holiday_profile: row.bank_holiday_profile ?? null,
+    skip_holidays: row.skip_holidays ?? true,
     exclude_market_nights: row.exclude_market_nights ?? true,
   };
 }

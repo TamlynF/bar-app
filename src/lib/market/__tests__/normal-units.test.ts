@@ -4,7 +4,6 @@ import {
   effectiveWeekdays,
   isBankHolidayNight,
   nightOf,
-  profileWeekdayFor,
   resolveNormalUnits,
   sampleNightDates,
   samplesFromLines,
@@ -76,10 +75,7 @@ describe("sampleNightDates", () => {
 describe("bank holidays", () => {
   const holidays = new Set(["2026-08-31"]);
 
-  it("treats a bank-holiday eve as the profile weekday and keeps both dates out of normals", () => {
-    expect(profileWeekdayFor("2026-08-30", holidays, 6)).toBe(6);
-    expect(profileWeekdayFor("2026-08-30", holidays, null)).toBe(0);
-    expect(profileWeekdayFor("2026-08-29", holidays, 6)).toBe(6);
+  it("keeps a bank holiday and its eve out of normals", () => {
     expect(isBankHolidayNight("2026-08-30", holidays)).toBe(true);
     expect(isBankHolidayNight("2026-08-31", holidays)).toBe(true);
     expect(isBankHolidayNight("2026-08-29", holidays)).toBe(false);
