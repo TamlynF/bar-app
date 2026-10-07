@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { BookOpen, ChevronDown, Info, PowerOff } from "lucide-react";
+import { ChevronDown, Info, PowerOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -37,6 +36,10 @@ import { formatRunDate } from "./ui";
 
 const INPUT =
   "min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40";
+/* Small words beside an input ("Min", "to", "%") - the band sheet's label
+   weight at caption size, and its faded separator. */
+const CAPTION = "font-bold text-[12px] whitespace-nowrap text-[#5E6654]";
+const SEPARATOR = "text-xs text-[#5E6654]/50";
 /* Every settings value sits in the same fixed column, with the browser's
    number spinners hidden so the digits line up down the card. */
 const CONFIG_VALUE =
@@ -151,7 +154,13 @@ function SkipToggle({
 }) {
   const id = `market-${name}`;
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
+    <span className="flex min-w-0 items-center justify-between gap-3">
+      <span className="flex min-w-0 items-center gap-1">
+        <label htmlFor={id} className={cn("cursor-pointer truncate", CAPTION)}>
+          {label}
+        </label>
+        <RowHelp label={label} text={help} />
+      </span>
       <input type="hidden" name={name} value="off" />
       <input
         id={id}
@@ -161,10 +170,6 @@ function SkipToggle({
         defaultChecked={defaultChecked}
         className="h-4 w-4 shrink-0 cursor-pointer accent-admin-primary"
       />
-      <label htmlFor={id} className="cursor-pointer truncate font-bold text-[12px] text-[#5E6654]">
-        {label}
-      </label>
-      <RowHelp label={label} text={help} />
     </span>
   );
 }
@@ -235,7 +240,7 @@ function TierPctInputs({ field, values }: { field: { key: string; label: string;
   return (
     <span className="flex flex-1 items-center justify-end gap-1.5">
       {TIER_BANDS.map((band, index) => (
-        <label key={band} className="flex items-center gap-1 text-[11px] font-semibold text-admin-muted">
+        <label key={band} className={cn("flex items-center gap-1", CAPTION)}>
           <span className="sr-only">{`${field.label} ranks ${band}`}</span>
           <span aria-hidden="true">{band}</span>
           <input
@@ -274,39 +279,140 @@ function ConfigNumberRow({ field, value }: { field: ConfigField; value: number }
   );
 }
 
+const PRICE_RANGE_HELP =
+  "How far a price may move from the drink's base price, as a multiple of it. At 0.7 to 1.5 a £4.00 drink never drops below £2.80 or rises above £6.00, whatever the tiers or a crash call for. A drink's own min and max price on the drinks page override this.";
+
+function RangeInput({ name, label, value }: { name: string; label: string; value: number }) {
+  return (
+    <label className={cn("flex items-center gap-1", CAPTION)}>
+      <span>{label}</span>
+      <input
+        type="number"
+        name={name}
+        aria-label={`${label} price (x base)`}
+        defaultValue={value}
+        step="0.05"
+        min="0"
+        required
+        className={cn(INPUT, "w-12 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
+      />
+    </label>
+  );
+}
+
+/* Floor and ceiling as one "from … to …" pair, read the way staff say it. */
+function PriceRangeRow({ config }: { config: MarketConfig }) {
+  return (
+    <Row label="Price range (x base)" help={PRICE_RANGE_HELP}>
+      <span className="flex flex-1 items-center justify-end gap-2">
+        <RangeInput name="floorPct" label="Min" value={config.floorPct} />
+        <span className={SEPARATOR}>to</span>
+        <RangeInput name="ceilPct" label="Max" value={config.ceilPct} />
+      </span>
+    </Row>
+  );
+}
+
+const UPDATE_TIMING_HELP =
+  "How often the market checks the till for new sales (seconds), and how many of those checks pass before drinks are re-sorted and prices change. With 60 and 2, sales are read every minute and prices move every 2 minutes - that is the board's Next update countdown. Prices only ever change on a re-sort; stock and sell-outs update on every check.";
+
+function TimingInput({ name, label, value, step, unit }: { name: string; label: string; value: number; step: string; unit: string }) {
+  return (
+    <label className={cn("flex items-center gap-1", CAPTION)}>
+      <span>{label}</span>
+      <input
+        type="number"
+        name={name}
+        aria-label={`${label}, in ${unit}`}
+        defaultValue={value}
+        step={step}
+        min={step}
+        required
+        className={cn(INPUT, "w-12 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
+      />
+      <span>{unit}</span>
+    </label>
+  );
+}
+
+/* Tick interval and re-rank cadence read as one sentence: check sales
+   every N seconds, change prices every M checks. */
+function UpdateTimingRow({ config }: { config: MarketConfig }) {
+  return (
+    <Row label="Update timing" help={UPDATE_TIMING_HELP}>
+      <span className="flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+        <TimingInput name="tickIntervalSec" label="Sales every" value={config.tickIntervalSec} step="5" unit="s" />
+        <TimingInput name="rerankEveryTicks" label="Prices every" value={config.rerankEveryTicks} step="1" unit="checks" />
+      </span>
+    </Row>
+  );
+}
+
 function ConfigFormRows({ config }: { config: MarketConfig }) {
   return (
     <>
-      {TIER_FIELDS.map((field) => (
-        <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
-      ))}
+      <UpdateTimingRow config={config} />
+      {TIER_FIELDS.map((field) =>
+        field.key === "rerankEveryTicks" ? null : (
+          <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
+        )
+      )}
+      <PriceRangeRow config={config} />
       <Row label={TIER_PCT_FIELDS.up.label} help={`Ranks 1–5, 6–10, 11–15 from the top. ${TIER_PCT_FIELDS.up.help}`}>
         <TierPctInputs field={TIER_PCT_FIELDS.up} values={config.tierPcts.up} />
       </Row>
       <Row label={TIER_PCT_FIELDS.down.label} help={`Ranks 1–5, 6–10, 11–15 from the bottom. ${TIER_PCT_FIELDS.down.help}`}>
         <TierPctInputs field={TIER_PCT_FIELDS.down} values={config.tierPcts.down} />
       </Row>
-      <Link
-        href="/settings/market/how-it-works"
-        className="flex min-h-11 items-center gap-1 border-b border-[#D8D5C8] px-4 text-[12px] font-semibold text-admin-primary hover:underline sm:px-5"
-      >
-        <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-        How these dials set a price
-      </Link>
-      {CONFIG_FIELDS.map((field) => (
-        <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
-      ))}
-      <Row label={PUSH_ALERTS_FIELD.label} help={`${PUSH_ALERTS_FIELD.hint} ${PUSH_ALERTS_FIELD.help}`}>
-        <span className="flex flex-1 justify-end">
-          <span className={cn(CONFIG_VALUE, "flex justify-end")}>
+      {CONFIG_FIELDS.map((field) =>
+        MOVED_FIELDS.has(field.key) ? null : (
+          <ConfigNumberRow key={field.key} field={field} value={config[field.key]} />
+        )
+      )}
+    </>
+  );
+}
+
+const LEADERBOARD_FIELD = CONFIG_FIELDS.find((field) => field.key === "leaderboardRows");
+/* Dials drawn by a merged or relocated row rather than the plain list. */
+const MOVED_FIELDS = new Set<ConfigField["key"]>(["tickIntervalSec", "floorPct", "ceilPct", "moveNotifyPct", "leaderboardRows"]);
+
+const PHONE_ALERTS_HELP = `${PUSH_ALERTS_FIELD.help} The percentage is how far a drink's price must move, up or down, from the price it was last announced at before subscribers are told again - 5% means a £4.00 drink has to shift by at least 20p.`;
+
+/* The two settings staff reach for on the night itself - what the big screen
+   lists and whether phones buzz - sit with the event's details rather than
+   among the pricing dials. */
+function BoardAndAlertsRows({ config }: { config: MarketConfig }) {
+  return (
+    <>
+      {LEADERBOARD_FIELD && <ConfigNumberRow field={LEADERBOARD_FIELD} value={config.leaderboardRows} />}
+      <Row label="Phone alerts" help={PHONE_ALERTS_HELP}>
+        <span className="flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <label className={cn("flex items-center gap-1.5", CAPTION)}>
             <input
               type="checkbox"
               name="pushAlertsEnabled"
-              aria-label={PUSH_ALERTS_FIELD.label}
+              aria-label="Phone alerts on"
               defaultChecked={config.pushAlertsEnabled}
               className="h-4 w-4 cursor-pointer accent-admin-primary"
             />
-          </span>
+            <span>On</span>
+          </label>
+          <label className={cn("flex items-center gap-1", CAPTION)}>
+            <span>Notify when price moves</span>
+            <input
+              type="number"
+              name="moveNotifyPercent"
+              aria-label="Notify when the price moves by this percentage"
+              defaultValue={Math.round(config.moveNotifyPct * 100)}
+              step="1"
+              min="1"
+              max="50"
+              required
+              className={cn(INPUT, "w-10 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none")}
+            />
+            <span>%</span>
+          </label>
         </span>
       </Row>
     </>
@@ -477,7 +583,7 @@ function EventForm({
                 defaultValue={event?.openTime || "19:00"}
                 className={cn(INPUT, "w-22 flex-none")}
               />
-              <span className="text-[11px] font-semibold text-[#5E6654]">to</span>
+              <span className={SEPARATOR}>to</span>
               <input
                 type="time"
                 name="close_time"
@@ -491,7 +597,7 @@ function EventForm({
           <Row label="Sales history days" help={SALES_HISTORY_DAYS_HELP}>
             <WeekdayDropdown selected={event?.weekdays ?? []} />
           </Row>
-          <div className="grid grid-cols-2 gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+          <div className="grid grid-cols-2 gap-6 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
             <SkipToggle
               name="skip_holidays"
               label="Skip bank holidays"
@@ -505,6 +611,7 @@ function EventForm({
               defaultChecked={event?.excludeMarketNights ?? true}
             />
           </div>
+          <BoardAndAlertsRows config={config} />
         </Section>
 
         <Section title="Market settings" hint={configSummary(config)} className="min-w-0">
@@ -556,7 +663,7 @@ function settingTiles(config: MarketConfig): { label: string; value: string }[] 
     { label: "Price range", value: `${config.floorPct}× to ${config.ceilPct}× base` },
     { label: "Alert on a move of", value: `${Math.round(config.moveNotifyPct * 100)}%` },
     { label: "Low stock at", value: `${config.lowStockThreshold} left` },
-    { label: "Leaderboard shows", value: config.leaderboardRows > 0 ? `top ${config.leaderboardRows}` : "as many as fit" },
+    { label: "Big screen shows", value: config.leaderboardRows > 0 ? `top ${config.leaderboardRows}` : "as many as fit" },
     { label: "Phone alerts", value: config.pushAlertsEnabled ? "On" : "Off" },
   ];
 }
@@ -613,6 +720,7 @@ export function EventRecordSheet({
       navigate={sheet.navigateAcross(order)}
       title={title}
       recordId={selected?.id}
+      size="wide"
       formId="stock-market-event-form"
       isPending={sheet.isPending}
       onEdit={sheet.startEdit}

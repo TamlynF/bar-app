@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, Search, SlidersHorizontal, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 
@@ -13,7 +12,9 @@ export type DrinkFilters = {
   watchedOnly: boolean;
 };
 
-export const EMPTY_FILTERS: DrinkFilters = { query: "", hideSoldOut: false, dealsOnly: false, watchedOnly: false };
+/* Sold-out drinks stay off the list unless someone asks for them. */
+export const DEFAULT_FILTERS: DrinkFilters = { query: "", hideSoldOut: true, dealsOnly: false, watchedOnly: false };
+export const EMPTY_FILTERS: DrinkFilters = { ...DEFAULT_FILTERS, hideSoldOut: false };
 
 type QuickKey = "hideSoldOut" | "dealsOnly" | "watchedOnly";
 
@@ -23,8 +24,14 @@ const QUICK: { key: QuickKey; label: string }[] = [
   { key: "watchedOnly", label: "Watching" },
 ];
 
+/* Quick filters that differ from the defaults - what the badge counts and
+   what Clear puts back. */
 export function activeFilterCount(filters: DrinkFilters): number {
-  return QUICK.filter(({ key }) => filters[key]).length;
+  return QUICK.filter(({ key }) => filters[key] !== DEFAULT_FILTERS[key]).length;
+}
+
+export function isFiltered(filters: DrinkFilters): boolean {
+  return activeFilterCount(filters) > 0 || filters.query.trim() !== "";
 }
 
 export function applyDrinkFilters(
@@ -85,23 +92,25 @@ export function DrinkFilterBar({
             </button>
           )}
         </div>
-        <Button
+        <button
           type="button"
-          variant="goldOutline"
-          size="cta"
           aria-expanded={open}
           aria-controls="drink-quick-filters"
           onClick={() => setOpen((value) => !value)}
-          className="h-11 shrink-0 rounded-xl px-3 md:h-11"
+          className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-btn font-semibold transition-colors ${
+            open || active > 0
+              ? "border-gold bg-gold/10 text-gold"
+              : "border-white/15 bg-[#242c12] text-ink hover:border-gold/60 hover:text-gold"
+          }`}
         >
-          <SlidersHorizontal aria-hidden="true" />
+          <SlidersHorizontal className="h-4 w-4 text-gold" aria-hidden="true" />
           Filters
           {active > 0 && (
-            <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-pill font-bold text-on-gold">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-gold px-1.5 text-pill font-bold text-on-gold">
               {active}
             </span>
           )}
-        </Button>
+        </button>
       </div>
 
       {open && (
@@ -125,10 +134,10 @@ export function DrinkFilterBar({
               </button>
             );
           })}
-          {(active > 0 || filters.query) && (
+          {isFiltered(filters) && (
             <button
               type="button"
-              onClick={() => onChange(EMPTY_FILTERS)}
+              onClick={() => onChange(DEFAULT_FILTERS)}
               className="ml-auto inline-flex min-h-11 items-center px-2 text-meta font-semibold text-stone-400 transition-colors hover:text-white"
             >
               Clear
@@ -137,7 +146,7 @@ export function DrinkFilterBar({
         </div>
       )}
 
-      {(active > 0 || filters.query) && (
+      {(isFiltered(filters) || shown !== total) && (
         <p className="text-meta text-stone-500">
           Showing {shown} of {total} drinks
         </p>

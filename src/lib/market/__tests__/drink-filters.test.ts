@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeFilterCount, applyDrinkFilters, EMPTY_FILTERS } from "@/app/(public)/market/drink-filters";
+import { activeFilterCount, applyDrinkFilters, DEFAULT_FILTERS, EMPTY_FILTERS, isFiltered } from "@/app/(public)/market/drink-filters";
 import type { MarketInstrumentPayload } from "../tick";
 
 const drink = (over: Partial<MarketInstrumentPayload>): MarketInstrumentPayload =>
@@ -40,6 +40,14 @@ describe("applyDrinkFilters", () => {
   it("combines filters", () => {
     const filters = { query: "e", hideSoldOut: true, dealsOnly: true, watchedOnly: false };
     expect(applyDrinkFilters(board, filters, []).map((d) => d.id)).toEqual([1]);
-    expect(activeFilterCount(filters)).toBe(2);
+    expect(activeFilterCount(filters)).toBe(1);
+  });
+
+  it("hides sold out by default and only counts changes from that", () => {
+    expect(applyDrinkFilters(board, DEFAULT_FILTERS, []).map((d) => d.id)).toEqual([1, 3]);
+    expect(activeFilterCount(DEFAULT_FILTERS)).toBe(0);
+    expect(isFiltered(DEFAULT_FILTERS)).toBe(false);
+    expect(activeFilterCount({ ...DEFAULT_FILTERS, hideSoldOut: false })).toBe(1);
+    expect(isFiltered({ ...DEFAULT_FILTERS, query: "gin" })).toBe(true);
   });
 });

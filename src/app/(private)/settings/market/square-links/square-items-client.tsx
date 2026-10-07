@@ -50,6 +50,7 @@ import { saleLinesTitle, type SaleLineCount } from "./square-links-client";
 import CreateServeDialog from "./create-serve-dialog";
 import ModifierListPopover from "../modifier-list-popover";
 import {
+  SegmentedControl,
   CATEGORY_TOGGLE,
   CATEGORY_TOGGLE_NOTE,
   FilterPill,
@@ -299,6 +300,14 @@ function CategorySelect({
 }
 
 type ArchiveFilter = "current" | "archived" | "all";
+
+/* The desktop segmented control's short labels; the phone popup keeps the
+   longer ARCHIVE_OPTIONS wording. */
+const ARCHIVE_SEGMENTS: { key: ArchiveFilter; label: string }[] = [
+  { key: "current", label: "In use" },
+  { key: "archived", label: "Archived" },
+  { key: "all", label: "All" },
+];
 
 const ARCHIVE_OPTIONS: { key: ArchiveFilter; label: string }[] = [
   { key: "current", label: "In use" },
@@ -664,7 +673,7 @@ export default function SquareItemsClient({
       </Dialog>
 
       <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-card shadow-sm">
-        <div className="space-y-3 border-b border-admin-line bg-admin-card px-4 py-3.5 sm:px-5">
+        <div className="space-y-3 border-b border-admin-line bg-admin-surface px-4 py-3.5 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-[15px] font-bold text-admin-ink">Square items</h2>
@@ -774,15 +783,13 @@ export default function SquareItemsClient({
                 onClick={() => setFiltersOpen(true)}
               />
             </div>
-            <label className="hidden min-h-9 cursor-pointer items-center gap-2 text-[13px] font-semibold text-admin-ink sm:inline-flex">
-              <input
-                type="checkbox"
-                checked={archive !== "current"}
-                onChange={(event) => setArchive(event.target.checked ? "all" : "current")}
-                className="h-4 w-4 cursor-pointer accent-admin-primary"
-              />
-              Include archived
-            </label>
+            <SegmentedControl
+              label="Which Square items to show"
+              value={archive}
+              options={ARCHIVE_SEGMENTS}
+              onChange={setArchive}
+              className="hidden sm:inline-flex"
+            />
             <p className={cn("text-[12px] text-admin-muted sm:ml-auto sm:block", !filtered && "hidden")}>
               Showing <span className="font-semibold text-admin-ink tabular-nums">{shown.length}</span> of{" "}
               <span className="tabular-nums">{allRows.length}</span>

@@ -153,7 +153,7 @@ function readConfig(formData: FormData, base: MarketConfig = DEFAULT_MARKET_CONF
     tickIntervalSec: formData.get("tickIntervalSec"),
     floorPct: formData.get("floorPct"),
     ceilPct: formData.get("ceilPct"),
-    moveNotifyPct: formData.get("moveNotifyPct"),
+    moveNotifyPct: pctField(formData, "moveNotifyPercent", base.moveNotifyPct),
     lowStockThreshold: formData.get("lowStockThreshold"),
     leaderboardRows: formData.get("leaderboardRows") ?? 0,
     mixerPrice: formData.get("mixerPrice") ?? base.mixerPrice,
@@ -380,6 +380,12 @@ const eventSchema = configSchema.extend({
   close_time: z.string().regex(CLOCK, "Closing time is required."),
 });
 
+/* A checkbox paired with a hidden "off" so an unticked box still posts: the
+   hidden field comes first, so only getAll sees the tick. */
+function readSwitch(formData: FormData, key: string): boolean {
+  return formData.getAll(key).includes("on");
+}
+
 function readWeekdays(formData: FormData): number[] {
   return [...new Set(formData.getAll("weekdays").map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
 }
@@ -405,7 +411,7 @@ export async function saveStockMarketEventAction(formData: FormData) {
     tickIntervalSec: formData.get("tickIntervalSec"),
     floorPct: formData.get("floorPct"),
     ceilPct: formData.get("ceilPct"),
-    moveNotifyPct: formData.get("moveNotifyPct"),
+    moveNotifyPct: pctField(formData, "moveNotifyPercent", DEFAULT_MARKET_CONFIG.moveNotifyPct),
     lowStockThreshold: formData.get("lowStockThreshold"),
     leaderboardRows: formData.get("leaderboardRows") ?? 0,
     mixerPrice: formData.get("mixerPrice") ?? DEFAULT_MARKET_CONFIG.mixerPrice,
@@ -446,8 +452,8 @@ export async function saveStockMarketEventAction(formData: FormData) {
     tier_pcts: tier.tierPcts,
     pace_floor_units: tier.paceFloorUnits,
     weekdays: readWeekdays(formData),
-    skip_holidays: formData.get("skip_holidays") !== "off",
-    exclude_market_nights: formData.get("exclude_market_nights") !== "off",
+    skip_holidays: readSwitch(formData, "skip_holidays"),
+    exclude_market_nights: readSwitch(formData, "exclude_market_nights"),
   };
 
   let eventId: number;

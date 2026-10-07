@@ -88,6 +88,48 @@ export function FilterPill({
   );
 }
 
+/* A row of joined segments where exactly one is on - the desktop twin of a
+   pill list in the phone filter popup. */
+export function SegmentedControl<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: T;
+  options: { key: T; label: string }[];
+  onChange: (value: T) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn("h-9 items-center overflow-hidden rounded-xl border border-admin-line bg-admin-card p-0.5 shadow-xs", className)}
+    >
+      {options.map((option) => {
+        const active = option.key === value;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.key)}
+            className={cn(
+              "h-full rounded-lg px-3 text-[12px] font-semibold whitespace-nowrap transition-colors",
+              active ? "bg-admin-primary-soft text-admin-primary" : "text-admin-muted hover:bg-admin-surface hover:text-admin-ink",
+            )}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* The phone-only button beside search that opens the filter popup, with a
    dot while any filter is on. */
 export function FiltersButton({

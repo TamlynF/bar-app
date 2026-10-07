@@ -32,7 +32,7 @@ import { AlertSignup, type AlertChannel, type AlertHandle } from "./alert-signup
 import { InstallDialog, useInstallTarget } from "./install-card";
 import { NotifyMethod } from "./notify-method";
 import { WatchList } from "./watch-list";
-import { DrinkFilterBar, EMPTY_FILTERS, applyDrinkFilters, type DrinkFilters } from "./drink-filters";
+import { DrinkFilterBar, DEFAULT_FILTERS, applyDrinkFilters, type DrinkFilters } from "./drink-filters";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
 
 /* iOS (and some Android browsers) refuse `new Notification()` from page
@@ -444,7 +444,7 @@ export default function MarketFeed({
   const [emailHandle, setEmailHandle] = useChannelHandle("email");
   const [whatsappHandle, setWhatsappHandle] = useChannelHandle("whatsapp");
   const [signingUp, setSigningUp] = useState<AlertChannel | null>(null);
-  const [filters, setFilters] = useState<DrinkFilters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<DrinkFilters>(DEFAULT_FILTERS);
   const smsOn = smsAvailable && smsHandle != null;
   const emailOn = emailAvailable && emailHandle != null;
   const whatsappOn = whatsappAvailable && whatsappHandle != null;
@@ -777,7 +777,8 @@ export default function MarketFeed({
         </>
       )}
 
-      <div className="-mb-4 flex items-center justify-between gap-3 text-meta text-stone-400">
+      <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 text-meta text-stone-400">
         <span className="min-w-0 truncate">
           <span className="font-semibold text-gold">{state.closesAt ? `Open until ${state.closesAt}` : "Market open"}</span>
           {" · "}
@@ -813,6 +814,7 @@ export default function MarketFeed({
           </p>
         </div>
       )}
+      </div>
       </aside>
 
       <div className="mt-8 space-y-4 md:mt-0">
@@ -908,7 +910,7 @@ export default function MarketFeed({
         {instruments.length > 0 && visible.length === 0 && (
           <li className="rounded-2xl border border-white/10 bg-white/5 px-4 py-8 text-center text-body text-stone-400 md:col-span-full">
             No drinks match.{" "}
-            <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="font-semibold text-gold underline-offset-4 hover:underline">
+            <button type="button" onClick={() => setFilters(DEFAULT_FILTERS)} className="font-semibold text-gold underline-offset-4 hover:underline">
               Clear filters
             </button>
           </li>

@@ -606,7 +606,7 @@ export default function SquareLinksClient({
       </Dialog>
 
       <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-card shadow-sm">
-        <div className="space-y-3 border-b border-admin-line bg-admin-card px-4 py-3.5 sm:px-5">
+        <div className="space-y-3 border-b border-admin-line bg-admin-surface px-4 py-3.5 sm:px-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-[15px] font-bold text-admin-ink">Menu serves</h2>
