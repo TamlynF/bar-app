@@ -27,6 +27,9 @@ the public marketing palette:
 | `--destructive` | `#B33A32` | status red |
 | `--ring` | `#D7A928` | brand gold - focus rings only |
 
+The full token list ships in `tokens/tokens.css` (`:root` and `[data-surface]` scopes only -
+read it before picking a colour); `_ds_bundle.css` holds the compiled utilities.
+
 So out of the box `Button` looks like an **admin** button: olive fill, near-white text.
 Gold is the focus-ring colour only - never a button fill.
 

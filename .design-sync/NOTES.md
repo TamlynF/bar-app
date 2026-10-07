@@ -72,6 +72,43 @@ are admin-surface primitives, `_tw-input.css` appends `html, body { background-c
 If you ever see buttons with no fill again: confirm `_tw-input.css` still imports
 globals.css (not the old bare `@import "tailwindcss"`).
 
+## Token rules (user-set 2026-10-07) and the tokens/ step
+The project's `_adherence.oxlintrc.json` (generated app-side from the uploaded stylesheet
+with a permissive scope heuristic) had filled its token list with Tailwind internals -
+`--tw-translate-x` classed as a colour, `--tw-scale-x` as spacing, 50-odd `--tw-*` names from
+`@property` blocks and utility selectors. The user set three rules; the pipeline now has two
+extra durable steps that implement them:
+
+1. **`node .design-sync/build-tokens.mjs`** (run after the Tailwind compile, before the driver)
+   parses the compiled `node_modules/bar-app-ds/styles.css` and writes
+   `node_modules/bar-app-ds/tokens/tokens.css` holding ONLY custom properties declared under
+   `:root` / `:host` / `html` / `[data-*]` selectors (with their @layer/@media wrappers kept so
+   the cascade is identical), never `--tw-*`, never anything that lives only in a utility
+   selector or an `@property` block. It also stamps `/* @kind other */` after every
+   `--animate-*` / `--ease-*` / `--default-*` / `--aspect-*` declaration, in tokens.css AND in
+   place in styles.css. `cfg.tokensPkg: "bar-app-ds"` + `cfg.tokensGlob: "tokens/*.css"` make
+   the converter copy it to `ds-bundle/tokens/` and import it first in `styles.css`; the README
+   token index is then built from it (285 names on 2026-10-07) instead of from the bundle.
+   Parser gotcha: selectors carry escaped quotes (`.content-['…']`), so the walker
+   must treat `\` as an escape outside strings or one stray quote swallows the rest of the
+   file and the admin/After Dark `:root` blocks silently vanish (first run found only 232 of
+   the 285 names for exactly that reason).
+2. **`node .design-sync/build-adherence.mjs`** (run AFTER the driver - it writes into
+   `ds-bundle/`, which the driver wipes) rebuilds `ds-bundle/_adherence.oxlintrc.json` from
+   `.design-sync/.cache/adherence-remote.json` (the app's last rules/components/overrides,
+   re-fetched via `get_file` each sync - keep it current) plus the names in
+   `ds-bundle/tokens/tokens.css`: no `--tw-*` entries at all, `@kind` comments win, then the
+   app's prior kind, then a name/value guess. The file is uploaded alongside the DS files
+   (add `_adherence.oxlintrc.json` and `tokens/**` to the plan writes).
+3. `--font-serif: ui-serif, Georgia, Cambria, …` stays as compiled (user said keep it) - the
+   `[FONT_MISSING] Cambria` warn therefore stays too.
+
+**Open question for the next sync:** the app regenerates `_adherence.oxlintrc.json` when the
+project is next opened. Re-fetch it and check whether the `--tw-*` names came back - if they
+did, the app's scraper ignores `tokens/` precedence and the fix needs to move app-side (we
+cannot strip `@property --tw-*` from the bundle CSS without breaking transforms/shadows in
+every design).
+
 ## Tailwind CSS compile
 `styles.css` is compiled via `@tailwindcss/cli` (installed into `.ds-sync`).
 Output **directly into the mini-package** (under `node_modules`, so the editor's
@@ -82,6 +119,7 @@ hint on Tailwind's own preflight):
 node .ds-sync/node_modules/@tailwindcss/cli/dist/index.mjs \
   -i .design-sync/.cache/_tw-input.css \
   -o node_modules/bar-app-ds/styles.css
+node .design-sync/build-tokens.mjs
 ```
 Tailwind v4 **auto-detects content from the repo root** in addition to the
 `@source` globs, so the compiled CSS pulls in app-wide utilities. That is why
@@ -91,6 +129,12 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-10-07 second run (same day) - token rules, UPLOADED.** Added the tokens/ step and the
+  adherence rebuild (see "Token rules" above). Both components verification-unchanged
+  (`empty_worklist`), render check 2/2 clean, `upload.any:true` with `styling:true`/`aux:true`
+  (tokens/tokens.css is new in the styling set; README gained the tokens index + a conventions
+  line naming `tokens/tokens.css`). Uploaded 19 DS files + `_adherence.oxlintrc.json` on the
+  atomic path, `deletes:[]`.
 - **2026-10-07 re-sync (bundled skill 2.1.286) - UPLOADED, Button API changed.** Staged
   scripts already matched 2.1.286. Upstream `button.tsx` had gained two public-surface
   variants (`gold`, `goldOutline`) and a `cta` size (commit `6224c088` era) - the
