@@ -103,11 +103,18 @@ extra durable steps that implement them:
 3. `--font-serif: ui-serif, Georgia, Cambria, …` stays as compiled (user said keep it) - the
    `[FONT_MISSING] Cambria` warn therefore stays too.
 
-**Open question for the next sync:** the app regenerates `_adherence.oxlintrc.json` when the
-project is next opened. Re-fetch it and check whether the `--tw-*` names came back - if they
-did, the app's scraper ignores `tokens/` precedence and the fix needs to move app-side (we
-cannot strip `@property --tw-*` from the bundle CSS without breaking transforms/shadows in
-every design).
+**Answered (2026-10-07, third run):** the app regenerated the file after the project was
+opened. It DOES read `/* @kind X */` comments (`--default-font-family` flipped font→other, the
+new `:root` tokens from tokens.css all appeared with sensible kinds) but it scrapes the whole
+`styles.css` closure, so `tokens/` precedence does NOT apply: every `--tw-*` name came back
+(classed color/spacing again) and so did the utility-level `--cell-size`/`--peek-base`/
+`--marquee-duration`. Countermeasure, allowed by rule 3 ("other or remove"): `build-tokens.mjs`
+now also stamps `/* @kind other */` on every `--tw-*` declaration line in styles.css (~800
+lines), so when the app regenerates the file the `--tw-*` entries land as `other` instead of
+color/spacing; the file WE upload still has none of them. Rule 1 (exclusion) therefore holds
+only until the app's next regeneration - full exclusion needs an app-side change; the user
+should raise it with Claude Design if the regenerated list matters. Check on the next sync:
+re-fetch the file and confirm every `--tw-*` kind is `other`.
 
 ## Tailwind CSS compile
 `styles.css` is compiled via `@tailwindcss/cli` (installed into `.ds-sync`).
@@ -129,6 +136,11 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-10-07 third run - UPLOADED (styling only).** Re-fetched the app-regenerated adherence
+  file (see the answered open question above), added the `--tw-*` → `@kind other` stamping,
+  rebuilt. Both components verification-unchanged, render 2/2 clean, `upload.any:true` with
+  `styling:true` only (styles.css grew with the stamps). Uploaded styles/tokens/adherence on the
+  atomic path, `deletes:[]`.
 - **2026-10-07 second run (same day) - token rules, UPLOADED.** Added the tokens/ step and the
   adherence rebuild (see "Token rules" above). Both components verification-unchanged
   (`empty_worklist`), render check 2/2 clean, `upload.any:true` with `styling:true`/`aux:true`

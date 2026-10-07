@@ -8,7 +8,10 @@
 //      selectors count as tokens; anything declared only inside utility
 //      selectors or @property blocks is left out, and --tw-* is always left out
 //   2. --animate-*, --ease-*, --default-*, --aspect-* carry `/* @kind other */`
-//      (also stamped in place in styles.css so both files agree)
+//      (also stamped in place in styles.css so both files agree); every --tw-*
+//      declaration in styles.css is stamped `other` too, so the app-side
+//      regeneration of the adherence file can never class a Tailwind internal
+//      as a colour or spacing (it ignores tokens/ precedence but reads @kind)
 //   3. the adherence token list is rebuilt from this file (build-adherence.mjs)
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
@@ -92,7 +95,7 @@ function render(found) {
 
 function annotateInPlace(css) {
   let stamped = 0;
-  const next = css.replace(/^(\s*--(?:animate|ease|default|aspect)-[\w-]+\s*:[^;\n]*;)(?![^\n]*@kind)/gm, (m) => {
+  const next = css.replace(/^(\s*--(?:animate|ease|default|aspect|tw)-[\w-]+\s*:[^;\n]*;)(?![^\n]*@kind)/gm, (m) => {
     stamped++;
     return `${m} /* @kind other */`;
   });
