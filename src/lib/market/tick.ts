@@ -209,14 +209,6 @@ function crashRemainingSeconds(session: MarketSessionRow, config: MarketConfig, 
 
 const SPARK_TICKS = 30;
 
-/* Prices hold between board updates, so the tick before is usually the same
-   number; the direction is measured against the last price that differed. */
-function lastDifferentPrice(spark: number[], price: number): number | null {
-  for (let i = spark.length - 1; i >= 0; i--) {
-    if (spark[i] !== price) return spark[i];
-  }
-  return null;
-}
 const WATERMARK_OVERLAP_MS = 60 * 1000;
 
 function toInstrumentState(row: MarketInstrumentRow): InstrumentState {
@@ -811,7 +803,7 @@ export async function readMarketState(
       const price = Number(row.current_price);
       const opening = Number(row.opening_price);
       const spark = sparkByInstrument.get(row.id) ?? [];
-      const previous = lastDifferentPrice(spark, price) ?? opening;
+      const changePct = opening > 0 ? servedChangePct(opening, price, mixer) : 0;
       const category = instrumentCategory(row);
       const limits = instrumentLimits(toInstrumentState(row), config);
       return {
@@ -821,8 +813,8 @@ export async function readMarketState(
         price: withMixer(price, mixer),
         basePrice: withMixer(Number(row.base_price), mixer),
         openingPrice: withMixer(opening, mixer),
-        changePct: opening > 0 ? servedChangePct(opening, price, mixer) : 0,
-        direction: price > previous ? "up" : price < previous ? "down" : "flat",
+        changePct,
+        direction: changePct > 0 ? "up" : changePct < 0 ? "down" : "flat",
         stock: row.stock_state,
         spark: spark.map((point) => withMixer(point, mixer)),
         category: category.name,

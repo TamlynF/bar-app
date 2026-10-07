@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Bell, BellRing, Mail, MessageSquare, TrendingUp } from "lucide-react";
+import { Bell, BellOff, BellRing, Mail, MessageSquare, TrendingUp } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { whatsappLinkKind } from "@/lib/whatsapp-link";
 import { toast } from "sonner";
 import { ArrowCta } from "@/components/ui/arrow-cta";
+import { Button } from "@/components/ui/button";
+import { titleCase } from "@/lib/title-case";
 import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
 import { detectInstallPlatform } from "@/lib/pwa-install";
@@ -24,11 +26,11 @@ import {
   type SmsSubscriptionHandle,
   type WhatsappSubscriptionHandle,
 } from "./actions";
-import { formatUkMobile } from "@/lib/sms/phone";
 import { AlertSignup, type AlertChannel, type AlertHandle } from "./alert-signup";
 import { InstallDialog, useInstallTarget } from "./install-card";
 import { NotifyMethod } from "./notify-method";
 import { WatchList } from "./watch-list";
+import { DrinkFilterBar, EMPTY_FILTERS, applyDrinkFilters, type DrinkFilters } from "./drink-filters";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
 
 /* iOS (and some Android browsers) refuse `new Notification()` from page
@@ -119,7 +121,14 @@ function NextTickCountdown({ seconds, label = "Next update" }: { seconds: number
   }, [seconds]);
   return (
     <span className="tabular-nums" aria-live="off">
-      {remaining <= 0 ? "Updating…" : `${label} ${formatCountdown(remaining)}`}
+      {remaining <= 0 ? (
+        <span className="font-bold text-neon">Updating…</span>
+      ) : (
+        <>
+          <span className="font-semibold text-ink">{label}</span>{" "}
+          <span className="font-bold text-neon">{formatCountdown(remaining)}</span>
+        </>
+      )}
     </span>
   );
 }
@@ -372,6 +381,36 @@ function useWatchedDrinks(): [number[], (id: number) => void] {
   return [watched, toggle];
 }
 
+/* One channel that is switched on: the channel's icon, its name and an
+   icon-only off switch. Half the aside's width so two can sit side by side. */
+function ChannelOnChip({
+  icon,
+  label,
+  offLabel,
+  onOff,
+}: {
+  icon: ReactNode;
+  label: string;
+  offLabel: string;
+  onOff: () => void;
+}) {
+  return (
+    <div className="flex basis-[calc(50%-0.25rem)] items-center gap-2 rounded-2xl border border-white/15 bg-[#242c12] py-1.5 pr-1.5 pl-3">
+      <span className="shrink-0 text-gold">{icon}</span>
+      <p className="min-w-0 flex-1 truncate text-meta font-semibold text-ink">{label}</p>
+      <button
+        type="button"
+        onClick={onOff}
+        aria-label={offLabel}
+        title={offLabel}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 text-stone-400 transition-colors hover:border-[#FF6B35]/60 hover:text-[#FF6B35]"
+      >
+        <BellOff className="h-4 w-4" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 /* `header` (the page title) and `footer` (the big-screen link) are rendered
    here so that from tablet up they can sit in a sticky side panel with the
    market status and alert controls, leaving the whole right column to the
@@ -408,9 +447,11 @@ export default function MarketFeed({
   const [emailHandle, setEmailHandle] = useChannelHandle("email");
   const [whatsappHandle, setWhatsappHandle] = useChannelHandle("whatsapp");
   const [signingUp, setSigningUp] = useState<AlertChannel | null>(null);
+  const [filters, setFilters] = useState<DrinkFilters>(EMPTY_FILTERS);
   const smsOn = smsAvailable && smsHandle != null;
   const emailOn = emailAvailable && emailHandle != null;
   const whatsappOn = whatsappAvailable && whatsappHandle != null;
+  const anyChannelOn = notifyEnabled || smsOn || emailOn || whatsappOn;
   const installed = useSyncExternalStore(subscribeNever, readInstalled, () => false);
   const notifyUndecided = useSyncExternalStore(subscribeNever, readNotifyUndecided, () => false);
   const freshInstall = installed && notifyUndecided && !justGranted;
@@ -442,6 +483,7 @@ export default function MarketFeed({
   }, []);
 
   const onToggleWatch = (id: number) => {
+    if (!anyChannelOn) return;
     const next = watched.includes(id) ? watched.filter((w) => w !== id) : [...watched, id];
     toggleWatched(id);
     const name = instruments.find((instrument) => instrument.id === id)?.name;
@@ -479,7 +521,6 @@ export default function MarketFeed({
     .join("\u0000");
 
   const alertsAllowed = state?.pushAlertsEnabled !== false;
-  const anyChannelOn = notifyEnabled || smsOn || emailOn || whatsappOn;
 
   useEffect(() => {
     if (fresh.length === 0) return;
@@ -640,7 +681,6 @@ export default function MarketFeed({
     );
   }
 
-  const watchedCount = instruments.filter((instrument) => watched.includes(instrument.id)).length;
   const tickKey = state.tickNo ?? 0;
   const countdown =
     state.crashActive && state.crashRemainingSec != null
@@ -650,29 +690,14 @@ export default function MarketFeed({
         : null;
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
+  const visible = applyDrinkFilters(instruments, filters, watched);
   const alertsOff = !alertsAllowed;
   const showPushControls = !alertsOff && !smsOn && !emailOn && !whatsappOn;
-  const watchedLine =
-    watchedCount > 0
-      ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
-      : "No drinks picked yet - tap a bell to get alerts.";
 
   return (
     <div className="md:grid md:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-14">
       <aside className="space-y-8 md:sticky md:top-24">
       {header}
-      <div className="-mt-2 flex items-center justify-between gap-3 font-black text-[10px] tracking-wider text-stone-500 uppercase">
-        <span className="min-w-0 truncate">
-          <span className="text-[#FDCC4B]">{state.closesAt ? `Open until ${state.closesAt}` : "Market open"}</span>
-          {" · "}
-          {tradingCount} {tradingCount === 1 ? "drink" : "drinks"}
-        </span>
-        {countdown && (
-          <span className="shrink-0 whitespace-nowrap">
-            <NextTickCountdown key={countdown.key} seconds={countdown.seconds} label={countdown.label} />
-          </span>
-        )}
-      </div>
 
       {state.crashActive && (
         <div className="ad-blink rounded-2xl border border-[#FF6B35]/40 bg-[#FF6B35]/10 px-4 py-3 text-center font-black text-sm tracking-widest text-[#FF6B35] uppercase">
@@ -680,82 +705,46 @@ export default function MarketFeed({
         </div>
       )}
 
-      {!alertsOff && (
-        <WatchList instruments={instruments} watched={watched} onToggle={onToggleWatch} alertsOn={anyChannelOn} />
-      )}
 
-      {smsOn && smsHandle && (
-        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-          <p className="text-[12px] leading-relaxed text-stone-400">
-            <span className="font-black text-xs tracking-widest text-ink uppercase">Texts on</span>
-            {` - to ${formatUkMobile(smsHandle.address)}, a few a night at most. `}
-            {watchedLine}
-          </p>
-          <button
-            type="button"
-            onClick={disableSms}
-            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
-          >
-            Turn off
-          </button>
+      {anyChannelOn && !alertsOff && (
+        <div className="flex flex-wrap gap-2">
+          {smsOn && smsHandle && (
+            <ChannelOnChip
+              icon={<MessageSquare className="h-4 w-4" aria-hidden="true" />}
+              label="Texts on"
+              offLabel="Turn off texts"
+              onOff={disableSms}
+            />
+          )}
+          {whatsappOn && whatsappHandle && (
+            <ChannelOnChip
+              icon={<SiWhatsapp className="h-4 w-4" aria-hidden="true" />}
+              label="WhatsApp on"
+              offLabel="Turn off WhatsApp alerts"
+              onOff={disableWhatsapp}
+            />
+          )}
+          {emailOn && emailHandle && (
+            <ChannelOnChip
+              icon={<Mail className="h-4 w-4" aria-hidden="true" />}
+              label="Emails on"
+              offLabel="Turn off emails"
+              onOff={disableEmail}
+            />
+          )}
+          {notifyEnabled && (
+            <ChannelOnChip
+              icon={<Bell className="h-4 w-4" aria-hidden="true" />}
+              label="Push on"
+              offLabel="Turn off push alerts"
+              onOff={disableNotifications}
+            />
+          )}
+          <WatchList instruments={instruments} watched={watched} onToggle={onToggleWatch} />
         </div>
       )}
 
-      {whatsappOn && whatsappHandle && (
-        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <SiWhatsapp className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-          <p className="min-w-0 text-[12px] leading-relaxed text-stone-400">
-            <span className="font-black text-xs tracking-widest text-ink uppercase">WhatsApp on</span>
-            {` - to ${formatUkMobile(whatsappHandle.address)}, a few a night at most. `}
-            {watchedLine}
-          </p>
-          <button
-            type="button"
-            onClick={disableWhatsapp}
-            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
-          >
-            Turn off
-          </button>
-        </div>
-      )}
-
-      {emailOn && emailHandle && (
-        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-          <p className="min-w-0 text-[12px] leading-relaxed text-stone-400">
-            <span className="font-black text-xs tracking-widest text-ink uppercase">Emails on</span>
-            {` - to ${emailHandle.address}, a few a night at most. `}
-            {watchedLine}
-          </p>
-          <button
-            type="button"
-            onClick={disableEmail}
-            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
-          >
-            Turn off
-          </button>
-        </div>
-      )}
-
-      {!showPushControls ? null : notifyEnabled ? (
-        <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-          <p className="text-[12px] leading-relaxed text-stone-400">
-            <span className="font-black text-xs tracking-widest text-ink uppercase">Alerts on</span>
-            {pushState === "on" && " - they'll reach your phone even when it's locked."}
-            {pushState === "page-only" && " - they arrive while this page is open."}{" "}
-            {watchedLine}
-          </p>
-          <button
-            type="button"
-            onClick={disableNotifications}
-            className="-my-1 -mr-2 ml-auto flex min-h-11 shrink-0 items-center self-center rounded-xl px-3 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:bg-white/5 hover:text-white"
-          >
-            Turn off
-          </button>
-        </div>
-      ) : (
+      {!showPushControls || notifyEnabled ? null : (
         <>
           {wantsAlerts && signingUp ? (
             <AlertSignup
@@ -777,24 +766,33 @@ export default function MarketFeed({
               onWhatsapp={() => setSigningUp("whatsapp")}
             />
           ) : (
-            <button
-              type="button"
-              onClick={() => setWantsAlerts(true)}
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 px-4 py-3 font-black text-xs tracking-widest text-[#FDCC4B] uppercase transition-colors hover:bg-[#FDCC4B]/20"
-            >
-              <Bell className="h-4 w-4" aria-hidden="true" />{" "}
+            <Button type="button" variant="gold" size="cta" className="w-full" onClick={() => setWantsAlerts(true)}>
+              <BellRing aria-hidden="true" />
               {freshInstall ? "Turn on lock-screen alerts" : "Notify me on price drops"}
-            </button>
+            </Button>
           )}
-          {(freshInstall || watchedCount > 0) && (
-            <p className="-mt-5 text-center text-[11px] leading-relaxed text-stone-500">
+          {!wantsAlerts && (
+            <p className="-mt-5 text-center text-meta text-stone-500">
               {freshInstall
                 ? "You're on the Home Screen - one tap and you're set."
-                : `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"} - turn alerts on to hear about them.`}
+                : "Turn alerts on, then tap the bell on the drinks you want to hear about."}
             </p>
           )}
         </>
       )}
+
+      <div className="-mb-4 flex items-center justify-between gap-3 text-meta text-stone-400">
+        <span className="min-w-0 truncate">
+          <span className="font-semibold text-gold">{state.closesAt ? `Open until ${state.closesAt}` : "Market open"}</span>
+          {" · "}
+          {tradingCount} {tradingCount === 1 ? "drink" : "drinks"}
+        </span>
+        {countdown && (
+          <span className="shrink-0 whitespace-nowrap">
+            <NextTickCountdown key={countdown.key} seconds={countdown.seconds} label={countdown.label} />
+          </span>
+        )}
+      </div>
       {whatsappUrl && !alertsOff && !(wantsAlerts && !notifyEnabled) && (
         <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
           <SiWhatsapp className="h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
@@ -821,28 +819,52 @@ export default function MarketFeed({
       )}
       </aside>
 
-      <div className="mt-8 space-y-8 md:mt-0">
+      <div className="mt-8 space-y-4 md:mt-0">
+      <DrinkFilterBar filters={filters} onChange={setFilters} shown={visible.length} total={instruments.length} />
       <ul className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
-        {sortForPhone(instruments).map((instrument) => {
+        {sortForPhone(visible).map((instrument) => {
           const isWatched = watched.includes(instrument.id);
+          const hasServe = instrument.serve.trim().toLowerCase() !== "each";
+          const soldOut = instrument.stock === "out";
+          const bellDisabled = !anyChannelOn || soldOut;
           return (
           <li
             key={instrument.id}
-            className={`flex items-center gap-3 rounded-2xl border py-3 ${alertsOff ? "px-4" : "px-3"} ${
-              isWatched && !alertsOff ? "border-[#FDCC4B]/40 bg-[#FDCC4B]/5" : "border-white/10 bg-white/5"
+            className={`flex items-center gap-3 rounded-2xl border py-3 shadow-[0_2px_10px_rgba(0,0,0,0.35)] ${alertsOff ? "px-4" : "px-3"} ${
+              isWatched && !alertsOff
+                ? "border-gold/70 border-l-4 border-l-gold bg-gold/12"
+                : "border-white/15 bg-[#242c12]"
             }`}
           >
             {!alertsOff && (
               <button
                 type="button"
                 onClick={() => onToggleWatch(instrument.id)}
+                disabled={bellDisabled}
                 aria-pressed={isWatched}
-                aria-label={isWatched ? `Stop watching ${instrument.name}` : `Watch ${instrument.name} for price alerts`}
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                  isWatched ? "text-[#FDCC4B]" : "text-stone-500 hover:text-white"
+                aria-label={
+                  soldOut
+                    ? `${instrument.name} is sold out - alerts unavailable`
+                    : !anyChannelOn
+                      ? `Turn alerts on to watch ${instrument.name}`
+                      : isWatched
+                        ? `Stop watching ${instrument.name}`
+                        : `Watch ${instrument.name} for price alerts`
+                }
+                className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed ${
+                  soldOut
+                    ? "text-[#FF4D6D]/70"
+                    : isWatched
+                      ? "bg-gold text-on-gold shadow-[0_0_0_3px_rgba(253,204,75,0.25)] disabled:opacity-30"
+                      : "border border-white/15 text-stone-400 hover:border-gold/60 hover:text-gold disabled:opacity-30"
                 }`}
               >
-                {isWatched ? (
+                {soldOut ? (
+                  <>
+                    <BellOff className="h-5 w-5" aria-hidden="true" />
+                    <span className="mt-0.5 text-[9px] leading-none font-semibold uppercase tracking-wide">Out</span>
+                  </>
+                ) : isWatched ? (
                   <BellRing className="h-5 w-5" aria-hidden="true" />
                 ) : (
                   <Bell className="h-5 w-5" aria-hidden="true" />
@@ -853,16 +875,22 @@ export default function MarketFeed({
               <p className="font-ui text-[15px] leading-tight font-bold tracking-wide text-ink uppercase">
                 {instrument.name}
               </p>
-              {instrument.serve.trim().toLowerCase() !== "each" && (
-                <p className="mt-0.5 font-ui text-meta text-stone-400">{instrument.serve}</p>
+              {(hasServe || instrument.category) && (
+                <p className="mt-0.5 font-ui text-meta text-stone-400">
+                  {hasServe && titleCase(instrument.serve)}
+                  {hasServe && instrument.category && <span className="text-stone-600"> · </span>}
+                  {instrument.category && <span className="text-stone-500">{instrument.category}</span>}
+                </p>
               )}
-              {(instrument.stock !== "ok" || instrument.tierPct !== 0) && (
-                <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {instrument.stock !== "ok" && <StockBadge stock={instrument.stock} />}
-                  <TierBadge pct={instrument.tierPct} />
-                  {instrument.tierPct !== 0 && instrument.targetPrice != null && (
-                    <span className="text-[10px] text-stone-500">heading to {formatGbp(instrument.targetPrice)}</span>
-                  )}
+              {(instrument.stock === "low" || instrument.tierPct !== 0) && (
+                <p className={`mt-1.5 flex flex-wrap items-center gap-1.5 ${instrument.stock === "low" ? "" : "max-sm:hidden"}`}>
+                  {instrument.stock === "low" && <StockBadge stock={instrument.stock} />}
+                  <span className="max-sm:hidden sm:contents">
+                    <TierBadge pct={instrument.tierPct} />
+                    {instrument.tierPct !== 0 && instrument.targetPrice != null && (
+                      <span className="text-[10px] text-stone-500">heading to {formatGbp(instrument.targetPrice)}</span>
+                    )}
+                  </span>
                 </p>
               )}
             </div>
@@ -879,6 +907,14 @@ export default function MarketFeed({
         {instruments.length === 0 && (
           <li className="rounded-2xl border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-stone-400 md:col-span-full">
             No drinks are trading yet.
+          </li>
+        )}
+        {instruments.length > 0 && visible.length === 0 && (
+          <li className="rounded-2xl border border-white/10 bg-white/5 px-4 py-8 text-center text-body text-stone-400 md:col-span-full">
+            No drinks match.{" "}
+            <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="font-semibold text-gold underline-offset-4 hover:underline">
+              Clear filters
+            </button>
           </li>
         )}
       </ul>
