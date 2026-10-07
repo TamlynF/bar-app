@@ -8,6 +8,7 @@ import { renderTemplate } from "@/lib/email/resolve";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import {
   approvePrivateHire,
+  changeAgreedHire,
   closePrivateHire,
   confirmPrivateHire,
   heldPrivateHireSlots,
@@ -15,18 +16,27 @@ import {
   proposePrivateHireTimes,
   reopenPrivateHire,
   resendPrivateHireEmail,
+  switchOffCheckout,
   syncHireEvent,
   venueToday,
   type FlowContext,
   type FlowResult,
+  type HireSlot,
 } from "@/lib/private-hire-flow";
 import {
   depositDueDate,
+  dueDateForNewHireDate,
   normalizePrivateHireStatus,
   resolveDepositAmount,
   type DepositPaidVia,
 } from "@/lib/private-hire-status";
-import { formatDeposit, formatHireDate, formatHireTime, heldSlotsOnDate } from "@/lib/private-hire-details";
+import {
+  formatDeposit,
+  formatHireDate,
+  formatHireTime,
+  heldSlotsOnDate,
+  supersedeCheckout,
+} from "@/lib/private-hire-details";
 import type { PrivateHireEmailKey } from "@/lib/private-hire-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -96,22 +106,42 @@ export async function updatePrivateHireFields(
   const before = await loadHire(supabase, id);
   if (!before) throw new Error("Request not found.");
 
+  /* Once the customer has agreed the times, a new slot (or, while the deposit
+     is unpaid, a new amount) goes through changeAgreedHireAction so they're
+     told about it - never a silent save. */
+  const status = normalizePrivateHireStatus(before.status);
+  const agreed = status === "awaiting_deposit" || status === "confirmed";
+  const {
+    deposit_amount,
+    selected_date,
+    selected_start_time,
+    selected_end_time,
+    ...rest
+  } = fields;
+  const saved = {
+    ...rest,
+    ...(agreed ? {} : { selected_date, selected_start_time, selected_end_time }),
+    ...(status === "awaiting_deposit" ? {} : { deposit_amount }),
+  };
+  const defined = Object.fromEntries(Object.entries(saved).filter(([, v]) => v !== undefined));
+
   /* A new amount or slot means the customer's existing checkout is out of
      date, so the next "Pay deposit" click makes a fresh one. */
   const checkoutChanged =
-    (fields.deposit_amount !== undefined && Number(fields.deposit_amount) !== Number(before.deposit_amount)) ||
-    (fields.selected_date !== undefined && fields.selected_date !== before.selected_date);
+    (defined.deposit_amount !== undefined && Number(deposit_amount) !== Number(before.deposit_amount)) ||
+    (defined.selected_date !== undefined && selected_date !== before.selected_date);
 
   const { error } = await supabase
     .from("private_hire_requests")
     .update({
-      ...fields,
-      ...(checkoutChanged ? { payment_link_url: null, square_order_id: null } : {}),
+      ...defined,
+      ...(checkoutChanged ? supersedeCheckout(before) : {}),
       updated_by: empId,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (error) throw new Error("Failed to save changes.");
+  if (checkoutChanged) await switchOffCheckout(before);
 
   const after = await loadHire(supabase, id);
   if (after && normalizePrivateHireStatus(after.status) === "confirmed" && after.event_id) {
@@ -157,7 +187,7 @@ export async function markPrivateHireDepositPaidAction(
 }
 
 export async function closePrivateHireAction(id: string, to: "declined" | "cancelled", note?: string) {
-  return finish(await closePrivateHire(await flowContext(), id, to, { note }));
+  return finish(await closePrivateHire(await flowContext(), id, to, { note, byStaff: true }));
 }
 
 export async function reopenPrivateHireAction(id: string) {
@@ -168,12 +198,50 @@ export async function resendPrivateHireEmailAction(id: string) {
   return finish(await resendPrivateHireEmail(await flowContext(), id));
 }
 
+export async function changeAgreedHireAction(
+  id: string,
+  change: { slot?: HireSlot | null; deposit?: number | null },
+  opts: { note?: string } = {}
+) {
+  return finish(await changeAgreedHire(await flowContext(), id, change, opts));
+}
+
 /* Lets the action dialogs preview exactly what will be sent, rather than an
    approximation built from copy compiled into the page. */
-export async function privateHireEmailSlotsAction(key: PrivateHireEmailKey, id: string) {
+export async function privateHireEmailSlotsAction(
+  key: PrivateHireEmailKey,
+  id: string,
+  unsaved?: {
+    date: string | null;
+    start: string | null;
+    end: string | null;
+    subtypeId: number | null;
+    deposit?: number | null;
+  }
+) {
   const supabase = await createClient();
-  const row = await loadHire(supabase, id);
-  if (!row) return null;
+  const loaded = await loadHire(supabase, id);
+  if (!loaded) return null;
+  const changedSubtype =
+    unsaved?.subtypeId != null && unsaved.subtypeId !== loaded.event_subtypes_id
+      ? (
+          await supabase
+            .from("event_subtypes")
+            .select("id, name, default_event_title, event_types_id")
+            .eq("id", unsaved.subtypeId)
+            .maybeSingle()
+        ).data
+      : null;
+  const row = unsaved
+    ? {
+        ...loaded,
+        selected_date: unsaved.date,
+        selected_start_time: unsaved.start,
+        selected_end_time: unsaved.end,
+        ...(unsaved.deposit != null ? { deposit_amount: unsaved.deposit } : {}),
+        ...(changedSubtype ? { event_subtypes: changedSubtype } : {}),
+      }
+    : loaded;
   const settings = await supabase
     .from("company_information")
     .select("private_hire_deposit, private_hire_deposit_days")
@@ -181,7 +249,7 @@ export async function privateHireEmailSlotsAction(key: PrivateHireEmailKey, id: 
     .maybeSingle();
   /* Before approval there's no due date yet - preview the one approving now would set. */
   const dueDate =
-    row.deposit_due_date ??
+    dueDateForNewHireDate(row.deposit_due_date, row.selected_date, venueToday()) ??
     depositDueDate(venueToday(), Number(settings.data?.private_hire_deposit_days) || 7, row.selected_date);
   return renderTemplate(supabase, key, {
     customerName: row.full_name,

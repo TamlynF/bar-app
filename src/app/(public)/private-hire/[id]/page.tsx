@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { PublicNav } from "@/components/public-nav";
 import { PageHeader } from "@/components/editorial/page-header";
 import { getContactEmail } from "@/lib/company-info";
+import { EMAIL_REPLY_DOMAIN } from "@/lib/email";
+import { correspondenceReplyAddress } from "@/lib/email/correspondence";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { venueToday } from "@/lib/private-hire-flow";
 import {
@@ -115,7 +117,8 @@ export default async function PrivateHireRequestPage({
   const due = formatHireDate(row.deposit_due_date);
   const Icon = STATUS_ICON[status];
   const isClosed = status === "declined" || status === "cancelled" || status === "expired";
-  const contactEmail = await getContactEmail();
+  const writeTo =
+    correspondenceReplyAddress({ kind: "hire", id: row.id }, EMAIL_REPLY_DOMAIN) ?? (await getContactEmail());
 
   return (
     <main className="min-h-dvh w-full bg-canvas px-4 pb-12 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
@@ -175,11 +178,13 @@ export default async function PrivateHireRequestPage({
         />
 
         <p className="mt-8 text-center text-meta text-ink-2">
-          Questions? Reply to any of our emails or write to{" "}
-          <a href={`mailto:${contactEmail}`} className="font-semibold text-gold underline-offset-2 hover:underline">
-            {contactEmail}
+          Questions? Write to{" "}
+          <a
+            href={`mailto:${writeTo}`}
+            className="mt-1 block font-semibold break-words text-gold underline-offset-2 hover:underline sm:mt-0 sm:inline"
+          >
+            {writeTo}
           </a>
-          .
         </p>
       </div>
     </main>

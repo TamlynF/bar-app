@@ -58,6 +58,9 @@ const KIND_LABELS: Record<string, string> = {
   approved: "Approved - deposit due",
   deposit_reminder: "Deposit reminder",
   expired: "Deposit expired",
+  deposit_updated: "Deposit updated",
+  time_turned_down: "Time turned down",
+  page_response: "From their request page",
 };
 
 const LONG_BODY_CHARS = 420;
@@ -478,10 +481,12 @@ export function CorrespondencePanel({
   counterpartName,
   onCountChange,
   editable = true,
+  showBookingLinks = true,
 }: ThreadOwner & {
   counterpartName?: string;
   onCountChange?: (count: number) => void;
   editable?: boolean;
+  showBookingLinks?: boolean;
 }) {
   const [thread, setThread] = useState<CorrespondenceThread | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -621,7 +626,7 @@ export function CorrespondencePanel({
                 message={m}
                 counterpartName={who}
                 showSource={aggregated}
-                bookings={thread.bookings}
+                bookings={showBookingLinks ? thread.bookings : undefined}
                 bookingNoun={thread.bookingNoun}
                 linkedId={musicActId ? m.bandRequestId : m.privateHireRequestId}
                 onRelink={editable && relinkScope ? (id) => relink(m.id, id) : undefined}

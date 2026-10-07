@@ -1,5 +1,6 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
+import { squareDashboardConfig } from "@/lib/square";
 import { type PrivateHireRequest } from "./components/private-hire-card";
 import PrivateHireListClient from "./components/private-hire-list-client";
 
@@ -45,7 +46,11 @@ export default async function PrivateBookingsPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-3 py-4 sm:py-0 md:px-4 xl:max-w-none">
-      <PrivateHireListClient initialRequests={items} initialStatuses={initialStatuses} />
+      <PrivateHireListClient
+        initialRequests={items}
+        initialStatuses={initialStatuses}
+        square={squareDashboardConfig()}
+      />
     </div>
   );
 }

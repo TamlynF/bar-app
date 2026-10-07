@@ -10,6 +10,7 @@ import { type BandRequest } from "../../../music-bookings/components/band-bookin
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
 import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
+import { squareDashboardConfig } from "@/lib/square";
 
 function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
@@ -63,7 +64,11 @@ export default async function GeneralEventBookingsPage({
     const requests = (await getPrivateHireRequestsForType()) as unknown as PrivateHireRequest[];
     return (
       <RequestsShell title="Private hire" subtitle="Review and respond to venue hire enquiries">
-        <PrivateHireListClient initialRequests={requests} initialStatuses={initialStatuses} />
+        <PrivateHireListClient
+          initialRequests={requests}
+          initialStatuses={initialStatuses}
+          square={squareDashboardConfig()}
+        />
       </RequestsShell>
     );
   }

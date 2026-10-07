@@ -44,6 +44,22 @@ export function hireDetailRows(p: {
   return rows;
 }
 
+/* Drops the customer's checkout so the next "Pay deposit" makes a fresh one,
+   keeping the old order so a payment made on it can still be matched. */
+export function supersedeCheckout(
+  row: { square_order_id: string | null; superseded_square_order_ids: string[] | null }
+): Record<string, unknown> {
+  const kept = row.superseded_square_order_ids ?? [];
+  return {
+    payment_link_url: null,
+    square_payment_link_id: null,
+    square_order_id: null,
+    ...(row.square_order_id && !kept.includes(row.square_order_id)
+      ? { superseded_square_order_ids: [...kept, row.square_order_id] }
+      : {}),
+  };
+}
+
 export type HeldHireSlot = {
   id: string;
   full_name: string;

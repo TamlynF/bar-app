@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
+import React, { useDeferredValue, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   approvePrivateHireAction,
@@ -9,6 +9,7 @@ import {
   closePrivateHireAction,
   reopenPrivateHireAction,
   resendPrivateHireEmailAction,
+  changeAgreedHireAction,
   privateHireDepositDefaultAction,
   updatePrivateHireFields,
   getPrivateEventOptions,
@@ -25,6 +26,7 @@ import {
   Send,
   ArrowRight,
   BellRing,
+  CalendarClock,
   CalendarDays,
   CheckCircle,
   Check,
@@ -63,6 +65,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
 import { toHHMM, type ClashEvent } from "@/lib/event-clash";
+import { squareOrderUrl, squareTransactionUrl } from "@/lib/market/simulate";
 import { unwrapSubtype, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
   buildPrivateHireOutcomeEmail,
@@ -118,6 +121,11 @@ export interface PrivateHireRequest {
   deposit_due_date: string | null;
   deposit_paid_at: string | null;
   deposit_paid_via: string | null;
+  deposit_reminded_at: string | null;
+  payment_status: string | null;
+  square_payment_id: string | null;
+  square_order_id: string | null;
+  payment_link_url: string | null;
   proposed_at: string | null;
   approved_at: string | null;
   confirmed_at: string | null;
@@ -129,7 +137,9 @@ export interface PrivateHireRequest {
   linked_event?: LinkedEvent | LinkedEvent[] | null;
 }
 
-type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & {
+export type SquareDashboard = { environment: "sandbox" | "production"; locationId: string | null };
+
+type PrivateHireSubtypeJoin =Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & {
   event_types_id: number;
   event_types?: { name: string } | { name: string }[] | null;
 };
@@ -206,7 +216,9 @@ type HireAction =
   | "decline"
   | "cancel"
   | "reopen"
-  | "reopenDeposit";
+  | "reopenDeposit"
+  | "changeDeposit"
+  | "reschedule";
 
 const ACTION_TOAST: Record<HireAction, string> = {
   approve: "Approved - deposit request emailed",
@@ -218,6 +230,8 @@ const ACTION_TOAST: Record<HireAction, string> = {
   cancel: "Hire cancelled - customer emailed",
   reopen: "Request reopened",
   reopenDeposit: "Reopened - new deposit request emailed",
+  changeDeposit: "Deposit updated - customer emailed a new payment link",
+  reschedule: "Hire moved - customer emailed",
 };
 
 function formatTime12(t?: string | null): string {
@@ -257,7 +271,7 @@ function formatDateTime(iso?: string | null): string {
 }
 
 function EditRow({
-  label, value, onChange, editable, type = "text", placeholder, readOnlyValue, trailing,
+  label, value, onChange, editable, type = "text", placeholder, readOnlyValue, trailing, inputClassName,
 }: {
   label: string;
   value: string;
@@ -267,6 +281,7 @@ function EditRow({
   placeholder?: string;
   readOnlyValue?: React.ReactNode;
   trailing?: React.ReactNode;
+  inputClassName?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
@@ -280,7 +295,10 @@ function EditRow({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
+          className={cn(
+            "min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40",
+            inputClassName
+          )}
         />
       )}
       {trailing}
@@ -288,26 +306,110 @@ function EditRow({
   );
 }
 
-function ContactRow({ label, value, href, icon: Icon, external }: { label: string; value: string | null; href: string | null; icon: React.ElementType<{ className?: string }>; external?: boolean }) {
+function PaymentStatusPill({ status }: { status: string | null }) {
+  if (!status) return <>-</>;
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
+        status === "paid" ? "bg-admin-success-bg text-admin-success" : "bg-admin-warning-bg text-admin-warning"
+      )}
+    >
+      {status === "partially_paid" ? "part paid" : status.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+function LinkRow({ label, value, href, title }: { label: string; value: string | null; href: string | null; title: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
+      {value && href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={title}
+          onClick={(e) => e.stopPropagation()}
+          className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-admin-primary underline-offset-2 hover:underline"
+        >
+          <span className="truncate font-mono text-[12px]">{value}</span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        </a>
+      ) : (
+        <span className="text-[13px] font-semibold text-[#20231A]">-</span>
+      )}
+    </div>
+  );
+}
+
+const CONTACT_ICON_BUTTON =
+  "relative -my-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors after:absolute after:-inset-2 hover:bg-[#34451F] hover:text-white";
+
+function ContactRow({
+  label,
+  value,
+  href,
+  icon: Icon,
+  external,
+  onActivate,
+  actionTitle,
+}: {
+  label: string;
+  value: string | null;
+  href: string | null;
+  icon: React.ElementType<{ className?: string }>;
+  external?: boolean;
+  onActivate?: () => void;
+  actionTitle?: string;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
         <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
-        {href && (
+        {href && onActivate ? (
+          <button
+            type="button"
+            aria-label={actionTitle ?? `${label}: ${value}`}
+            title={actionTitle}
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivate();
+            }}
+            className={CONTACT_ICON_BUTTON}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </button>
+        ) : href ? (
           <a
             href={href}
             {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             aria-label={`${label}: ${value}`}
-            title={`Open ${label.toLowerCase()}`}
+            title={actionTitle ?? `Open ${label.toLowerCase()}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
+            className={CONTACT_ICON_BUTTON}
           >
             <Icon className="h-3.5 w-3.5" />
           </a>
-        )}
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function ViewMoreButton({ open, onToggle, controls }: { open: boolean; onToggle: () => void; controls: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      className="flex w-full items-center justify-center gap-1 bg-admin-surface/60 px-4 py-2 text-[12px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-primary focus-visible:bg-admin-surface focus-visible:outline-none max-sm:min-h-11"
+    >
+      {open ? "View less" : "View more"}
+      <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
+    </button>
   );
 }
 
@@ -398,12 +500,19 @@ function formatDay(date: string | null | undefined): string {
   return date ? format(new Date(date + "T00:00:00"), "EEE d MMM") : "";
 }
 
-function stageHint(request: PrivateHireRequest, status: PrivateHireStatus, blocker?: string): string {
+function stageHint(
+  request: PrivateHireRequest,
+  status: PrivateHireStatus,
+  blocker?: string,
+  slotMatchesPreferred?: boolean
+): string {
   switch (status) {
     case "new":
       return blocker
         ? `New request. ${blocker}`
-        : "New request. Approve their times to ask for the deposit, or propose different ones.";
+        : slotMatchesPreferred
+          ? "New request. The selected slot is what they asked for - approve it to ask for the deposit."
+          : "New request. The selected slot differs from what they asked for, so it goes to them as a proposal.";
     case "awaiting_customer":
       return `Waiting for ${request.full_name} to accept the proposed time${
         request.proposed_at ? ` (sent ${formatDay(request.proposed_at.slice(0, 10))})` : ""
@@ -487,6 +596,56 @@ function StepConnector({ done }: { done: boolean }) {
   );
 }
 
+function initialSlot(request: PrivateHireRequest, status: PrivateHireStatus) {
+  const saved = {
+    date: request.selected_date || "",
+    start: toHHMM(request.selected_start_time),
+    end: toHHMM(request.selected_end_time),
+    prefilled: false,
+  };
+  const nothingSaved = !saved.date && !saved.start && !saved.end;
+  const preferredUpcoming = !!request.preferred_date && request.preferred_date >= format(new Date(), "yyyy-MM-dd");
+  if (status !== "new" || !nothingSaved || !preferredUpcoming) return saved;
+  return {
+    date: request.preferred_date ?? "",
+    start: toHHMM(request.preferred_start_time),
+    end: toHHMM(request.preferred_end_time),
+    prefilled: true,
+  };
+}
+
+/* The approve and propose explanations each show in full until staff
+   dismiss them once in this browser, then live behind an info button. */
+type SlotRole = "approve" | "propose";
+const SLOT_HINT_KEY: Record<SlotRole, string> = {
+  approve: "private-hire-approve-hint-seen",
+  propose: "private-hire-slot-hint-seen",
+};
+const slotHintListeners = new Set<() => void>();
+
+function subscribeSlotHint(listener: () => void) {
+  slotHintListeners.add(listener);
+  return () => {
+    slotHintListeners.delete(listener);
+  };
+}
+
+function readSlotHintsSeen(): string {
+  try {
+    const seen = (role: SlotRole) => (window.localStorage.getItem(SLOT_HINT_KEY[role]) === "1" ? "1" : "0");
+    return seen("approve") + seen("propose");
+  } catch {
+    return "11";
+  }
+}
+
+function markSlotHintSeen(role: SlotRole) {
+  try {
+    window.localStorage.setItem(SLOT_HINT_KEY[role], "1");
+  } catch {}
+  slotHintListeners.forEach((l) => l());
+}
+
 type ButtonSpec = { action: HireAction; label: string; needsSlot?: boolean };
 
 /* The buttons each stage offers: a quiet destructive one on the left, an
@@ -497,7 +656,6 @@ const STAGE_BUTTONS: Record<
 > = {
   new: {
     danger: { action: "decline", label: "Decline" },
-    secondary: { action: "propose", label: "Propose new time", needsSlot: true },
     primary: { action: "approve", label: "Approve times", needsSlot: true },
   },
   awaiting_customer: {
@@ -525,12 +683,18 @@ const STAGE_BUTTONS: Record<
   },
 };
 
+const NEW_STAGE_PROPOSE_BUTTONS: (typeof STAGE_BUTTONS)[PrivateHireStatus] = {
+  danger: { action: "decline", label: "Decline" },
+  primary: { action: "propose", label: "Propose new time", needsSlot: true },
+};
+
 function StageStepper({
   request,
   status,
   onAction,
   pendingAction,
   slotBlocker,
+  slotMatchesPreferred,
   onRevealSlot,
   closedReason,
   onClosedReasonChange,
@@ -540,6 +704,7 @@ function StageStepper({
   onAction: (action: HireAction) => void;
   pendingAction: HireAction | null;
   slotBlocker?: string;
+  slotMatchesPreferred: boolean;
   onRevealSlot: () => void;
   closedReason: string;
   onClosedReasonChange: (v: string) => void;
@@ -547,9 +712,9 @@ function StageStepper({
   const idx = PRIVATE_HIRE_PIPELINE.indexOf(status);
   const isClosed = isClosedPrivateHire(status);
   const busy = !!pendingAction;
-  const buttons = STAGE_BUTTONS[status];
+  const buttons = status === "new" && !slotMatchesPreferred ? NEW_STAGE_PROPOSE_BUTTONS : STAGE_BUTTONS[status];
   const primaryBlocked = !!buttons.primary?.needsSlot && !!slotBlocker;
-  const hint = stageHint(request, status, primaryBlocked ? slotBlocker : undefined);
+  const hint = stageHint(request, status, primaryBlocked ? slotBlocker : undefined, slotMatchesPreferred);
 
   const spinner = (a?: ButtonSpec) =>
     a && pendingAction === a.action ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : null;
@@ -678,12 +843,12 @@ function StageStepper({
                 onClick={onRevealSlot}
                 title={slotBlocker}
                 className={cn(
-                  "inline-flex h-11 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 text-[13px] font-semibold whitespace-nowrap text-amber-800 transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:px-4 lg:flex-initial",
+                  "inline-flex h-11 min-w-0 flex-1 shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 text-center text-[13px] leading-tight font-semibold text-amber-800 sm:whitespace-nowrap transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 sm:px-4 lg:flex-initial",
                   !buttons.secondary && "col-span-2"
                 )}
               >
                 <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Pick a slot first
+                {buttons.primary.label}: pick a slot
               </button>
             ) : (
               <button
@@ -761,6 +926,7 @@ function ActionDialogBody({
   to,
   noteLabel,
   notePlaceholder,
+  notice,
 }: {
   initial: ActionDraft;
   onChange: (draft: ActionDraft) => void;
@@ -770,6 +936,7 @@ function ActionDialogBody({
   to: string;
   noteLabel: string;
   notePlaceholder: string;
+  notice?: React.ReactNode;
 }) {
   const [draft, setDraft] = useState(initial);
   const update = (patch: Partial<ActionDraft>) => {
@@ -827,6 +994,7 @@ function ActionDialogBody({
           )}
         </div>
       )}
+      {notice}
       {noDeposit && (
         <p className="rounded-lg bg-admin-info-bg px-3 py-2 text-[12px] font-semibold text-admin-info">
           No deposit - this confirms the hire straight away and puts it on the schedule.
@@ -855,9 +1023,11 @@ const LIST_HREF = "/event-bookings/private-bookings";
 
 export function PrivateHireCard({
   request,
+  square,
   onSheetOpenChange,
 }: {
   request: PrivateHireRequest;
+  square: SquareDashboard;
   onSheetOpenChange?: (request: PrivateHireRequest, open: boolean) => void;
 }) {
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
@@ -913,12 +1083,20 @@ export function PrivateHireCard({
 
   const [guestCount, setGuestCount] = useState(String(request.guest_count ?? ""));
   const [subtypeId, setSubtypeId] = useState(String(request.event_subtypes_id));
-  const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
-  const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
-  const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
+  const [openingSlot] = useState(() => initialSlot(request, status));
+  const savedSlot = {
+    date: request.selected_date || "",
+    start: toHHMM(request.selected_start_time),
+    end: toHHMM(request.selected_end_time),
+    prefilled: false,
+  };
+  const slotBaseline = savedSlot.date || savedSlot.start || savedSlot.end ? savedSlot : openingSlot;
+  const [selectedDate, setSelectedDate] = useState(openingSlot.date);
+  const [selectedStartTime, setSelectedStartTime] = useState(openingSlot.start);
+  const [selectedEndTime, setSelectedEndTime] = useState(openingSlot.end);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState(
-    request.deposit_amount != null && request.deposit_amount > 0 ? String(request.deposit_amount) : ""
+    request.deposit_amount != null ? String(request.deposit_amount) : ""
   );
   const [depositDue, setDepositDue] = useState(request.deposit_due_date || "");
 
@@ -929,6 +1107,14 @@ export function PrivateHireCard({
     if (!open || options) return;
     getPrivateEventOptions().then(setOptions).catch(() => {});
   }, [open, options]);
+  const [defaultDeposit, setDefaultDeposit] = useState<number | null>(null);
+  const [depositDetailsOpen, setDepositDetailsOpen] = useState(false);
+  const [contactDetailsOpen, setContactDetailsOpen] = useState(false);
+  useEffect(() => {
+    if (!open || defaultDeposit != null || !depositEditable) return;
+    privateHireDepositDefaultAction().then(setDefaultDeposit).catch(() => {});
+  }, [open, defaultDeposit, depositEditable]);
+  const usingDefaultDeposit = depositEditable && depositAmount.trim() === "";
   const onlyType = options?.types.length === 1 ? options.types[0] : undefined;
   const typeId =
     currentSub?.event_types_id != null ? String(currentSub.event_types_id) : onlyType ? String(onlyType.id) : "";
@@ -973,20 +1159,21 @@ export function PrivateHireCard({
     : undefined;
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
-  const origStart = toHHMM(request.selected_start_time);
-  const origEnd = toHHMM(request.selected_end_time);
   const dateTimeChanged =
-    selectedDate !== (request.selected_date || "") ||
-    selectedStartTime !== origStart ||
-    selectedEndTime !== origEnd;
+    selectedDate !== slotBaseline.date ||
+    selectedStartTime !== slotBaseline.start ||
+    selectedEndTime !== slotBaseline.end;
   const detailsChanged =
     guestCount !== String(request.guest_count ?? "") ||
     subtypeId !== String(request.event_subtypes_id) ||
     declineReasonText !== (request.decline_reason ?? "");
-  const origDeposit = request.deposit_amount != null && request.deposit_amount > 0 ? String(request.deposit_amount) : "";
+  const origDeposit = request.deposit_amount != null ? String(request.deposit_amount) : "";
+  const depositValue = (v: string) => (v.trim() === "" ? null : Number(v));
   const depositChanged =
-    Number(depositAmount || 0) !== Number(origDeposit || 0) || depositDue !== (request.deposit_due_date || "");
+    depositValue(depositAmount) !== depositValue(origDeposit) || depositDue !== (request.deposit_due_date || "");
   const hasChanges = detailsChanged || dateTimeChanged || depositChanged;
+  const depositAmountChanged =
+    depositAmount.trim() !== "" && Number(depositAmount) !== Number(request.deposit_amount ?? 0);
 
   const editFields = () => ({
     guest_count: guestCount.trim() === "" ? request.guest_count : Number(guestCount),
@@ -997,7 +1184,7 @@ export function PrivateHireCard({
     decline_reason: declineReasonText || null,
     ...(depositChanged
       ? {
-          deposit_amount: depositAmount.trim() === "" ? 0 : Math.max(0, Number(depositAmount)),
+          deposit_amount: depositAmount.trim() === "" ? null : Math.max(0, Number(depositAmount)),
           ...(status === "awaiting_deposit" && depositDue ? { deposit_due_date: depositDue } : {}),
         }
       : {}),
@@ -1071,6 +1258,16 @@ export function PrivateHireCard({
     return list;
   }
 
+  function startEmail() {
+    const composer = document.getElementById(`reply-${request.id}`);
+    if (!composer) {
+      window.location.href = `mailto:${request.email}`;
+      return;
+    }
+    composer.scrollIntoView({ block: "center", behavior: "smooth" });
+    composer.focus({ preventScroll: true });
+  }
+
   function revealSlot() {
     setConfirmAttempted(true);
     setSlotFlash(true);
@@ -1092,9 +1289,9 @@ export function PrivateHireCard({
   function discardChanges() {
     setGuestCount(String(request.guest_count ?? ""));
     setSubtypeId(String(request.event_subtypes_id));
-    setSelectedDate(request.selected_date || "");
-    setSelectedStartTime(toHHMM(request.selected_start_time));
-    setSelectedEndTime(toHHMM(request.selected_end_time));
+    setSelectedDate(slotBaseline.date);
+    setSelectedStartTime(slotBaseline.start);
+    setSelectedEndTime(slotBaseline.end);
     setDeclineReasonText(request.decline_reason || "");
     setDepositAmount(origDeposit);
     setDepositDue(request.deposit_due_date || "");
@@ -1118,7 +1315,37 @@ export function PrivateHireCard({
     via?: boolean;
     noteLabel: string;
     notePlaceholder: string;
+    notice?: React.ReactNode;
   };
+
+  const paidDeposit = Number(request.paid_amount) || 0;
+  const refundNotice =
+    paidDeposit > 0 ? (
+      <div className="rounded-lg border border-admin-warning/30 bg-admin-warning-bg px-3 py-2 text-[12px] leading-snug text-admin-warning">
+        <p className="font-semibold">
+          {formatDeposit(paidDeposit)} deposit was paid - cancelling doesn&apos;t refund it.
+        </p>
+        <p className="mt-0.5">
+          Refund it by hand in Square
+          {request.square_payment_id ? (
+            <>
+              :{" "}
+              <a
+                href={squareTransactionUrl(square.environment, request.square_payment_id, square.locationId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold underline underline-offset-2"
+              >
+                open the payment
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </a>
+            </>
+          ) : (
+            "."
+          )}
+        </p>
+      </div>
+    ) : undefined;
 
   function dialogFor(action: HireAction): DialogSpec | null {
     const approveLike = {
@@ -1149,6 +1376,39 @@ export function PrivateHireCard({
           title: "Reopen with a new deadline?",
           description: "Sends a fresh deposit request with a new due date and holds the date again.",
           confirmLabel: "Reopen & Email",
+        };
+      case "reschedule":
+        return status === "awaiting_deposit"
+          ? {
+              title: "Move this hire?",
+              description:
+                "Emails the customer the new date and time with the deposit details, and replaces their payment link. The due date moves earlier if the new date needs it.",
+              confirmLabel: "Move & Email",
+              email: "private_hire.rescheduled",
+              noDepositEmail: "private_hire.confirmed",
+              deposit: "Deposit (£)",
+              noteLabel: "Message to the customer (optional)",
+              notePlaceholder: "Why the date or time has changed...",
+            }
+          : {
+              title: "Move this hire?",
+              description: "Updates the event on the schedule and emails the customer the new date and time.",
+              confirmLabel: "Move & Email",
+              email: "private_hire.rescheduled",
+              noteLabel: "Message to the customer (optional)",
+              notePlaceholder: "Why the date or time has changed...",
+            };
+      case "changeDeposit":
+        return {
+          title: "Change the deposit?",
+          description:
+            "Emails the customer the new amount, and their payment link is replaced with one for it. £0 confirms the hire with no deposit.",
+          confirmLabel: "Update & Email",
+          email: "private_hire.deposit_updated",
+          noDepositEmail: "private_hire.confirmed",
+          deposit: "New deposit (£)",
+          noteLabel: "Message to the customer (optional)",
+          notePlaceholder: "Why the deposit has changed...",
         };
       case "propose":
         return {
@@ -1189,9 +1449,10 @@ export function PrivateHireCard({
               : "Releases the held date and emails the customer.",
           confirmLabel: "Cancel Hire & Email",
           destructive: true,
-          email: "private_hire.cancelled",
+          email: status === "confirmed" ? "private_hire.booking_cancelled" : "private_hire.cancelled",
           noteLabel: "Message to the customer (optional)",
           notePlaceholder: "Shared with the customer in the email.",
+          notice: refundNotice,
         };
       default:
         return null;
@@ -1222,9 +1483,18 @@ export function PrivateHireCard({
 
     /* Fetched rather than composed here, so the preview is the copy that will
        actually be sent - including any wording changed on the settings page. */
+    const slotOnScreen = {
+      date: selectedDate || null,
+      start: selectedStartTime || null,
+      end: selectedEndTime || null,
+      subtypeId: subtypeId ? Number(subtypeId) : null,
+      deposit: depositAmount.trim() ? Number(depositAmount) : null,
+    };
     const [withDeposit, noDeposit, defaultDeposit] = await Promise.all([
-      d.email ? privateHireEmailSlotsAction(d.email, request.id) : Promise.resolve(null),
-      d.noDepositEmail ? privateHireEmailSlotsAction(d.noDepositEmail, request.id) : Promise.resolve(undefined),
+      d.email ? privateHireEmailSlotsAction(d.email, request.id, slotOnScreen) : Promise.resolve(null),
+      d.noDepositEmail
+        ? privateHireEmailSlotsAction(d.noDepositEmail, request.id, slotOnScreen)
+        : Promise.resolve(undefined),
       d.deposit && !depositAmount ? privateHireDepositDefaultAction() : Promise.resolve(Number(depositAmount)),
     ]);
 
@@ -1257,6 +1527,7 @@ export function PrivateHireCard({
           }}
           depositLabel={d.deposit}
           showVia={d.via}
+          notice={d.notice}
           to={request.email}
           noteLabel={d.noteLabel}
           notePlaceholder={d.notePlaceholder}
@@ -1269,7 +1540,12 @@ export function PrivateHireCard({
     setError(null);
     setClashes([]);
     void attempt(async () => {
-      const usesSlot = action === "approve" || action === "propose" || action === "accept" || action === "reopenDeposit";
+      const usesSlot =
+        action === "approve" ||
+        action === "propose" ||
+        action === "accept" ||
+        action === "reopenDeposit" ||
+        action === "reschedule";
       if (usesSlot) {
         const c = await findClashes();
         if (c.length) return;
@@ -1283,7 +1559,7 @@ export function PrivateHireCard({
     setPendingAction(action);
     startTransition(async () => {
       try {
-        if (hasChanges) await updatePrivateHireFields(request.id, editFields());
+        if (hasChanges || slotBaseline.prefilled) await updatePrivateHireFields(request.id, editFields());
         const note = draft.note.trim() || undefined;
         const amount = draft.deposit.trim() === "" ? null : Math.max(0, Number(draft.deposit));
         const check = (r: { ok: boolean; error?: string }) => {
@@ -1316,8 +1592,29 @@ export function PrivateHireCard({
           case "resend":
             check(await resendPrivateHireEmailAction(request.id));
             break;
+          case "changeDeposit":
+            check(await changeAgreedHireAction(request.id, { deposit: amount ?? 0 }, { note }));
+            break;
+          case "reschedule":
+            check(
+              await changeAgreedHireAction(
+                request.id,
+                {
+                  slot: { date: selectedDate, start: selectedStartTime, end: selectedEndTime },
+                  deposit: status === "awaiting_deposit" ? amount : null,
+                },
+                { note }
+              )
+            );
+            break;
         }
-        const zeroDeposit = (action === "approve" || action === "accept" || action === "reopenDeposit") && amount === 0;
+        const zeroDeposit =
+          (action === "approve" ||
+            action === "accept" ||
+            action === "reopenDeposit" ||
+            action === "changeDeposit" ||
+            (action === "reschedule" && status === "awaiting_deposit")) &&
+          amount === 0;
         toast.success(zeroDeposit ? "Confirmed with no deposit - customer emailed" : ACTION_TOAST[action]);
       } catch (e) {
         setError(e instanceof Error && e.message ? e.message : "Failed to update. Please try again.");
@@ -1328,6 +1625,14 @@ export function PrivateHireCard({
 
   function handleSave() {
     if (!hasChanges) return;
+    if ((status === "awaiting_deposit" || status === "confirmed") && dateTimeChanged) {
+      handleAction("reschedule");
+      return;
+    }
+    if (status === "awaiting_deposit" && depositAmountChanged) {
+      handleAction("changeDeposit");
+      return;
+    }
     setError(null);
     setClashes([]);
     void attempt(async () => {
@@ -1407,6 +1712,19 @@ export function PrivateHireCard({
     !!(preferredStart || preferredEnd) &&
     selectedStartTime === preferredStart &&
     selectedEndTime === preferredEnd;
+  const slotMatchesPreferred =
+    !!preferredDate &&
+    selectedDate === preferredDate &&
+    selectedStartTime === preferredStart &&
+    selectedEndTime === preferredEnd;
+  const slotFilled = !!selectedDate && !!selectedStartTime && !!selectedEndTime;
+  const slotRole = status !== "new" || !slotFilled ? null : slotMatchesPreferred ? "approve" : "propose";
+  const slotHintsSeen = useSyncExternalStore(subscribeSlotHint, readSlotHintsSeen, () => "11");
+  const slotHintSeen = slotRole === "approve" ? slotHintsSeen[0] === "1" : slotHintsSeen[1] === "1";
+  const slotHintText =
+    slotRole === "approve"
+      ? `Approve times sends ${request.full_name} the deposit request for this slot.`
+      : `Propose new time emails ${request.full_name} this slot to accept or turn down. Use the preferred pills above to switch back to their times.`;
 
   const subtypeBadge = toTitleCase(currentSub?.name);
 
@@ -1736,6 +2054,12 @@ export function PrivateHireCard({
                         )}
                       </div>
                     )}
+                    <SheetRow label="Proposed" value={formatDateTime(request.proposed_at)} />
+                    <SheetRow label="Approved" value={formatDateTime(request.approved_at)} />
+                    <SheetRow label="Deposit reminded" value={formatDateTime(request.deposit_reminded_at)} />
+                    <SheetRow label="Deposit paid" value={formatDateTime(request.deposit_paid_at)} />
+                    <SheetRow label="Confirmed" value={formatDateTime(request.confirmed_at)} />
+                    <SheetRow label="Closed" value={formatDateTime(request.closed_at)} />
                     <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
                     <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
                     <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "-"} />
@@ -1749,6 +2073,7 @@ export function PrivateHireCard({
               onAction={handleAction}
               pendingAction={pendingAction}
               slotBlocker={slotWarning ?? clashWarning}
+              slotMatchesPreferred={slotMatchesPreferred}
               onRevealSlot={revealSlot}
               closedReason={declineReasonText}
               onClosedReasonChange={setDeclineReasonText}
@@ -1812,8 +2137,6 @@ export function PrivateHireCard({
                     ) : undefined
                   }
                 >
-                  <SheetRow label="Name" value={request.full_name} />
-
                   <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Type / Subtype</span>
                     {!editable || !options ? (
@@ -1891,10 +2214,65 @@ export function PrivateHireCard({
                     ref={slotRowRef}
                     className={cn(
                       "scroll-mt-4 border-b border-[#D8D5C8] px-4 py-2 transition-colors last:border-0 sm:px-5",
-                      hasClashes ? "bg-red-50" : showSlotWarning && "bg-amber-50",
+                      slotRole && "border-l-4 py-3 pl-3 sm:pl-4",
+                      slotRole === "approve" && "border-l-admin-primary",
+                      slotRole === "propose" && "border-l-admin-info",
+                      hasClashes
+                        ? "bg-red-50"
+                        : showSlotWarning
+                          ? "bg-amber-50"
+                          : slotRole === "approve"
+                            ? "bg-admin-primary-soft/60"
+                            : slotRole === "propose" && "bg-admin-info-bg",
                       slotFlash && "ring-2 ring-amber-400/70 ring-inset"
                     )}
                   >
+                    {slotRole && (
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                        <span
+                          className={cn(
+                            "flex items-center gap-1.5 text-[13px] font-bold",
+                            slotRole === "approve" ? "text-admin-primary" : "text-admin-info"
+                          )}
+                        >
+                          {slotRole === "approve" ? (
+                            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          ) : (
+                            <CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          )}
+                          {slotRole === "approve" ? "You're approving" : "You're proposing"}
+                          {slotHintSeen && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  aria-label="What happens when you send this"
+                                  className="-my-1 flex h-6 w-6 items-center justify-center rounded-full text-current opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-admin-primary/40 focus-visible:outline-none max-sm:h-11 max-sm:w-11"
+                                >
+                                  <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                align="start"
+                                className="w-72 rounded-xl border-admin-line bg-white p-3 text-[12px] leading-snug font-normal text-admin-ink"
+                              >
+                                {slotHintText}
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
+                            slotRole === "approve"
+                              ? "bg-admin-primary text-white"
+                              : "bg-white text-admin-info ring-1 ring-admin-info/30"
+                          )}
+                        >
+                          {slotRole === "approve" ? "Their requested time" : "Different time"}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                       <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                         Selected Date &amp; Time
@@ -2000,6 +2378,18 @@ export function PrivateHireCard({
                         </span>
                       )}
                     </div>
+                    {slotRole && !hasClashes && !slotHintSeen && (
+                      <p className="mt-2 text-[12px] leading-snug text-admin-muted">
+                        {slotHintText}{" "}
+                        <button
+                          type="button"
+                          onClick={() => slotRole && markSlotHintSeen(slotRole)}
+                          className="font-semibold text-admin-primary underline-offset-2 hover:underline max-sm:min-h-11"
+                        >
+                          Got it
+                        </button>
+                      </p>
+                    )}
                     {editable && slotWarning && showSlotWarning && <FieldMessage warning={slotWarning} />}
                     {visibleClashes.length > 0 && (
                       <div className="mt-2">
@@ -2007,53 +2397,148 @@ export function PrivateHireCard({
                       </div>
                     )}
                   </div>
-
-                  {status === "confirmed" ? (
-                    <SheetRow
-                      label="Deposit"
-                      value={
-                        request.deposit_paid_via && request.deposit_paid_via !== "none"
-                          ? `${formatDeposit(request.paid_amount)} · ${DEPOSIT_PAID_VIA_LABEL[request.deposit_paid_via as DepositPaidVia] ?? request.deposit_paid_via}${request.deposit_paid_at ? ` · ${formatDay(request.deposit_paid_at.slice(0, 10))}` : ""}`
-                          : "None taken"
-                      }
-                    />
-                  ) : (
-                    <EditRow
-                      label="Deposit (£)"
-                      value={depositAmount}
-                      onChange={setDepositAmount}
-                      editable={depositEditable}
-                      type="number"
-                      placeholder="Company default"
-                      readOnlyValue={request.deposit_amount ? formatDeposit(request.deposit_amount) : "-"}
-                    />
-                  )}
-
-                  {(status === "awaiting_deposit" || status === "expired") && (
-                    <EditRow
-                      label="Deposit due"
-                      value={depositDue}
-                      onChange={setDepositDue}
-                      editable={status === "awaiting_deposit"}
-                      type="date"
-                      readOnlyValue={formatDay(request.deposit_due_date) || "-"}
-                    />
-                  )}
-
-                  <ContactRow
-                    label="Customer page"
-                    value={status === "awaiting_customer" ? "Waiting for their answer" : status === "awaiting_deposit" ? "Pay deposit link" : "Request status"}
-                    href={`/private-hire/${request.id}`}
-                    icon={ExternalLink}
-                    external
-                  />
                 </Section>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
                 {notesCards}
+              </div>
+
+                <Section
+                  className="min-w-0"
+                  title="Deposit"
+                  headerRight={
+                    request.payment_status ? <PaymentStatusPill status={request.payment_status} /> : undefined
+                  }
+                >
+                  <EditRow
+                    label="Deposit (£)"
+                    value={depositAmount}
+                    onChange={setDepositAmount}
+                    editable={depositEditable}
+                    type="number"
+                    placeholder={defaultDeposit != null ? formatDeposit(defaultDeposit) : "Company default"}
+                    inputClassName={usingDefaultDeposit && defaultDeposit != null ? "placeholder:text-[#20231A]" : undefined}
+                    readOnlyValue={request.deposit_amount != null ? formatDeposit(request.deposit_amount) : "-"}
+                    trailing={
+                      usingDefaultDeposit && defaultDeposit != null ? (
+                        <span
+                          title="Not saved on the request yet - this amount is set when you approve, unless you type a different one"
+                          className="shrink-0 rounded-full bg-admin-surface px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-admin-muted"
+                        >
+                          Company default
+                        </span>
+                      ) : undefined
+                    }
+                  />
+                  {request.payment_status === "partially_paid" && (
+                    <SheetRow
+                      label="Balance owed"
+                      value={
+                        <span className="text-admin-warning">
+                          {formatDeposit(
+                            Math.max(0, (Number(request.deposit_amount) || 0) - (Number(request.paid_amount) || 0))
+                          )}
+                        </span>
+                      }
+                    />
+                  )}
+                  {depositDetailsOpen && (
+                    <div id={`deposit-details-${request.id}`} className="animate-in border-b border-[#D8D5C8] duration-200 fade-in">
+                      <SheetRow
+                        label="Payment amount"
+                        value={request.paid_amount != null ? formatDeposit(request.paid_amount) : "-"}
+                      />
+                      <EditRow
+                        label="Deposit due"
+                        value={depositDue}
+                        onChange={setDepositDue}
+                        editable={status === "awaiting_deposit"}
+                        type="date"
+                        readOnlyValue={formatDay(request.deposit_due_date) || "-"}
+                      />
+                      <SheetRow label="Deposit reminded at" value={formatDateTime(request.deposit_reminded_at)} />
+                      <SheetRow
+                        label="Deposit paid"
+                        value={
+                          [
+                            request.deposit_paid_at ? formatDateTime(request.deposit_paid_at) : "",
+                            request.deposit_paid_via
+                              ? `via ${(DEPOSIT_PAID_VIA_LABEL[request.deposit_paid_via as DepositPaidVia] ?? request.deposit_paid_via).toLowerCase()}`
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ") || "-"
+                        }
+                      />
+                      <LinkRow
+                        label="Square payment ID"
+                        value={request.square_payment_id}
+                        href={
+                          request.square_payment_id
+                            ? squareTransactionUrl(square.environment, request.square_payment_id, square.locationId)
+                            : null
+                        }
+                        title="Open this payment in the Square dashboard"
+                      />
+                      <LinkRow
+                        label="Square order ID"
+                        value={request.square_order_id}
+                        href={request.square_order_id ? squareOrderUrl(square.environment, request.square_order_id) : null}
+                        title="Open this order in the Square dashboard"
+                      />
+                      <LinkRow
+                        label="Payment link"
+                        value={request.payment_link_url}
+                        href={request.payment_link_url}
+                        title="Open the customer's Square payment link"
+                      />
+                    </div>
+                  )}
+                  <ViewMoreButton
+                    open={depositDetailsOpen}
+                    onToggle={() => setDepositDetailsOpen((v) => !v)}
+                    controls={`deposit-details-${request.id}`}
+                  />
+                </Section>
+
+              <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section title="Contact">
-                  <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
-                  <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
+                  <SheetRow label="Name" value={request.full_name} />
+                  {contactDetailsOpen && (
+                    <div
+                      id={`contact-details-${request.id}`}
+                      className="animate-in border-b border-[#D8D5C8] duration-200 fade-in"
+                    >
+                      <ContactRow
+                        label="Email"
+                        value={request.email}
+                        href={request.email ? `mailto:${request.email}` : null}
+                        icon={Mail}
+                        onActivate={editable ? startEmail : undefined}
+                        actionTitle={editable ? `Write an email to ${request.full_name}` : undefined}
+                      />
+                      <ContactRow
+                        label="Phone"
+                        value={request.phone_no}
+                        href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null}
+                        icon={Phone}
+                        actionTitle={request.phone_no ? `Call ${request.phone_no}` : undefined}
+                      />
+                      <ContactRow
+                        label="Customer page"
+                        value={status === "awaiting_customer" ? "Waiting for their answer" : status === "awaiting_deposit" ? "Pay deposit link" : "Request status"}
+                        href={`/private-hire/${request.id}`}
+                        icon={ExternalLink}
+                        external
+                        actionTitle="Open the customer's request page"
+                      />
+                    </div>
+                  )}
+                  <ViewMoreButton
+                    open={contactDetailsOpen}
+                    onToggle={() => setContactDetailsOpen((v) => !v)}
+                    controls={`contact-details-${request.id}`}
+                  />
                 </Section>
 
                 {isCancelled && (
@@ -2093,6 +2578,7 @@ export function PrivateHireCard({
                   <CorrespondencePanel
                     privateHireRequestId={request.id}
                     editable={editable}
+                    showBookingLinks={false}
                     counterpartName={request.full_name}
                     onCountChange={setEmailCount}
                   />

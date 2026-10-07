@@ -3,6 +3,8 @@ import {
   canMovePrivateHire,
   customerCanCancel,
   depositDueDate,
+  depositPaymentStatus,
+  dueDateForNewHireDate,
   effectivePrivateHireStatus,
   holdsDate,
   isClosedPrivateHire,
@@ -19,6 +21,7 @@ import {
   heldSlotsAsEvents,
   heldSlotsOnDate,
   hireDetailRows,
+  supersedeCheckout,
 } from "@/lib/private-hire-details";
 
 describe("normalizePrivateHireStatus", () => {
@@ -157,9 +160,13 @@ describe("resolveDepositAmount", () => {
     expect(resolveDepositAmount(150, 100)).toBe(150);
   });
 
-  it("falls back to the company default", () => {
-    expect(resolveDepositAmount(0, 100)).toBe(100);
+  it("falls back to the company default only when the request has no amount", () => {
     expect(resolveDepositAmount(null, 99.999)).toBe(100);
+    expect(resolveDepositAmount(undefined, 100)).toBe(100);
+  });
+
+  it("keeps a deposit staff waived to £0", () => {
+    expect(resolveDepositAmount(0, 100)).toBe(0);
   });
 
   it("is zero when neither is set", () => {
@@ -204,5 +211,72 @@ describe("private hire details", () => {
     expect(events.every((e) => e.id < 0 && e.is_active)).toBe(true);
     expect(events[0].title).toContain("Jane");
     expect(heldSlotsOnDate(held, "2026-11-15")).toHaveLength(1);
+  });
+});
+
+describe("supersedeCheckout", () => {
+  it("clears the checkout and keeps the old order so a late payment still matches", () => {
+    expect(supersedeCheckout({ square_order_id: "ORDER_2", superseded_square_order_ids: ["ORDER_1"] })).toEqual({
+      payment_link_url: null,
+      square_payment_link_id: null,
+      square_order_id: null,
+      superseded_square_order_ids: ["ORDER_1", "ORDER_2"],
+    });
+  });
+
+  it("leaves the superseded list alone when there's no order yet or it's already kept", () => {
+    expect(supersedeCheckout({ square_order_id: null, superseded_square_order_ids: [] })).toEqual({
+      payment_link_url: null,
+      square_payment_link_id: null,
+      square_order_id: null,
+    });
+    expect(supersedeCheckout({ square_order_id: "ORDER_1", superseded_square_order_ids: ["ORDER_1"] })).toEqual({
+      payment_link_url: null,
+      square_payment_link_id: null,
+      square_order_id: null,
+    });
+  });
+
+  it("starts the list when the column is empty", () => {
+    expect(supersedeCheckout({ square_order_id: "ORDER_1", superseded_square_order_ids: null })).toMatchObject({
+      superseded_square_order_ids: ["ORDER_1"],
+    });
+  });
+});
+
+describe("dueDateForNewHireDate", () => {
+  it("keeps the due date when the new hire date is still after it", () => {
+    expect(dueDateForNewHireDate("2026-10-16", "2026-11-14", "2026-10-08")).toBe("2026-10-16");
+    expect(dueDateForNewHireDate("2026-10-16", "2026-10-17", "2026-10-08")).toBe("2026-10-16");
+  });
+
+  it("pulls it back to the day before an earlier hire date, but never into the past", () => {
+    expect(dueDateForNewHireDate("2026-10-16", "2026-10-12", "2026-10-08")).toBe("2026-10-11");
+    expect(dueDateForNewHireDate("2026-10-16", "2026-10-08", "2026-10-08")).toBe("2026-10-08");
+  });
+
+  it("leaves a missing due date or hire date alone", () => {
+    expect(dueDateForNewHireDate(null, "2026-10-12", "2026-10-08")).toBeNull();
+    expect(dueDateForNewHireDate("2026-10-16", null, "2026-10-08")).toBe("2026-10-16");
+  });
+});
+
+describe("depositPaymentStatus", () => {
+  it("is paid when the whole deposit (or more) came in", () => {
+    expect(depositPaymentStatus(500, 500)).toBe("paid");
+    expect(depositPaymentStatus(600, 500)).toBe("paid");
+  });
+
+  it("is part paid when less than the deposit came in", () => {
+    expect(depositPaymentStatus(200, 500)).toBe("partially_paid");
+  });
+
+  it("is unpaid when nothing came in", () => {
+    expect(depositPaymentStatus(0, 500)).toBe("unpaid");
+    expect(depositPaymentStatus(0, 0)).toBe("unpaid");
+  });
+
+  it("counts any payment as paid when no deposit amount was set", () => {
+    expect(depositPaymentStatus(100, null)).toBe("paid");
   });
 });

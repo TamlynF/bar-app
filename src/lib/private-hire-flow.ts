@@ -7,6 +7,7 @@ import { renderTemplate } from "@/lib/email/resolve";
 import { plainLayout, plainNote, plainPanel } from "@/lib/email/layout";
 import { escapeHtml } from "@/lib/email/escape";
 import { eventSlotIsComplete } from "@/lib/event-active";
+import { toHHMM } from "@/lib/event-clash";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { siteUrl } from "@/lib/site-url";
 import { getContactEmail } from "@/lib/company-info";
@@ -17,10 +18,13 @@ import { toE164 } from "@/lib/phone";
 import {
   canMovePrivateHire,
   depositDueDate,
+  depositPaymentStatus,
+  dueDateForNewHireDate,
   effectivePrivateHireStatus,
   normalizePrivateHireStatus,
   resolveDepositAmount,
   shouldSendDepositReminder,
+  DEPOSIT_PAID_VIA_LABEL,
   statusValues,
   DEFAULT_DEPOSIT_DAYS,
   type DepositPaidVia,
@@ -31,6 +35,7 @@ import {
   formatHireDate,
   formatHireTime,
   hireDetailRows,
+  supersedeCheckout,
   type HeldHireSlot,
 } from "@/lib/private-hire-details";
 
@@ -57,6 +62,7 @@ export type HireRow = {
   id: string;
   full_name: string;
   email: string;
+  contact_id: number | null;
   phone_no: string | null;
   guest_count: number;
   status: string;
@@ -68,15 +74,19 @@ export type HireRow = {
   deposit_amount: number | null;
   paid_amount: number | null;
   payment_status: string | null;
+  deposit_paid_via: string | null;
   deposit_due_date: string | null;
   deposit_reminded_at: string | null;
   payment_link_url: string | null;
+  square_payment_link_id: string | null;
   square_order_id: string | null;
+  square_payment_id: string | null;
+  superseded_square_order_ids: string[] | null;
   event_subtypes: SubtypeJoin | SubtypeJoin[] | null;
 };
 
 const HIRE_SELECT =
-  "id, full_name, email, phone_no, guest_count, status, event_id, event_subtypes_id, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_due_date, deposit_reminded_at, payment_link_url, square_order_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
+  "id, full_name, email, contact_id, phone_no, guest_count, status, event_id, event_subtypes_id, selected_date, selected_start_time, selected_end_time, deposit_amount, paid_amount, payment_status, deposit_paid_via, deposit_due_date, deposit_reminded_at, payment_link_url, square_payment_link_id, square_order_id, square_payment_id, superseded_square_order_ids, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )";
 
 const STALE = "This request has moved on since you opened it - refresh to see where it is now.";
 
@@ -116,6 +126,18 @@ function reasonLabel(row: HireRow): string {
 
 function slotIsSet(row: HireRow): boolean {
   return !!row.selected_date && !!row.selected_start_time && !!row.selected_end_time;
+}
+
+/* Square payment links stay payable until they're deleted, so a checkout the
+   customer no longer needs is switched off there too. Rows from before the
+   link id was kept can't be, which is what the superseded orders cover. */
+export async function switchOffCheckout(row: Pick<HireRow, "id" | "square_payment_link_id">): Promise<void> {
+  if (!row.square_payment_link_id) return;
+  try {
+    await squareClient.checkout.paymentLinks.delete({ id: row.square_payment_link_id });
+  } catch (err) {
+    console.error(`[private hire] couldn't switch off the Square link for ${row.id}:`, squareErrorDetail(err));
+  }
 }
 
 /* Moves the row only if it is still in the status it was read in. */
@@ -314,11 +336,11 @@ export async function approvePrivateHire(
     deposit_due_date: due,
     deposit_reminded_at: null,
     approved_at: now.toISOString(),
-    payment_link_url: null,
-    square_order_id: null,
+    ...supersedeCheckout(row),
     closed_at: null,
   });
   if (!moved) return { ok: false, error: STALE };
+  await switchOffCheckout(row);
 
   await sendCustomerEmail(
     ctx,
@@ -347,13 +369,98 @@ export async function proposePrivateHireTimes(
     proposed_at: new Date().toISOString(),
     deposit_due_date: null,
     deposit_reminded_at: null,
-    payment_link_url: null,
-    square_order_id: null,
+    ...supersedeCheckout(row),
   });
   if (!moved) return { ok: false, error: STALE };
+  await switchOffCheckout(row);
 
   await sendCustomerEmail(ctx, row, "private_hire.proposed", "proposed", { note: opts.note });
   return { ok: true, status: "awaiting_customer" };
+}
+
+export type HireSlot = { date: string; start: string; end: string };
+
+/* Changes to a hire the customer has already agreed - a new date or time, a
+   new deposit while it's still unpaid, or both - told to them in one email.
+   A £0 deposit means none is needed, so the hire is confirmed. Any change
+   while the deposit is unpaid replaces the checkout, so the customer pays
+   the right amount for the right date. */
+export async function changeAgreedHire(
+  ctx: FlowContext,
+  id: string,
+  change: { slot?: HireSlot | null; deposit?: number | null },
+  opts: { note?: string | null } = {}
+): Promise<FlowResult> {
+  const row = await loadHire(ctx.supabase, id);
+  if (!row) return { ok: false, error: "Request not found." };
+  const status = normalizePrivateHireStatus(row.status);
+  if (status !== "awaiting_deposit" && status !== "confirmed") return { ok: false, error: STALE };
+
+  const slot = change.slot ?? null;
+  if (slot && (!slot.date || !slot.start || !slot.end)) {
+    return { ok: false, error: "Set a date, start and end time first." };
+  }
+  const slotChanged =
+    !!slot &&
+    (slot.date !== row.selected_date ||
+      slot.start !== toHHMM(row.selected_start_time) ||
+      slot.end !== toHHMM(row.selected_end_time));
+
+  let deposit: number | null = null;
+  if (status === "awaiting_deposit" && change.deposit != null) {
+    if (!Number.isFinite(change.deposit) || change.deposit < 0) {
+      return { ok: false, error: "Enter a deposit of £0 or more." };
+    }
+    deposit = Math.round(change.deposit * 100) / 100;
+  }
+  const depositChanged = deposit != null && deposit !== Number(row.deposit_amount ?? 0);
+  if (!slotChanged && !depositChanged) return { ok: true, status };
+
+  const slotFields =
+    slot && slotChanged
+      ? {
+          selected_date: slot.date,
+          selected_start_time: slot.start,
+          selected_end_time: slot.end,
+          ...(status === "awaiting_deposit"
+            ? { deposit_due_date: dueDateForNewHireDate(row.deposit_due_date, slot.date, venueToday(ctx.now)) }
+            : {}),
+        }
+      : {};
+  const updated: HireRow = {
+    ...row,
+    ...slotFields,
+    ...(depositChanged ? { deposit_amount: deposit } : {}),
+  };
+
+  if (status === "confirmed") {
+    const moved = await moveRow(ctx, row, "confirmed", slotFields);
+    if (!moved) return { ok: false, error: STALE };
+    await syncHireEvent(ctx, updated);
+    await sendCustomerEmail(ctx, updated, "private_hire.rescheduled", "rescheduled", { note: opts.note });
+    return { ok: true, status: "confirmed" };
+  }
+
+  const moved = await moveRow(ctx, row, "awaiting_deposit", {
+    ...slotFields,
+    ...(depositChanged ? { deposit_amount: deposit, deposit_reminded_at: null } : {}),
+    ...supersedeCheckout(row),
+  });
+  if (!moved) return { ok: false, error: STALE };
+  await switchOffCheckout(row);
+
+  if (depositChanged && deposit === 0) {
+    return confirmPrivateHire(ctx, id, { via: "none", paidAmount: 0, note: opts.note });
+  }
+
+  await sendCustomerEmail(
+    ctx,
+    updated,
+    slotChanged ? "private_hire.rescheduled" : "private_hire.deposit_updated",
+    slotChanged ? "rescheduled" : "deposit_updated",
+    { note: opts.note, deposit: true }
+  );
+  return { ok: true, status: "awaiting_deposit" };
 }
 
 /* Records the deposit and confirms the hire. Safe to call twice: a request
@@ -377,21 +484,42 @@ export async function confirmPrivateHire(
 
   const now = new Date().toISOString();
   const paid = Math.max(0, Math.round(opts.paidAmount * 100) / 100);
+  const paymentStatus = depositPaymentStatus(paid, row.deposit_amount);
   const moved = await moveRow(ctx, row, "confirmed", {
     paid_amount: paid,
-    payment_status: paid > 0 ? "paid" : "unpaid",
+    payment_status: paymentStatus,
     deposit_paid_at: paid > 0 ? now : null,
     deposit_paid_via: opts.via,
     ...(opts.squarePaymentId ? { square_payment_id: opts.squarePaymentId } : {}),
     confirmed_at: now,
     closed_at: null,
     payment_link_url: null,
+    square_payment_link_id: null,
   });
   if (!moved) {
     const latest = await loadHire(ctx.supabase, id);
     return normalizePrivateHireStatus(latest?.status) === "confirmed"
       ? { ok: true, status: "confirmed" }
       : { ok: false, error: STALE };
+  }
+
+  const manual = opts.via === "bank_transfer" || opts.via === "cash" || opts.via === "other";
+  if (manual) {
+    await switchOffCheckout(row);
+    const owed = Math.max(0, (Number(row.deposit_amount) || 0) - paid);
+    const { error } = await ctx.supabase.from("private_hire_notes").insert({
+      request_id: id,
+      created_by: ctx.actorId,
+      body: [
+        `Deposit marked paid: ${formatDeposit(paid)} by ${DEPOSIT_PAID_VIA_LABEL[opts.via].toLowerCase()}.`,
+        paymentStatus === "partially_paid"
+          ? `${formatDeposit(owed)} of the ${formatDeposit(row.deposit_amount)} deposit is still owed.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+    if (error) console.error("[private hire] paid note not saved:", error);
   }
 
   const confirmed = { ...row, status: "confirmed", paid_amount: paid };
@@ -401,6 +529,30 @@ export async function confirmPrivateHire(
     await sendAdminAlert(ctx, { ...confirmed, deposit_amount: paid }, "admin.private_hire.deposit_paid");
   }
   return { ok: true, status: "confirmed" };
+}
+
+/* What staff closing a request leaves in the team notes. A customer cancelling
+   from their page is noted where they respond, and expiry is the nightly job. */
+function closeNote(
+  row: HireRow,
+  to: "declined" | "cancelled" | "expired",
+  opts: { note?: string | null; byStaff?: boolean }
+): string | null {
+  const message = opts.note?.trim();
+  if (to === "declined") {
+    return message
+      ? `Request declined. Reason given to the customer: "${message}"`
+      : "Request declined. No reason was given to the customer.";
+  }
+  if (to !== "cancelled" || !opts.byStaff) return null;
+  const paid = Number(row.paid_amount) || 0;
+  return [
+    "Hire cancelled.",
+    message ? `Message to the customer: "${message}"` : "No message was given to the customer.",
+    paid > 0 ? `${formatDeposit(paid)} was paid - refund it in Square.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 const CLOSE_EMAIL: Record<"declined" | "cancelled" | "expired", { key: string; kind: string }> = {
@@ -413,25 +565,36 @@ export async function closePrivateHire(
   ctx: FlowContext,
   id: string,
   to: "declined" | "cancelled" | "expired",
-  opts: { note?: string | null; notify?: boolean } = {}
+  opts: { note?: string | null; notify?: boolean; byStaff?: boolean } = {}
 ): Promise<FlowResult> {
   const row = await loadHire(ctx.supabase, id);
   if (!row) return { ok: false, error: "Request not found." };
-  if (!canMovePrivateHire(normalizePrivateHireStatus(row.status), to)) return { ok: false, error: STALE };
+  const from = normalizePrivateHireStatus(row.status);
+  if (!canMovePrivateHire(from, to)) return { ok: false, error: STALE };
 
   const moved = await moveRow(ctx, row, to, {
     closed_at: new Date().toISOString(),
     payment_link_url: null,
+    square_payment_link_id: null,
     ...(to !== "expired" && opts.note?.trim() ? { decline_reason: opts.note.trim() } : {}),
   });
   if (!moved) return { ok: false, error: STALE };
 
+  await switchOffCheckout(row);
   await deactivateHireEvent(ctx, row);
+  const noteBody = closeNote(row, to, opts);
+  if (noteBody) {
+    const { error } = await ctx.supabase
+      .from("private_hire_notes")
+      .insert({ request_id: id, created_by: ctx.actorId, body: noteBody });
+    if (error) console.error(`[private hire] ${to} note not saved:`, error);
+  }
   if (opts.notify !== false) {
-    const { key, kind } = CLOSE_EMAIL[to];
+    const { kind } = CLOSE_EMAIL[to];
+    const key = to === "cancelled" && from === "confirmed" ? "private_hire.booking_cancelled" : CLOSE_EMAIL[to].key;
     await sendCustomerEmail(ctx, row, key, kind, {
       note: opts.note,
-      details: to !== "declined",
+      details: to !== "declined" && !!row.selected_date,
       deposit: to === "expired",
     });
   }
@@ -472,6 +635,22 @@ const RESPONSE_PHRASE: Record<CustomerResponse, string> = {
   cancel: "cancelled their request",
 };
 
+/* What a customer types on their request page goes into the request's
+   correspondence like an email they sent, so it sits with the rest of the
+   conversation and shows as unread. */
+async function logPageMessage(ctx: FlowContext, row: HireRow, subject: string, text: string) {
+  const { error } = await ctx.supabase.from("email_messages").insert({
+    private_hire_request_id: row.id,
+    contact_id: row.contact_id,
+    direction: "inbound",
+    kind: "page_response",
+    from_address: row.email,
+    subject,
+    text_body: text,
+  });
+  if (error) console.error("[private hire] page message not logged:", error);
+}
+
 export async function respondAsCustomer(
   ctx: FlowContext,
   id: string,
@@ -503,14 +682,29 @@ export async function respondAsCustomer(
   }
   if (!result.ok) return result;
 
-  if (text) {
-    await ctx.supabase.from("private_hire_notes").insert({
-      request_id: id,
-      body: `Message from ${row.full_name} (${RESPONSE_PHRASE[response]}): ${text}`,
-    });
+  /* Every response is recorded, with the time it was about, so the
+     request's history shows exactly what the customer said yes or no to. */
+  const proposedSlot = row.selected_date
+    ? `${formatHireDate(row.selected_date)}, ${formatHireTime(row.selected_start_time, row.selected_end_time)}`
+    : null;
+  const aboutSlot = proposedSlot ? `${RESPONSE_PHRASE[response]} (${proposedSlot})` : RESPONSE_PHRASE[response];
+  const noteBody = text
+    ? `Message from ${row.full_name} (${aboutSlot}): ${text}`
+    : `${row.full_name} ${aboutSlot} on their request page.`;
+  const summary =
+    response === "cancel"
+      ? `Cancelled their request${proposedSlot ? ` for ${proposedSlot}` : ""}.`
+      : `${response === "accept" ? "Accepted" : "Turned down"} the proposed time: ${proposedSlot ?? "TBC"}.`;
+  const pageText = [summary, text].filter(Boolean).join("\n\n");
+  await Promise.all([
+    ctx.supabase.from("private_hire_notes").insert({ request_id: id, body: noteBody }),
+    logPageMessage(ctx, row, `${row.full_name} ${aboutSlot}`, pageText),
+  ]);
+  if (response === "reject") {
+    await sendCustomerEmail(ctx, row, "private_hire.time_turned_down", "time_turned_down", { details: false });
   }
   await sendAdminAlert(ctx, row, "admin.private_hire.customer_response", {
-    customerResponse: RESPONSE_PHRASE[response] + (text ? ` - "${text}"` : ""),
+    customerResponse: aboutSlot + (text ? ` - "${text}"` : ""),
   });
   return result;
 }
@@ -551,7 +745,7 @@ export async function depositCheckoutUrl(
         metadata: { private_hire_request_id: row.id },
         lineItems: [
           {
-            name: `Private hire deposit - ${formatHireDate(row.selected_date)}`,
+            name: `Private hire deposit - ${row.full_name} - ${reasonLabel(row)} - ${formatHireDate(row.selected_date)}`,
             quantity: "1",
             basePriceMoney: { amount: BigInt(pence), currency: "GBP" },
           },
@@ -576,7 +770,11 @@ export async function depositCheckoutUrl(
     if (!paymentLink?.url || !paymentLink.orderId) throw new Error("Square returned no link");
     await ctx.supabase
       .from("private_hire_requests")
-      .update({ payment_link_url: paymentLink.url, square_order_id: paymentLink.orderId })
+      .update({
+        payment_link_url: paymentLink.url,
+        square_payment_link_id: paymentLink.id ?? null,
+        square_order_id: paymentLink.orderId,
+      })
       .eq("id", row.id);
     return { url: paymentLink.url };
   } catch (err) {
@@ -607,15 +805,109 @@ export async function settleHireDeposit(
   paidPence: number | null,
   paymentId: string | null
 ): Promise<boolean> {
-  const { data } = await ctx.supabase
+  const { data: current } = await ctx.supabase
     .from("private_hire_requests")
     .select("id, deposit_amount")
     .eq("square_order_id", orderId)
     .maybeSingle();
+  const { data: superseded } = current
+    ? { data: null }
+    : await ctx.supabase
+        .from("private_hire_requests")
+        .select("id, deposit_amount")
+        .contains("superseded_square_order_ids", [orderId])
+        .maybeSingle();
+  const data = current ?? superseded;
   if (!data) return false;
   const paid = paidPence != null ? paidPence / 100 : Number(data.deposit_amount) || 0;
+  if (await recordPaymentOnConfirmedHire(ctx, data.id, paid, paymentId)) return true;
   const result = await confirmPrivateHire(ctx, data.id, { via: "square", paidAmount: paid, squarePaymentId: paymentId });
-  if (!result.ok) console.error(`[private hire] deposit for ${data.id} paid but not confirmed: ${result.error}`);
+  if (!result.ok) {
+    const recorded = await recordPaymentOnClosedHire(ctx, data.id, paid, paymentId);
+    if (!recorded) console.error(`[private hire] deposit for ${data.id} paid but not confirmed: ${result.error}`);
+  }
+  return true;
+}
+
+/* A card payment for a hire that's already confirmed - most often paid another
+   way and marked paid, then the old checkout paid as well. The first payment
+   stays as recorded; this one is noted and the team told, since the customer
+   has probably paid twice. Returns false when the hire isn't confirmed. */
+async function recordPaymentOnConfirmedHire(
+  ctx: FlowContext,
+  id: string,
+  paid: number,
+  paymentId: string | null
+): Promise<boolean> {
+  const row = await loadHire(ctx.supabase, id);
+  if (!row || normalizePrivateHireStatus(row.status) !== "confirmed") return false;
+  if (paymentId && row.square_payment_id === paymentId) return true;
+  if (paymentId) {
+    const { data: seen } = await ctx.supabase
+      .from("private_hire_notes")
+      .select("id")
+      .eq("request_id", id)
+      .ilike("body", `%${paymentId}%`)
+      .limit(1);
+    if (seen?.length) return true;
+  }
+
+  const amount = Math.max(0, Math.round(paid * 100) / 100);
+  const via = row.deposit_paid_via as DepositPaidVia | null;
+  const earlier =
+    via && via !== "none"
+      ? `${formatDeposit(row.paid_amount)} by ${DEPOSIT_PAID_VIA_LABEL[via].toLowerCase()}`
+      : "no deposit";
+  await ctx.supabase.from("private_hire_notes").insert({
+    request_id: id,
+    body: `${formatDeposit(amount)} was paid by card after this hire was already confirmed (${earlier}). The customer may have paid twice - refund it in Square.${paymentId ? ` Square payment ${paymentId}.` : ""}`,
+  });
+  await sendAdminAlert(ctx, { ...row, deposit_amount: amount }, "admin.private_hire.extra_payment", {
+    earlierPayment: earlier,
+  });
+  return true;
+}
+
+/* A customer can still pay a checkout they had open after the request was
+   cancelled, declined or expired. The money is in Square either way, so it's
+   written onto the request and the team is told to refund or reopen it. */
+async function recordPaymentOnClosedHire(
+  ctx: FlowContext,
+  id: string,
+  paid: number,
+  paymentId: string | null
+): Promise<boolean> {
+  const row = await loadHire(ctx.supabase, id);
+  if (!row) return false;
+  const status = normalizePrivateHireStatus(row.status);
+  if (status !== "cancelled" && status !== "declined" && status !== "expired") return false;
+  if (paymentId && row.square_payment_id === paymentId) return true;
+
+  const amount = Math.max(0, Math.round(paid * 100) / 100);
+  const now = new Date().toISOString();
+  const { error } = await ctx.supabase
+    .from("private_hire_requests")
+    .update({
+      paid_amount: amount,
+      payment_status: "paid",
+      deposit_paid_at: now,
+      deposit_paid_via: "square",
+      ...(paymentId ? { square_payment_id: paymentId } : {}),
+      updated_at: now,
+    })
+    .eq("id", id);
+  if (error) {
+    console.error(`[private hire] payment on closed request ${id} not recorded:`, error);
+    return false;
+  }
+
+  await ctx.supabase.from("private_hire_notes").insert({
+    request_id: id,
+    body: `${formatDeposit(amount)} was paid by card after this request was ${status}. Refund it in Square, or reopen the request if the hire is going ahead.`,
+  });
+  await sendAdminAlert(ctx, { ...row, deposit_amount: amount }, "admin.private_hire.closed_payment", {
+    requestStatus: status,
+  });
   return true;
 }
 

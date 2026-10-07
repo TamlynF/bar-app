@@ -22,7 +22,9 @@ import {
   CalendarClock,
   Music,
   CalendarDays,
+  Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { bandDateRules, describeBandNights } from "@/lib/band-availability";
 import { formatGBP } from "@/lib/events-display";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
@@ -140,6 +142,42 @@ function Row({
         {value}
       </span>
     </div>
+  );
+}
+
+// How the deposit due date is worked out, on both the view and the edit sheet.
+// A popover rather than a tooltip so it opens on a tap as well as a click.
+function DepositDaysInfo({ days }: { days: number }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="How the deposit due date is worked out"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-primary/40 focus-visible:outline-none max-sm:h-11 max-sm:w-11"
+        >
+          <Info className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-80 space-y-2 rounded-xl border-admin-line bg-white p-3.5 text-[12px] leading-snug text-admin-ink"
+      >
+        <p className="text-[13px] font-bold">How the due date is set</p>
+        <p>
+          When a request is approved - by you, or by the customer accepting a time you proposed - the deposit is due{" "}
+          <strong>{days} days</strong> later.
+        </p>
+        <p>
+          It&apos;s never later than the day before the hire. Approved on 6 Oct for a hire on 9 Oct, it&apos;s due 8
+          Oct, however many days are set here.
+        </p>
+        <p className="text-admin-muted">
+          The customer gets one reminder email when it&apos;s two days away. If it isn&apos;t paid by the due date, the request
+          expires and the date is released.
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -607,7 +645,12 @@ export default function CompanyInfoClient({
             <Row
               icon={<CalendarClock className="h-3.5 w-3.5" />}
               label="Deposit due within"
-              value={`${data.private_hire_deposit_days ?? 7} days`}
+              value={
+                <span className="inline-flex items-center justify-end gap-1">
+                  {`${data.private_hire_deposit_days ?? 7} days`}
+                  <DepositDaysInfo days={data.private_hire_deposit_days ?? 7} />
+                </span>
+              }
             />
             <Row
               icon={<Shapes className="h-3.5 w-3.5" />}
@@ -937,6 +980,7 @@ export default function CompanyInfoClient({
                 placeholder="7"
                 className={cn(FIELD_INPUT, "tabular-nums")}
               />
+              <DepositDaysInfo days={parseInt(form.private_hire_deposit_days) || 7} />
             </FormRow>
           </SectionCard>
 

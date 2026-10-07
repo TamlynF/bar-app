@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Search, Inbox, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PrivateHireCard, type PrivateHireRequest } from "./private-hire-card";
+import { PrivateHireCard, type PrivateHireRequest, type SquareDashboard } from "./private-hire-card";
 import { isClosedPrivateHire, normalizePrivateHireStatus } from "@/lib/private-hire-status";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 
@@ -66,9 +66,11 @@ function StatusCircle({
 export default function PrivateHireListClient({
   initialRequests,
   initialStatuses = [],
+  square,
 }: {
   initialRequests: PrivateHireRequest[];
   initialStatuses?: string[];
+  square: SquareDashboard;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
@@ -244,7 +246,7 @@ export default function PrivateHireListClient({
                   </p>
                 ) : (
                   items.map((req) => (
-                    <PrivateHireCard key={req.id} request={req} onSheetOpenChange={pinWhileOpen} />
+                    <PrivateHireCard key={req.id} request={req} square={square} onSheetOpenChange={pinWhileOpen} />
                   ))
                 )}
               </section>

@@ -95,6 +95,11 @@ export function squareItemUrl(environment: "sandbox" | "production", itemId: str
   return `https://${host}/dashboard/items/library/${encodeURIComponent(itemId)}`;
 }
 
+export function squareOrderUrl(environment: "sandbox" | "production", orderId: string): string {
+  const host = environment === "sandbox" ? "app.squareupsandbox.com" : "app.squareup.com";
+  return `https://${host}/dashboard/orders/overview/${encodeURIComponent(orderId)}`;
+}
+
 export function squareTransactionUrl(
   environment: "sandbox" | "production",
   paymentId: string,

@@ -111,6 +111,26 @@ export function depositDueDate(today: string, days: number, hireDate?: string | 
   return dayBefore < due ? (dayBefore < today ? today : dayBefore) : due;
 }
 
+/* Keeps an existing due date when the hire moves, unless the new date comes
+   first - then it's pulled back to the day before (and never into the past). */
+export function dueDateForNewHireDate(due: string | null, hireDate: string | null, today: string): string | null {
+  if (!due || !hireDate) return due;
+  const dayBefore = addDays(hireDate, -1);
+  if (due <= dayBefore) return due;
+  return dayBefore < today ? today : dayBefore;
+}
+
+/* How much of the deposit a recorded payment covers. Less than was asked is
+   part paid, so the balance still shows on the request. */
+export function depositPaymentStatus(
+  paid: number,
+  deposit: number | null | undefined
+): "unpaid" | "partially_paid" | "paid" {
+  if (!(paid > 0)) return "unpaid";
+  const asked = Number(deposit);
+  return Number.isFinite(asked) && asked > 0 && paid < asked ? "partially_paid" : "paid";
+}
+
 export function isDepositOverdue(dueDate: string | null | undefined, today: string): boolean {
   return !!dueDate && dueDate < today;
 }
@@ -140,8 +160,8 @@ export function resolveDepositAmount(
   requestAmount: number | null | undefined,
   companyDefault: number | null | undefined
 ): number {
-  const own = Number(requestAmount);
-  if (Number.isFinite(own) && own > 0) return Math.round(own * 100) / 100;
+  const own = requestAmount == null ? NaN : Number(requestAmount);
+  if (Number.isFinite(own) && own >= 0) return Math.round(own * 100) / 100;
   const fallback = Number(companyDefault);
   return Number.isFinite(fallback) && fallback > 0 ? Math.round(fallback * 100) / 100 : 0;
 }

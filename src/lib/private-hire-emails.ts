@@ -10,10 +10,13 @@ export type PrivateHireEmail = {
 
 export type PrivateHireEmailKey =
   | "private_hire.approved"
+  | "private_hire.deposit_updated"
+  | "private_hire.rescheduled"
   | "private_hire.proposed"
   | "private_hire.confirmed"
   | "private_hire.declined"
-  | "private_hire.cancelled";
+  | "private_hire.cancelled"
+  | "private_hire.booking_cancelled";
 
 /* Turns resolved copy into the shape the admin preview renders. The note is
    typed by staff when they take the action, so it never lives in the
