@@ -73,6 +73,10 @@ async function HomeContent() {
   const karaokeUrl =
     ((rawEvents ?? []) as EventRow[]).map((e) => serializeEvent(e)).find((e) => e.isKaraoke && e.karaokeRequestUrl)
       ?.karaokeRequestUrl ?? null;
+  const karaokeTonightEvent = ((rawEvents ?? []) as EventRow[])
+    .map((e) => serializeEvent(e))
+    .find((e) => e.isKaraoke && e.date === todayStr);
+  const karaokeTonight = karaokeTonightEvent ? { url: karaokeTonightEvent.karaokeRequestUrl } : null;
 
   const events = ((rawEvents ?? []) as EventRow[])
     .filter((e) => {
@@ -96,10 +100,18 @@ async function HomeContent() {
 
   return (
     <>
-      <PublicNav currentPath="/" ticker />
+      <PublicNav currentPath="/" />
       <MarqueeTicker items={tickerItems} />
 
-      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} karaokeUrl={karaokeUrl} quizUrl={quizUrl} />
+      <HomeHero
+        featured={featured}
+        featuredSpace={featuredSpace}
+        today={today}
+        hours={info?.opening_hours}
+        karaokeUrl={karaokeUrl}
+        quizUrl={quizUrl}
+        karaokeTonight={karaokeTonight}
+      />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>

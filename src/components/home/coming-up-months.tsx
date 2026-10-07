@@ -16,12 +16,6 @@ function priceStamp(e: SerializedEvent) {
   return { label: "Free", paid: false };
 }
 
-function shortPrice(e: SerializedEvent) {
-  if (e.isFullyBooked) return "Sold out";
-  if (e.price != null && e.price > 0) return formatGBP(e.price);
-  return "Free";
-}
-
 function sentenceCase(text: string | null) {
   if (!text) return null;
   return text.length <= 2 ? text.toUpperCase() : text.charAt(0).toUpperCase() + text.slice(1);
@@ -29,6 +23,18 @@ function sentenceCase(text: string | null) {
 
 function meta(e: SerializedEvent) {
   return [e.subType, e.startTimeLabel].filter(Boolean).join(" · ");
+}
+
+function RowMeta({ e }: { e: SerializedEvent }) {
+  const subType = sentenceCase(e.subType);
+  return (
+    <span className="mt-1.25 block text-[13px] leading-[1.3] font-semibold text-ink-2 tabular-nums">
+      {e.startTimeLabel && <span className="font-extrabold text-neon">{e.startTimeLabel}</span>}
+      {e.startTimeLabel && subType && " · "}
+      {subType}
+      {e.isFullyBooked && " · Sold out"}
+    </span>
+  );
 }
 
 /* This month's one-off nights. Events on the same date share one card and
@@ -61,56 +67,46 @@ export function ComingUpMonths({
         </p>
       ) : (
         <>
-          <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-2xl border border-gold bg-white/8 sm:hidden">
+          <ul className="flex flex-col divide-y divide-hairline overflow-hidden rounded-[18px] border border-hairline bg-canvas-2 sm:hidden">
             {months.flatMap((month) =>
               month.days.map((day) => {
                 const [lead, ...rest] = day.events;
                 return (
-                  <li key={day.date} className="relative flex">
-                    <div className="flex w-16 shrink-0 flex-col items-center justify-center gap-1 border-r border-dashed border-white/20 py-4">
-                      <span className="text-pill font-bold tracking-wide text-ink-2 uppercase">
+                  <li key={day.date} className="relative grid grid-cols-[44px_1fr_18px] items-center gap-3.5 px-3.5 py-4">
+                    <div className="flex flex-col items-center gap-1 text-center">
+                      <span className="text-[10px] leading-none font-extrabold tracking-[0.12em] text-ink-2 uppercase">
                         {day.dayShort}
                       </span>
-                      <span className="font-bold font-stretch-condensed text-4xl leading-none text-gold tabular-nums">
-                        {day.dayNumber.padStart(2, "0")}
+                      <span className="font-display text-[26px] leading-none tracking-[0.01em] text-gold tabular-nums">
+                        {day.dayNumber}
                       </span>
                     </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 py-4">
-                      <span className="text-pill font-bold tracking-wide text-neon uppercase">
-                        {lead.startTimeLabel}
-                      </span>
+                    <div className="min-w-0">
                       <Link
                         href={`/whats-on/${lead.id}`}
-                        className="font-black text-h3 leading-tight tracking-tight text-ink uppercase transition-colors after:absolute after:inset-0 hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                        className="block font-black text-base leading-[1.15] text-balance text-ink uppercase transition-colors after:absolute after:inset-0 hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                       >
                         {lead.title}
                       </Link>
-                      <span className="text-meta text-ink-2">
-                        {[sentenceCase(lead.subType), shortPrice(lead)]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
+                      <RowMeta e={lead} />
                       {rest.map((e) => (
                         <Link
                           key={e.id}
                           href={`/whats-on/${e.id}`}
-                          className="relative z-10 -my-1 py-1 text-meta text-ink-2 transition-colors hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                          className="relative z-10 mt-2.25 block rounded-r-[10px] border-l-2 border-gold bg-white/[.035] py-2 pr-2.5 pl-3 transition-colors hover:bg-white/6 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
                         >
-                          +{" "}
-                          <span className="font-bold text-ink uppercase">
-                            {e.title}
+                          <span className="mb-1 block text-[9px] leading-none font-extrabold tracking-[0.14em] text-gold uppercase">
+                            Then
                           </span>
-                          {" · "}
-                          {[
-                            sentenceCase(e.subType) &&
-                              `${sentenceCase(e.subType)} ${e.startTimeLabel ?? ""}`.trim(),
-                            shortPrice(e),
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
+                          <span className="block font-black text-sm leading-[1.15] text-ink uppercase">{e.title}</span>
+                          <RowMeta e={e} />
                         </Link>
                       ))}
                     </div>
+                    <span
+                      className="size-2 -rotate-45 justify-self-center border-r-2 border-b-2 border-ink-2 opacity-60"
+                      aria-hidden="true"
+                    />
                   </li>
                 );
               }),

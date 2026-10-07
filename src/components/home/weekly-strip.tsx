@@ -13,8 +13,16 @@ function closingTime(listing: WeeklyListing, hours: OpeningHours | null | undefi
   return close == null ? null : formatClock(close);
 }
 
+/* Phone cards take the mockup's accents rather than the listing's own
+   classes so the glow, bulb and button all share one --acc colour. */
+const CARD_ACCENT: Record<WeeklyListing["key"], string> = {
+  quiz: "#6FD3C4",
+  karaoke: "#FD632B",
+  live: "#FDCC4B",
+};
+
 const STUB =
-  "group flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 pt-3 pb-2.5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold";
+  "ad-regular relative flex min-h-40 w-full flex-col items-center gap-1.75 overflow-hidden rounded-[14px] px-2 pt-3.5 pb-2.5 text-center focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold";
 
 function StubContent({
   listing,
@@ -29,18 +37,18 @@ function StubContent({
 }) {
   return (
     <>
-      <span className="text-pill font-black tracking-wide text-ink-2 uppercase">{listing.day}</span>
-      <span className={cn("font-pirata text-[26px] leading-[0.95]", listing.accentText)}>{listing.shortTitle}</span>
-      <span className="flex flex-col items-center gap-0.5 tabular-nums">
+      <span className="mt-1 text-[10px] leading-none font-black tracking-[0.16em] text-[var(--acc)] uppercase">
+        {listing.day}
+      </span>
+      <span className="font-pirata text-[30px] leading-[0.95] text-ink [text-shadow:0_2px_0_rgb(0_0_0/0.5)]">
+        {listing.shortTitle}
+      </span>
+      <span className="flex flex-col items-center gap-1 tabular-nums">
         <span className="text-[15px] leading-none font-bold text-ink">{listing.time}</span>
         {close && <span className="text-xs leading-none text-ink-2">till {close}</span>}
       </span>
-      <span
-        className={cn(
-          "mt-auto flex h-9 w-full items-center justify-center gap-1 rounded-lg text-[13px] font-extrabold text-on-gold transition-transform group-active:scale-95",
-          listing.accentBg
-        )}
-      >
+      <span className="ad-regular-perf mt-0.5" aria-hidden="true" />
+      <span className="ad-regular-btn mt-auto flex h-9.5 w-full items-center justify-center gap-1 rounded-[10px] text-[13px] leading-none font-extrabold text-on-gold">
         {action}
         <span aria-hidden="true">{external ? "↗" : "→"}</span>
       </span>
@@ -61,24 +69,27 @@ export function WeeklyStrip({
 }) {
   return (
     <section aria-labelledby="weekly-heading" className={cn("flex flex-col gap-2 sm:gap-3", className)}>
-      <div className="flex items-center justify-between gap-3">
-        <h2
-          id="weekly-heading"
-          className="font-black text-sm tracking-[0.08em] text-ink-2 uppercase max-sm:leading-none sm:font-semibold sm:text-eyebrow sm:tracking-normal sm:text-gold sm:normal-case"
-        >
-          <span className="sm:hidden">Every week</span>
+      <div className="flex items-center justify-between gap-3 max-sm:mb-1.5">
+        <h2 id="weekly-heading" className="sm:font-semibold sm:text-eyebrow sm:text-gold">
+          <span className="mb-1.5 block text-[10px] leading-none font-bold tracking-[0.18em] text-gold uppercase sm:hidden">
+            Every week
+          </span>
+          <span className="block font-display text-[26px] leading-none tracking-[0.02em] text-ink uppercase sm:hidden">
+            The regulars
+          </span>
           <span className="hidden sm:inline">What’s on</span>
         </h2>
       </div>
-      <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-gold bg-white/8 sm:hidden">
-        {WEEKLY_LISTINGS.map((listing, i) => {
+      <ul className="grid grid-cols-3 gap-2.25 sm:hidden">
+        {WEEKLY_LISTINGS.map((listing) => {
           const sing = listing.key === "karaoke" && karaokeUrl ? karaokeUrl : null;
           const book = listing.key === "quiz" && quizUrl ? quizUrl : null;
           const close = closingTime(listing, hours);
           return (
             <li
               key={listing.key}
-              className={cn("flex min-w-0", i > 0 && "border-l border-dashed border-white/20")}
+              className="flex min-w-0"
+              style={{ "--acc": CARD_ACCENT[listing.key] } as React.CSSProperties}
             >
               {sing ? (
                 <a

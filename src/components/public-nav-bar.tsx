@@ -160,8 +160,8 @@ export function PublicNavBar({
                 <TrendingUp className="h-4 w-4" aria-hidden="true" />
                 <span
                   className={cn(
-                    "ad-live-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-canvas",
-                    marketCrash ? "bg-white" : "bg-[#E6392E]"
+                    "absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-canvas",
+                    marketCrash ? "ad-live-dot bg-white" : "ad-live bg-[#3DDC84]"
                   )}
                   aria-hidden="true"
                 />

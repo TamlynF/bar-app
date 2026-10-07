@@ -4,8 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import { ChevronRight, Tag } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import { ExchangeDealCard } from "@/components/home/exchange-deal-card";
 import { SpecialDetailModal } from "@/components/special-detail-modal";
 import type { SpecialRow } from "@/components/specials-section";
+import { useMarketLive } from "@/hooks/use-market-live";
 import { plainText } from "@/lib/plain-text";
 import { cn } from "@/lib/utils";
 
@@ -26,12 +28,15 @@ function whenLabel(s: SpecialRow) {
    never blur into one block. Tapping opens the special's own popup. */
 export function DealsStrip({ specials, className }: { specials: SpecialRow[]; className?: string }) {
   const [open, setOpen] = useState<SpecialRow | null>(null);
+  const marketLive = useMarketLive();
   const deals = specials.slice(0, MAX_DEALS);
-  if (deals.length === 0) return null;
+  if (deals.length === 0 && !marketLive) return null;
 
   return (
     <section id="specials" aria-labelledby="deals-heading" className={cn("scroll-mt-24", className)}>
       <SectionHeading eyebrow="Good drinks. Better prices." title="Deals on now" id="deals-heading" />
+
+      <ExchangeDealCard className="mb-2.5 sm:hidden" />
 
       <ul
         className={cn(

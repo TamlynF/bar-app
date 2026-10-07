@@ -45,7 +45,7 @@ export function CategoryCard({ group, sizes, className }: { group: GalleryGroup;
         <CategoryCover group={group} sizes={sizes} />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-canvas via-canvas/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-black via-black/70 to-transparent"
         />
         <span className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3">
           <span className="truncate font-black text-btn leading-tight tracking-tight text-ink uppercase drop-shadow-sm group-hover:text-gold">
