@@ -20,7 +20,10 @@ import {
   Image as ImageIcon,
   PoundSterling,
   CalendarClock,
+  Music,
+  CalendarDays,
 } from "lucide-react";
+import { bandDateRules, describeBandNights } from "@/lib/band-availability";
 import { formatGBP } from "@/lib/events-display";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import Link from "next/link";
@@ -37,6 +40,15 @@ import {
 } from "@/components/admin";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const BAND_WEEKDAYS = [
+  { day: 1, label: "Mon" },
+  { day: 2, label: "Tue" },
+  { day: 3, label: "Wed" },
+  { day: 4, label: "Thu" },
+  { day: 5, label: "Fri" },
+  { day: 6, label: "Sat" },
+  { day: 0, label: "Sun" },
+] as const;
 const DAY_LABELS: Record<string, string> = {
   monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu",
   friday: "Fri", saturday: "Sat", sunday: "Sun",
@@ -65,6 +77,8 @@ interface CompanyInfo {
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;
   private_hire_deposit_days: number | null;
+  band_request_weekdays?: number[] | null;
+  band_request_bank_holidays?: boolean | null;
   created_at?: string;
   created_by?: number | null;
   updated_at?: string | null;
@@ -153,6 +167,10 @@ function SectionCard({
       {children}
     </DetailCard>
   );
+}
+
+function capitalise(text: string) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function linkValue(value: string | null, href?: string) {
@@ -300,12 +318,27 @@ export default function CompanyInfoClient({
     private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
     private_hire_deposit: record?.private_hire_deposit?.toString() ?? "",
     private_hire_deposit_days: record?.private_hire_deposit_days?.toString() ?? "7",
+    band_request_weekdays: bandDateRules(record).weekdays,
+    band_request_bank_holidays: bandDateRules(record).bankHolidays,
   });
 
   const [form, setForm] = useState(() => emptyForm(initialData));
 
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const toggleBandWeekday = (day: number) => {
+    setFormError(null);
+    setForm((prev) => ({
+      ...prev,
+      band_request_weekdays: prev.band_request_weekdays.includes(day)
+        ? prev.band_request_weekdays.filter((d) => d !== day)
+        : [...prev.band_request_weekdays, day].sort((a, b) => a - b),
+    }));
+  };
+
+  const bandNightsMissing =
+    form.band_request_weekdays.length === 0 && !form.band_request_bank_holidays;
 
   // Typing is left alone; a pasted URL collapses to its handle once you leave
   // the field, so what is stored is never a whole address.
@@ -338,6 +371,10 @@ export default function CompanyInfoClient({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!data?.id) return;
+    if (bandNightsMissing) {
+      setFormError("Pick at least one night bands can request, or include bank holiday nights.");
+      return;
+    }
 
     const fd = new FormData();
     fd.set("id", String(data.id));
@@ -359,6 +396,8 @@ export default function CompanyInfoClient({
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
     fd.set("private_hire_deposit", form.private_hire_deposit);
     fd.set("private_hire_deposit_days", form.private_hire_deposit_days);
+    fd.set("band_request_weekdays", JSON.stringify(form.band_request_weekdays));
+    fd.set("band_request_bank_holidays", String(form.band_request_bank_holidays));
 
     setFormError(null);
     startTransition(async () => {
@@ -587,6 +626,24 @@ export default function CompanyInfoClient({
                     : "Click to start planning..."}
                   <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 </Link>
+              }
+            />
+          </SectionCard>
+
+          <SectionCard icon={<Music className="h-3.5 w-3.5" />} title="Band requests">
+            <Row
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
+              label="Nights offered"
+              value={capitalise(describeBandNights(bandDateRules(data)))}
+            />
+            <Row
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
+              label="Bank holidays"
+              multiline
+              value={
+                bandDateRules(data).bankHolidays
+                  ? "The night before each one. The day itself only when the next day is another bank holiday or a Saturday."
+                  : "Not included"
               }
             />
           </SectionCard>
@@ -881,6 +938,62 @@ export default function CompanyInfoClient({
                 className={cn(FIELD_INPUT, "tabular-nums")}
               />
             </FormRow>
+          </SectionCard>
+
+          <SectionCard icon={<Music className="h-3.5 w-3.5" />} title="Band requests">
+            <div className="space-y-4 p-4 sm:p-5">
+              <div className="space-y-2">
+                <p className="text-[13px] font-semibold text-admin-ink">Nights bands can request</p>
+                <div role="group" aria-label="Nights bands can request" className="grid grid-cols-7 gap-1.5">
+                  {BAND_WEEKDAYS.map(({ day, label }) => {
+                    const on = form.band_request_weekdays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleBandWeekday(day)}
+                        className={cn(
+                          "h-11 rounded-xl border text-[13px] transition-colors",
+                          on
+                            ? "border-admin-primary bg-admin-primary-soft font-bold text-admin-primary ring-1 ring-admin-primary"
+                            : "border-admin-line bg-admin-card font-semibold text-admin-muted hover:border-admin-muted/40",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={form.band_request_bank_holidays}
+                  onChange={(e) => {
+                    setFormError(null);
+                    setForm((prev) => ({ ...prev, band_request_bank_holidays: e.target.checked }));
+                  }}
+                  className="mt-0.5 size-4 shrink-0 accent-admin-primary"
+                />
+                <span className="text-[13px] leading-snug text-admin-ink">
+                  <span className="font-semibold">Include bank holiday nights</span>
+                  <span className="block text-admin-muted">
+                    Opens the night before each bank holiday, whatever the weekday. The bank holiday
+                    itself only opens when the next day is another bank holiday or a Saturday, like
+                    Christmas Day or Good Friday.
+                  </span>
+                </span>
+              </label>
+              <p className={HINT}>
+                {bandNightsMissing
+                  ? "Bands won't be able to pick any nights."
+                  : `The stage form offers ${describeBandNights({
+                      weekdays: form.band_request_weekdays,
+                      bankHolidays: form.band_request_bank_holidays,
+                    })}, when the venue is open and no live music is already booked.`}
+              </p>
+            </div>
           </SectionCard>
 
           {formError && <ErrorBox message={formError} />}

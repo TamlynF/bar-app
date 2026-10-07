@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { NOTES_MAX_LENGTH } from "@/lib/notes-limit";
 import { SquareError } from "square";
 import { format } from "date-fns";
 import { hasVenueSpaceFor, updateFullyBookedStatus } from "@/lib/update-fully-booked";
@@ -91,11 +92,14 @@ export async function createEventBooking(formData: FormData) {
   const countryCode = (formData.get("country_code") as string) || null;
   const phoneNo = (formData.get("phone_no") as string) || null;
   const groupSize = parseInt(formData.get("group_size") as string, 10);
-  const specialRequests = (formData.get("special_requests") as string) || null;
+  const specialRequests = ((formData.get("special_requests") as string) || "").trim() || null;
   const groupName = (formData.get("group_name") as string) || fullName;
 
   if (!eventId || !fullName || !email || !groupSize || groupSize < 1) {
     return { error: "Please fill in all required fields." };
+  }
+  if (specialRequests && specialRequests.length > NOTES_MAX_LENGTH) {
+    return { error: `Please keep your requests under ${NOTES_MAX_LENGTH} characters.` };
   }
 
   try {

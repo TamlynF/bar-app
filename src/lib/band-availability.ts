@@ -15,7 +15,38 @@ const DAY_KEYS = [
   "saturday",
 ] as const;
 
-const PERFORMANCE_WEEKDAYS = new Set([5, 6]);
+const WEEKDAY_PLURALS = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+
+export type BandDateRules = { weekdays: number[]; bankHolidays: boolean };
+
+export const DEFAULT_BAND_DATE_RULES: BandDateRules = { weekdays: [5, 6], bankHolidays: true };
+
+export function bandDateRules(row: {
+  band_request_weekdays?: number[] | null;
+  band_request_bank_holidays?: boolean | null;
+} | null | undefined): BandDateRules {
+  const weekdays = row?.band_request_weekdays;
+  return {
+    weekdays: Array.isArray(weekdays)
+      ? [...new Set(weekdays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b)
+      : DEFAULT_BAND_DATE_RULES.weekdays,
+    bankHolidays: row?.band_request_bank_holidays ?? DEFAULT_BAND_DATE_RULES.bankHolidays,
+  };
+}
+
+function joinWithAnd(parts: string[]): string {
+  if (parts.length <= 1) return parts.join("");
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/* "Fridays, Saturdays and the night before a bank holiday" - the nights the
+   public form offers, in the order a week reads (Monday first). */
+export function describeBandNights(rules: BandDateRules): string {
+  const weekNights = [1, 2, 3, 4, 5, 6, 0]
+    .filter((d) => rules.weekdays.includes(d))
+    .map((d) => WEEKDAY_PLURALS[d]);
+  return joinWithAnd(rules.bankHolidays ? [...weekNights, "the night before a bank holiday"] : weekNights);
+}
 
 function addHoursToClock(time: string, hours: number): string {
   const minutes = (toMinutes(time) ?? 0) + hours * 60;
@@ -48,18 +79,26 @@ export function slotsWithinOpeningHours(
   });
 }
 
+export type BandEvent = EventClashCandidate & { is_music?: boolean };
+
 export type BandAvailabilityInput = {
   from: string;
   to: string;
   openingHours: OpeningHours | null | undefined;
-  events: EventClashCandidate[];
+  events: BandEvent[];
+  rules?: BandDateRules;
 };
 
-export function isPerformanceDate(iso: string, holidays: Set<string>): boolean {
-  const weekday = fromISODate(iso).getUTCDay();
-  if (PERFORMANCE_WEEKDAYS.has(weekday)) return true;
-  if (holidays.has(iso)) return true;
-  return holidays.has(toISODate(addDaysUTC(fromISODate(iso), 1)));
+export function isPerformanceDate(
+  iso: string,
+  holidays: Set<string>,
+  rules: BandDateRules = DEFAULT_BAND_DATE_RULES
+): boolean {
+  if (rules.weekdays.includes(fromISODate(iso).getUTCDay())) return true;
+  if (!rules.bankHolidays) return false;
+  const nextDay = addDaysUTC(fromISODate(iso), 1);
+  if (holidays.has(toISODate(nextDay))) return true;
+  return holidays.has(iso) && nextDay.getUTCDay() === 6;
 }
 
 export function computeAvailableBandDates({
@@ -67,15 +106,20 @@ export function computeAvailableBandDates({
   to,
   openingHours,
   events,
+  rules = DEFAULT_BAND_DATE_RULES,
 }: BandAvailabilityInput): string[] {
   if (!openingHours || from > to) return [];
 
   const holidays = ukBankHolidaysBetween(from, toISODate(addDaysUTC(fromISODate(to), 1)));
+  const musicNights = new Set(
+    events.filter((e) => e.is_music && e.is_active !== false && e.date).map((e) => e.date)
+  );
   const available: string[] = [];
 
   for (let day = fromISODate(from); toISODate(day) <= to; day = addDaysUTC(day, 1)) {
     const iso = toISODate(day);
-    if (!isPerformanceDate(iso, holidays)) continue;
+    if (!isPerformanceDate(iso, holidays, rules)) continue;
+    if (musicNights.has(iso)) continue;
 
     const slots = slotsWithinOpeningHours(openingHours, day.getUTCDay());
     if (slots.length === 0) continue;

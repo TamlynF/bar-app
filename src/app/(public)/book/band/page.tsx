@@ -1,7 +1,8 @@
 import React from "react";
 import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getAvailableBandDates } from "@/lib/band-availability-data";
+import { getBandAvailability } from "@/lib/band-availability-data";
+import { describeBandNights } from "@/lib/band-availability";
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
@@ -36,7 +37,10 @@ export default async function BandBookingPage() {
     { value: "dj", label: "DJ" },
   ];
 
-  const [availableDates, maxVideoBytes] = await Promise.all([getAvailableBandDates(), getVideoUploadLimitBytes()]);
+  const [{ dates: availableDates, rules }, maxVideoBytes] = await Promise.all([
+    getBandAvailability(),
+    getVideoUploadLimitBytes(),
+  ]);
 
   return (
     <main className="flex min-h-dvh w-full max-sm:min-h-[calc(100dvh-4.5rem-env(safe-area-inset-bottom))] flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
@@ -72,7 +76,12 @@ export default async function BandBookingPage() {
             </div>
 
             <div className="relative z-10">
-              <BandBookingForm typeOptions={typeOptions} availableDates={availableDates} maxVideoBytes={maxVideoBytes} />
+              <BandBookingForm
+                typeOptions={typeOptions}
+                availableDates={availableDates}
+                bandNights={describeBandNights(rules)}
+                maxVideoBytes={maxVideoBytes}
+              />
             </div>
           </div>
         </div>

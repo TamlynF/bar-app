@@ -3,6 +3,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
+import { bandDateRules } from "@/lib/band-availability";
+
+function parseWeekdays(raw: string | undefined): number[] {
+  try {
+    const parsed = JSON.parse(raw ?? "[]");
+    return Array.isArray(parsed) ? parsed.map(Number) : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function getCompanyInfo() {
   const supabase = await createClient();
@@ -57,6 +67,10 @@ export async function updateCompanyInfo(formData: FormData) {
       90,
       Math.max(1, parseInt(formData.get("private_hire_deposit_days")?.toString() || "7", 10) || 7)
     ),
+    band_request_weekdays: bandDateRules({
+      band_request_weekdays: parseWeekdays(formData.get("band_request_weekdays")?.toString()),
+    }).weekdays,
+    band_request_bank_holidays: formData.get("band_request_bank_holidays")?.toString() === "true",
     created_at: existing?.created_at ?? new Date().toISOString(),
     created_by: existing?.created_by ?? currentEmployeeId,
     updated_at: new Date().toISOString(),
@@ -75,6 +89,7 @@ export async function updateCompanyInfo(formData: FormData) {
 
     revalidatePath("/settings/company");
     revalidatePath("/");
+    revalidatePath("/book/band");
     return { success: true, audit: saved };
   } catch (error) {
     console.error("Error updating company info:", error);

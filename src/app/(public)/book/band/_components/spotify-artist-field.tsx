@@ -44,49 +44,63 @@ function ArtistAvatar({ artist, large }: { artist: SpotifyArtist; large?: boolea
 /* Spotify profile picker: search by name (starting from the act name typed on
    step 1) or paste any Spotify share link. Either way the band confirms the
    artist from a photo and follower count, and the form keeps the canonical
-   open.spotify.com/artist link. With autoMatch, the act name is looked up as
-   the field opens and the first artist with that exact name is picked. */
+   open.spotify.com/artist link. Whatever the field opens with is looked up
+   straight away and an error shows when no profile is confirmed; with
+   autoMatch, the first artist with that exact name is picked. */
 export function SpotifyArtistField({
   artist,
-  initialQuery,
+  query,
+  onQueryChange,
   autoMatch,
   onAutoMatched,
   onChange,
+  blockedError,
 }: {
   artist: SpotifyArtist | null;
-  initialQuery: string;
+  query: string;
+  onQueryChange: (query: string) => void;
   autoMatch: boolean;
   onAutoMatched: (picked: boolean) => void;
   onChange: (artist: SpotifyArtist | null) => void;
+  blockedError?: string;
 }) {
-  const [matchOnOpen] = useState(() => autoMatch && !artist && initialQuery.trim().length >= 2);
-  const [query, setQuery] = useState(initialQuery);
+  const [openingQuery] = useState(query);
+  const [checkOnOpen] = useState(() => !artist && openingQuery.trim().length > 0);
   const [results, setResults] = useState<SpotifyArtist[]>([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(matchOnOpen);
+  const [loading, setLoading] = useState(checkOnOpen);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const latest = useRef(0);
-  const matchStarted = useRef(false);
+  const checkStarted = useRef(false);
 
   useEffect(() => {
-    if (!matchOnOpen || matchStarted.current) return;
-    matchStarted.current = true;
-    const name = initialQuery.trim();
+    if (!checkOnOpen || checkStarted.current) return;
+    checkStarted.current = true;
+    const name = openingQuery.trim();
+    if (looksLikeLink(name)) {
+      run(name);
+      return;
+    }
     const request = ++latest.current;
     findSpotifyArtists(name)
       .then((found) => {
         if (request !== latest.current) return;
         const match = found.find((a) => sameName(a.name, name));
-        if (match) {
+        if (match && autoMatch) {
           choose(match);
           onAutoMatched(true);
           return;
         }
-        onAutoMatched(false);
+        if (autoMatch) onAutoMatched(false);
         setLoading(false);
         setResults(found);
-        setError(`We couldn't find "${name}" on Spotify. Search again or paste your profile link.`);
+        setError(
+          match
+            ? "Tap the box to pick your Spotify profile, or paste your profile link."
+            : `We couldn't find "${name}" on Spotify. Search again, paste your profile link, or clear the box to skip it.`
+        );
       })
       .catch(() => {
         if (request !== latest.current) return;
@@ -152,8 +166,12 @@ export function SpotifyArtistField({
   }
 
   function clear() {
-    setQuery("");
+    latest.current++;
+    if (timer.current) clearTimeout(timer.current);
+    onQueryChange("");
     setResults([]);
+    setOpen(false);
+    setLoading(false);
     setError(null);
     onChange(null);
   }
@@ -187,18 +205,19 @@ export function SpotifyArtistField({
         <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20">
           <SiSpotify className="ml-3.5 h-4 w-4 shrink-0 text-[#1DB954]" aria-hidden="true" />
           <input
+            ref={inputRef}
             type="search"
             role="combobox"
             aria-expanded={open && results.length > 0}
             aria-controls="spotify-artist-results"
             aria-autocomplete="list"
             aria-label="Spotify profile link"
-            aria-invalid={!!error}
+            aria-invalid={!!(error ?? blockedError)}
             autoComplete="off"
             spellCheck={false}
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
+              onQueryChange(e.target.value);
               setError(null);
               schedule(e.target.value, looksLikeLink(e.target.value) ? 0 : SEARCH_DELAY_MS);
             }}
@@ -210,7 +229,24 @@ export function SpotifyArtistField({
             placeholder="Search your band or paste a link"
             className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
           />
-          {loading && <Loader2 className="mr-3.5 h-4 w-4 shrink-0 animate-spin text-gold" aria-hidden="true" />}
+          {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" aria-hidden="true" />}
+          {query ? (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                clear();
+                inputRef.current?.focus();
+              }}
+              aria-label="Clear Spotify search"
+              title="Clear"
+              className="flex size-11 shrink-0 items-center justify-center text-stone-500 transition-colors hover:text-ink"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : (
+            <span className="w-3.5 shrink-0" aria-hidden="true" />
+          )}
         </div>
 
         {open && results.length > 0 && (
@@ -241,7 +277,7 @@ export function SpotifyArtistField({
           </ul>
         )}
       </div>
-      <FieldError message={error ?? undefined} />
+      <FieldError message={error ?? blockedError} />
     </div>
   );
 }

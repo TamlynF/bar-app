@@ -33,6 +33,7 @@ import { cleanPhoneInput, isValidPhone, PHONE_ERROR } from "@/lib/phone";
 import { addDays, format, startOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { NotesTextarea } from "@/app/(public)/book/_components/notes-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const inputBaseClass =
@@ -718,20 +719,14 @@ export default function PrivateHireForm({
               <label htmlFor="ph-additional" className={labelClass}>
                 Additional Requests
               </label>
-              <div className="group relative">
-                <div className={iconContainerClass}>
-                  <MessageSquareQuote className={iconClass} />
-                </div>
-                <textarea
-                  id="ph-additional"
-                  title="Additional requests or special requirements"
-                  value={additionalReqs}
-                  onChange={(e) => setAdditionalReqs(e.target.value)}
-                  placeholder="Type your requests here..."
-                  rows={4}
-                  className={`${inputClass(false)} min-h-25 resize-none py-3`}
-                />
-              </div>
+              <NotesTextarea
+                id="ph-additional"
+                icon={<MessageSquareQuote className={iconClass} />}
+                value={additionalReqs}
+                onChange={(e) => setAdditionalReqs(e.target.value)}
+                placeholder="Food, music, decorations, accessibility needs…"
+                className={`${inputClass(false)} py-3 placeholder:text-stone-700 focus-visible:border-[#fdcc4b] focus-visible:ring-1 focus-visible:ring-[#fdcc4b]`}
+              />
             </div>
           </>
         )}

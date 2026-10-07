@@ -21,6 +21,8 @@ export type CompanyInfoRow = {
   private_hire_min_capacity: number | null;
   private_hire_deposit: number | null;
   private_hire_deposit_days: number | null;
+  band_request_weekdays?: number[] | null;
+  band_request_bank_holidays?: boolean | null;
   description: string | null;
   opening_hours: OpeningHours | null;
   tagline: string | null;

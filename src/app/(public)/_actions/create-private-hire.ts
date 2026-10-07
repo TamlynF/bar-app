@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { NOTES_MAX_LENGTH } from "@/lib/notes-limit";
 import { upsertContactByEmail } from "@/lib/music-acts";
 import { Resend } from "resend";
 import { ADMIN_EMAIL, EMAIL_FROM } from "@/lib/email";
@@ -40,6 +41,9 @@ export interface PrivateHireData {
 export async function createPrivateHire(data: PrivateHireData) {
   if (!data.phone_no?.trim()) throw new Error("Please enter your phone number.");
   if (!isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
+  if ((data.additional_requirements?.trim().length ?? 0) > NOTES_MAX_LENGTH) {
+    throw new Error(`Please keep your requests under ${NOTES_MAX_LENGTH} characters.`);
+  }
   const start = toMinutes(data.preferred_start_time);
   const end = toMinutes(data.preferred_end_time);
   if (data.preferred_date && start != null && end != null) {

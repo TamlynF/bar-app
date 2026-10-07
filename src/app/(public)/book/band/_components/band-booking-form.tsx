@@ -7,13 +7,19 @@ import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
 import { showFirstFrame } from "@/lib/video-preview";
 import { X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
-  ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft, Info, CalendarDays, Share2,
+  Mic, Guitar, Music, User, Mail, Phone, PoundSterling, MessageSquareQuote,
 } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { format, startOfToday, startOfMonth } from "date-fns";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cleanMoneyInput, formatMoneyInput, parseMoney } from "@/lib/money-input";
+import { NOTES_MAX_LENGTH } from "@/lib/notes-limit";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
 import { SpotifyArtistField } from "./spotify-artist-field";
 import { SocialLinksField, type SocialLinks } from "./social-links-field";
@@ -43,14 +49,19 @@ const titleCase = (s: string) =>
 
 const inputClass =
   "w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
+const iconInputClass = inputClass.replace("px-4", "pl-11 pr-4");
+const shadcnFieldClass =
+  "h-auto rounded-xl border-white/10 bg-black/40 py-3 pr-4 pl-11 text-sm text-white shadow-none placeholder:text-stone-500 focus-visible:border-[#FDCC4B]/40 focus-visible:ring-1 focus-visible:ring-[#FDCC4B]/20 md:text-sm";
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SPOTIFY_UNCONFIRMED_ERROR =
+  "Pick your Spotify profile from the list, paste your profile link, or clear the box to skip it.";
 const NO_VIDEO_ERROR = "Please add at least one performance video - paste a link or upload a clip.";
 
 const STEPS = [
   { number: 1, title: "Your Act", subtitle: "Tell us about your act." },
   { number: 2, title: "Contact", subtitle: "How do we reach you?" },
-  { number: 3, title: "Online & Media", subtitle: "Links and performance videos." },
+  { number: 3, title: "Videos & Links", subtitle: "Show us your act and where to find you." },
   { number: 4, title: "Availability", subtitle: "When can you play?" },
   { number: 5, title: "Fee & Notes", subtitle: "Your fee and anything else." },
 ];
@@ -58,10 +69,112 @@ const STEPS = [
 interface BandBookingFormProps {
   typeOptions: { value: string; label: string }[];
   availableDates: string[];
+  bandNights: string;
   maxVideoBytes: number;
 }
 
-export default function BandBookingForm({ typeOptions, availableDates, maxVideoBytes }: BandBookingFormProps) {
+const calendarThemeVars = {
+  "--primary": "#FDCC4B",
+  "--primary-foreground": "#26300D",
+  "--accent": "rgba(255,255,255,0.10)",
+  "--accent-foreground": "#FDCC4B",
+  "--background": "transparent",
+  "--muted-foreground": "#a8a29e",
+  "--border": "rgba(255,255,255,0.10)",
+  "--ring": "#FDCC4B",
+} as React.CSSProperties;
+
+function IconField({
+  icon: Icon,
+  multiline,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  multiline?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="group relative">
+      <div
+        className={`pointer-events-none absolute left-0 flex pl-3.5 ${
+          multiline ? "top-3.5" : "inset-y-0 items-center"
+        }`}
+      >
+        <Icon
+          className="h-4 w-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]"
+          aria-hidden={true}
+        />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function mediaSectionClass(invalid: boolean) {
+  return `space-y-3 rounded-2xl border bg-black/20 p-3.5 sm:p-4 ${invalid ? "border-red-500/40" : "border-white/10"}`;
+}
+
+function MediaSectionTitle({
+  icon,
+  title,
+  required,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/5">{icon}</span>
+      <h4 className="truncate text-sm font-semibold text-white">{title}</h4>
+      <span
+        className={`shrink-0 rounded-full px-2 py-0.5 text-pill font-bold tracking-wide uppercase ${
+          required ? "bg-gold/15 text-gold" : "bg-white/5 text-stone-400"
+        }`}
+      >
+        {required ? "Required" : "Optional"}
+      </span>
+    </div>
+  );
+}
+
+function MediaSection({
+  icon,
+  title,
+  required,
+  aside,
+  hint,
+  invalid = false,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  required?: boolean;
+  aside?: React.ReactNode;
+  hint?: string;
+  invalid?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={mediaSectionClass(invalid)}>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <MediaSectionTitle icon={icon} title={title} required={required} />
+          {aside}
+        </div>
+        {hint && <p className="text-xs leading-relaxed text-ink-2">{hint}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export default function BandBookingForm({
+  typeOptions,
+  availableDates,
+  bandNights,
+  maxVideoBytes,
+}: BandBookingFormProps) {
   const maxVideoMb = megabytes(maxVideoBytes);
   const [isPending, startTransition] = useTransition();
   useFormScrollRest();
@@ -85,6 +198,8 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
   const [spotifyArtist, setSpotifyArtist] = useState<SpotifyArtist | null>(null);
   const [spotifyMatchedFor, setSpotifyMatchedFor] = useState("");
   const [spotifyAutoPicked, setSpotifyAutoPicked] = useState(false);
+  const [spotifyQuery, setSpotifyQuery] = useState("");
+  const spotifyUnconfirmed = !spotifyArtist && spotifyQuery.trim().length > 0;
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [videoLinks, setVideoLinks] = useState<VideoLinkEntry[]>([]);
   const totalVideos = videoLinks.length + videoFiles.length;
@@ -98,6 +213,8 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
   }
 
   const sortedDates = [...preferredDates].sort((a, b) => a.getTime() - b.getTime());
+  const datesFull = preferredDates.length >= MAX_DATES;
+  const isPicked = (d: Date) => preferredDates.some((x) => x.getTime() === d.getTime());
 
   const availableDateSet = new Set(availableDates);
   const isDateAvailable = (d: Date) => availableDateSet.has(format(d, "yyyy-MM-dd"));
@@ -117,6 +234,7 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
       if (!EMAIL_PATTERN.test(email.trim())) errors.email = "Please enter a valid email address.";
       if (phone.trim() && !isValidPhone(phone)) errors.phone = PHONE_ERROR;
     }
+    if (step === 3 && spotifyUnconfirmed) errors.spotify = SPOTIFY_UNCONFIRMED_ERROR;
     return errors;
   }
 
@@ -137,6 +255,7 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
     const errors = missingFields();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
+    if (step === 2 && !spotifyArtist) setSpotifyQuery(groupName);
     if (step === 3) {
       if (totalVideos === 0) {
         setVideoError(NO_VIDEO_ERROR);
@@ -251,7 +370,7 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
           group_name: groupName,
           type: actType,
           genre: genre || undefined,
-          payment_amount: paymentAmount ? Number(paymentAmount) : undefined,
+          payment_amount: parseMoney(paymentAmount) ?? undefined,
           booker_name: name,
           email,
           phone_no: phone || undefined,
@@ -319,45 +438,53 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
           <>
             <div>
               <label className={labelClass}>Act / Group Name <span className="text-red-400">*</span></label>
-              <input
-                value={groupName}
-                onChange={(e) => {
-                  setGroupName(e.target.value);
-                  clearFieldError("groupName");
-                  if (spotifyAutoPicked) {
-                    setSpotifyArtist(null);
-                    setSpotifyAutoPicked(false);
-                  }
-                }}
-                placeholder="e.g. The Midnight Echo"
-                aria-invalid={!!fieldErrors.groupName}
-                className={inputClass}
-              />
+              <IconField icon={Mic}>
+                <input
+                  value={groupName}
+                  onChange={(e) => {
+                    setGroupName(e.target.value);
+                    clearFieldError("groupName");
+                    if (spotifyAutoPicked) {
+                      setSpotifyArtist(null);
+                      setSpotifyAutoPicked(false);
+                    }
+                  }}
+                  placeholder="e.g. The Midnight Echo"
+                  aria-label="Act or group name"
+                  aria-invalid={!!fieldErrors.groupName}
+                  className={iconInputClass}
+                />
+              </IconField>
               <FieldError message={fieldErrors.groupName} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Type <span className="text-red-400">*</span></label>
-                <Select value={actType} onValueChange={setActType}>
-                  <SelectTrigger aria-label="Type of Act" className={`${inputClass} pr-4 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-ink-2`}>
-                    <SelectValue>{selectedTypeLabel}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{titleCase(o.label)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <IconField icon={Guitar}>
+                  <Select value={actType} onValueChange={setActType}>
+                    <SelectTrigger aria-label="Type of Act" className={`${iconInputClass} [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-ink-2`}>
+                      <SelectValue>{selectedTypeLabel}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {typeOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{titleCase(o.label)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </IconField>
               </div>
               <div>
                 <label className={labelClass}>Genre <span className="text-red-400">*</span></label>
-                <input
-                  value={genre}
-                  onChange={(e) => { setGenre(e.target.value); clearFieldError("genre"); }}
-                  placeholder="e.g. Rock, Jazz, Pop"
-                  aria-invalid={!!fieldErrors.genre}
-                  className={inputClass}
-                />
+                <IconField icon={Music}>
+                  <input
+                    value={genre}
+                    onChange={(e) => { setGenre(e.target.value); clearFieldError("genre"); }}
+                    placeholder="e.g. Rock, Jazz, Pop"
+                    aria-label="Genre"
+                    aria-invalid={!!fieldErrors.genre}
+                    className={iconInputClass}
+                  />
+                </IconField>
                 <FieldError message={fieldErrors.genre} />
               </div>
             </div>
@@ -368,50 +495,56 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
           <>
             <div>
               <label htmlFor="band-booker-name" className={labelClass}>Your Name <span className="text-red-400">*</span></label>
-              <input
-                id="band-booker-name"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
-                placeholder="Booker or contact name"
-                aria-invalid={!!fieldErrors.name}
-                className={inputClass}
-              />
+              <IconField icon={User}>
+                <input
+                  id="band-booker-name"
+                  name="name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
+                  placeholder="Booker or contact name"
+                  aria-invalid={!!fieldErrors.name}
+                  className={iconInputClass}
+                />
+              </IconField>
               <FieldError message={fieldErrors.name} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="band-email" className={labelClass}>Email <span className="text-red-400">*</span></label>
-                <input
-                  id="band-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
-                  placeholder="your@email.com"
-                  aria-invalid={!!fieldErrors.email}
-                  className={inputClass}
-                />
+                <IconField icon={Mail}>
+                  <input
+                    id="band-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
+                    placeholder="your@email.com"
+                    aria-invalid={!!fieldErrors.email}
+                    className={iconInputClass}
+                  />
+                </IconField>
                 <FieldError message={fieldErrors.email} />
               </div>
               <div>
                 <label htmlFor="band-phone" className={labelClass}>Phone</label>
-                <input
-                  id="band-phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  inputMode="tel"
-                  maxLength={24}
-                  value={phone}
-                  onChange={(e) => { setPhone(cleanPhoneInput(e.target.value)); clearFieldError("phone"); }}
-                  placeholder="+44 7700 000000"
-                  aria-invalid={!!fieldErrors.phone}
-                  className={inputClass}
-                />
+                <IconField icon={Phone}>
+                  <input
+                    id="band-phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
+                    maxLength={24}
+                    value={phone}
+                    onChange={(e) => { setPhone(cleanPhoneInput(e.target.value)); clearFieldError("phone"); }}
+                    placeholder="+44 7700 000000"
+                    aria-invalid={!!fieldErrors.phone}
+                    className={iconInputClass}
+                  />
+                </IconField>
                 <FieldError message={fieldErrors.phone} />
               </div>
             </div>
@@ -419,38 +552,19 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
         )}
 
         {step === 3 && (
-          <>
-            <div className="space-y-3">
-              <SocialLinksField links={socialLinks} onChange={setSocialLinks} labelClassName={`${labelClass} mb-0!`} />
-            </div>
-
-            <div className="space-y-3 sm:pt-2">
-              <p className={labelClass}>Spotify profile link</p>
-              <SpotifyArtistField
-                artist={spotifyArtist}
-                initialQuery={groupName}
-                autoMatch={spotifyMatchedFor !== groupName.trim()}
-                onAutoMatched={(picked) => {
-                  setSpotifyMatchedFor(groupName.trim());
-                  setSpotifyAutoPicked(picked);
-                }}
-                onChange={(next) => {
-                  setSpotifyArtist(next);
-                  setSpotifyAutoPicked(false);
-                }}
-              />
-            </div>
-
-            <div className="space-y-3 sm:pt-2">
-              <div className="flex items-center justify-between">
-                <p className={labelClass}>Performance Videos <span className="text-red-400">*</span></p>
-                <span className="text-[10px] font-bold text-stone-400">{totalVideos}/{MAX_VIDEOS}</span>
-              </div>
-              <p className="-mt-1.5 text-xs leading-relaxed text-ink-2">
-                Add at least one. Paste a link from YouTube, Vimeo, Instagram, TikTok, Facebook, Google Drive or
-                Dropbox, or upload a short clip.
-              </p>
-
+          <div className="space-y-3 sm:space-y-4">
+            <MediaSection
+              icon={<Video className="h-4 w-4 text-gold" aria-hidden="true" />}
+              title="Videos"
+              required
+              aside={
+                <span className="shrink-0 text-xs font-semibold whitespace-nowrap text-stone-400 tabular-nums">
+                  {totalVideos} of {MAX_VIDEOS}
+                </span>
+              }
+              hint="Add at least one clip of you playing live. Paste a link from YouTube, Instagram, TikTok, Google Drive and more, or upload one."
+              invalid={!!videoError}
+            >
               <VideoLinksField
                 links={videoLinks}
                 onChange={(next) => {
@@ -478,8 +592,8 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
                         </video>
                         {vf.uploading && (
                           <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1.5">
-                            <div className="flex items-center gap-1 text-[10px] font-medium text-stone-200">
-                              <Loader2 className="h-2.5 w-2.5 animate-spin" /> Uploading… {vf.progress}%
+                            <div className="flex items-center gap-1 text-xs font-medium text-stone-200">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Uploading… {vf.progress}%
                             </div>
                             <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/15">
                               <div
@@ -494,19 +608,24 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
                         <div className="flex items-center gap-2">
                           <Video className="h-3.5 w-3.5 shrink-0 text-stone-500" />
                           <p className="min-w-0 flex-1 truncate text-xs font-medium text-white">{vf.file.name}</p>
-                          <button title={`Remove ${vf.file.name}`} type="button" onClick={() => removeVideo(vf.id)}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-600 transition-all hover:bg-red-400/10 hover:text-red-400">
-                            <X className="h-3.5 w-3.5" />
+                          <button
+                            title={`Remove ${vf.file.name}`}
+                            aria-label={`Remove ${vf.file.name}`}
+                            type="button"
+                            onClick={() => removeVideo(vf.id)}
+                            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-stone-500 transition-all hover:bg-red-400/10 hover:text-red-400"
+                          >
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
                         {!vf.uploading && vf.uploadedUrl && (
-                          <p className="flex items-center gap-1 text-[10px] text-green-400">
-                            <CheckCircle2 className="h-2.5 w-2.5" /> Uploaded
+                          <p className="flex items-center gap-1 text-xs text-green-400">
+                            <CheckCircle2 className="h-3 w-3" /> Uploaded
                           </p>
                         )}
                         {!vf.uploading && vf.error && (
-                          <p className="flex items-center gap-1 text-[10px] text-red-400">
-                            <AlertCircle className="h-2.5 w-2.5" /> {vf.error}
+                          <p className="flex items-center gap-1 text-xs text-red-400">
+                            <AlertCircle className="h-3 w-3" /> {vf.error}
                           </p>
                         )}
                         <input
@@ -516,7 +635,7 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
                           value={vf.description}
                           onChange={(e) => setVideoDescription(vf.id, e.target.value)}
                           placeholder="Add a short description (optional)"
-                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-white placeholder:text-stone-400 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
+                          className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2.5 text-xs text-white placeholder:text-stone-400 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
                         />
                       </div>
                     </div>
@@ -526,6 +645,11 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
 
               {totalVideos < MAX_VIDEOS && (
                 <>
+                  <div className="flex items-center gap-3 text-xs text-stone-500" aria-hidden="true">
+                    <span className="h-px flex-1 bg-white/10" />
+                    or
+                    <span className="h-px flex-1 bg-white/10" />
+                  </div>
                   <input
                     title="Upload Videos"
                     ref={fileInputRef}
@@ -538,97 +662,156 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`flex w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed bg-gold/5 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gold/10 active:bg-gold/15 sm:py-4 ${
+                    className={`flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl border-2 border-dashed bg-gold/5 px-3 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gold/10 active:bg-gold/15 ${
                       videoError ? "border-red-500/50" : "border-gold/40 hover:border-gold/70"
                     }`}
                   >
                     <Upload className="h-4 w-4 text-gold" aria-hidden="true" />
                     {videoFiles.length === 0 ? "Upload a clip" : "Upload another clip"}
-                    <span className="text-xs font-medium text-ink-2">max {maxVideoMb} MB</span>
+                    <span className="text-xs font-medium text-ink-2">up to {maxVideoMb} MB</span>
                   </button>
                 </>
               )}
 
               {videoError && (
-                <p className="flex items-center gap-1.5 text-[11px] font-medium text-red-400">
-                  <AlertCircle className="h-3 w-3 shrink-0" /> {videoError}
+                <p role="alert" className="flex items-start gap-1.5 text-xs font-medium text-red-400">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {videoError}
                 </p>
               )}
-            </div>
-          </>
+            </MediaSection>
+
+            <MediaSection
+              icon={<SiSpotify className="h-4 w-4 text-[#1DB954]" aria-hidden="true" />}
+              title="Spotify"
+              hint="We look up your act name. Pick your profile or paste its link."
+            >
+              <SpotifyArtistField
+                artist={spotifyArtist}
+                query={spotifyQuery}
+                onQueryChange={(next) => {
+                  setSpotifyQuery(next);
+                  clearFieldError("spotify");
+                }}
+                blockedError={fieldErrors.spotify}
+                autoMatch={spotifyMatchedFor !== groupName.trim()}
+                onAutoMatched={(picked) => {
+                  setSpotifyMatchedFor(groupName.trim());
+                  setSpotifyAutoPicked(picked);
+                }}
+                onChange={(next) => {
+                  setSpotifyArtist(next);
+                  setSpotifyAutoPicked(false);
+                  clearFieldError("spotify");
+                }}
+              />
+            </MediaSection>
+
+            <section className={mediaSectionClass(false)}>
+              <SocialLinksField
+                links={socialLinks}
+                onChange={setSocialLinks}
+                heading={
+                  <MediaSectionTitle
+                    icon={<Share2 className="h-4 w-4 text-gold" aria-hidden="true" />}
+                    title="Socials"
+                  />
+                }
+              />
+            </section>
+          </div>
         )}
 
         {step === 4 && (
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between gap-3">
-                <p className={`${labelClass} mb-0!`}>Preferred dates</p>
-                <span className="text-[10px] font-bold text-stone-400">{preferredDates.length}/{MAX_DATES}</span>
+                <p className={`${labelClass} mb-0!`}>Preferred nights</p>
+                <span
+                  aria-live="polite"
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+                    datesFull ? "border-gold/60 bg-gold/15 text-gold" : "border-white/10 text-stone-400"
+                  }`}
+                >
+                  {preferredDates.length} of {MAX_DATES} picked
+                </span>
               </div>
-              <p className="mt-1 text-xs leading-relaxed text-ink-2">
-                {preferredDates.length >= MAX_DATES
-                  ? `That's the most you can pick. Remove one to choose a different night.`
-                  : `Pick all the nights you can play (up to ${MAX_DATES}).`}
+              <p className="mt-1.5 text-xs leading-relaxed text-ink-2">
+                Tap every night you could play. The more you pick, the easier it is to fit you in.
               </p>
-            </div>
-
-            <div
-              style={{
-                "--primary": "#FDCC4B",
-                "--primary-foreground": "#26300D",
-                "--accent": "rgba(255,255,255,0.10)",
-                "--accent-foreground": "#FDCC4B",
-                "--background": "transparent",
-                "--muted-foreground": "#a8a29e",
-                "--border": "rgba(255,255,255,0.10)",
-                "--ring": "#FDCC4B",
-              } as React.CSSProperties}
-              className="flex justify-center rounded-2xl border border-white/10 bg-black/20 p-2"
-            >
-              <Calendar
-                mode="multiple"
-                max={MAX_DATES}
-                selected={preferredDates}
-                onSelect={(dates) => setPreferredDates((dates ?? []).filter(isDateAvailable))}
-                disabled={(date) => !isDateAvailable(date)}
-                startMonth={startOfMonth(firstAvailable ?? startOfToday())}
-                endMonth={lastAvailable ? startOfMonth(lastAvailable) : undefined}
-                defaultMonth={firstAvailable ?? new Date()}
-                className="bg-transparent p-1 text-white [--cell-size:2.375rem] sm:[--cell-size:2.5rem]"
-              />
             </div>
 
             {availableDates.length === 0 ? (
-              <p className="text-xs leading-relaxed text-ink-2">
-                No stage slots are open at the moment. Carry on and add a note on the next step and we&apos;ll be in
-                touch.
+              <p className="flex items-start gap-2 rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-relaxed text-ink-2">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden="true" />
+                <span>
+                  Every stage night is booked up right now. Carry on, and tell us when you&apos;re free on the next
+                  step.
+                </span>
               </p>
-            ) : sortedDates.length > 0 ? (
-              <ul aria-label="Dates you picked" className="flex flex-wrap gap-2">
+            ) : (
+              <div
+                style={calendarThemeVars}
+                className="rounded-2xl border border-white/10 bg-black/20 px-1 pt-1 pb-2"
+              >
+                <Calendar
+                  mode="multiple"
+                  max={MAX_DATES}
+                  selected={preferredDates}
+                  onSelect={(dates) => setPreferredDates((dates ?? []).filter(isDateAvailable))}
+                  disabled={(date) => !isDateAvailable(date) || (datesFull && !isPicked(date))}
+                  startMonth={startOfMonth(firstAvailable ?? startOfToday())}
+                  endMonth={lastAvailable ? startOfMonth(lastAvailable) : undefined}
+                  defaultMonth={firstAvailable ?? new Date()}
+                  weekStartsOn={1}
+                  className="mx-auto bg-transparent p-1 text-white [--cell-size:2.5rem] min-[400px]:[--cell-size:2.75rem]"
+                />
+                <p className="px-2 text-center text-[11px] leading-snug text-stone-500">
+                  Faded nights are already booked or not open to bands.
+                </p>
+              </div>
+            )}
+
+            {datesFull && (
+              <p
+                role="status"
+                className="flex items-start gap-2 rounded-xl border border-gold/40 bg-gold/10 p-3 text-xs leading-relaxed text-ink"
+              >
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden="true" />
+                <span>
+                  All {MAX_DATES} nights picked. To choose a different night, remove one below.
+                </span>
+              </p>
+            )}
+
+            {sortedDates.length > 0 ? (
+              <ul aria-label="Nights you picked" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {sortedDates.map((d) => (
                   <li
                     key={d.getTime()}
-                    className="inline-flex h-9 items-center gap-0.5 rounded-full border border-gold/40 bg-gold/10 pl-3 text-xs font-semibold whitespace-nowrap text-ink"
+                    className="flex h-10 items-center justify-between rounded-full border border-gold/40 bg-gold/10 pl-3.5 text-xs font-semibold whitespace-nowrap text-ink"
                   >
                     {format(d, "EEE d MMM")}
                     <button
                       type="button"
                       aria-label={`Remove ${format(d, "EEEE d MMMM")}`}
                       onClick={() => removeDate(d)}
-                      className="flex size-9 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:text-red-400"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full text-ink-2 transition-colors hover:text-red-400"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-xs text-ink-2">No dates picked yet. Dates are optional.</p>
-            )}
+            ) : availableDates.length > 0 ? (
+              <p className="text-xs text-ink-2">No nights picked yet. They&apos;re optional, so you can skip this.</p>
+            ) : null}
 
-            <p className="border-t border-white/10 pt-3 text-xs leading-relaxed text-stone-400">
-              Only nights with a free 2-hour stage slot can be picked: Fridays, Saturdays and public holidays (plus the
-              night before).
+            <p className="flex items-start gap-2 border-t border-white/10 pt-3 text-xs leading-relaxed text-stone-400">
+              <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-stone-500" aria-hidden="true" />
+              <span>
+                Bands play on {bandNights}, when no other live music is on. Can&apos;t make any of these? Tell
+                us on the next step.
+              </span>
             </p>
           </div>
         )}
@@ -636,27 +819,52 @@ export default function BandBookingForm({ typeOptions, availableDates, maxVideoB
         {step === 5 && (
           <>
             <div>
-              <label className={labelClass}>Expected Payment (£)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="0.00"
-                className={inputClass}
-              />
+              <label htmlFor="band-fee" className={labelClass}>Your Fee (£)</label>
+              <IconField icon={PoundSterling}>
+                <Input
+                  id="band-fee"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  aria-describedby="band-fee-hint"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(cleanMoneyInput(e.target.value))}
+                  onBlur={() => setPaymentAmount(formatMoneyInput(paymentAmount))}
+                  placeholder="0.00"
+                  className={`${shadcnFieldClass} tabular-nums`}
+                />
+              </IconField>
+              <p id="band-fee-hint" className="mt-1.5 text-xs leading-relaxed text-ink-2">
+                What you&apos;d charge for the night. Leave it blank if you&apos;d rather we make an offer.
+              </p>
             </div>
 
             <div className="sm:pt-2">
-              <label className={labelClass}>Additional Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Set length, equipment needs, anything else we should know…"
-                rows={4}
-                className={`${inputClass} resize-none`}
-              />
+              <div className="flex items-baseline justify-between gap-3">
+                <label htmlFor="band-notes" className={labelClass}>Additional Notes</label>
+                <span
+                  className={`text-xs tabular-nums ${
+                    notes.length >= NOTES_MAX_LENGTH ? "text-gold" : "text-stone-500"
+                  }`}
+                >
+                  {notes.length}/{NOTES_MAX_LENGTH}
+                </span>
+              </div>
+              <p className="-mt-0.5 mb-2 text-xs leading-relaxed text-ink-2">
+                {datesFull
+                  ? "Free on more nights than you could pick? List them here."
+                  : "Can't make the nights on the calendar? Tell us when you're free."}
+              </p>
+              <IconField icon={MessageSquareQuote} multiline>
+                <Textarea
+                  id="band-notes"
+                  value={notes}
+                  maxLength={NOTES_MAX_LENGTH}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Other nights you could play, set length, kit you'll bring…"
+                  className={`${shadcnFieldClass} max-h-60 min-h-28 resize-none overflow-y-auto leading-relaxed [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]`}
+                />
+              </IconField>
             </div>
           </>
         )}

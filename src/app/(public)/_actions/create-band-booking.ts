@@ -11,6 +11,8 @@ import { escapeHtml } from "@/lib/email/escape";
 import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
 import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/correspondence-data";
 import { isValidPhone, PHONE_ERROR } from "@/lib/phone";
+import { parseMoney } from "@/lib/money-input";
+import { NOTES_MAX_LENGTH } from "@/lib/notes-limit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -44,7 +46,17 @@ export interface BandBookingData {
   notes?: string;
 }
 
-export async function createBandBooking(data: BandBookingData) {
+export async function createBandBooking(input: BandBookingData) {
+  const paymentAmount = parseMoney(input.payment_amount);
+  if (input.payment_amount != null && paymentAmount == null) {
+    throw new Error("Please enter your fee as an amount of £0 or more.");
+  }
+  const notes = input.notes?.trim() ?? "";
+  if (notes.length > NOTES_MAX_LENGTH) {
+    throw new Error(`Please keep your notes under ${NOTES_MAX_LENGTH} characters.`);
+  }
+  const data: BandBookingData = { ...input, payment_amount: paymentAmount ?? undefined, notes: notes || undefined };
+
   if (data.phone_no?.trim() && !isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
   const videoUrls = data.video_urls.map((u) => u.trim()).filter(Boolean);
   if (videoUrls.length === 0) {
@@ -174,7 +186,7 @@ async function sendAdminEmail(supabase: ServerClient, data: BandBookingData, id:
     `<p><strong>Type:</strong> ${escapeHtml(data.type)}</p>`,
     data.genre ? `<p><strong>Genre:</strong> ${escapeHtml(data.genre)}</p>` : "",
     data.payment_amount != null
-      ? `<p><strong>Expected Payment:</strong> £${escapeHtml(String(data.payment_amount))}</p>`
+      ? `<p><strong>Expected Payment:</strong> £${escapeHtml(data.payment_amount.toFixed(2))}</p>`
       : "",
     `<p><strong>Booker Name:</strong> ${escapeHtml(data.booker_name)}</p>`,
     `<p><strong>Email:</strong> ${escapeHtml(data.email)}</p>`,

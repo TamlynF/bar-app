@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ExternalLink, Link2, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Check, ExternalLink, Link2, Plus, X } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube } from "react-icons/si";
 import { FieldError } from "@/app/(public)/book/_components/field-error";
 import {
@@ -36,11 +36,11 @@ function focusField(platform: SocialPlatform) {
 export function SocialLinksField({
   links,
   onChange,
-  labelClassName,
+  heading,
 }: {
   links: SocialLinks;
   onChange: (links: SocialLinks) => void;
-  labelClassName: string;
+  heading: ReactNode;
 }) {
   const [paste, setPaste] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
@@ -82,8 +82,8 @@ export function SocialLinksField({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className={labelClassName}>Socials</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {heading}
         <div role="group" aria-label="Add a social profile" className="flex items-center gap-2">
           {SOCIAL_PLATFORMS.map((platform) => {
             const { Icon, color } = PLATFORM_STYLE[platform];
@@ -197,26 +197,35 @@ export function SocialLinksField({
       })}
 
       {reusable && missing.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-ink-2">Same handle on</span>
-          {missing.map((platform) => {
-            const { Icon, color } = PLATFORM_STYLE[platform];
-            return (
-              <button
-                key={platform}
-                type="button"
-                onClick={() => {
-                  setLink(platform, reusable);
-                  setNotice(`${SOCIAL_LABELS[platform]} added as ${reusable}`);
-                }}
-                aria-label={`Use ${reusable} on ${SOCIAL_LABELS[platform]}`}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 text-xs font-semibold text-ink transition-colors hover:border-gold/50 hover:bg-gold/10"
-              >
-                <Icon className={`h-3.5 w-3.5 ${color}`} aria-hidden="true" />
-                {SOCIAL_LABELS[platform]}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 py-2 pr-2 pl-3">
+          <p className="min-w-0 flex-1 text-xs leading-snug text-ink-2">
+            Same handle elsewhere?
+            <span className="block truncate font-semibold text-ink">@{reusable}</span>
+          </p>
+          <div role="group" aria-label={`Use @${reusable} on another social`} className="flex shrink-0 gap-2">
+            {missing.map((platform) => {
+              const { Icon, color } = PLATFORM_STYLE[platform];
+              return (
+                <button
+                  key={platform}
+                  type="button"
+                  onClick={() => {
+                    setLink(platform, reusable);
+                    setNotice(`${SOCIAL_LABELS[platform]} added as ${reusable}`);
+                  }}
+                  aria-label={`Use ${reusable} on ${SOCIAL_LABELS[platform]}`}
+                  title={`Add to ${SOCIAL_LABELS[platform]}`}
+                  className="relative flex size-11 items-center justify-center rounded-xl border border-white/10 bg-black/40 transition-colors hover:border-gold/50 hover:bg-gold/10 sm:w-auto sm:gap-1.5 sm:px-3"
+                >
+                  <Icon className={`h-4 w-4 ${color}`} aria-hidden="true" />
+                  <span className="hidden text-xs font-semibold text-ink sm:inline">{SOCIAL_LABELS[platform]}</span>
+                  <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full border border-white/20 bg-[#26300D] text-gold">
+                    <Plus className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

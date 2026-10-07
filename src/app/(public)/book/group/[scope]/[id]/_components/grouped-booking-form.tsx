@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NotesTextarea } from "@/app/(public)/book/_components/notes-textarea";
 import { Button } from "@/components/ui/button";
 import SquarePaymentSheet from "@/components/square-payment-sheet";
 import type { InPagePayment } from "@/lib/square-web-payments";
@@ -534,23 +535,24 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
       {f.special_requests.visible && (
         <div className="space-y-1">
-          <label className={labelClasses}>
+          <label htmlFor="gb-special-requests" className={labelClasses}>
             {f.special_requests.label} {f.special_requests.required ? <span className="text-red-500">*</span> : "(Optional)"}
           </label>
-          <div className="group relative">
-            <div className={iconContainerClasses}>
-              <MessageSquareQuote className={iconClasses} />
-            </div>
-            <textarea
-              name="specialRequests"
-              required={f.special_requests.required}
-              value={formData.specialRequests}
-              onChange={handleInputChange}
-              aria-invalid={!!fieldErrors.specialRequests}
-              className={cn(inputBaseClasses, "min-h-25 resize-none py-3 text-sm", fieldErrors.specialRequests && "border-red-500/60")}
-              placeholder="Type your requests here..."
-            />
-          </div>
+          <NotesTextarea
+            id="gb-special-requests"
+            icon={<MessageSquareQuote className={iconClasses} />}
+            name="specialRequests"
+            required={f.special_requests.required}
+            value={formData.specialRequests}
+            onChange={handleInputChange}
+            aria-invalid={!!fieldErrors.specialRequests}
+            className={cn(
+              inputBaseClasses,
+              "py-3 text-sm focus-visible:border-[#fdcc4b] focus-visible:ring-1 focus-visible:ring-[#fdcc4b]",
+              fieldErrors.specialRequests && "border-red-500/60"
+            )}
+            placeholder="Allergies, accessibility needs, a birthday to celebrate…"
+          />
           <FieldError message={fieldErrors.specialRequests} />
         </div>
       )}
