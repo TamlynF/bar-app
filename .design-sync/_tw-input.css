@@ -1,0 +1,18 @@
+/* Compile input for the POC mini-package styles.css.
+   `source(none)` switches Tailwind's automatic content detection off, and the
+   app's globals.css is NOT imported any more (it declares @source globs over
+   the whole app, which is what used to pull ~4k app utilities into the
+   bundle). Its theme registrations and token scopes are extracted instead by
+   .design-sync/build-tw-theme.mjs into _tw-theme.css, so the shadcn tokens
+   (:root --primary/… + @theme inline --color-*) and the After Dark tokens
+   (--gold/--canvas/--text-btn) still resolve and Button/Input render with
+   fill. Only the mini-package sources are scanned; the inline safelist is
+   the layout glue the conventions header shows the design agent. */
+@import "tailwindcss" source(none);
+@import "./.cache/_tw-theme.css";
+@source "./poc-src/*.tsx";
+@source inline("flex flex-col gap-3");
+
+/* Button/Input are admin-surface primitives: show preview cards on the admin
+   cream canvas rather than the public dark olive. */
+html, body { background-color: #F4F1E8; }

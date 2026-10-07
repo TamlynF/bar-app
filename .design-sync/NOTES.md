@@ -116,26 +116,58 @@ only until the app's next regeneration - full exclusion needs an app-side change
 should raise it with Claude Design if the regenerated list matters. Check on the next sync:
 re-fetch the file and confirm every `--tw-*` kind is `other`.
 
-## Tailwind CSS compile
-`styles.css` is compiled via `@tailwindcss/cli` (installed into `.ds-sync`).
-Output **directly into the mini-package** (under `node_modules`, so the editor's
-Tailwind/CSS linter doesn't flag the generated output - don't leave a compiled
-`.css` under `.design-sync/`, it produces a noisy `propertyIgnoredDueToDisplay`
-hint on Tailwind's own preflight):
+## Tailwind CSS compile (rewritten 2026-10-07, fourth run - lean bundle)
+The compile input is now the COMMITTED `.design-sync/_tw-input.css` (it used to sit in the
+gitignored `.cache/`, so a fresh clone had no input at all). It no longer imports the app's
+`globals.css`: that file declares six `@source` globs over the whole app plus Tailwind's
+automatic repo-root detection, which is what put ~4k app utilities (282+ utility token
+scopes, `.bg-linear-*` nested `@supports`, `.space-y-*` `:where(& > …)` reverse vars) into
+the bundle. Instead:
 ```
+node .design-sync/build-minipkg.mjs
+node .design-sync/build-tw-theme.mjs        # globals.css -> .cache/_tw-theme.css (theme + token scopes only)
 node .ds-sync/node_modules/@tailwindcss/cli/dist/index.mjs \
-  -i .design-sync/.cache/_tw-input.css \
-  -o node_modules/bar-app-ds/styles.css
-node .design-sync/build-tokens.mjs
+  -i .design-sync/_tw-input.css -o node_modules/bar-app-ds/styles.css
+node .design-sync/build-tokens.mjs          # -> node_modules/bar-app-ds/tokens/tokens.css + @kind stamps
+node .ds-sync/resync.mjs … (driver)
+node .design-sync/build-adherence.mjs       # after the driver (writes into ds-bundle/)
 ```
-Tailwind v4 **auto-detects content from the repo root** in addition to the
-`@source` globs, so the compiled CSS pulls in app-wide utilities. That is why
-`package-validate` prints a non-blocking `[TOKENS_MISSING]` for app runtime vars
-(`--spotify-bg`, `--badge-color`, `--chip-c`, `--ev-theme`, radix popover vars).
-These are set at runtime by the app and are irrelevant to Button/Input - **leave
-as a known warn, do not chase.**
+- `_tw-input.css` = `@import "tailwindcss" source(none)` + `@import "./.cache/_tw-theme.css"`
+  + `@source "./poc-src/*.tsx"` + `@source inline("flex flex-col gap-3")` (the layout glue
+  the conventions header shows) + the cream `html, body` override. **Automatic content
+  detection is OFF**; only poc-src and the inline safelist produce utilities. To give the
+  design agent more glue classes, extend the `@source inline(...)` list - that is the knob.
+- `build-tw-theme.mjs` extracts from globals.css: every `@custom-variant`, every top-level
+  `@theme`/`@theme inline` block verbatim, and the `--*` declarations of the token scopes
+  (`:root`, `:host`, `[data-*]`, `.dark`) with their @layer/@media wrappers. `@theme inline`
+  vars (`--color-gold`, `--text-btn`) are inlined by Tailwind and never appear as custom
+  properties - expected. Shared walker: `.design-sync/css-walk.mjs` (handles escaped quotes
+  in Tailwind selectors - without that one stray quote swallows the rest of the file).
+- Result (2026-10-07): styles.css **489 KB -> 23 KB**, 108 utility rules, tokens.css **78
+  names** (was 285 - the unused Tailwind default palette is no longer emitted), **both
+  validator warns gone**: `[TOKENS_MISSING]` (no app runtime vars referenced any more) and
+  `[FONT_MISSING] Cambria` (`--font-serif` is an unused `@theme` var and is not emitted - the
+  stack itself is untouched, it just isn't in the output). Render check 2/2, Button sheet
+  re-checked by eye: gold/goldOutline/cta all render as before.
+- **Consequence for the design agent (deliberate, user-requested):** `styles.css` carries
+  only the classes Button/Input use plus the safelist. An arbitrary Tailwind class in the
+  agent's own layout glue no longer resolves; the conventions header now says so and
+  points it at inline styles / `var(--token)`. If designs start looking unstyled, widen the
+  safelist rather than re-importing globals.css.
+- **@kind stamping rule (user-set, fourth run):** a `/* @kind other */` stamp only attaches
+  when the declaration's immediate parent is a token scope or a top-level utility rule whose
+  only ancestors are `@layer` - never inside a nested `@supports`/`@media` or a nested
+  selector (the app's checker reported 5 unattached stamps on `--tw-gradient-position`
+  inside `.bg-linear-* > @supports`). With the lean bundle only 10 stamps remain, all at
+  eligible depth.
 
 ## Run log
+- **2026-10-07 fourth run - lean bundle + stamping rule, UPLOADED.** See the rewritten
+  "Tailwind CSS compile" section. Both components verification-unchanged, render 2/2 clean,
+  `upload.any:true` with `styling:true`/`aux:true` (styles/tokens/README changed, bundle not).
+  Conventions header: `bg-accent`/`ring-ring` corrected to the forms that actually ship
+  (`hover:bg-accent`, `focus-visible:ring-ring/50`) and the lean-stylesheet rule added; all
+  15 token rows re-validated by definition grep. Uploaded on the atomic path, `deletes:[]`.
 - **2026-10-07 third run - UPLOADED (styling only).** Re-fetched the app-regenerated adherence
   file (see the answered open question above), added the `--tw-*` → `@kind other` stamping,
   rebuilt. Both components verification-unchanged, render 2/2 clean, `upload.any:true` with
@@ -337,8 +369,8 @@ as a known warn, do not chase.**
   sides through `tr -d '\r'` before diffing or you'll conclude the components moved when
   they didn't.
 - `node_modules/bar-app-ds/` is gitignored-by-location - a fresh clone has no
-  mini-package; run `node .design-sync/build-minipkg.mjs` (durable script) then the
-  `@tailwindcss/cli` styles.css step before re-running the driver.
+  mini-package; run the full chain in "Tailwind CSS compile" (minipkg -> tw-theme -> tailwind
+  -> tokens) before the driver.
 - If `src/components/ui/{button,input}.tsx` change upstream, the `poc-src/` copies
   and the hand-written `.d.ts` will drift - re-copy and re-bundle.
 - **`cfg.dtsPropsFor` now owns both contracts (2026-07-31).** `Button.d.ts` and

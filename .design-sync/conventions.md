@@ -6,8 +6,8 @@ A **proof-of-concept** import of two primitives (`Button`, `Input`) from the
 ## The token layer (admin olive/cream)
 
 These shadcn-derived primitives reference semantic colour utilities - `bg-primary`,
-`text-primary-foreground`, `bg-secondary`, `bg-destructive`, `bg-accent`,
-`border-input`, `ring-ring`. The app's `globals.css` now defines the backing theme
+`text-primary-foreground`, `bg-secondary`, `bg-destructive`, `hover:bg-accent`,
+`border-input`, `focus-visible:ring-ring/50`. The app's `globals.css` now defines the backing theme
 variables in a `:root` block, re-exported through `@theme inline` as `--color-*`,
 so **these utilities resolve to real colour** and `Button` variants render with fill.
 
@@ -29,6 +29,9 @@ the public marketing palette:
 
 The full token list ships in `tokens/tokens.css` (`:root` and `[data-surface]` scopes only -
 read it before picking a colour); `_ds_bundle.css` holds the compiled utilities.
+The stylesheet is lean: it carries only the utility classes `Button` and `Input` use plus
+`flex`, `flex-col` and `gap-3`. Any other layout glue you write must use inline styles or
+`var(--token)` values from `tokens/tokens.css` - an arbitrary Tailwind class will not resolve.
 
 So out of the box `Button` looks like an **admin** button: olive fill, near-white text.
 Gold is the focus-ring colour only - never a button fill.
