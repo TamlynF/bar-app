@@ -50,6 +50,11 @@ const config = (phase: string): NextConfig => {
           destination: "/book",
           permanent: true,
         },
+        {
+          source: "/book/quiz/manage-booking/:id",
+          destination: "/manage-booking/:id",
+          permanent: true,
+        },
       ];
     },
   };

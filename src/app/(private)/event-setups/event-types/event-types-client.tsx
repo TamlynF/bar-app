@@ -11,6 +11,8 @@ import {
 import { createBrowserClient } from "@supabase/ssr";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { sanitizeBookingEmailChoices, type BookingEmailChoices, type EmailVersion } from "@/lib/email/booking-email-versions";
+import { BookingEmailsPicker, serializeBookingEmails } from "../_components/booking-emails-picker";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
 import { readImageFileDimensions } from "@/lib/image-file-dimensions";
@@ -135,6 +137,7 @@ export type Subtype = {
   payment_required: boolean;
   default_payment_amount: number | null;
   booking_config: BookingConfig | null;
+  booking_emails?: unknown;
   event_subtype_badges: Badge[];
 } & BookingCardFields;
 
@@ -147,6 +150,7 @@ export type EventTypeRecord = {
   booking_grouping: BookingGrouping;
   is_bookable: boolean;
   booking_config: BookingConfig | null;
+  booking_emails?: unknown;
   event_subtypes: Subtype[];
 } & BookingCardFields;
 
@@ -170,6 +174,7 @@ type CatForm = {
   is_bookable: boolean;
   booking_config: ResolvedBookingConfig;
   origBookingConfig: BookingConfig | null;
+  booking_emails: BookingEmailChoices;
 } & CardDraft;
 
 type SubForm = {
@@ -191,6 +196,7 @@ type SubForm = {
   default_payment_amount: string;
   booking_config: ResolvedBookingConfig;
   origBookingConfig: BookingConfig | null;
+  booking_emails: BookingEmailChoices;
   badges: BadgeDraft[];
 } & CardDraft;
 
@@ -232,7 +238,13 @@ function useMediaQuery(query: string) {
   return matches;
 }
 
-export default function EventTypesClient({ initialEventTypes = [] }: { initialEventTypes: EventTypeRecord[] }) {
+export default function EventTypesClient({
+  initialEventTypes = [],
+  emailVersions = [],
+}: {
+  initialEventTypes: EventTypeRecord[];
+  emailVersions?: EmailVersion[];
+}) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const narrow = useMediaQuery("(max-width: 899px)");
@@ -270,7 +282,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setCatForm({
       isNew: true, name: "", title: "", description: "", color: null,
       booking_grouping: "per_event", is_bookable: false,
-      booking_config: normalizeBookingConfig(null), origBookingConfig: null,
+      booking_config: normalizeBookingConfig(null), origBookingConfig: null, booking_emails: {},
       ...cardFromRecord({ booking_card_title: null, booking_card_tagline: null, booking_card_icon: null, booking_card_badge: null }),
     });
 
@@ -279,6 +291,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       id: t.id, isNew: false, name: toTitleCase(t.name), title: t.title ?? "", description: t.description ?? "",
       color: t.color ?? null, booking_grouping: t.booking_grouping ?? "per_event", is_bookable: t.is_bookable,
       booking_config: normalizeBookingConfig(t.booking_config), origBookingConfig: t.booking_config,
+      booking_emails: sanitizeBookingEmailChoices(t.booking_emails),
       ...cardFromRecord(t),
     });
 
@@ -287,7 +300,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       isNew: true, event_types_id: t.id, name: "", title: "", default_event_title: "", default_image_url: "",
       tagline: "", color: null, behavior: "standard", is_bookable: false, host_required: false,
       seating_required: true, show_on_enquiry_form: true, payment_required: false, default_payment_amount: "",
-      booking_config: normalizeBookingConfig(null), origBookingConfig: null, badges: [],
+      booking_config: normalizeBookingConfig(null), origBookingConfig: null, booking_emails: {}, badges: [],
       ...cardFromRecord({ booking_card_title: null, booking_card_tagline: null, booking_card_icon: null, booking_card_badge: null }),
     });
 
@@ -300,6 +313,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       show_on_enquiry_form: s.show_on_enquiry_form ?? true, payment_required: s.payment_required,
       default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
       booking_config: normalizeBookingConfig(s.booking_config), origBookingConfig: s.booking_config,
+      booking_emails: sanitizeBookingEmailChoices(s.booking_emails),
       badges: (s.event_subtype_badges ?? []).map((b) => ({ id: b.id, title: b.title, description: b.description ?? "", icon: b.icon })),
       ...cardFromRecord(s),
     });
@@ -323,6 +337,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     const catBookable = catForm.booking_grouping === "per_type" && catForm.is_bookable;
     fd.set("is_bookable", catBookable ? "on" : "");
     fd.set("booking_config", catBookable ? configToJson(catForm.booking_config) : JSON.stringify(catForm.origBookingConfig ?? {}));
+    fd.set("booking_emails", serializeBookingEmails(catForm.booking_emails));
     appendCardFields(fd, catForm);
     setError(null);
     startTransition(async () => {
@@ -356,6 +371,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("default_payment_amount", subForm.default_payment_amount || "0");
     fd.set("booking_config", ownsPage && subForm.is_bookable ? configToJson(subForm.booking_config) : JSON.stringify(subForm.origBookingConfig ?? {}));
     fd.set("badges", JSON.stringify(subForm.badges.filter((b) => b.title.trim()).map((b) => ({ id: b.id, title: b.title, description: b.description, icon: b.icon }))));
+    fd.set("booking_emails", serializeBookingEmails(subForm.booking_emails));
     appendCardFields(fd, subForm);
     setError(null);
     startTransition(async () => {
@@ -408,7 +424,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           <Plus className="h-4 w-4 stroke-[2.5]" /> Add category
         </button>
         {catForm && (
-          <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
+          <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} emailVersions={emailVersions} />
         )}
         {ConfirmDialogUI}
       </div>
@@ -528,7 +544,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       </div>
 
       {catForm && (
-        <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
+        <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} emailVersions={emailVersions} />
       )}
       {subForm && (
         <SubtypeSheet
@@ -539,6 +555,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           onSave={submitSub}
           pending={isPending}
           error={error}
+          emailVersions={emailVersions}
         />
       )}
 
@@ -662,8 +679,9 @@ const SHEET_CLASS =
   "sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:h-auto sm:max-h-[90dvh] sm:w-[680px] " +
   "sm:max-w-[calc(100vw-2rem)] sm:-translate-x-1/2 sm:rounded-[20px] sm:border sm:border-[#D8D5C8]";
 
-function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
+function CategorySheet({ form, setForm, onClose, onSave, pending, error, emailVersions }: {
   form: CatForm; setForm: (f: CatForm) => void; onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
+  emailVersions: EmailVersion[];
 }) {
   const set = (patch: Partial<CatForm>) => setForm({ ...form, ...patch });
   const nameErr = !form.name.trim();
@@ -724,6 +742,16 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
             </SheetSection>
           )}
 
+          <SheetSection title="Emails" blurb="Which wording customers get for bookings in this category.">
+            <BookingEmailsPicker
+              value={form.booking_emails}
+              onChange={(booking_emails) => set({ booking_emails })}
+              versions={emailVersions}
+              inheritFrom={[]}
+              blurb="Sub-categories and single events can still pick their own."
+            />
+          </SheetSection>
+
           {error && <ErrorBox message={error} />}
         </div>
         <SheetFoot
@@ -744,11 +772,13 @@ const TABS: { id: string; label: string }[] = [
   { id: "needs", label: "What it needs" },
   { id: "web", label: "Website" },
   { id: "booking", label: "Booking form" },
+  { id: "emails", label: "Emails" },
 ];
 
-function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }: {
+function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error, emailVersions }: {
   form: SubForm; setForm: (f: SubForm) => void; parent: EventTypeRecord | undefined;
   onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
+  emailVersions: EmailVersion[];
 }) {
   const [activeTab, setActiveTab] = useState("basics");
   const set = (patch: Partial<SubForm>) => setForm({ ...form, ...patch });
@@ -930,6 +960,16 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
               config={form.booking_config}
               onConfig={(cfg) => set({ booking_config: cfg })}
               fallbackTitle={form.title || form.name}
+            />
+          )}
+
+          {cur === "emails" && (
+            <BookingEmailsPicker
+              value={form.booking_emails}
+              onChange={(booking_emails) => set({ booking_emails })}
+              versions={emailVersions}
+              inheritFrom={[{ label: "category", choices: parent?.booking_emails }]}
+              blurb="Which wording customers get for bookings of this kind of night. A single event can still pick its own."
             />
           )}
 

@@ -130,3 +130,14 @@ select setval(pg_get_serial_sequence('public.tables', 'id'),             (select
 select setval(pg_get_serial_sequence('public.contacts', 'id'),           (select max(id) from public.contacts));
 select setval(pg_get_serial_sequence('public.quiz_category_configs','id'),(select max(id) from public.quiz_category_configs));
 select setval('public.company_information_id_seq', (select max(id) from public.company_information));
+
+-- Quiz sub-types use the "Quiz Night" booking email versions (created by the
+-- booking_email_versions migration, which runs before this seed).
+update public.event_subtypes s
+set booking_emails = coalesce(s.booking_emails, '{}'::jsonb) || jsonb_build_object(
+  'confirmed', (select id from public.email_templates
+                where scenario_key = 'booking.event.confirmed' and variant_name = 'Quiz Night'),
+  'waitlisted', (select id from public.email_templates
+                 where scenario_key = 'booking.event.waitlisted' and variant_name = 'Quiz Night')
+)
+where s.behavior = 'quiz';

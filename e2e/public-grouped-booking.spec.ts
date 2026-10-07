@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 const admin = createClient(
@@ -76,7 +76,15 @@ test.beforeEach(async ({}, testInfo) => {
 });
 
 test.afterEach(async () => {
-  if (eventId) await admin.from("events").delete().eq("id", eventId);
+  if (eventId) {
+    const { data: bookings } = await admin.from("bookings").select("id").eq("event_id", eventId);
+    const ids = (bookings ?? []).map((b) => b.id);
+    if (ids.length) {
+      await admin.from("booking_table_mappings").delete().in("booking_id", ids);
+      await admin.from("bookings").delete().in("id", ids);
+    }
+    await admin.from("events").delete().eq("id", eventId);
+  }
   if (subtypeId) await admin.from("event_subtypes").delete().eq("id", subtypeId);
   if (typeId) await admin.from("event_types").delete().eq("id", typeId);
 });
@@ -86,7 +94,7 @@ test.describe("public grouped booking - shared config source", () => {
     await page.goto(`/book/group/type/${typeId}`);
 
     await expect(page.getByRole("heading", { name: /book your spot/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /confirm booking/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /book now/i })).toBeVisible();
 
     await expect(page.getByText("PER TYPE SHARED TAGLINE")).toBeVisible();
     await expect(page.getByText("Type Crew Name", { exact: true })).toBeVisible();
@@ -97,10 +105,73 @@ test.describe("public grouped booking - shared config source", () => {
     await page.goto(`/book/group/subtype/${subtypeId}`);
 
     await expect(page.getByRole("heading", { name: /book your spot/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /confirm booking/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /book now/i })).toBeVisible();
 
     await expect(page.getByText("PER SUBTYPE SHARED TAGLINE")).toBeVisible();
     await expect(page.getByText("Subtype Crew Name", { exact: true })).toBeVisible();
     await expect(page.getByText("Type Crew Name", { exact: true })).toHaveCount(0);
+  });
+});
+
+async function fillBooking(page: Page, details: { name: string; email: string; team: string }) {
+  const name = page.getByPlaceholder("e.g. Jane Smith");
+  const email = page.getByPlaceholder("e.g. jane@email.com");
+  const team = page.getByPlaceholder("e.g. The Thirsty Trivia Titans");
+  await expect(name).toBeVisible();
+
+  await expect(async () => {
+    await name.fill(details.name);
+    await email.fill(details.email);
+    await team.fill(details.team);
+    await expect(name).toHaveValue(details.name);
+    await expect(email).toHaveValue(details.email);
+    await expect(team).toHaveValue(details.team);
+  }).toPass({ timeout: 10_000 });
+}
+
+test.describe("public grouped booking - full free booking", () => {
+  test("books a place on the chosen date and shows the confirmation", async ({ page }, testInfo) => {
+    const stamp = `${testInfo.project.name}-${Date.now()}`;
+    await page.goto(`/book/group/subtype/${subtypeId}?id=${eventId}`);
+
+    await fillBooking(page, { name: "Playwright Punter", email: `pw-${stamp}@example.com`, team: `PW ${stamp}` });
+
+    const book = page.getByRole("button", { name: /book now/i });
+    await expect(book).toBeEnabled();
+    await book.click();
+
+    await expect(page.getByRole("heading", { name: /you're booked/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /book another spot/i })).toBeVisible();
+
+    const { data: rows } = await admin.from("bookings").select("status, group_name").eq("event_id", eventId);
+    expect(rows).toEqual([{ status: "confirmed", group_name: `PW ${stamp}` }]);
+  });
+
+  test("blocks a team name that is already booked for that date", async ({ page }, testInfo) => {
+    const stamp = `${testInfo.project.name}-${Date.now()}`;
+    const team = `PW Taken ${stamp}`;
+    const { data: contact, error: cErr } = await admin
+      .from("contacts")
+      .insert({ full_name: "First Team", email: `pw-first-${stamp}@example.com` })
+      .select("id")
+      .single();
+    if (cErr) throw cErr;
+    const { error: bErr } = await admin.from("bookings").insert({
+      event_id: eventId,
+      contact_id: contact.id,
+      group_name: team,
+      group_size: 2,
+      status: "confirmed",
+      payment_status: "paid",
+      paid_amount: 0,
+      total_amount: 0,
+    });
+    if (bErr) throw bErr;
+
+    await page.goto(`/book/group/subtype/${subtypeId}?id=${eventId}`);
+    await fillBooking(page, { name: "Second Team", email: `pw-second-${stamp}@example.com`, team: team.toLowerCase() });
+
+    await expect(page.getByText(/subtype crew name is already taken/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /book now/i })).toBeDisabled();
   });
 });

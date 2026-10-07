@@ -21,7 +21,7 @@ import {
   paymentPendingMergeValues,
 } from "@/lib/payment-pending-email";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
-import { renderTemplate } from "@/lib/email/resolve";
+import { renderBookingTemplate } from "@/lib/email/booking-email-choice";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
@@ -232,7 +232,7 @@ export async function createEventBooking(formData: FormData) {
 
     if (isFree) {
       await sendEventBookingEmail(
-        supabase, newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
+        supabase, eventId, newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
       );
       await notifyAdminBookingCreated(newBooking.id);
       await updateFullyBookedStatus(supabase, eventId);
@@ -314,9 +314,10 @@ async function sendPaymentPendingEmail(
     amountDue: number;
   }
 ) {
-  const slots = await renderTemplate(
+  const slots = await renderBookingTemplate(
     supabase,
     "booking.payment_pending",
+    args.eventId,
     paymentPendingMergeValues({
       name: args.name,
       eventTitle: args.eventTitle,
@@ -354,6 +355,7 @@ async function sendPaymentPendingEmail(
 
 async function sendEventBookingEmail(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: number,
   bookingId: number,
   email: string,
   name: string,
@@ -368,9 +370,10 @@ async function sendEventBookingEmail(
   const manageUrl = `${appUrl}/manage-booking/${bookingId}`;
   const partySize = `${groupSize} ${groupSize === 1 ? "Person" : "People"}`;
 
-  const slots = await renderTemplate(
+  const slots = await renderBookingTemplate(
     supabase,
     status === "confirmed" ? "booking.event.confirmed" : "booking.event.waitlisted",
+    eventId,
     {
       customerName: name,
       eventTitle,

@@ -19,6 +19,8 @@ import {
   type BookingSnapshot,
 } from "@/lib/booking-emails";
 import { renderTemplate } from "@/lib/email/resolve";
+import { emailLevelsFromEvent, versionFor } from "@/lib/email/booking-email-choice";
+import type { ChoiceLevels } from "@/lib/email/booking-email-versions";
 import type { RenderedSlots } from "@/lib/email/design";
 import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
 
@@ -39,6 +41,7 @@ export interface LoadedBooking {
   eventType: string | null;
   eventSubtype: string | null;
   bookingGrouping: BookingGrouping | null;
+  emailLevels: ChoiceLevels;
 }
 
 function unwrap<T>(rel: T | T[] | null | undefined): T | null {
@@ -55,9 +58,9 @@ export async function loadBookingSnapshot(
       id, event_id, group_name, group_size, status, special_requests, total_amount, paid_amount,
       contacts!bookings_contact_id_fkey(full_name, email),
       events!bookings_event_id_fkey(
-        id, title, date, booking_config,
-        event_types(name, booking_grouping, booking_config),
-        event_subtypes(name, behavior, booking_config)
+        id, title, date, booking_config, booking_emails,
+        event_types(name, booking_grouping, booking_config, booking_emails),
+        event_subtypes(name, behavior, booking_config, booking_emails)
       )
     `)
     .eq("id", bookingId)
@@ -73,13 +76,24 @@ export async function loadBookingSnapshot(
   }
 
   type ContactRel = { full_name: string | null; email: string | null };
-  type TypeRel = { name: string | null; booking_grouping: string | null; booking_config: BookingConfig | null };
-  type SubtypeRel = { name: string | null; behavior: string | null; booking_config: BookingConfig | null };
+  type TypeRel = {
+    name: string | null;
+    booking_grouping: string | null;
+    booking_config: BookingConfig | null;
+    booking_emails: unknown;
+  };
+  type SubtypeRel = {
+    name: string | null;
+    behavior: string | null;
+    booking_config: BookingConfig | null;
+    booking_emails: unknown;
+  };
   type EventRel = {
     id: number;
     title: string | null;
     date: string | null;
     booking_config: BookingConfig | null;
+    booking_emails: unknown;
     event_types: TypeRel | TypeRel[] | null;
     event_subtypes: SubtypeRel | SubtypeRel[] | null;
   };
@@ -112,6 +126,7 @@ export async function loadBookingSnapshot(
     eventType: eventType?.name ?? null,
     eventSubtype: eventSubtype?.name ?? null,
     bookingGrouping,
+    emailLevels: emailLevelsFromEvent(event),
     snapshot: {
       bookingId: data.id as number,
       customerName: contact.full_name || "there",
@@ -160,8 +175,13 @@ function urls(loaded: LoadedBooking) {
 
 /* Templates are read with the service-role client these notifications already
    use - they fire from webhooks and background paths where there is no session. */
-function slotsFor(key: string, snapshot: BookingSnapshot) {
-  return renderTemplate(createAdminClient(), key, bookingMergeValues(snapshot));
+function slotsFor(key: string, loaded: LoadedBooking) {
+  return renderTemplate(
+    createAdminClient(),
+    key,
+    bookingMergeValues(loaded.snapshot),
+    versionFor(key, loaded.emailLevels)
+  );
 }
 
 export async function notifyAdminBookingCreated(
@@ -170,7 +190,7 @@ export async function notifyAdminBookingCreated(
   const loaded = await loadBookingSnapshot(bookingId);
   if (!loaded) return;
 
-  const slots = await slotsFor("admin.booking.new", loaded.snapshot);
+  const slots = await slotsFor("admin.booking.new", loaded);
   if (!slots) return;
 
   await send(
@@ -199,7 +219,7 @@ export async function notifyBookingChanged(
 
   const customerSlots = await slotsFor(
     opts.changedByAdmin ? "booking.changed.by_admin" : "booking.changed.by_customer",
-    loaded.snapshot
+    loaded
   );
   if (customerSlots) {
     await send(
@@ -210,7 +230,7 @@ export async function notifyBookingChanged(
   }
 
   if (!opts.changedByAdmin) {
-    const adminSlots = await slotsFor("admin.booking.changed", loaded.snapshot);
+    const adminSlots = await slotsFor("admin.booking.changed", loaded);
     if (adminSlots) {
       await send(
         ADMIN_EMAIL,
@@ -237,7 +257,7 @@ export async function notifyBookingCancelled(
 
   const customerSlots = await slotsFor(
     opts.cancelledByAdmin ? "booking.cancelled.by_admin" : "booking.cancelled.by_customer",
-    loaded.snapshot
+    loaded
   );
   if (customerSlots) {
     await send(
@@ -248,7 +268,7 @@ export async function notifyBookingCancelled(
   }
 
   if (!opts.cancelledByAdmin) {
-    const adminSlots = await slotsFor("admin.booking.cancelled", loaded.snapshot);
+    const adminSlots = await slotsFor("admin.booking.cancelled", loaded);
     if (adminSlots) {
       await send(
         ADMIN_EMAIL,

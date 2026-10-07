@@ -5,7 +5,7 @@ export type WeeklyNight = {
   title: string;
   meta: string;
   metaShort: string;
-  bookHref: string | null;
+  bookable: boolean;
   bookLabel: string | null;
 };
 
@@ -17,7 +17,7 @@ export const WEEKLY_NIGHTS: WeeklyNight[] = [
     title: "Quiz night",
     meta: "9pm · free entry · £10 pizza for teams",
     metaShort: "9pm · free entry",
-    bookHref: "/book/quiz",
+    bookable: true,
     bookLabel: "Book for the quiz",
   },
   {
@@ -27,7 +27,7 @@ export const WEEKLY_NIGHTS: WeeklyNight[] = [
     title: "Karaoke",
     meta: "From 8pm · £15 pitchers till 9pm",
     metaShort: "From 8pm",
-    bookHref: null,
+    bookable: false,
     bookLabel: null,
   },
   {
@@ -37,7 +37,7 @@ export const WEEKLY_NIGHTS: WeeklyNight[] = [
     title: "Live band, then DJ",
     meta: "Band from 8pm · DJ set after till 2am",
     metaShort: "Band 8pm · DJ after",
-    bookHref: null,
+    bookable: false,
     bookLabel: null,
   },
 ];

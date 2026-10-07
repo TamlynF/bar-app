@@ -33,7 +33,7 @@ Live music events are the headline. Don Fenticas is a live-music-first venue wit
 
 ## Capabilities and Constraints
 
-Public routes: `/` (schedule-led home), `/whats-on`, `/book` hub with `/book/quiz` (free, waitlist when full), `/book/bingo` (paid up front), `/book/event/[id]` (ticketed), `/book/band` (stage application), `/book/private` (private hire enquiry), `/book/group`, `/manage-booking/[id]` (self-service view, modify, cancel), `/menu`, `/gallery`, `/contact`, `/market` and `/market/board`.
+Public routes: `/` (schedule-led home), `/whats-on`, `/book` hub with `/book/event/[id]` (ticketed), `/book/group/[scope]/[id]` (pick a date - the quiz and Music Bingo book here), `/book/band` (stage application), `/book/private` (private hire enquiry), `/manage-booking/[id]` (self-service view, modify, cancel), `/menu`, `/gallery`, `/contact`, `/market` and `/market/board`.
 
 Admin routes cover bookings by type, unpaid bookings, events and event types, quiz config, generator, history and leaderboards, and settings for company, venue, tables, floor plan, customers, teams, users, menu, specials, merchandise, promo content, gallery, music acts, price rounds, market, rivals, email templates, AI and website.
 

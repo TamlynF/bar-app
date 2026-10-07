@@ -1,5 +1,7 @@
 "use client";
 
+import { sanitizeBookingEmailChoices, type BookingEmailChoices, type EmailVersion } from "@/lib/email/booking-email-versions";
+import { BookingEmailsPicker, serializeBookingEmails } from "../_components/booking-emails-picker";
 import { Fragment, useState, useTransition, useEffect, useRef, useMemo, startTransition as deferRender } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -122,6 +124,7 @@ export type EventType = {
   booking_grouping: string | null;
   is_bookable: boolean | null;
   booking_config: BookingConfig | null;
+  booking_emails?: unknown;
 };
 
 export type EventSubtype = {
@@ -138,6 +141,7 @@ export type EventSubtype = {
   payment_required: boolean;
   default_payment_amount: number | null;
   booking_config: BookingConfig | null;
+  booking_emails?: unknown;
   default_image_url: string | null;
 };
 
@@ -169,6 +173,7 @@ export type EventRecord = {
   is_bookable: boolean | null;
   booking_page_url: string | null;
   booking_config: BookingConfig | null;
+  booking_emails?: unknown;
   booking_card_title: string | null;
   booking_card_tagline: string | null;
   booking_card_icon: string | null;
@@ -411,6 +416,7 @@ export default function EventsClient({
   winnerByEvent = {},
   venueCapacity = null,
   tableCount = 0,
+  emailVersions = [],
   filter,
   initialFrom,
   initialTo,
@@ -429,6 +435,7 @@ export default function EventsClient({
   winnerByEvent?: Record<number, number>;
   /** Venue-wide seat count from company_information; null when it isn't configured. */
   venueCapacity?: number | null;
+  emailVersions?: EmailVersion[];
   /** Tables marked available on the floor plan; the denominator for seated events. */
   tableCount?: number;
   filter?: string;
@@ -538,6 +545,7 @@ export default function EventsClient({
   const [formGroupName, setFormGroupName] = useState<string>("");
   const [formIsBookable, setFormIsBookable] = useState(false);
   const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
+  const [formBookingEmails, setFormBookingEmails] = useState<BookingEmailChoices>({});
   const [formCardTitle, setFormCardTitle] = useState("");
   const [formCardTagline, setFormCardTagline] = useState("");
   const [formCardIcon, setFormCardIcon] = useState<string | null>(null);
@@ -843,6 +851,7 @@ export default function EventsClient({
     setFormCardTagline("");
     setFormCardIcon(null);
     setFormCardBadge("");
+    setFormBookingEmails({});
     setFormImageUrl("");
     setImageWarning(null);
     setFormExternalLink("");
@@ -877,6 +886,7 @@ export default function EventsClient({
     setFormCardTagline(source.booking_card_tagline ?? "");
     setFormCardIcon(source.booking_card_icon ?? null);
     setFormCardBadge(source.booking_card_badge ?? "");
+    setFormBookingEmails(sanitizeBookingEmailChoices(source.booking_emails));
     setFormBookingPageUrl(
       source.is_bookable
         ? bookingUrlFor({
@@ -941,6 +951,7 @@ export default function EventsClient({
     setFormCardTagline(selected.booking_card_tagline ?? "");
     setFormCardIcon(selected.booking_card_icon ?? null);
     setFormCardBadge(selected.booking_card_badge ?? "");
+    setFormBookingEmails(sanitizeBookingEmailChoices(selected.booking_emails));
     setIsEditing(true);
   };
 
@@ -3959,6 +3970,19 @@ export default function EventsClient({
                         <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                         <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
                       </div>
+
+                      <div className="border-t border-[#D8D5C8] p-3 sm:p-4">
+                        <BookingEmailsPicker
+                          value={formBookingEmails}
+                          onChange={setFormBookingEmails}
+                          versions={emailVersions}
+                          inheritFrom={[
+                            { label: "sub-category", choices: selectedSubtype?.booking_emails },
+                            { label: "category", choices: selectedTypeForForm?.booking_emails },
+                          ]}
+                          blurb="Only for this event. Leave on Inherit to use the sub-category's or category's choice."
+                        />
+                      </div>
                     </>
                   )}
                 </FormSection>
@@ -3987,6 +4011,7 @@ export default function EventsClient({
                   </div>
                 )}
 
+                <input type="hidden" name="booking_emails" value={serializeBookingEmails(formBookingEmails)} />
                 {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
               </form>
             )}

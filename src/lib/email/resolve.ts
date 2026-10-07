@@ -24,7 +24,8 @@ type TemplateClient = SupabaseClient;
 
 export async function resolveTemplate(
   supabase: TemplateClient,
-  key: string
+  key: string,
+  versionId?: number | null
 ): Promise<ResolvedTemplate | null> {
   const scenario = findScenario(key);
   if (!scenario) {
@@ -32,10 +33,25 @@ export async function resolveTemplate(
     return null;
   }
 
+  /* A chosen version that has since been deleted, or that belongs to another
+     email, falls back to Standard rather than leaving the booking unsent. */
+  if (versionId) {
+    const { data: version, error: versionError } = await supabase
+      .from("email_templates")
+      .select("*")
+      .eq("id", versionId)
+      .eq("scenario_key", key)
+      .not("variant_name", "is", null)
+      .maybeSingle();
+    if (versionError) console.error("[email templates] could not read version:", versionError.message);
+    if (version) return mergeOverride(scenario, version as EmailTemplateRow);
+  }
+
   const { data, error } = await supabase
     .from("email_templates")
     .select("*")
     .eq("scenario_key", key)
+    .is("variant_name", null)
     .maybeSingle();
 
   if (error) {
@@ -50,7 +66,7 @@ export async function resolveTemplate(
 }
 
 export async function resolveAllTemplates(supabase: TemplateClient): Promise<ResolvedTemplate[]> {
-  const { data, error } = await supabase.from("email_templates").select("*");
+  const { data, error } = await supabase.from("email_templates").select("*").is("variant_name", null);
 
   if (error) {
     console.error("[email templates] could not read overrides:", error.message);
@@ -73,9 +89,13 @@ export async function resolveBrand(supabase: TemplateClient): Promise<EmailBrand
 export async function renderTemplate(
   supabase: TemplateClient,
   key: string,
-  values: MergeValues
+  values: MergeValues,
+  versionId?: number | null
 ): Promise<RenderedSlots | null> {
-  const [resolved, brand] = await Promise.all([resolveTemplate(supabase, key), resolveBrand(supabase)]);
+  const [resolved, brand] = await Promise.all([
+    resolveTemplate(supabase, key, versionId),
+    resolveBrand(supabase),
+  ]);
   if (!resolved || !resolved.isActive) return null;
 
   const { slots, unknownTokens } = renderSlots(resolved.slots, values);

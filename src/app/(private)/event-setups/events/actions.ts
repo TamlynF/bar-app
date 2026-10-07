@@ -15,6 +15,7 @@ import { buildHostCopy, type HostCopy, type HostCopyCategory, type HostCopyQuest
 import { siteUrl } from "@/lib/site-url";
 import { heldPrivateHireSlots } from "@/lib/private-hire-flow";
 import { heldSlotsAsEvents } from "@/lib/private-hire-details";
+import { parseBookingEmails } from "@/lib/email/booking-email-versions";
 
 /* Events on a date plus private hires waiting on their deposit, which hold
    their slot until it's paid or released. */
@@ -82,6 +83,7 @@ export async function saveEventAction(formData: FormData) {
     karaoke_request_url: formData.get("karaoke_request_url")?.toString() || null,
     is_bookable: isBookable,
     booking_config: JSON.parse(formData.get("booking_config")?.toString() || "{}"),
+    booking_emails: parseBookingEmails(formData.get("booking_emails")?.toString()),
     booking_card_title: formData.get("booking_card_title")?.toString() || null,
     booking_card_tagline: formData.get("booking_card_tagline")?.toString() || null,
     booking_card_icon: formData.get("booking_card_icon")?.toString() || null,

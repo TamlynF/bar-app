@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmployeeId } from "@/lib/current-employee";
 import { findScenario, scenarioFamily } from "@/lib/email/scenarios";
+import {
+  isVersionable,
+  normalizeVersionName,
+  sanitizeBookingEmailChoices,
+  withoutVersion,
+} from "@/lib/email/booking-email-versions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { safeAttachmentName } from "@/lib/email/correspondence";
 import {
@@ -34,6 +40,152 @@ const COLUMN_FOR_SLOT: Record<SlotKey, string> = {
   cardTitle: "card_title",
   noteTitle: "note_title",
 };
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>;
+
+async function findTemplateRow(supabase: ServerClient, key: string, versionId: number | null) {
+  const query = supabase
+    .from("email_templates")
+    .select("id, attachments")
+    .eq("scenario_key", key);
+  const { data, error } = versionId
+    ? await query.eq("id", versionId).not("variant_name", "is", null).maybeSingle()
+    : await query.is("variant_name", null).maybeSingle();
+  if (error) console.error("Email template lookup failed:", error);
+  return (data as { id: number; attachments: unknown } | null) ?? null;
+}
+
+const DUPLICATE_NAME = "23505";
+const COPIED_COLUMNS =
+  "subject, heading, eyebrow, greeting, intro, outro, cta_label, footnote, card_title, note_title, blocks";
+
+function versionNameError(variantName: string): string | null {
+  if (!variantName) return "Give the version a name, for example Quiz Night.";
+  if (variantName.toLowerCase() === "standard") return "Standard is the name of the built-in email - pick another.";
+  return null;
+}
+
+/* A new version starts as a copy of the one it was made from, so staff edit
+   from what they can already see. Attachments are not copied: each template's
+   files are removed when it drops them, and a shared file would vanish from
+   the other version too. */
+export async function createEmailVersionAction(
+  key: string,
+  name: string,
+  copyFromId: number | null
+): Promise<{ id?: number; error?: string }> {
+  if (!isVersionable(key)) return { error: "Only the customer booking emails can have versions." };
+  const variantName = normalizeVersionName(name);
+  const nameError = versionNameError(variantName);
+  if (nameError) return { error: nameError };
+
+  const supabase = await createClient();
+  const employeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+
+  const sourceQuery = supabase.from("email_templates").select(COPIED_COLUMNS).eq("scenario_key", key);
+  const { data: source } = copyFromId
+    ? await sourceQuery.eq("id", copyFromId).maybeSingle()
+    : await sourceQuery.is("variant_name", null).maybeSingle();
+
+  const { data, error } = await supabase
+    .from("email_templates")
+    .insert({
+      ...((source as Record<string, unknown> | null) ?? {}),
+      scenario_key: key,
+      variant_name: variantName,
+      created_at: now,
+      created_by: employeeId,
+      updated_at: now,
+      updated_by: employeeId,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === DUPLICATE_NAME) return { error: `There is already a version called "${variantName}".` };
+    console.error("Email version create failed:", error);
+    return { error: "Could not create this version." };
+  }
+
+  revalidatePath("/settings/email-templates");
+  return { id: data.id as number };
+}
+
+export async function renameEmailVersionAction(id: number, name: string) {
+  const variantName = normalizeVersionName(name);
+  const nameError = versionNameError(variantName);
+  if (nameError) return { error: nameError };
+
+  const supabase = await createClient();
+  const employeeId = await getCurrentEmployeeId(supabase);
+  const { error } = await supabase
+    .from("email_templates")
+    .update({ variant_name: variantName, updated_at: new Date().toISOString(), updated_by: employeeId })
+    .eq("id", id)
+    .not("variant_name", "is", null);
+
+  if (error) {
+    if (error.code === DUPLICATE_NAME) return { error: `There is already a version called "${variantName}".` };
+    console.error("Email version rename failed:", error);
+    return { error: "Could not rename this version." };
+  }
+
+  revalidatePath("/settings/email-templates");
+  revalidatePath("/event-setups/event-types");
+  revalidatePath("/event-setups/events");
+  return { success: true };
+}
+
+const CHOICE_TABLES = ["event_types", "event_subtypes", "events"] as const;
+
+/* Anything that picked this version goes back to inheriting, so a deleted
+   version can never leave a booking without an email. */
+export async function deleteEmailVersionAction(id: number) {
+  const supabase = await createClient();
+  const { data: version } = await supabase
+    .from("email_templates")
+    .select("id, scenario_key, attachments")
+    .eq("id", id)
+    .not("variant_name", "is", null)
+    .maybeSingle();
+  if (!version) return { error: "That version no longer exists." };
+
+  for (const table of CHOICE_TABLES) {
+    const { data: rows, error: readError } = await supabase
+      .from(table)
+      .select("id, booking_emails")
+      .not("booking_emails", "is", null);
+    if (readError) {
+      console.error(`Email version usage read failed (${table}):`, readError);
+      return { error: "Could not check where this version is used." };
+    }
+    for (const row of (rows ?? []) as { id: number; booking_emails: unknown }[]) {
+      if (!Object.values(sanitizeBookingEmailChoices(row.booking_emails)).includes(id)) continue;
+      const { error: clearError } = await supabase
+        .from(table)
+        .update({ booking_emails: withoutVersion(row.booking_emails, id) })
+        .eq("id", row.id);
+      if (clearError) {
+        console.error(`Email version usage clear failed (${table} ${row.id}):`, clearError);
+        return { error: "Could not remove this version from everything using it." };
+      }
+    }
+  }
+
+  const { error } = await supabase.from("email_templates").delete().eq("id", id);
+  if (error) {
+    console.error("Email version delete failed:", error);
+    return { error: "Could not delete this version." };
+  }
+  const files = sanitizeAttachments(version.attachments, version.scenario_key as string).map((a) => a.path);
+  if (files.length) await removeTemplateFiles(files);
+
+  revalidatePath("/settings/email-templates");
+  revalidatePath("/event-setups/event-types");
+  revalidatePath("/event-setups/events");
+  return { success: true };
+}
 
 export async function saveEmailTemplateAction(formData: FormData) {
   const key = String(formData.get("scenario_key") ?? "");
@@ -89,30 +241,26 @@ export async function saveEmailTemplateAction(formData: FormData) {
     payload[column] = edited[slot] === scenario.defaults[slot] ? null : edited[slot];
   }
 
+  const versionId = Number(formData.get("version_id")) || null;
   const supabase = await createClient();
   const employeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from("email_templates")
-    .select("id, created_at, created_by, attachments")
-    .eq("scenario_key", key)
-    .maybeSingle();
+  const existing = await findTemplateRow(supabase, key, versionId);
+  if (versionId && !existing) return { error: "That version no longer exists." };
 
-  const { error } = await supabase.from("email_templates").upsert(
-    {
-      ...(existing?.id ? { id: existing.id } : {}),
-      scenario_key: key,
-      ...payload,
-      blocks,
-      attachments: attachments.length ? attachments : null,
-      created_at: existing?.created_at ?? now,
-      created_by: existing?.created_by ?? employeeId,
-      updated_at: now,
-      updated_by: employeeId,
-    },
-    { onConflict: "scenario_key" }
-  );
+  const values = {
+    ...payload,
+    blocks,
+    attachments: attachments.length ? attachments : null,
+    updated_at: now,
+    updated_by: employeeId,
+  };
+  const { error } = existing
+    ? await supabase.from("email_templates").update(values).eq("id", existing.id)
+    : await supabase
+        .from("email_templates")
+        .insert({ scenario_key: key, ...values, created_at: now, created_by: employeeId });
 
   if (error) {
     console.error("Email template save failed:", error);
@@ -135,12 +283,12 @@ export async function resetEmailTemplateAction(key: string) {
   if (!findScenario(key)) return { error: "That email scenario no longer exists." };
 
   const supabase = await createClient();
-  const { data: existing } = await supabase
-    .from("email_templates")
-    .select("attachments")
-    .eq("scenario_key", key)
-    .maybeSingle();
-  const { error } = await supabase.from("email_templates").delete().eq("scenario_key", key);
+  const existing = await findTemplateRow(supabase, key, null);
+  if (!existing) {
+    revalidatePath("/settings/email-templates");
+    return { success: true };
+  }
+  const { error } = await supabase.from("email_templates").delete().eq("id", existing.id);
   if (!error) {
     const files = sanitizeAttachments(existing?.attachments, key).map((a) => a.path);
     if (files.length) await removeTemplateFiles(files);
@@ -155,31 +303,26 @@ export async function resetEmailTemplateAction(key: string) {
   return { success: true };
 }
 
-export async function setEmailTemplateActiveAction(key: string, isActive: boolean) {
+export async function setEmailTemplateActiveAction(
+  key: string,
+  isActive: boolean,
+  versionId?: number | null
+) {
   if (!findScenario(key)) return { error: "That email scenario no longer exists." };
 
   const supabase = await createClient();
   const employeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from("email_templates")
-    .select("id, created_at, created_by")
-    .eq("scenario_key", key)
-    .maybeSingle();
+  const existing = await findTemplateRow(supabase, key, versionId ?? null);
+  if (versionId && !existing) return { error: "That version no longer exists." };
 
-  const { error } = await supabase.from("email_templates").upsert(
-    {
-      ...(existing?.id ? { id: existing.id } : {}),
-      scenario_key: key,
-      is_active: isActive,
-      created_at: existing?.created_at ?? now,
-      created_by: existing?.created_by ?? employeeId,
-      updated_at: now,
-      updated_by: employeeId,
-    },
-    { onConflict: "scenario_key" }
-  );
+  const values = { is_active: isActive, updated_at: now, updated_by: employeeId };
+  const { error } = existing
+    ? await supabase.from("email_templates").update(values).eq("id", existing.id)
+    : await supabase
+        .from("email_templates")
+        .insert({ scenario_key: key, ...values, created_at: now, created_by: employeeId });
 
   if (error) {
     console.error("Email template activation failed:", error);

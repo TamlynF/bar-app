@@ -42,6 +42,8 @@ function makeSupabase(bookingRow: BookingRow) {
   const chain = () => builder;
   builder.select = chain;
   builder.eq = chain;
+  builder.is = chain;
+  builder.not = chain;
   builder.maybeSingle = () => Promise.resolve({ data: bookingRow });
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: null, error: null });
   return { client: { from: () => builder } };

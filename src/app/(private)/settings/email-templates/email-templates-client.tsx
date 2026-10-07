@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { LayoutTemplate, Mail, MailX, Paperclip, RotateCcw } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Copy, CopyPlus, LayoutTemplate, Mail, MailX, Paperclip, PencilLine, RotateCcw } from "lucide-react";
 import {
   DetailCard,
   DetailCell,
@@ -30,10 +30,15 @@ import {
 import { AttachmentChips, EmailAttachmentsEditor } from "./email-attachments-editor";
 import { EmailBrandEditor } from "./email-brand-editor";
 import { EmailBlocksEditor } from "./email-blocks-editor";
+import { isVersionable } from "@/lib/email/booking-email-versions";
+import { EmailVersionNamePanel } from "./email-version-panel";
 import {
   saveEmailTemplateAction,
   resetEmailTemplateAction,
   setEmailTemplateActiveAction,
+  createEmailVersionAction,
+  renameEmailVersionAction,
+  deleteEmailVersionAction,
 } from "./actions";
 
 type Employee = { id: number; full_name: string | null };
@@ -63,27 +68,46 @@ const MULTILINE_SLOTS: ReadonlySet<SlotKey> = new Set<SlotKey>(["intro", "outro"
 
 const FORM_ID = "email-template-form";
 
+type TemplateItem = ResolvedTemplate & { versionId: number | null; versionName: string | null };
+
+const itemId = (item: TemplateItem) => (item.versionId ? `v${item.versionId}` : item.scenario.key);
+
 export default function EmailTemplatesClient({
   rows,
   employees,
   brand,
+  versionUsage = {},
 }: {
   rows: EmailTemplateRow[];
   employees: Employee[];
   brand: EmailBrand;
   brandUpdatedAt?: string | null;
+  versionUsage?: Record<number, string[]>;
 }) {
   const resolved = useMemo(() => {
-    const byKey = new Map(rows.map((row) => [row.scenario_key, row]));
-    return EMAIL_SCENARIOS.map((scenario) =>
-      mergeOverride(scenario, byKey.get(scenario.key) ?? null)
-    );
+    const standard = new Map(rows.filter((row) => !row.variant_name).map((row) => [row.scenario_key, row]));
+    return EMAIL_SCENARIOS.flatMap((scenario): TemplateItem[] => [
+      { ...mergeOverride(scenario, standard.get(scenario.key) ?? null), versionId: null, versionName: null },
+      ...rows
+        .filter((row) => row.scenario_key === scenario.key && row.variant_name)
+        .sort((a, b) => (a.variant_name ?? "").localeCompare(b.variant_name ?? ""))
+        .map((row) => ({ ...mergeOverride(scenario, row), versionId: row.id, versionName: row.variant_name ?? null })),
+    ]);
   }, [rows]);
 
-  const sheet = useRecordSheet<ResolvedTemplate>({
+  const sheet = useRecordSheet<TemplateItem>({
     records: resolved,
-    getId: (record) => record.scenario.key,
+    getId: itemId,
   });
+
+  const openAfterCreate = useRef<number | null>(null);
+  useEffect(() => {
+    if (openAfterCreate.current == null) return;
+    const created = resolved.find((item) => item.versionId === openAfterCreate.current);
+    if (!created) return;
+    openAfterCreate.current = null;
+    sheet.openView(created);
+  }, [resolved, sheet]);
 
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<TemplateSlots | null>(null);
@@ -104,6 +128,7 @@ export default function EmailTemplatesClient({
     return resolved.filter(
       (r) =>
         r.scenario.label.toLowerCase().includes(q) ||
+        (r.versionName ?? "").toLowerCase().includes(q) ||
         r.scenario.description.toLowerCase().includes(q) ||
         r.slots.subject.toLowerCase().includes(q)
     );
@@ -133,6 +158,19 @@ export default function EmailTemplatesClient({
     sheet.close();
   }, [sheet]);
 
+  const handleDeleteVersion = useCallback(() => {
+    if (!selected?.versionId) return;
+    const usedBy = versionUsage[selected.versionId] ?? [];
+    sheet.confirmDelete({
+      title: `Delete the "${selected.versionName}" version?`,
+      description: usedBy.length
+        ? `${usedBy.length} ${usedBy.length === 1 ? "place uses" : "places use"} it (${usedBy.join(", ")}). They go back to inheriting - from the sub-category, category or the standard email.`
+        : "Nothing has picked this version, so no booking emails change.",
+      confirmLabel: "Delete version",
+      action: () => deleteEmailVersionAction(selected.versionId!),
+    });
+  }, [selected, sheet, versionUsage]);
+
   const handleReset = useCallback(() => {
     if (!selected) return;
     sheet.confirmDelete({
@@ -155,7 +193,7 @@ export default function EmailTemplatesClient({
       variant: next ? undefined : "destructive",
     });
     if (!ok) return;
-    const result = await setEmailTemplateActiveAction(selected.scenario.key, next);
+    const result = await setEmailTemplateActiveAction(selected.scenario.key, next, selected.versionId);
     if (result?.error) sheet.setFormError(result.error);
   }, [selected, sheet]);
 
@@ -183,6 +221,65 @@ export default function EmailTemplatesClient({
   const liveFiles = editing ? draftFiles : (selected?.attachments ?? []);
   const family = selected ? scenarioFamily(selected.scenario) : "plain";
   const replaced = draftBlocks ? BLOCK_REPLACED_SLOTS[family] : new Set<string>();
+  const sheetTitle = selected
+    ? selected.versionName
+      ? `${selected.scenario.label} - ${selected.versionName}`
+      : selected.scenario.label
+    : "Email template";
+
+  const versionActions = !selected || !isVersionable(selected.scenario.key)
+    ? []
+    : selected.versionId
+      ? [
+          {
+            label: "Rename version",
+            icon: <PencilLine className="h-4 w-4" />,
+            panel: (close: () => void) => (
+              <EmailVersionNamePanel
+                title="Rename this version"
+                initialName={selected.versionName ?? ""}
+                submitLabel="Save name"
+                onSubmit={(name) => renameEmailVersionAction(selected.versionId!, name)}
+                onDone={close}
+              />
+            ),
+          },
+          {
+            label: "Duplicate version",
+            icon: <Copy className="h-4 w-4" />,
+            panel: (close: () => void) => (
+              <EmailVersionNamePanel
+                title="Name the copy"
+                initialName={`${selected.versionName} copy`}
+                submitLabel="Create version"
+                onSubmit={async (name) => {
+                  const result = await createEmailVersionAction(selected.scenario.key, name, selected.versionId);
+                  if (result.id) openAfterCreate.current = result.id;
+                  return result;
+                }}
+                onDone={close}
+              />
+            ),
+          },
+        ]
+      : [
+          {
+            label: "New version",
+            icon: <CopyPlus className="h-4 w-4" />,
+            panel: (close: () => void) => (
+              <EmailVersionNamePanel
+                title="Name the new version"
+                submitLabel="Create version"
+                onSubmit={async (name) => {
+                  const result = await createEmailVersionAction(selected.scenario.key, name, null);
+                  if (result.id) openAfterCreate.current = result.id;
+                  return result;
+                }}
+                onDone={close}
+              />
+            ),
+          },
+        ];
 
   return (
     <div className="space-y-4">
@@ -222,12 +319,12 @@ export default function EmailTemplatesClient({
           >
             {items.map((item) => (
               <ListRow
-                key={item.scenario.key}
+                key={itemId(item)}
                 onClick={() => {
                   setDraft(null);
                   sheet.openView(item);
                 }}
-                selected={selected?.scenario.key === item.scenario.key}
+                selected={!!selected && itemId(selected) === itemId(item)}
                 status={
                   !isWired(item.scenario.key) ? (
                     <StatusPill tone="neutral">Not connected</StatusPill>
@@ -242,11 +339,12 @@ export default function EmailTemplatesClient({
                   )
                 }
               >
-                <div className="min-w-0 flex-1">
+                <div className={cn("min-w-0 flex-1", item.versionId && "border-l-2 border-admin-line pl-3")}>
                   <p className="truncate text-sm font-semibold text-admin-ink">
-                    {item.scenario.label}
+                    {item.versionName ?? item.scenario.label}
                   </p>
                   <p className="mt-0.5 truncate text-[11px] text-admin-muted">
+                    {item.versionId ? `Version of ${item.scenario.label} · ` : ""}
                     {item.slots.subject}
                   </p>
                 </div>
@@ -272,11 +370,11 @@ export default function EmailTemplatesClient({
         onClose={closeSheet}
         mode={sheet.mode}
         navigate={sheet.navigateAcross(inGroupOrder)}
-        title={selected?.scenario.label ?? "Email template"}
+        title={sheetTitle}
         formId={FORM_ID}
         isPending={sheet.isPending}
         onEdit={openEdit}
-        onDelete={selected?.isCustomised ? handleReset : undefined}
+        onDelete={selected?.versionId ? handleDeleteVersion : selected?.isCustomised ? handleReset : undefined}
         onCancel={() => {
           setDraft(null);
           sheet.close();
@@ -291,9 +389,15 @@ export default function EmailTemplatesClient({
               >
                 {selected.isActive ? "Sending" : "Not sending"}
               </StatusPill>
-              <StatusPill tone={selected.isCustomised ? "info" : "neutral"} showLabelOnMobile>
-                {selected.isCustomised ? "Customised" : "Built-in copy"}
-              </StatusPill>
+              {selected.versionId ? (
+                <StatusPill tone="info" showLabelOnMobile>
+                  Version
+                </StatusPill>
+              ) : (
+                <StatusPill tone={selected.isCustomised ? "info" : "neutral"} showLabelOnMobile>
+                  {selected.isCustomised ? "Customised" : "Built-in copy"}
+                </StatusPill>
+              )}
               <StatusPill tone="neutral" showLabelOnMobile>
                 {selected.scenario.recipient === "admin" ? "To staff" : "To customer"}
               </StatusPill>
@@ -303,6 +407,7 @@ export default function EmailTemplatesClient({
         actions={
           selected
             ? [
+                ...versionActions,
                 {
                   label: selected.isActive ? "Stop sending this email" : "Start sending this email",
                   icon: selected.isActive ? <MailX className="h-4 w-4" /> : <Mail className="h-4 w-4" />,
@@ -331,6 +436,14 @@ export default function EmailTemplatesClient({
               {selected.scenario.description}
             </p>
 
+            {isVersionable(selected.scenario.key) && (
+              <p className="text-[12px] leading-snug text-admin-muted">
+                {selected.versionId
+                  ? "Sent instead of the standard email wherever a category, sub-category or event picks this version."
+                  : "The standard email. Make a named version from the menu to use different wording on chosen categories, sub-categories or events."}
+              </p>
+            )}
+
             {!isWired(selected.scenario.key) && (
               <div className="rounded-2xl border border-admin-warning/30 bg-admin-warning-bg p-3">
                 <p className="text-[13px] leading-snug font-semibold text-admin-warning">
@@ -347,6 +460,7 @@ export default function EmailTemplatesClient({
             {editing && draft ? (
               <form id={FORM_ID} action={sheet.submit(saveEmailTemplateAction)}>
                 <input type="hidden" name="scenario_key" value={selected.scenario.key} />
+                {selected.versionId && <input type="hidden" name="version_id" value={selected.versionId} />}
 
                 <input type="hidden" name="blocks" value={draftBlocks ? JSON.stringify(draftBlocks) : ""} />
                 <input type="hidden" name="attachments" value={JSON.stringify(draftFiles)} />
@@ -466,6 +580,16 @@ export default function EmailTemplatesClient({
               </form>
             ) : (
               <DetailCard>
+                {selected.versionId && (
+                  <DetailCell
+                    label="Used by"
+                    value={
+                      (versionUsage[selected.versionId] ?? []).join("\n") ||
+                      "Nothing yet - pick it in the Emails section of a category, sub-category or event."
+                    }
+                    multiline
+                  />
+                )}
                 {selected.blocks && (
                   <DetailCell label="Layout" value={`Custom layout - ${selected.blocks.length} blocks`} />
                 )}

@@ -5,7 +5,7 @@ import { manageBookingPath } from "@/lib/booking-links";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
-import { renderTemplate } from "@/lib/email/resolve";
+import { renderBookingTemplate } from "@/lib/email/booking-email-choice";
 import { EMAIL_FROM } from "@/lib/email";
 import { getContactEmail } from "@/lib/company-info";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     const { data: booking } = await supabase
       .from("bookings")
       .select(`
-        id, status, payment_status, group_size, total_amount,
+        id, event_id, status, payment_status, group_name, group_size, total_amount,
         contacts!bookings_contact_id_fkey(full_name, email),
         events!bookings_event_id_fkey(date, title)
       `)
@@ -154,11 +154,11 @@ export async function POST(req: NextRequest) {
 
       const partySize = `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`;
 
-      const slots = await renderTemplate(supabase, "booking.event.confirmed", {
+      const slots = await renderBookingTemplate(supabase, "booking.event.confirmed", booking.event_id, {
         customerName: contact.full_name,
         eventTitle: eventRow?.title ?? "Event",
         eventDate: formatEventDate(eventRow?.date ?? null),
-        groupName: "",
+        groupName: booking.group_name ?? "",
         groupSize: partySize,
         bookingId: String(booking.id),
         contactEmail: await getContactEmail(),

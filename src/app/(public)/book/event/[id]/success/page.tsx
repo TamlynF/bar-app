@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Resend } from "resend";
 import RetryPaymentButton from "@/components/retry-payment-button";
 import { buildBookingConfirmedEmail, formatEventDate } from "@/lib/booking-emails";
-import { renderTemplate } from "@/lib/email/resolve";
+import { renderBookingTemplate } from "@/lib/email/booking-email-choice";
 import { getContactEmail } from "@/lib/company-info";
 import { EMAIL_FROM } from "@/lib/email";
 import { resendTemplateAttachments } from "@/lib/email/correspondence-data";
@@ -30,7 +30,7 @@ async function confirmAndNotify(bookingId: string) {
   const { data: booking } = await supabase
     .from("bookings")
     .select(`
-      id, status, payment_status, group_name, group_size, total_amount, square_order_id,
+      id, event_id, status, payment_status, group_name, group_size, total_amount, square_order_id,
       contacts!bookings_contact_id_fkey(full_name, email),
       events!bookings_event_id_fkey(date, title)
     `)
@@ -72,11 +72,11 @@ async function confirmAndNotify(bookingId: string) {
 
       const partySize = `${booking.group_size} ${booking.group_size === 1 ? "Person" : "People"}`;
 
-      const slots = await renderTemplate(supabase, "booking.event.confirmed", {
+      const slots = await renderBookingTemplate(supabase, "booking.event.confirmed", booking.event_id, {
         customerName: contact.full_name,
         eventTitle,
         eventDate: formatEventDate(event?.date ?? null),
-        groupName: "",
+        groupName: booking.group_name ?? "",
         groupSize: partySize,
         bookingId: String(booking.id),
         contactEmail: await getContactEmail(),

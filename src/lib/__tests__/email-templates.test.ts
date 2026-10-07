@@ -10,7 +10,7 @@ import { renderSlots, SLOT_KEYS, tokensUsed } from "@/lib/email/render";
 
 const row = (over: Partial<EmailTemplateRow>): EmailTemplateRow => ({
   id: 1,
-  scenario_key: "booking.quiz.confirmed",
+  scenario_key: "booking.event.confirmed",
   subject: null,
   heading: null,
   eyebrow: null,
@@ -27,21 +27,21 @@ const row = (over: Partial<EmailTemplateRow>): EmailTemplateRow => ({
   ...over,
 });
 
-const quiz = () => findScenario("booking.quiz.confirmed")!;
+const booking = () => findScenario("booking.event.confirmed")!;
 
 describe("mergeOverride", () => {
   it("falls back to the built-in copy when nothing is overridden", () => {
-    const resolved = mergeOverride(quiz(), null);
-    expect(resolved.slots).toEqual(quiz().defaults);
+    const resolved = mergeOverride(booking(), null);
+    expect(resolved.slots).toEqual(booking().defaults);
     expect(resolved.isCustomised).toBe(false);
     expect(resolved.isActive).toBe(true);
   });
 
   it("overrides only the slots that have a stored value", () => {
-    const resolved = mergeOverride(quiz(), row({ subject: "Table booked!" }));
+    const resolved = mergeOverride(booking(), row({ subject: "Table booked!" }));
 
     expect(resolved.slots.subject).toBe("Table booked!");
-    expect(resolved.slots.intro).toBe(quiz().defaults.intro);
+    expect(resolved.slots.intro).toBe(booking().defaults.intro);
     expect(resolved.isCustomised).toBe(true);
   });
 
@@ -55,17 +55,17 @@ describe("mergeOverride", () => {
   });
 
   it("maps cta_label onto the ctaLabel slot", () => {
-    const resolved = mergeOverride(quiz(), row({ cta_label: "See your table" }));
+    const resolved = mergeOverride(booking(), row({ cta_label: "See your table" }));
     expect(resolved.slots.ctaLabel).toBe("See your table");
   });
 
   it("carries is_active through so a scenario can be switched off", () => {
-    expect(mergeOverride(quiz(), row({ is_active: false })).isActive).toBe(false);
+    expect(mergeOverride(booking(), row({ is_active: false })).isActive).toBe(false);
   });
 
   it("keeps the row for the audit display", () => {
     const stored = row({ subject: "x" });
-    expect(mergeOverride(quiz(), stored).row).toBe(stored);
+    expect(mergeOverride(booking(), stored).row).toBe(stored);
   });
 });
 

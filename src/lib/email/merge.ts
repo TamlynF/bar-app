@@ -11,6 +11,7 @@ import { sanitizeAttachments, sanitizeBlocks, type EmailBlock, type TemplateAtta
 export type EmailTemplateRow = {
   id: number;
   scenario_key: string;
+  variant_name?: string | null;
   subject: string | null;
   heading: string | null;
   eyebrow: string | null;

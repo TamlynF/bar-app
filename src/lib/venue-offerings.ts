@@ -19,7 +19,7 @@ export const WEEKLY_LISTINGS: WeeklyListing[] = [
     title: "Quiz Thursdays",
     shortTitle: "Quiz",
     time: "9pm",
-    href: "/book/quiz",
+    href: "/whats-on",
     actionLabel: "Book",
     accentText: "text-[#5ED6F0]",
     accentBg: "bg-[#5ED6F0]",

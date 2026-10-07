@@ -21,7 +21,7 @@ The H1 of every page is the **purpose of that page**, not the bar's name:
 | `/gallery` | `GALLERY` |
 | `/contact` | `ABOUT US` or `GET IN TOUCH` |
 | `/book` | `BOOK YOUR EXPERIENCE` |
-| `/book/quiz` | `BOOK YOUR TABLE` (or quiz-specific) |
+| `/book/group/...`, `/book/event/[id]` | `BOOK YOUR SPOT` |
 | `/manage-booking/[id]` | `YOUR BOOKING` |
 | `/login` | `STAFF LOGIN` |
 

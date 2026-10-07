@@ -355,9 +355,10 @@ export function RecordSheet({
   const TitleTag: React.ElementType = split ? "h2" : SheetTitle;
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
-  // The menu hands focus back to its button as it closes, which the panel
-  // would read as a click outside itself and shut straight away.
-  const panelPending = useRef(false);
+  // A panel waits for the menu to finish closing before it opens. Opened while
+  // the menu is still up, the menu's focus trap pulls focus back from the
+  // panel and, on a tap or click, the menu stays stuck half-faded over it.
+  const panelPending = useRef<OpenPanel>(null);
 
   /* Closing a form only asks about discarding when something has actually
      changed: a user edit fires input/change on the form, and as a backstop
@@ -488,8 +489,7 @@ export function RecordSheet({
   };
 
   const showPanel = (panel: OpenPanel) => {
-    panelPending.current = true;
-    setOpenPanel(panel);
+    panelPending.current = panel;
   };
   const closePanel = () => setOpenPanel(null);
 
@@ -593,7 +593,8 @@ export function RecordSheet({
                     onCloseAutoFocus={(e) => {
                       if (panelPending.current) {
                         e.preventDefault();
-                        panelPending.current = false;
+                        setOpenPanel(panelPending.current);
+                        panelPending.current = null;
                       }
                     }}
                   >

@@ -193,12 +193,11 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 The booking pages share a public dark theme but each has its own logic:
 
-- `/book` - hub, lists quiz/bingo/band/private + upcoming bookable events
-- `/book/quiz` - Thursday quiz booking form (free, lazy event creation, waitlist when full)
-- `/book/bingo` - Music Bingo (paid via Square, pay upfront)
+- `/book` - hub, lists quiz/band/private + upcoming bookable events
 - `/book/band` - band/artist stage application (review queue)
 - `/book/private` - private hire enquiry (review queue)
 - `/book/event/[id]` - generic ticketed event booking (paid via Square)
+- `/book/group/[scope]/[id]` - grouped booking; the quiz and Music Bingo book here. The old `/book/bingo` and `/book/quiz` forms are gone: `next.config.ts` redirects `/book/bingo/manage-booking/:id` and `/book/quiz/manage-booking/:id` → `/manage-booking/:id` and any other `/book/bingo` path → `/book`, and `/book/quiz` is a server redirect to the next bookable quiz's page (`src/lib/quiz-booking-link.ts`, also behind the home page's "Book for the quiz" buttons)
 - `/manage-booking/[id]` - public self-service (view, modify, cancel)
 
 ---

@@ -40,7 +40,7 @@ function makeSupabase(queues: Record<string, Result[]>) {
   const from = (table: string) => {
     const builder: Record<string, unknown> = {};
     const chain = () => builder;
-    for (const m of ["select", "eq", "neq", "gte", "order", "ilike", "not", "limit"]) builder[m] = chain;
+    for (const m of ["select", "eq", "neq", "gte", "order", "ilike", "not", "is", "limit"]) builder[m] = chain;
     builder.insert = (payload: unknown) => { calls.inserts.push({ table, payload }); return builder; };
     builder.upsert = (payload: unknown) => { calls.inserts.push({ table, payload }); return builder; };
     builder.update = (payload: unknown) => { calls.updates.push({ table, payload }); return builder; };

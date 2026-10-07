@@ -11,10 +11,10 @@ import { EMAIL_FONTS, type EmailBrand, type FontKey } from "@/lib/email/design";
 import { ImageUploadButton } from "./email-blocks-editor";
 import { saveEmailBrandAction } from "./actions";
 
-const PREVIEW_KEYS = ["band.offered", "booking.quiz.confirmed", "enquiry.received.customer"] as const;
+const PREVIEW_KEYS = ["band.offered", "booking.event.confirmed", "enquiry.received.customer"] as const;
 const PREVIEW_LABELS: Record<(typeof PREVIEW_KEYS)[number], string> = {
   "band.offered": "Band email",
-  "booking.quiz.confirmed": "Booking email",
+  "booking.event.confirmed": "Booking email",
   "enquiry.received.customer": "Plain email",
 };
 
@@ -61,7 +61,7 @@ export function EmailBrandEditor({ brand, rows }: { brand: EmailBrand; rows: Ema
 
   const live = editing ? draft : brand;
   const scenario = findScenario(previewKey) ?? EMAIL_SCENARIOS[0];
-  const row = rows.find((r) => r.scenario_key === scenario.key) ?? null;
+  const row = rows.find((r) => r.scenario_key === scenario.key && !r.variant_name) ?? null;
   const resolved = mergeOverride(scenario, row);
   const set = <K extends keyof EmailBrand>(key: K, value: EmailBrand[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const anySet = Object.values(brand).some((v) => v != null);

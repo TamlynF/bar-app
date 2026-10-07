@@ -16,7 +16,7 @@ import { bandEmailHtml } from "@/lib/band-email-html";
 import { buildBandEmail } from "@/lib/band-emails";
 import { findScenario } from "@/lib/email/scenarios";
 
-const BOOKING = findScenario("booking.quiz.confirmed")!;
+const BOOKING = findScenario("booking.event.confirmed")!;
 
 describe("brand settings", () => {
   it("leaves each design on its own colours when nothing is set", () => {

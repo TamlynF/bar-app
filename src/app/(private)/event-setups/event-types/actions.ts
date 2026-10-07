@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseBookingEmails } from "@/lib/email/booking-email-versions";
 import { revalidatePath } from "next/cache";
 import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { isEventBehavior } from "@/lib/event-behavior";
@@ -36,6 +37,7 @@ export async function saveTypeAction(formData: FormData) {
   const cardFields = readCardFields(formData);
   const is_bookable = booking_grouping === "per_type" && formData.get("is_bookable") === "on";
   const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
+  const booking_emails = parseBookingEmails(formData.get("booking_emails")?.toString());
 
   if (!name) return { error: "Category name is required." };
   if (booking_grouping === "per_type" && !title) return { error: "Title is required for a per-category booking page." };
@@ -46,13 +48,13 @@ export async function saveTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ name, title, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
+        .update({ name, title, description, color, booking_grouping, is_bookable, booking_config, booking_emails, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ name, title, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, created_by: empId, modified_by: empId });
+        .insert({ name, title, description, color, booking_grouping, is_bookable, booking_config, booking_emails, ...cardFields, created_by: empId, modified_by: empId });
       if (error) throw error;
     }
     revalidatePath("/event-setups/event-types");
@@ -142,6 +144,7 @@ export async function saveSubtypeAction(formData: FormData) {
     payment_required,
     default_payment_amount,
     booking_config,
+    booking_emails: parseBookingEmails(formData.get("booking_emails")?.toString()),
     ...readCardFields(formData),
   };
 

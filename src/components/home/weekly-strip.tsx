@@ -51,10 +51,12 @@ function StubContent({
 export function WeeklyStrip({
   hours,
   karaokeUrl,
+  quizUrl,
   className,
 }: {
   hours?: OpeningHours | null;
   karaokeUrl?: string | null;
+  quizUrl?: string | null;
   className?: string;
 }) {
   return (
@@ -71,6 +73,7 @@ export function WeeklyStrip({
       <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-gold bg-white/8 sm:hidden">
         {WEEKLY_LISTINGS.map((listing, i) => {
           const sing = listing.key === "karaoke" && karaokeUrl ? karaokeUrl : null;
+          const book = listing.key === "quiz" && quizUrl ? quizUrl : null;
           const close = closingTime(listing, hours);
           return (
             <li
@@ -89,11 +92,11 @@ export function WeeklyStrip({
                 </a>
               ) : (
                 <Link
-                  href={listing.href}
-                  aria-label={`${listing.title}, ${listing.day} ${listing.time}: ${listing.key === "quiz" ? "book a team" : "see what's on"}`}
+                  href={book ?? listing.href}
+                  aria-label={`${listing.title}, ${listing.day} ${listing.time}: ${book ? "book a team" : "see what's on"}`}
                   className={STUB}
                 >
-                  <StubContent listing={listing} close={close} action={listing.actionLabel} />
+                  <StubContent listing={listing} close={close} action={book ? listing.actionLabel : "Info"} />
                 </Link>
               )}
             </li>
@@ -102,7 +105,8 @@ export function WeeklyStrip({
       </ul>
       <ol className="hidden grid-cols-3 gap-2 sm:grid lg:hidden">
         {WEEKLY_NIGHTS.map((night) => {
-          const lead = night.bookHref != null;
+          const bookHref = night.bookable ? quizUrl ?? null : null;
+          const lead = bookHref != null;
           return (
             <li
               key={night.key}
@@ -111,8 +115,8 @@ export function WeeklyStrip({
               <span className="font-black text-h3 leading-none tracking-tighter text-gold uppercase">{night.dayShort}</span>
               <span className="font-black text-pill leading-tight tracking-tight text-ink uppercase">{night.title}</span>
               <span className="text-pill leading-snug text-ink-2">{night.metaShort}</span>
-              {lead && night.bookHref ? (
-                <ArrowCta href={night.bookHref} variant="gold" size="sm" className="mt-auto w-full rounded-none">
+              {bookHref ? (
+                <ArrowCta href={bookHref} variant="gold" size="sm" className="mt-auto w-full rounded-none">
                   Book
                 </ArrowCta>
               ) : (
@@ -124,7 +128,8 @@ export function WeeklyStrip({
       </ol>
       <ol className="hidden grid-cols-3 gap-4 lg:grid">
         {WEEKLY_NIGHTS.map((night) => {
-          const lead = night.bookHref != null;
+          const bookHref = night.bookable ? quizUrl ?? null : null;
+          const lead = bookHref != null;
           return (
             <li
               key={night.key}
@@ -141,8 +146,8 @@ export function WeeklyStrip({
                 <h3 className="font-black text-btn leading-tight tracking-tight text-ink uppercase lg:text-h3">{night.title}</h3>
                 <p className="text-pill leading-snug text-ink-2 lg:text-meta">{night.meta}</p>
               </div>
-              {lead && night.bookHref ? (
-                <ArrowCta href={night.bookHref} variant="gold" size="sm" className="w-full rounded-none">
+              {bookHref ? (
+                <ArrowCta href={bookHref} variant="gold" size="sm" className="w-full rounded-none">
                   <span className="lg:hidden">Book</span>
                   <span className="hidden lg:inline">{night.bookLabel}</span>
                 </ArrowCta>

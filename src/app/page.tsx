@@ -11,6 +11,7 @@ import { GrainOverlay } from "@/components/ui/grain-overlay";
 import { Reveal } from "@/components/animations/reveal";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HomeHero } from "@/components/home/home-hero";
+import { quizBookingHref } from "@/lib/quiz-booking-link";
 import { ComingUpMonths } from "@/components/home/coming-up-months";
 import { DealsStrip } from "@/components/home/deals-strip";
 import { MerchGrid } from "@/components/home/merch-grid";
@@ -42,7 +43,7 @@ async function HomeContent() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, galleryGroups, info] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, galleryGroups, info, quizUrl] =
     await Promise.all([
       supabase
         .from("events")
@@ -66,6 +67,7 @@ async function HomeContent() {
         .limit(8),
       loadGalleryGroups(supabase),
       getCompanyInfo(),
+      quizBookingHref(supabase, today),
     ]);
 
   const karaokeUrl =
@@ -97,7 +99,7 @@ async function HomeContent() {
       <PublicNav currentPath="/" ticker />
       <MarqueeTicker items={tickerItems} />
 
-      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} karaokeUrl={karaokeUrl} />
+      <HomeHero featured={featured} featuredSpace={featuredSpace} today={today} hours={info?.opening_hours} karaokeUrl={karaokeUrl} quizUrl={quizUrl} />
 
       <div className="mx-auto flex w-full max-w-400 flex-col gap-12 px-4 pt-10 sm:px-6 lg:gap-16 lg:px-10 lg:pt-14">
         <Reveal index={0}>

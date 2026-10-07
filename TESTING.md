@@ -48,11 +48,12 @@ Playwright boots the app itself (`next dev -p 3100`) with the test env, so you d
 `playwright.config.ts` defines two **projects** - `mobile` (iPhone 13, ~390px) and `desktop` (1280px). Every spec runs under both. The app's Tailwind `sm` breakpoint is **640px**, and behaviour diverges across it (bottom nav vs sidebar, bottom sheet vs centered modal, 3-dot menu vs inline buttons). When a test depends on that difference, assert on the project: `test.info().project.name === "mobile"`.
 
 ### What's covered (starter specs - extend these)
-- `e2e/public-quiz.spec.ts` - public `/book/quiz` renders (unauthenticated).
+- `e2e/public-grouped-booking.spec.ts` - grouped booking pages (`/book/group/type|subtype/...`) show the owning level's shared booking config, complete a free booking end-to-end, and block a group/team name already booked for that date. Creates its own category, sub-category and event.
+- `e2e/public-event-booking.spec.ts` - `/book/event/[id]`: a free event booked end-to-end, and a paid event taken as far as the payment step (handed to Square's sandbox checkout, or the in-page payment sheet when `SQUARE_APPLICATION_ID` is set) without charging. Needs the sandbox Square credentials in `.env.test`.
 - `e2e/admin-events.spec.ts` - event create form: selecting a subtype **prefills** the title, and the **host**/**karaoke** fields show/hide based on the subtype flags.
 - `e2e/stock-market.spec.ts` - creates its own spirit-with-mixer drink and market event (service-role client, removed afterwards). Covers the event page (with-mixer price, normal-units override saved and persisted), Square links (the Menu serves view lists the drink and its category collapses; the Square items view links a copied Square variation, which carries a mixer modifier list, to a serve, follows the serve's menu category, then keeps a category picked by hand after unlinking, and creates a hidden menu item and serve for a Square variation the menu lacks, which stays off the public `/menu`), editing a linked serve's price in Settings → Menu keeping the serve's row and its Square link, and, on **desktop only** since one market can be live at a time, opening through the "sales history may be out of date" warning, the drink on the public `/market` page, and closing. Opening refreshes the Square catalog copy, so this spec reads the **sandbox** Square account named in `.env.test`; it never writes to it, because the test drink is not linked to Square.
 
-Worth adding next: completing a free quiz booking end-to-end, the paid generic `/book/event/[id]` and grouped `/book/group/...` flows, and an accessibility scan (`@axe-core/playwright`) to automate the Edge DevTools rules in CLAUDE.md (labels on icon buttons / form fields, no inline styles).
+Worth adding next: an accessibility scan (`@axe-core/playwright`) to automate the Edge DevTools rules in CLAUDE.md (labels on icon buttons / form fields, no inline styles).
 
 ---
 

@@ -93,40 +93,6 @@ const HIRE_FIELDS = [CUSTOMER_NAME, HIRE_DATE, HIRE_TIME, HIRE_REASON];
 export const EMAIL_SCENARIOS: EmailScenario[] = [
   /* ── Bookings ─────────────────────────────────────────────────────────── */
   {
-    key: "booking.quiz.confirmed",
-    label: "Quiz table confirmed",
-    group: "Bookings",
-    description: "The customer books a quiz table and there is room for them.",
-    recipient: "customer",
-    slots: BOOKING_SLOTS,
-    mergeFields: BOOKING_FIELDS,
-    defaults: slots({
-      subject: "Quiz Night Table Confirmed! 🎉",
-      heading: "{{eventTitle}}",
-      greeting: "Hey {{customerName}}!",
-      intro: `Great news! Your team "{{groupName}}" is locked in.`,
-      ctaLabel: "Manage Booking",
-      footnote:
-        "Can't make it? Please cancel at least 24 hours in advance using Manage Booking, so we can offer your place to someone else.",
-    }),
-  },
-  {
-    key: "booking.quiz.waitlisted",
-    label: "Quiz table waitlisted",
-    group: "Bookings",
-    description: "The customer books a quiz table but the night is already full.",
-    recipient: "customer",
-    slots: BOOKING_SLOTS,
-    mergeFields: BOOKING_FIELDS,
-    defaults: slots({
-      subject: "You are on the Waitlist",
-      heading: "{{eventTitle}}",
-      greeting: "Hey {{customerName}}!",
-      intro: `We're currently full, so "{{groupName}}" has been added to our waitlist.`,
-      ctaLabel: "Manage Booking",
-    }),
-  },
-  {
     key: "booking.event.confirmed",
     label: "Event booking confirmed",
     group: "Bookings",
@@ -722,8 +688,6 @@ export const EMAIL_SCENARIO_GROUPS = [
    rather than letting someone carefully edit words that will never be sent.
    A key moves into this set in the same change that cuts its send site over. */
 const WIRED_SCENARIOS = new Set([
-  "booking.quiz.confirmed",
-  "booking.quiz.waitlisted",
   "booking.event.confirmed",
   "booking.event.waitlisted",
   "booking.payment_pending",
