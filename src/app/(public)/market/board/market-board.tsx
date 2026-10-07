@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { CompanyWordmark } from "@/components/company-wordmark";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { formatGbp } from "@/lib/price";
 import type { MarketInstrumentPayload } from "@/lib/market/tick";
 import { useMarketState } from "../use-market-state";
+import { useCountdown } from "@/hooks/use-countdown";
+import { formatCountdown } from "@/lib/market/countdown";
 import { FlipPrice, displayChangePct, displayPrice, formatChangePct, formatDisplayPrice } from "../market-ui";
 import type { MarketStatePayload } from "@/lib/market/tick";
 
@@ -42,13 +44,6 @@ function trendOf(changePct: number): Trend {
 
 function isAtFloor(instrument: MarketInstrumentPayload): boolean {
   return (displayPrice(instrument) ?? instrument.price) <= instrument.floor + 0.001;
-}
-
-function formatCountdown(ms: number): string {
-  const clamped = Math.max(0, ms);
-  const minutes = Math.floor(clamped / 60000);
-  const seconds = Math.floor((clamped % 60000) / 1000);
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function byCategoryThenName(a: MarketInstrumentPayload, b: MarketInstrumentPayload): number {
@@ -665,27 +660,6 @@ function TickerSegments({ crash }: { crash: boolean }) {
   );
 }
 
-function useCountdown(remainingSec: number | undefined): string {
-  const endsAtRef = useRef<number | null>(null);
-  const [countdown, setCountdown] = useState("0:00");
-
-  useEffect(() => {
-    if (remainingSec != null) endsAtRef.current = Date.now() + remainingSec * 1000;
-  }, [remainingSec]);
-
-  useEffect(() => {
-    const update = () => {
-      const endsAt = endsAtRef.current ?? Date.now();
-      setCountdown(formatCountdown(endsAt - Date.now()));
-    };
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return countdown;
-}
-
 /* One header figure: a small label, the big value and a one-line note, so
    every figure on the header sits on the same three baselines. */
 function StatCell({
@@ -722,8 +696,8 @@ export default function MarketBoard({
   const { state } = useMarketState(5000, true);
   const [view, setView] = useState<BoardView>(initialView);
   const crash = state?.crashActive === true;
-  const crashCountdown = useCountdown(state?.crashRemainingSec);
-  const rerankCountdown = useCountdown(state?.nextRerankInSec ?? undefined);
+  const crashCountdown = formatCountdown(useCountdown(state?.crashEndsAt, state?.clockOffsetMs) ?? 0);
+  const rerankCountdown = formatCountdown(useCountdown(state?.nextRerankAt, state?.clockOffsetMs) ?? 0);
   const warmingUp = state?.warmedUp === false;
 
   if (!state || state.status === "closed") {

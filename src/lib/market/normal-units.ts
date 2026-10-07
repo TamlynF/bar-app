@@ -7,7 +7,17 @@ import type { MarketConfig } from "./types";
 
 export const VENUE_TIME_ZONE = "Europe/London";
 export const DEFAULT_SAMPLE_NIGHTS = 6;
-export const DEFAULT_LOOKBACK_WEEKS = 12;
+/* The sync keeps six months of Square orders, so the search for sample
+   nights reaches back the same distance. */
+export const DEFAULT_LOOKBACK_WEEKS = 26;
+export const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
+
+/* The event's "sales history days": the weekdays whose past Square orders
+   feed its normals. Nothing picked means no filter, every day counts. */
+export function effectiveWeekdays(weekdays: number[] | null | undefined): number[] {
+  const picked = [...new Set((weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
+  return picked.length > 0 ? picked : ALL_WEEKDAYS;
+}
 export const SATURDAY = 6;
 /* A trading night runs from this hour to the same hour next morning, so a
    sale rung at 01:45 on Sunday belongs to Saturday. */

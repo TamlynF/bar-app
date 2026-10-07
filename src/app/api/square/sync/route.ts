@@ -20,7 +20,7 @@ async function run(req: NextRequest) {
   }
   const supabase = createAdminClient();
   const catalog = await syncSquareCatalog(supabase);
-  const result = await syncSquareSales(supabase);
+  const result = await syncSquareSales(supabase, { trigger: "cron" });
   const status = result.status === "ok" && catalog.status === "ok" ? 200 : 500;
   return NextResponse.json({ ...result, catalog }, { status });
 }

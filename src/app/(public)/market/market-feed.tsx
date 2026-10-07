@@ -12,6 +12,8 @@ import { formatGbp } from "@/lib/price";
 import type { MarketEventPayload } from "@/lib/market/tick";
 import { detectInstallPlatform } from "@/lib/pwa-install";
 import { useMarketState } from "./use-market-state";
+import { useCountdown } from "@/hooks/use-countdown";
+import { formatCountdown } from "@/lib/market/countdown";
 import { TierBadge, formatDisplayPrice, sortForPhone } from "./market-ui";
 import {
   removeMarketPushSubscription,
@@ -101,24 +103,19 @@ function ChangePill({
   );
 }
 
-function formatCountdown(seconds: number): string {
-  const clamped = Math.max(0, Math.round(seconds));
-  const minutes = Math.floor(clamped / 60);
-  const rest = clamped % 60;
-  return `${minutes}:${rest.toString().padStart(2, "0")}`;
-}
-
-/* Remounted by the parent (key = tick number) so the clock restarts from the
-   server's figure on every tick instead of drifting on the poll interval. */
-function NextTickCountdown({ seconds, label = "Next update" }: { seconds: number; label?: string }) {
-  const [remaining, setRemaining] = useState(seconds);
-  useEffect(() => {
-    const startedAt = Date.now();
-    const timer = setInterval(() => {
-      setRemaining(seconds - (Date.now() - startedAt) / 1000);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [seconds]);
+/* Same clock as the TV board and the trade floor (useCountdown), so a phone
+   held up next to the screen reads the same second. */
+function NextTickCountdown({
+  at,
+  clockOffsetMs,
+  label = "Next update",
+}: {
+  at: string;
+  clockOffsetMs?: number;
+  label?: string;
+}) {
+  const remaining = useCountdown(at, clockOffsetMs);
+  if (remaining == null) return null;
   return (
     <span className="tabular-nums" aria-live="off">
       {remaining <= 0 ? (
@@ -681,12 +678,11 @@ export default function MarketFeed({
     );
   }
 
-  const tickKey = state.tickNo ?? 0;
   const countdown =
-    state.crashActive && state.crashRemainingSec != null
-      ? { key: `crash-${tickKey}`, seconds: state.crashRemainingSec, label: "Recovery in" }
-      : state.warmedUp && state.nextRerankInSec != null
-        ? { key: `update-${tickKey}`, seconds: state.nextRerankInSec, label: "Next update" }
+    state.crashActive && state.crashEndsAt != null
+      ? { at: state.crashEndsAt, label: "Recovery in" }
+      : state.warmedUp && state.nextRerankAt != null
+        ? { at: state.nextRerankAt, label: "Next update" }
         : null;
 
   const tradingCount = instruments.filter((instrument) => instrument.stock !== "out").length;
@@ -789,7 +785,7 @@ export default function MarketFeed({
         </span>
         {countdown && (
           <span className="shrink-0 whitespace-nowrap">
-            <NextTickCountdown key={countdown.key} seconds={countdown.seconds} label={countdown.label} />
+            <NextTickCountdown at={countdown.at} clockOffsetMs={state.clockOffsetMs} label={countdown.label} />
           </span>
         )}
       </div>

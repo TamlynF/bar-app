@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { Fragment, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -36,6 +36,8 @@ import { squareItemUrl } from "@/lib/market/simulate";
 import { mergeLiveInstruments } from "@/lib/market/live-merge";
 import { withMixer } from "@/lib/market/mixer";
 import { useLiveTick } from "@/hooks/use-live-tick";
+import { useCountdown } from "@/hooks/use-countdown";
+import { formatCountdown } from "@/lib/market/countdown";
 import {
   crashInstrumentAction,
   crashMarketAction,
@@ -95,34 +97,6 @@ function CrashTimingChoice({ onChange }: { onChange: (timing: CrashTiming) => vo
       ))}
     </fieldset>
   );
-}
-
-function formatCountdown(ms: number): string {
-  const clamped = Math.max(0, ms);
-  const minutes = Math.floor(clamped / 60000);
-  const seconds = Math.floor((clamped % 60000) / 1000);
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
-}
-
-function useCountdown(remainingSec: number | null | undefined): string {
-  const endsAtRef = useRef<number | null>(null);
-  const [countdown, setCountdown] = useState("0:00");
-
-  useEffect(() => {
-    if (remainingSec != null) endsAtRef.current = Date.now() + remainingSec * 1000;
-  }, [remainingSec]);
-
-  useEffect(() => {
-    const update = () => {
-      const endsAt = endsAtRef.current ?? Date.now();
-      setCountdown(formatCountdown(endsAt - Date.now()));
-    };
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return countdown;
 }
 
 function tierLabel(pct: number | null): string | null {
@@ -675,10 +649,16 @@ export function LiveFloorCard({
   const [breakdownFor, setBreakdownFor] = useState<InstrumentSummary | null>(null);
   const [query, setQuery] = useState("");
 
-  const liveState = useLiveTick(true, router.refresh);
+  const liveState = useLiveTick(router.refresh);
   const instruments = mergeLiveInstruments(initialInstruments, liveState, session.id, session.tickNo);
-  const nextTickCountdown = useCountdown(liveState?.nextTickInSec);
+  const crashLeft = useCountdown(liveState?.crashActive ? liveState.crashEndsAt : null, liveState?.clockOffsetMs);
+  const updateLeft = useCountdown(liveState?.nextRerankAt, liveState?.clockOffsetMs);
   const warmedUp = liveState?.warmedUp ?? true;
+  const boardClock = liveState?.crashActive
+    ? `recovery in ${formatCountdown(crashLeft ?? 0)}`
+    : !warmedUp
+      ? `warming up ${liveState?.unitsSoldTotal ?? 0}/${liveState?.warmupUnits ?? 0}`
+      : `next update ${formatCountdown(updateLeft ?? 0)}`;
   const tickNo = liveState?.status === "live" ? (liveState.tickNo ?? session.tickNo) : session.tickNo;
   const floorFields = FLOOR_FIELDS;
   const floorColumns = floorFields.filter((field) => !field.detail);
@@ -835,8 +815,7 @@ export function LiveFloorCard({
             </h2>
           </div>
           <p className="mt-1 text-[12px] text-admin-muted tabular-nums">
-            {instruments.length} {instruments.length === 1 ? "drink" : "drinks"} trading · Tick {tickNo} · next in{" "}
-            {nextTickCountdown}
+            {instruments.length} {instruments.length === 1 ? "drink" : "drinks"} trading · Tick {tickNo} · {boardClock}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

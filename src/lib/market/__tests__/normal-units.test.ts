@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  effectiveWeekdays,
   isBankHolidayNight,
   nightOf,
   profileWeekdayFor,
@@ -67,8 +68,8 @@ describe("sampleNightDates", () => {
     expect(sampleNightDates(6, { today: "2026-09-19", count: 2, exclude: new Set(["2026-09-12"]) })).toEqual(["2026-09-05", "2026-08-29"]);
   });
 
-  it("covers twelve weeks by default", () => {
-    expect(sampleNightDates(6, { today: "2026-09-19", count: 20 })).toHaveLength(12);
+  it("covers twenty-six weeks by default", () => {
+    expect(sampleNightDates(6, { today: "2026-09-19", count: 40 })).toHaveLength(26);
   });
 });
 
@@ -150,5 +151,16 @@ describe("sessionTicksFor", () => {
     expect(sessionTicksFor("19:00", "23:30", 60)).toBe(270);
     expect(sessionTicksFor("20:00", "02:00", 60)).toBe(360);
     expect(sessionTicksFor("20:00", "02:00", 120)).toBe(180);
+  });
+});
+
+describe("effectiveWeekdays", () => {
+  it("uses the picked days, deduplicated and sorted", () => {
+    expect(effectiveWeekdays([6, 4, 4])).toEqual([4, 6]);
+  });
+
+  it("means every day when nothing is picked", () => {
+    expect(effectiveWeekdays([])).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(effectiveWeekdays(null)).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 });

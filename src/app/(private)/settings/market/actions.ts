@@ -1846,9 +1846,6 @@ export async function recalculateNormalUnitsAction(eventId: number) {
   if (error) return { error: error.message };
   if (!event) return { error: "That event is no longer available." };
   const row = event as StockMarketEventRow;
-  if ((row.weekdays ?? []).length === 0) {
-    return { error: "Pick which day(s) of the week this event runs on first." };
-  }
   try {
     const result = await recalculateNormalUnits(supabase, normalUnitsEventRow(row));
     revalidateMarket();
@@ -1868,7 +1865,10 @@ export async function recalculateNormalUnitsAction(eventId: number) {
 }
 
 /* The same pull the nightly cron does, on demand. Runs as the service role
-   because square_sales is written by the cron, never by a signed-in user. */
+   because square_sales is written by the cron, never by a signed-in user.
+   A server action has less time than the cron, so a long backfill is
+   continued run by run rather than finished in one go. */
+const MANUAL_SYNC_BUDGET_MS = 45_000;
 /* Checked before a market opens: a failed or missed nightly sync means the
    normals the tiers rank against are missing recent nights. */
 export async function salesSyncStatusAction(): Promise<SalesSyncHealth> {
@@ -1888,13 +1888,21 @@ export async function syncSquareSalesAction() {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Sign in to sync sales." };
   const admin = createAdminClient();
-  const [catalog, result] = await Promise.all([syncSquareCatalog(admin), syncSquareSales(admin)]);
+  const [catalog, result] = await Promise.all([
+    syncSquareCatalog(admin),
+    syncSquareSales(admin, { trigger: "manual", budgetMs: MANUAL_SYNC_BUDGET_MS }),
+  ]);
   revalidateMarket();
   if (result.status === "error") return { error: result.error ?? "Could not sync sales from Square." };
   return {
     success: true,
     ordersSynced: result.ordersSynced,
     linesSynced: result.linesSynced,
+    ordersPruned: result.ordersPruned,
+    phase: result.phase,
+    complete: result.complete,
+    windowsDone: result.windowsDone,
+    windowsTotal: result.windowsTotal,
     catalogVariations: catalog.status === "ok" ? catalog.variations : null,
     catalogError: catalog.status === "error" ? catalog.error : null,
   };

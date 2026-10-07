@@ -1,6 +1,18 @@
 import { squareClient } from "@/lib/square";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { tradingNightOf } from "@/lib/market/normal-units";
+import { withRetry } from "@/lib/retry";
+import { sendSquareSyncFailureAlert } from "@/lib/square-sync-alert";
+import {
+  SYNC_ATTEMPTS,
+  SYNC_RETRY_DELAYS_MS,
+  planSync,
+  retentionCutoff,
+  shouldAlertOnFailure,
+  type SyncPlan,
+  type SyncStateLike,
+  type SyncWindow,
+} from "@/lib/square-sync-plan";
 
 type Money = { amount?: bigint | number | null } | null | undefined;
 
@@ -227,49 +239,40 @@ export function orderToSaleRow(
   };
 }
 
-async function fetchFeesByOrder(
-  locationId: string,
-  beginTime: string
-): Promise<Map<string, number>> {
+async function fetchFeesByOrder(locationId: string, window: SyncWindow): Promise<Map<string, number>> {
   const fees = new Map<string, number>();
-  try {
-    const page = await squareClient.payments.list({ locationId, beginTime });
-    for await (const p of page) {
-      if (!p.orderId) continue;
-      const fee = (p.processingFee ?? []).reduce(
-        (s, f) => s + toGBP(f.amountMoney),
-        0
-      );
-      if (fee) fees.set(p.orderId, round2((fees.get(p.orderId) ?? 0) + fee));
-    }
-  } catch (err) {
-    console.error("[square-sync] payments.list failed (fees=0):", err);
+  const page = await squareClient.payments.list({
+    locationId,
+    beginTime: window.from.toISOString(),
+    endTime: window.to.toISOString(),
+  });
+  for await (const p of page) {
+    if (!p.orderId) continue;
+    const fee = (p.processingFee ?? []).reduce((s, f) => s + toGBP(f.amountMoney), 0);
+    if (fee) fees.set(p.orderId, round2((fees.get(p.orderId) ?? 0) + fee));
   }
   return fees;
 }
 
-async function fetchRefundsByOrder(
-  locationId: string,
-  beginTime: string
-): Promise<Map<string, number>> {
+async function fetchRefundsByOrder(locationId: string, window: SyncWindow): Promise<Map<string, number>> {
   const refunds = new Map<string, number>();
-  try {
-    const page = await squareClient.refunds.list({ locationId, beginTime });
-    for await (const r of page) {
-      if (!r.orderId) continue;
-      const amt = toGBP(r.amountMoney);
-      if (amt) refunds.set(r.orderId, round2((refunds.get(r.orderId) ?? 0) + amt));
-    }
-  } catch (err) {
-    console.error("[square-sync] refunds.list failed (refunds=0):", err);
+  const page = await squareClient.refunds.list({
+    locationId,
+    beginTime: window.from.toISOString(),
+    endTime: window.to.toISOString(),
+  });
+  for await (const r of page) {
+    if (!r.orderId) continue;
+    const amt = toGBP(r.amountMoney);
+    if (amt) refunds.set(r.orderId, round2((refunds.get(r.orderId) ?? 0) + amt));
   }
   return refunds;
 }
 
-async function searchCompletedOrders(
-  locationId: string,
-  beginTime: string
-): Promise<SquareOrder[]> {
+/* Every completed order closed inside the window, whatever it sold - lines
+   are kept for unlinked items too, so a drink linked to the menu later
+   already has its history. */
+async function searchCompletedOrders(locationId: string, window: SyncWindow): Promise<SquareOrder[]> {
   const orders: SquareOrder[] = [];
   let cursor: string | undefined;
   do {
@@ -279,7 +282,7 @@ async function searchCompletedOrders(
       query: {
         filter: {
           stateFilter: { states: ["COMPLETED"] },
-          dateTimeFilter: { closedAt: { startAt: beginTime } },
+          dateTimeFilter: { closedAt: { startAt: window.from.toISOString(), endAt: window.to.toISOString() } },
         },
         sort: { sortField: "CLOSED_AT", sortOrder: "ASC" },
       },
@@ -292,14 +295,32 @@ async function searchCompletedOrders(
 }
 
 export type SyncResult = {
+  status: "ok" | "error";
+  phase: "backfill" | "incremental";
+  /* False when the run stopped at its time budget with windows still to do;
+     the next run (cron or Sync now) carries on from the saved cursor. */
+  complete: boolean;
+  windowsDone: number;
+  windowsTotal: number;
   ordersSynced: number;
   linesSynced: number;
+  ordersPruned: number;
+  attempts: number;
   from: string;
-  status: "ok" | "error";
+  to: string;
   error?: string;
 };
 
+export type SyncOptions = {
+  now?: Date;
+  /* Wall-clock budget for the Square pulls; the run stops cleanly between
+     windows once it is spent rather than being killed mid-write. */
+  budgetMs?: number;
+  trigger?: "cron" | "manual";
+};
+
 const CHUNK = 500;
+export const DEFAULT_SYNC_BUDGET_MS = 240_000;
 
 /* An order's lines are replaced wholesale, so a line that Square has since
    voided disappears here too instead of lingering under an old uid. */
@@ -320,78 +341,249 @@ async function replaceSaleLines(supabase: SupabaseClient, orders: SquareOrder[])
   return lines.length;
 }
 
-export async function syncSquareSales(
-  supabase: SupabaseClient,
-  now: Date = new Date()
-): Promise<SyncResult> {
-  const locationId = process.env.SQUARE_LOCATION_ID;
-  if (!locationId) {
-    return { ordersSynced: 0, linesSynced: 0, from: "", status: "error", error: "SQUARE_LOCATION_ID not set" };
-  }
+type SyncStateRow = SyncStateLike & {
+  consecutive_failures?: number | null;
+  last_status?: string | null;
+};
 
-  const { data: state } = await supabase
+async function readSyncState(supabase: SupabaseClient): Promise<SyncStateRow | null> {
+  const { data, error } = await supabase
     .from("square_sync_state")
-    .select("last_synced_at")
+    .select("last_synced_at, backfill_cursor, backfill_done_at, consecutive_failures, last_status")
     .eq("id", 1)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as SyncStateRow | null) ?? null;
+}
 
-  const lookbackMs = 3 * 24 * 60 * 60 * 1000;
-  const defaultStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // first run: 90d
-  const watermark = state?.last_synced_at ? new Date(state.last_synced_at) : defaultStart;
-  const beginTime = new Date(
-    Math.min(watermark.getTime() - lookbackMs, now.getTime())
-  ).toISOString();
+async function updateSyncState(supabase: SupabaseClient, patch: Record<string, unknown>): Promise<void> {
+  const { error } = await supabase.from("square_sync_state").update(patch).eq("id", 1);
+  if (error) throw new Error(error.message);
+}
 
-  try {
-    const [orders, variationCategory] = await Promise.all([
-      searchCompletedOrders(locationId, beginTime),
-      buildVariationCategoryMap(),
-    ]);
+async function openRunLog(
+  supabase: SupabaseClient,
+  plan: SyncPlan,
+  trigger: string,
+  startedAt: Date
+): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("square_sync_runs")
+    .insert({
+      started_at: startedAt.toISOString(),
+      trigger,
+      phase: plan.phase,
+      status: "running",
+      from_at: plan.from.toISOString(),
+      to_at: plan.to.toISOString(),
+      windows_total: plan.windows.length,
+    })
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[square-sync] could not open the run log:", error.message);
+    return null;
+  }
+  return (data as { id: number } | null)?.id ?? null;
+}
 
-    const [feesByOrder, refundsByOrder] = await Promise.all([
-      fetchFeesByOrder(locationId, beginTime),
-      fetchRefundsByOrder(locationId, beginTime),
-    ]);
+async function closeRunLog(supabase: SupabaseClient, runId: number | null, patch: Record<string, unknown>): Promise<void> {
+  if (runId == null) return;
+  const { error } = await supabase.from("square_sync_runs").update(patch).eq("id", runId);
+  if (error) console.error("[square-sync] could not close the run log:", error.message);
+}
 
-    const rows = orders
-      .map((o) => orderToSaleRow(o, variationCategory, feesByOrder, refundsByOrder))
-      .filter((r): r is SquareSaleRow => r !== null);
-
-    if (rows.length > 0) {
-      for (let i = 0; i < rows.length; i += CHUNK) {
-        const chunk = rows.slice(i, i + CHUNK);
-        const { error } = await supabase
-          .from("square_sales")
-          .upsert(chunk, { onConflict: "square_order_id" });
-        if (error) throw new Error(error.message);
-      }
+/* One window: pull, flatten, upsert. Square being flaky is retried here
+   with a pause between goes; a window that still fails stops the run with
+   the earlier windows already saved. */
+async function syncWindow(
+  supabase: SupabaseClient,
+  locationId: string,
+  window: SyncWindow,
+  variationCategory: Map<string, string>
+): Promise<{ orders: number; lines: number; attempts: number }> {
+  const { value, attempts } = await withRetry(
+    async () => {
+      const orders = await searchCompletedOrders(locationId, window);
+      const [feesByOrder, refundsByOrder] = await Promise.all([
+        fetchFeesByOrder(locationId, window),
+        fetchRefundsByOrder(locationId, window),
+      ]);
+      return { orders, feesByOrder, refundsByOrder };
+    },
+    {
+      attempts: SYNC_ATTEMPTS,
+      delaysMs: SYNC_RETRY_DELAYS_MS,
+      onRetry: (error, attempt) =>
+        console.warn(
+          `[square-sync] window ${window.from.toISOString()}..${window.to.toISOString()} attempt ${attempt} failed, retrying:`,
+          error instanceof Error ? error.message : error
+        ),
     }
-    const linesSynced = await replaceSaleLines(supabase, orders);
+  );
 
-    await supabase
-      .from("square_sync_state")
-      .update({
-        last_synced_at: now.toISOString(),
-        last_run_at: now.toISOString(),
-        last_status: "ok",
-        last_error: null,
-        orders_synced: rows.length,
-        updated_at: now.toISOString(),
-      })
-      .eq("id", 1);
+  const rows = value.orders
+    .map((o) => orderToSaleRow(o, variationCategory, value.feesByOrder, value.refundsByOrder))
+    .filter((r): r is SquareSaleRow => r !== null);
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabase.from("square_sales").upsert(rows.slice(i, i + CHUNK), { onConflict: "square_order_id" });
+    if (error) throw new Error(error.message);
+  }
+  const lines = await replaceSaleLines(supabase, value.orders);
+  return { orders: rows.length, lines, attempts };
+}
 
-    return { ordersSynced: rows.length, linesSynced, from: beginTime, status: "ok" };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await supabase
-      .from("square_sync_state")
-      .update({
+/* Drops orders older than the retention window from the app's own copy;
+   their lines go with them (cascade). Square itself is never written to. */
+async function pruneOldSales(supabase: SupabaseClient, now: Date): Promise<number> {
+  const { count, error } = await supabase
+    .from("square_sales")
+    .delete({ count: "exact" })
+    .lt("business_date", retentionCutoff(now));
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/* The scheduled pull. First run ever: the last six months, seven days at a
+   time, saving the cursor after each batch so a timeout or a Square outage
+   costs at most one batch and the next run carries on. After that: a top-up
+   from the watermark. Each run then prunes anything past seven months. A run
+   that fails after its retries logs the error, counts the streak and mails
+   the venue. */
+export async function syncSquareSales(supabase: SupabaseClient, options: SyncOptions = {}): Promise<SyncResult> {
+  const now = options.now ?? new Date();
+  const budgetMs = options.budgetMs ?? DEFAULT_SYNC_BUDGET_MS;
+  const trigger = options.trigger ?? "cron";
+  const startedAt = Date.now();
+  const locationId = process.env.SQUARE_LOCATION_ID;
+
+  let state: SyncStateRow | null = null;
+  let plan: SyncPlan = planSync(null, now);
+  let runId: number | null = null;
+  const progress = { windowsDone: 0, orders: 0, lines: 0, attempts: 0 };
+
+  const fail = async (message: string): Promise<SyncResult> => {
+    const consecutiveFailures = (state?.consecutive_failures ?? 0) + 1;
+    const alert = shouldAlertOnFailure(consecutiveFailures);
+    console.error(`[square-sync] ${plan.phase} run failed (${consecutiveFailures} in a row):`, message);
+    await closeRunLog(supabase, runId, {
+      finished_at: new Date().toISOString(),
+      status: "error",
+      windows_done: progress.windowsDone,
+      orders_synced: progress.orders,
+      lines_synced: progress.lines,
+      attempts: progress.attempts,
+      error: message,
+    });
+    try {
+      await updateSyncState(supabase, {
         last_run_at: now.toISOString(),
         last_status: "error",
         last_error: message,
+        consecutive_failures: consecutiveFailures,
+        ...(alert ? { last_alerted_at: new Date().toISOString() } : {}),
         updated_at: now.toISOString(),
-      })
-      .eq("id", 1);
-    return { ordersSynced: 0, linesSynced: 0, from: beginTime, status: "error", error: message };
+      });
+    } catch (err) {
+      console.error("[square-sync] could not record the failure:", err);
+    }
+    if (alert) {
+      await sendSquareSyncFailureAlert({
+        phase: plan.phase,
+        trigger,
+        error: message,
+        consecutiveFailures,
+        attempts: Math.max(progress.attempts, 1),
+        windowsDone: progress.windowsDone,
+        windowsTotal: plan.windows.length,
+        runId,
+        failedAt: new Date(),
+      });
+    }
+    return {
+      status: "error",
+      phase: plan.phase,
+      complete: false,
+      windowsDone: progress.windowsDone,
+      windowsTotal: plan.windows.length,
+      ordersSynced: progress.orders,
+      linesSynced: progress.lines,
+      ordersPruned: 0,
+      attempts: progress.attempts,
+      from: plan.from.toISOString(),
+      to: plan.to.toISOString(),
+      error: message,
+    };
+  };
+
+  if (!locationId) return fail("SQUARE_LOCATION_ID not set");
+
+  try {
+    state = await readSyncState(supabase);
+    plan = planSync(state, now);
+    runId = await openRunLog(supabase, plan, trigger, new Date());
+    if (plan.phase === "backfill" && !state?.backfill_cursor) {
+      await updateSyncState(supabase, { backfill_from: plan.from.toISOString(), updated_at: now.toISOString() });
+    }
+
+    const variationCategory = await buildVariationCategoryMap();
+
+    for (const window of plan.windows) {
+      if (progress.windowsDone > 0 && Date.now() - startedAt > budgetMs) break;
+      const done = await syncWindow(supabase, locationId, window, variationCategory);
+      progress.windowsDone += 1;
+      progress.orders += done.orders;
+      progress.lines += done.lines;
+      progress.attempts += done.attempts;
+      await updateSyncState(
+        supabase,
+        plan.phase === "backfill"
+          ? { backfill_cursor: window.to.toISOString(), updated_at: new Date().toISOString() }
+          : { last_synced_at: window.to.toISOString(), updated_at: new Date().toISOString() }
+      );
+      await closeRunLog(supabase, runId, {
+        windows_done: progress.windowsDone,
+        orders_synced: progress.orders,
+        lines_synced: progress.lines,
+        attempts: progress.attempts,
+      });
+    }
+
+    const complete = progress.windowsDone === plan.windows.length;
+    const finishedBackfill = plan.phase === "backfill" && complete;
+    const ordersPruned = await pruneOldSales(supabase, now);
+
+    await updateSyncState(supabase, {
+      ...(finishedBackfill ? { backfill_done_at: now.toISOString(), last_synced_at: now.toISOString() } : {}),
+      last_run_at: now.toISOString(),
+      last_status: "ok",
+      last_error: null,
+      consecutive_failures: 0,
+      orders_synced: progress.orders,
+      last_pruned_at: now.toISOString(),
+      last_pruned_orders: ordersPruned,
+      updated_at: now.toISOString(),
+    });
+    await closeRunLog(supabase, runId, {
+      finished_at: new Date().toISOString(),
+      status: complete ? "ok" : "partial",
+      orders_pruned: ordersPruned,
+    });
+
+    return {
+      status: "ok",
+      phase: plan.phase,
+      complete,
+      windowsDone: progress.windowsDone,
+      windowsTotal: plan.windows.length,
+      ordersSynced: progress.orders,
+      linesSynced: progress.lines,
+      ordersPruned,
+      attempts: progress.attempts,
+      from: plan.from.toISOString(),
+      to: plan.to.toISOString(),
+    };
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : String(err));
   }
 }

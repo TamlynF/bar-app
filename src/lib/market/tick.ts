@@ -168,6 +168,15 @@ export type MarketStatePayload = {
   unitsSoldTotal?: number;
   warmupUnits?: number;
   nextRerankInSec?: number | null;
+  /* Absolute deadlines (ISO) so every screen counts down to the same instant
+     instead of to a relative figure that ages in transit. serverNow lets the
+     client correct its own clock against the server's. */
+  serverNow?: string;
+  nextTickAt?: string;
+  nextRerankAt?: string | null;
+  crashEndsAt?: string;
+  /* Filled in by the client poll loop: this device's clock minus the server's. */
+  clockOffsetMs?: number;
   leaderboardRows?: number;
   /* The event's closing time as HH:MM, null when the session has no event. */
   closesAt?: string | null;
@@ -196,6 +205,26 @@ function secondsUntilNextTick(session: MarketSessionRow, config: MarketConfig, n
   if (!session.last_tick_at) return config.tickIntervalSec;
   const sinceLastTick = (now.getTime() - new Date(session.last_tick_at).getTime()) / 1000;
   return Math.max(0, Math.ceil(config.tickIntervalSec - sinceLastTick));
+}
+
+export function nextTickDueAt(session: Pick<MarketSessionRow, "last_tick_at">, config: MarketConfig, now: Date): Date {
+  const intervalMs = config.tickIntervalSec * 1000;
+  if (!session.last_tick_at) return new Date(now.getTime() + intervalMs);
+  return new Date(new Date(session.last_tick_at).getTime() + intervalMs);
+}
+
+export function crashEndsAt(
+  session: Pick<MarketSessionRow, "last_tick_at" | "tick_no" | "crash_until_tick">,
+  config: MarketConfig,
+  now: Date
+): Date {
+  const ticksLeft = (session.crash_until_tick ?? session.tick_no) - session.tick_no;
+  const intervalMs = config.tickIntervalSec * 1000;
+  const lastTick = session.last_tick_at ? new Date(session.last_tick_at).getTime() : null;
+  if (lastTick == null || now.getTime() - lastTick > intervalMs) {
+    return new Date(now.getTime() + ticksLeft * intervalMs);
+  }
+  return new Date(lastTick + (ticksLeft + 1) * intervalMs);
 }
 
 function crashRemainingSeconds(session: MarketSessionRow, config: MarketConfig, now: Date): number {
@@ -242,6 +271,17 @@ export function nextUpdateTick(
   if (session.warmed_up_tick == null) return null;
   const every = Math.max(1, Math.round(config.rerankEveryTicks));
   return session.tick_no + (every - (session.tick_no % every));
+}
+
+export function nextRerankAt(
+  session: Pick<MarketSessionRow, "tick_no" | "warmed_up_tick" | "last_tick_at">,
+  config: MarketConfig,
+  now: Date
+): Date | null {
+  const updateTick = nextUpdateTick(session, config);
+  if (updateTick == null) return null;
+  const ticksLeft = updateTick - session.tick_no;
+  return new Date(nextTickDueAt(session, config, now).getTime() + (ticksLeft - 1) * config.tickIntervalSec * 1000);
 }
 
 function secondsUntilNextRerank(session: MarketSessionRow, config: MarketConfig, now: Date): number | null {
@@ -789,13 +829,21 @@ export async function readMarketState(
     tickIntervalSec: config.tickIntervalSec,
     nextTickInSec: secondsUntilNextTick(session, config, now),
     tickLeadSec: tickLeadSec(config),
+    serverNow: now.toISOString(),
+    nextTickAt: nextTickDueAt(session, config, now).toISOString(),
     crashActive,
-    ...(crashActive ? { crashRemainingSec: crashRemainingSeconds(session, config, now) } : {}),
+    ...(crashActive
+      ? {
+          crashRemainingSec: crashRemainingSeconds(session, config, now),
+          crashEndsAt: crashEndsAt(session, config, now).toISOString(),
+        }
+      : {}),
     pushAlertsEnabled: config.pushAlertsEnabled,
     warmedUp: session.warmed_up_tick != null,
     unitsSoldTotal: session.units_sold_total ?? 0,
     warmupUnits: config.warmupUnits,
     nextRerankInSec: secondsUntilNextRerank(session, config, now),
+    nextRerankAt: nextRerankAt(session, config, now)?.toISOString() ?? null,
     leaderboardRows: config.leaderboardRows,
     closesAt,
     instruments: instruments.map((row) => {

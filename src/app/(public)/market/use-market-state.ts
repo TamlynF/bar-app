@@ -44,6 +44,16 @@ function aged(data: MarketStatePayload, receivedAt: number, now: number): Market
   };
 }
 
+/* This device's clock minus the server's, measured when the payload lands.
+   The absolute deadlines in the payload are server time; subtracting this
+   puts them on the local clock so a TV, a phone and a laptop whose clocks
+   disagree still count down to the same instant. */
+function clockOffsetMs(data: MarketStatePayload, receivedAt: number): number | undefined {
+  if (!data.serverNow) return undefined;
+  const serverNow = Date.parse(data.serverNow);
+  return Number.isNaN(serverNow) ? undefined : receivedAt - serverNow;
+}
+
 /* When the tick in this payload was due. A scheduled tick run early inside
    the lead is stamped with its due time, so this lands on the countdown; a
    tick staff forced (crash now, re-rank now) is stamped when it ran, so it
@@ -79,7 +89,7 @@ export function useMarketState(pollMs: number = 6000, followTicks: boolean = fal
 
     function apply({ data, receivedAt, events }: Arrival) {
       const now = Date.now();
-      const shown = aged(data, receivedAt, now);
+      const shown = { ...aged(data, receivedAt, now), clockOffsetMs: clockOffsetMs(data, receivedAt) };
       setState(shown);
       shownRef.current =
         shown.status === "live" && shown.tickNo != null && shown.nextTickInSec != null

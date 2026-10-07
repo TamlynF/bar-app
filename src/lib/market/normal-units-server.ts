@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureBankHolidays } from "./bank-holidays";
 import {
   describeSource,
+  effectiveWeekdays,
   isBankHolidayNight,
   nightOf,
   profileWeekdayFor,
@@ -91,7 +92,7 @@ export async function recalculateNormalUnits(
   options: { now?: Date } = {}
 ): Promise<RecalculateResult> {
   const now = options.now ?? new Date();
-  const weekdays = (event.weekdays ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  const weekdays = effectiveWeekdays(event.weekdays);
   const priceIdByVariation = await eventVariationMap(supabase, event.id);
   const { count: serveCount } = await supabase
     .from("stock_market_event_items")
@@ -177,12 +178,10 @@ export async function resolveNormalsForOpen(
   config: Pick<MarketConfig, "paceFloorUnits">,
   now: Date = new Date()
 ): Promise<ResolvedNormals> {
-  if ((event.weekdays ?? []).length > 0) {
-    try {
-      await recalculateNormalUnits(supabase, event, { now });
-    } catch (err) {
-      console.error("[market] normal units recalculation failed, using the last set:", err);
-    }
+  try {
+    await recalculateNormalUnits(supabase, event, { now });
+  } catch (err) {
+    console.error("[market] normal units recalculation failed, using the last set:", err);
   }
   const cache = await loadNormalUnitsCache(
     supabase,

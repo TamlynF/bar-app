@@ -1,6 +1,11 @@
 export type SalesSyncSummary = {
   ordersSynced: number;
   linesSynced: number;
+  ordersPruned?: number;
+  phase?: "backfill" | "incremental";
+  complete?: boolean;
+  windowsDone?: number;
+  windowsTotal?: number;
   catalogVariations: number | null;
   catalogError: string | null;
 };
@@ -9,7 +14,13 @@ export type SalesSyncSummary = {
    the catalog copy together. A catalog failure is reported alongside, never
    instead of, the sales that did sync. */
 export function salesSyncMessage(result: SalesSyncSummary): { text: string; catalogFailed: boolean } {
-  const sales = `Synced ${result.ordersSynced} order(s) and ${result.linesSynced} line(s) from Square`;
+  const pulled = `${result.ordersSynced} order(s) and ${result.linesSynced} line(s)`;
+  const sales =
+    result.phase === "backfill" && !result.complete
+      ? `Pulled ${pulled} - ${result.windowsDone} of ${result.windowsTotal} history batches done, run Sync now again to continue`
+      : result.phase === "backfill"
+        ? `Finished the six-month history pull: ${pulled}`
+        : `Synced ${pulled} from Square`;
   if (result.catalogError) {
     return { text: `${sales}, but the catalog refresh failed: ${result.catalogError}`, catalogFailed: true };
   }

@@ -31,6 +31,12 @@ import { FIELD_INPUT, formatRunDate } from "./ui";
 const CONFIG_VALUE =
   "w-20 flex-none tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
+const SALES_HISTORY_DAYS_HELP = {
+  label: "Sales history days",
+  hint: "Which weekdays of past Square sales feed each drink's normal. None picked = every day.",
+  help: "A day runs from 9am to 6am the next morning, so Saturday covers 9am Saturday to 6am Sunday. This does not open or close the market.",
+};
+
 function WeekdayPicker({ selected }: { selected: number[] }) {
   const [days, setDays] = useState<number[]>(selected);
   function toggle(day: number) {
@@ -332,7 +338,10 @@ function EventForm({
             />
           </span>
         </FormRow>
-        <FormRow label="Runs on" align="start" dense>
+        <FormRow label="Sales history days" align="start" dense>
+          <TooltipProvider>
+            <ConfigHelp field={SALES_HISTORY_DAYS_HELP} />
+          </TooltipProvider>
           <WeekdayPicker selected={event?.weekdays ?? []} />
         </FormRow>
         <FormRow label="Bank holiday eve" dense>
@@ -364,9 +373,10 @@ function EventForm({
           </span>
         </FormRow>
         <p className="px-4 py-2.5 text-[11px] text-admin-muted sm:px-5">
-          Each drink&rsquo;s &ldquo;normal&rdquo; is the average of its last six nights on that weekday over the last 12 weeks,
-          from Square sales synced every night. A night runs from 6am to 6am, so sales after midnight count for the night
-          before. Bank holidays and their eves are left out.
+          Sales history days pick which weekdays of past Square sales set each drink&rsquo;s &ldquo;normal&rdquo;: the
+          average of its last six nights on that weekday from the six months of orders synced every night. Leave every day
+          unselected to use them all. A Saturday runs from 9am Saturday to 6am Sunday, so sales after midnight count for the
+          night before. Bank holidays and their eves are left out.
         </p>
       </DetailCard>
 
