@@ -54,7 +54,7 @@ export function relevantTo(
   events: MarketPushEvent[]
 ): MarketPushEvent[] {
   const watched = subscription.watched_instrument_ids ?? [];
-  if (watched.length === 0) return events;
+  if (watched.length === 0) return [];
   return events.filter(
     (event) =>
       event.kind === "crash" || (event.instrument_id != null && watched.includes(event.instrument_id))

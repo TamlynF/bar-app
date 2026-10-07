@@ -28,6 +28,7 @@ import { formatUkMobile } from "@/lib/sms/phone";
 import { AlertSignup, type AlertChannel, type AlertHandle } from "./alert-signup";
 import { InstallDialog, useInstallTarget } from "./install-card";
 import { NotifyMethod } from "./notify-method";
+import { WatchList } from "./watch-list";
 import { FlipPrice, StockBadge, eventCopy, formatChangePct } from "./market-ui";
 
 /* iOS (and some Android browsers) refuse `new Notification()` from page
@@ -445,7 +446,9 @@ export default function MarketFeed({
     toggleWatched(id);
     const name = instruments.find((instrument) => instrument.id === id)?.name;
     if (name && next.includes(id)) {
-      toast(`Watching ${name} - you'll only hear about the drinks you're watching, plus a crash.`);
+      toast(`Watching ${name} - you'll be alerted when it drops.`);
+    } else if (name && next.length === 0) {
+      toast(`Stopped watching ${name} - no drinks picked, so no alerts until you tap a bell.`);
     }
     if (pushState === "on") {
       registerPush(next).catch(() => {
@@ -486,10 +489,10 @@ export default function MarketFeed({
     if (!anyChannelOn || !alertsAllowed) return;
 
     const watchedNames = new Set(watchedNamesKey ? watchedNamesKey.split("\u0000") : []);
-    const relevant =
-      watchedNames.size === 0
-        ? fresh
-        : fresh.filter((event) => event.kind === "crash" || (event.name != null && watchedNames.has(event.name)));
+    if (watchedNames.size === 0) return;
+    const relevant = fresh.filter(
+      (event) => event.kind === "crash" || (event.name != null && watchedNames.has(event.name))
+    );
     if (relevant.length === 0) return;
 
     for (const event of relevant) {
@@ -652,7 +655,7 @@ export default function MarketFeed({
   const watchedLine =
     watchedCount > 0
       ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
-      : "Tap the bell on a drink to only hear about that one.";
+      : "No drinks picked yet - tap a bell to get alerts.";
 
   return (
     <div className="md:grid md:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] md:items-start md:gap-10 lg:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] lg:gap-14">
@@ -675,6 +678,10 @@ export default function MarketFeed({
         <div className="ad-blink rounded-2xl border border-[#FF6B35]/40 bg-[#FF6B35]/10 px-4 py-3 text-center font-black text-sm tracking-widest text-[#FF6B35] uppercase">
           Market crash - buy the dip
         </div>
+      )}
+
+      {!alertsOff && (
+        <WatchList instruments={instruments} watched={watched} onToggle={onToggleWatch} alertsOn={anyChannelOn} />
       )}
 
       {smsOn && smsHandle && (
@@ -738,9 +745,7 @@ export default function MarketFeed({
             <span className="font-black text-xs tracking-widest text-ink uppercase">Alerts on</span>
             {pushState === "on" && " - they'll reach your phone even when it's locked."}
             {pushState === "page-only" && " - they arrive while this page is open."}{" "}
-            {watchedCount > 0
-              ? `Watching ${watchedCount} ${watchedCount === 1 ? "drink" : "drinks"}: you'll only hear about those, plus a market crash.`
-              : "Tap the bell on a drink to only hear about that one."}
+            {watchedLine}
           </p>
           <button
             type="button"
