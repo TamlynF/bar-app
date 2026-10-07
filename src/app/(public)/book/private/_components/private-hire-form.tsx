@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   Users,
   User,
@@ -16,7 +16,10 @@ import {
   MessageSquareQuote,
   Tag,
   Info,
+  Minus,
+  Plus,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { FieldError, incompleteButtonClass } from "@/app/(public)/book/_components/field-error";
 import {
   stepBackButtonClass,
@@ -27,6 +30,10 @@ import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_compon
 import { describeOpenSessionClash, openSessionClash, type OpeningHours } from "@/lib/opening-hours";
 import { formatGBP } from "@/lib/events-display";
 import { cleanPhoneInput, isValidPhone, PHONE_ERROR } from "@/lib/phone";
+import { addDays, format, startOfMonth } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const inputBaseClass =
   "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
@@ -35,11 +42,24 @@ const iconContainerClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center p
 const iconClass = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 const helperClass =
   "col-span-2 -mt-1 ml-1 flex items-start gap-1.5 text-xs leading-relaxed text-ink-2 sm:col-span-1 sm:mt-2";
-/* iPhone Safari draws date and time inputs at their own natural width, which
-   spills out of a half-width column; without the native styling they fill
-   the column like any other input, so they need an explicit height. */
-const dateTimeInputClass =
-  "input-scheme-dark block h-11.5 min-w-0 appearance-none pl-9 sm:h-13.5 sm:pl-11 [&::-webkit-date-and-time-value]:text-left";
+const selectTriggerClass =
+  "h-auto cursor-pointer gap-2 text-left data-[state=open]:border-[#fdcc4b] data-[state=open]:ring-1 data-[state=open]:ring-[#fdcc4b]";
+const guestCountInputClass = "pr-22 tabular-nums";
+const stepperButtonClass =
+  "size-10 rounded-xl text-stone-400 hover:bg-white/10 hover:text-[#fdcc4b] focus-visible:ring-[#fdcc4b]/50 disabled:opacity-30";
+const halfWidthFieldClass ="h-11.5 min-w-0 pl-9 sm:h-13.5 sm:pl-11";
+const dateTriggerClass = `${halfWidthFieldClass} block truncate text-left`;
+const timeTriggerClass = `${selectTriggerClass} ${halfWidthFieldClass} pr-3`;
+const calendarThemeVars = {
+  "--primary": "#FDCC4B",
+  "--primary-foreground": "#26300D",
+  "--accent": "rgba(255,255,255,0.10)",
+  "--accent-foreground": "#FDCC4B",
+  "--background": "transparent",
+  "--muted-foreground": "#a8a29e",
+  "--border": "rgba(255,255,255,0.10)",
+  "--ring": "#FDCC4B",
+} as React.CSSProperties;
 
 function inputClass(hasError: boolean) {
   return `${inputBaseClass} ${
@@ -56,6 +76,7 @@ const STEPS = [
 ];
 
 const DEFAULT_MIN_GUESTS = 30;
+const GUEST_STEP = 5;
 const OVERNIGHT_CUTOFF_MINUTES = 8 * 60;
 const DEFAULT_DURATION_MINUTES = 4 * 60;
 
@@ -82,6 +103,68 @@ function toTimeString(totalMinutes: number) {
   const hours = String(Math.floor(wrapped / 60)).padStart(2, "0");
   const minutes = String(wrapped % 60).padStart(2, "0");
   return `${hours}:${minutes}`;
+}
+
+const TIME_STEP_MINUTES = 15;
+const TIME_OPTIONS = Array.from({ length: (24 * 60) / TIME_STEP_MINUTES }, (_, i) =>
+  toTimeString(OVERNIGHT_CUTOFF_MINUTES + i * TIME_STEP_MINUTES)
+);
+
+function TimeSelect({
+  id,
+  value,
+  onChange,
+  hasError,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  hasError: boolean;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} aria-invalid={hasError} className={`${inputClass(hasError)} ${timeTriggerClass}`}>
+        <SelectValue placeholder="--:--" />
+      </SelectTrigger>
+      <SelectContent className="max-h-72">
+        {TIME_OPTIONS.map((time) => (
+          <SelectItem key={time} value={time}>
+            {time}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function formatDuration(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (hours) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`);
+  if (minutes) parts.push(`${minutes} minutes`);
+  return parts.join(" ");
+}
+
+function describeOvernight(date: Date | undefined, startTime: string, endTime: string) {
+  if (!startTime || !endTime) return null;
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  if (end >= start || end >= OVERNIGHT_CUTOFF_MINUTES) return null;
+  const duration = formatDuration(end + 24 * 60 - start);
+  const endDay = date ? `, ${format(addDays(date, 1), "EEE d MMM yyyy")},` : "";
+  return `This event runs for ${duration} and ends the following day${endDay} at ${endTime}.`;
+}
+
+function describeTimeOrderError(startTime: string, endTime: string) {
+  if (!startTime || !endTime) return undefined;
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  if (end === start) return "End time must be later than the start time.";
+  if (end < start && end >= OVERNIGHT_CUTOFF_MINUTES) {
+    return "End time must be later than the start time, unless the event runs into the early hours.";
+  }
+  return undefined;
 }
 
 function todayIso() {
@@ -119,10 +202,16 @@ export default function PrivateHireForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [guestCount, setGuestCount] = useState(String(minGuests));
+  const guestCountValue = parseInt(guestCount, 10);
   const [preferredDate, setPreferredDate] = useState("");
+  const [dateOpen, setDateOpen] = useState(false);
+  const todayDate = new Date(today + "T00:00:00");
+  const selectedDate = preferredDate ? new Date(preferredDate + "T00:00:00") : undefined;
   const [preferredStartTime, setPreferredStartTime] = useState("");
   const [preferredEndTime, setPreferredEndTime] = useState("");
   const [eventSubtypeId, setEventSubtypeId] = useState("");
+  const overnightNote = describeOvernight(selectedDate, preferredStartTime, preferredEndTime);
+  const timeOrderError = describeTimeOrderError(preferredStartTime, preferredEndTime);
   const [additionalReqs, setAdditionalReqs] = useState("");
 
   const openClash =
@@ -147,7 +236,8 @@ export default function PrivateHireForm({
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errors.email = "Please enter a valid email address.";
     }
-    if (phone.trim() && !isValidPhone(phone)) errors.phone = PHONE_ERROR;
+    if (!phone.trim()) errors.phone = "Please enter your phone number.";
+    else if (!isValidPhone(phone)) errors.phone = PHONE_ERROR;
     return errors;
   }
 
@@ -177,22 +267,24 @@ export default function PrivateHireForm({
     if (!preferredStartTime) errors.preferredStartTime = "Please select a start time.";
     if (!preferredEndTime) errors.preferredEndTime = "Please select an end time.";
 
-    if (preferredStartTime && preferredEndTime) {
-      const start = toMinutes(preferredStartTime);
-      const end = toMinutes(preferredEndTime);
-      if (end === start) {
-        errors.preferredEndTime = "End time must be later than the start time.";
-      } else if (end < start && end >= OVERNIGHT_CUTOFF_MINUTES) {
-        errors.preferredEndTime =
-          "End time must be later than the start time, unless the event runs into the early hours.";
-      }
-    }
+    if (timeOrderError) errors.preferredEndTime = timeOrderError;
 
     if (!errors.preferredEndTime && openClashMessage) errors.slot = openClashMessage;
 
     if (!eventSubtypeId) errors.eventSubtypeId = "Please select a reason for hire.";
 
     return errors;
+  }
+
+  function stepGuestCount(direction: 1 | -1) {
+    const stepped = Number.isNaN(guestCountValue)
+      ? minGuests
+      : direction > 0
+        ? Math.floor(guestCountValue / GUEST_STEP) * GUEST_STEP + GUEST_STEP
+        : Math.ceil(guestCountValue / GUEST_STEP) * GUEST_STEP - GUEST_STEP;
+    const next = Math.max(minGuests, Math.min(maxCapacity ?? Infinity, stepped));
+    setGuestCount(String(next));
+    clearFieldError("guestCount");
   }
 
   function handleGuestCountBlur() {
@@ -259,7 +351,7 @@ export default function PrivateHireForm({
         await createPrivateHire({
           full_name: fullName,
           email,
-          phone_no: phone || undefined,
+          phone_no: phone,
           guest_count: count,
           preferred_date: preferredDate || undefined,
           preferred_start_time: preferredStartTime || undefined,
@@ -370,7 +462,7 @@ export default function PrivateHireForm({
               </div>
               <div className="space-y-1">
                 <label htmlFor="ph-phone" className={labelClass}>
-                  Phone
+                  Phone <span className="text-red-500">*</span>
                 </label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
@@ -412,20 +504,44 @@ export default function PrivateHireForm({
                   </div>
                   <input
                     id="ph-guest-count"
-                    type="number"
+                    type="text"
                     inputMode="numeric"
-                    min={minGuests}
-                    max={maxCapacity ?? undefined}
+                    pattern="[0-9]*"
+                    maxLength={4}
                     value={guestCount}
                     onChange={(e) => {
-                      setGuestCount(e.target.value);
+                      setGuestCount(e.target.value.replace(/\D/g, ""));
                       clearFieldError("guestCount");
                     }}
                     onBlur={handleGuestCountBlur}
                     placeholder={`e.g. ${minGuests}`}
                     aria-invalid={!!fieldErrors.guestCount}
-                    className={inputClass(!!fieldErrors.guestCount)}
+                    className={`${inputClass(!!fieldErrors.guestCount)} ${guestCountInputClass}`}
                   />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Fewer guests"
+                      disabled={guestCountValue <= minGuests}
+                      onClick={() => stepGuestCount(-1)}
+                      className={stepperButtonClass}
+                    >
+                      <Minus />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="More guests"
+                      disabled={maxCapacity !== null && guestCountValue >= maxCapacity}
+                      onClick={() => stepGuestCount(1)}
+                      className={stepperButtonClass}
+                    >
+                      <Plus />
+                    </Button>
+                  </div>
                 </div>
                 <FieldError message={fieldErrors.guestCount} />
               </div>
@@ -438,25 +554,49 @@ export default function PrivateHireForm({
                 <label htmlFor="ph-date" className={labelClass}>
                   Date <span className="text-red-500">*</span>
                 </label>
-                <div className="group relative">
-                  <div className={iconContainerClass}>
-                    <Calendar className={iconClass} />
+                <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                  <div className="group relative">
+                    <div className={iconContainerClass}>
+                      <CalendarIcon className={iconClass} />
+                    </div>
+                    <PopoverTrigger asChild>
+                      <button
+                        id="ph-date"
+                        type="button"
+                        aria-describedby={fieldErrors.preferredDate ? "ph-date-error" : undefined}
+                        className={`${inputClass(!!fieldErrors.preferredDate)} ${dateTriggerClass}`}
+                      >
+                        {selectedDate ? (
+                          format(selectedDate, "EEE d MMM yyyy")
+                        ) : (
+                          <span className="text-stone-700">Pick a date</span>
+                        )}
+                      </button>
+                    </PopoverTrigger>
                   </div>
-                  <input
-                    id="ph-date"
-                    title="Select a date"
-                    type="date"
-                    min={today}
-                    value={preferredDate}
-                    onChange={(e) => {
-                      setPreferredDate(e.target.value);
-                      clearFieldError("preferredDate");
-                    }}
-                    aria-invalid={!!fieldErrors.preferredDate}
-                    className={`${inputClass(!!fieldErrors.preferredDate)} ${dateTimeInputClass}`}
-                  />
-                </div>
-                <FieldError message={fieldErrors.preferredDate} />
+                  <PopoverContent
+                    align="start"
+                    style={calendarThemeVars}
+                    className="w-auto rounded-2xl border-white/10 bg-[#26300D] p-2 text-white shadow-xl"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setPreferredDate(format(date, "yyyy-MM-dd"));
+                        clearFieldError("preferredDate");
+                        setDateOpen(false);
+                      }}
+                      disabled={{ before: todayDate }}
+                      startMonth={startOfMonth(todayDate)}
+                      defaultMonth={selectedDate ?? todayDate}
+                      autoFocus
+                      className="bg-transparent p-1 text-white [--cell-size:2.375rem] sm:[--cell-size:2.5rem]"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FieldError id="ph-date-error" message={fieldErrors.preferredDate} />
               </div>
             </div>
 
@@ -469,15 +609,11 @@ export default function PrivateHireForm({
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
-                  <input
+                  <TimeSelect
                     id="ph-start-time"
-                    title="Start time"
-                    type="time"
-                    step={900}
                     value={preferredStartTime}
-                    onChange={(e) => handleStartTimeChange(e.target.value)}
-                    aria-invalid={!!fieldErrors.preferredStartTime}
-                    className={`${inputClass(!!fieldErrors.preferredStartTime)} ${dateTimeInputClass}`}
+                    onChange={handleStartTimeChange}
+                    hasError={!!fieldErrors.preferredStartTime}
                   />
                 </div>
                 <FieldError message={fieldErrors.preferredStartTime} />
@@ -490,24 +626,29 @@ export default function PrivateHireForm({
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
-                  <input
+                  <TimeSelect
                     id="ph-end-time"
-                    title="End time"
-                    type="time"
-                    step={900}
                     value={preferredEndTime}
-                    onChange={(e) => {
-                      setPreferredEndTime(e.target.value);
+                    onChange={(value) => {
+                      setPreferredEndTime(value);
                       clearFieldError("preferredEndTime");
                     }}
-                    aria-invalid={!!fieldErrors.preferredEndTime}
-                    className={`${inputClass(!!fieldErrors.preferredEndTime)} ${dateTimeInputClass}`}
+                    hasError={!!fieldErrors.preferredEndTime}
                   />
                 </div>
-                <FieldError message={fieldErrors.preferredEndTime} />
+                <FieldError
+                  message={fieldErrors.preferredEndTime === timeOrderError ? undefined : fieldErrors.preferredEndTime}
+                />
               </div>
             </div>
-            <FieldError id="ph-slot-error" message={openClashMessage} />
+            <FieldError id="ph-time-error" message={timeOrderError} />
+            {overnightNote && (
+              <p className="ml-1 flex items-start gap-1.5 text-xs leading-relaxed text-ink-2">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" aria-hidden="true" />
+                <span>{overnightNote}</span>
+              </p>
+            )}
+            <FieldError id="ph-slot-error" message={timeOrderError ? undefined : openClashMessage} />
 
             <div className="space-y-1">
               <label htmlFor="ph-reason" className={labelClass}>
@@ -517,25 +658,28 @@ export default function PrivateHireForm({
                 <div className={iconContainerClass}>
                   <Tag className={iconClass} />
                 </div>
-                <select
-                  id="ph-reason"
-                  title="Reason for Hire"
+                <Select
                   value={eventSubtypeId}
-                  onChange={(e) => {
-                    setEventSubtypeId(e.target.value);
+                  onValueChange={(value) => {
+                    setEventSubtypeId(value);
                     clearFieldError("eventSubtypeId");
                   }}
-                  aria-invalid={!!fieldErrors.eventSubtypeId}
-                  className={`${inputClass(!!fieldErrors.eventSubtypeId)} cursor-pointer appearance-none pr-10`}
                 >
-                  <option value="">Select a reason</option>
-                  {subtypes.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {privateHireSubtypeLabel(s)}
-                    </option>
-                  ))}
-                </select>
-                <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+                  <SelectTrigger
+                    id="ph-reason"
+                    aria-invalid={!!fieldErrors.eventSubtypeId}
+                    className={`${inputClass(!!fieldErrors.eventSubtypeId)} ${selectTriggerClass}`}
+                  >
+                    <SelectValue placeholder="Select a reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subtypes.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {privateHireSubtypeLabel(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <FieldError message={fieldErrors.eventSubtypeId} />
             </div>
@@ -612,7 +756,9 @@ export default function PrivateHireForm({
             type="button"
             onClick={handleNext}
             disabled={step === 2 && !!openClashMessage}
-            aria-describedby={step === 2 && openClashMessage ? "ph-slot-error" : undefined}
+            aria-describedby={
+              step !== 2 ? undefined : timeOrderError ? "ph-time-error" : openClashMessage ? "ph-slot-error" : undefined
+            }
             className={`${stepPrimaryButtonClass} ${stepComplete ? "" : incompleteButtonClass}`}
           >
             Next

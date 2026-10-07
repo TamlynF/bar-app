@@ -28,7 +28,7 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
 export interface PrivateHireData {
   full_name: string;
   email: string;
-  phone_no?: string;
+  phone_no: string;
   guest_count: number;
   preferred_date?: string;
   preferred_start_time?: string;
@@ -38,7 +38,8 @@ export interface PrivateHireData {
 }
 
 export async function createPrivateHire(data: PrivateHireData) {
-  if (data.phone_no?.trim() && !isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
+  if (!data.phone_no?.trim()) throw new Error("Please enter your phone number.");
+  if (!isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
   const start = toMinutes(data.preferred_start_time);
   const end = toMinutes(data.preferred_end_time);
   if (data.preferred_date && start != null && end != null) {
