@@ -12,6 +12,11 @@ import { swatchHexFromColor } from "@/lib/event-type-colors";
 export const metadata = {
   title: "Book",
   description: "Book a table, a band slot, or a private event at Don Fenticas.",
+  openGraph: {
+    title: "Book a night at Don Fenticas",
+    description: "Quiz tables, music bingo, live gigs and private hire.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 type CardSource = {

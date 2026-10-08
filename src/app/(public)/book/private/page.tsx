@@ -8,6 +8,11 @@ import { readBookingArrival } from "@/lib/meta/booking-arrival";
 export const metadata = {
   title: "Private Hire",
   description: "Book Don Fenticas for your private event.",
+  openGraph: {
+    title: "Private hire at Don Fenticas",
+    description: "Birthdays, work dos and engagements. Pick a date and we'll come back with times.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

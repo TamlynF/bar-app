@@ -11,6 +11,11 @@ import { readBookingArrival } from "@/lib/meta/booking-arrival";
 export const metadata = {
   title: "Book the Stage",
   description: "Apply to perform live at Don Fenticas.",
+  openGraph: {
+    title: "Play on stage at Don Fenticas",
+    description: "Tell us about your act and the nights that suit you.",
+  },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

@@ -250,6 +250,8 @@ The booking pages share a public dark theme but each has its own logic:
 - `/book/group/[scope]/[id]` - grouped booking (pick a date within a type or sub-type); the quiz and Music Bingo book here. The old `/book/bingo` and `/book/quiz` forms are gone: `next.config.ts` redirects `/book/bingo/manage-booking/:id` and `/book/quiz/manage-booking/:id` → `/manage-booking/:id` and any other `/book/bingo` path → `/book`, and `/book/quiz` is a server redirect to the next bookable quiz's page (`src/lib/quiz-booking-link.ts`, also behind the home page's "Book for the quiz" buttons)
 - `/manage-booking/[id]` - public self-service (view, modify, cancel)
 
+Every booking page carries its own Open Graph card for links pasted into Instagram, WhatsApp and the like: `openGraph.title`/`description` in the page's metadata, plus an `opengraph-image.tsx` (and a `twitter-image.tsx` re-export) next to it that calls `bookingBanner(kicker)` in `src/lib/og/booking-banner.tsx` - a 1200x360 olive strip with a faint tiled `df` pattern, the kicker ("Play on stage at", "Music Bingo at", the event's title) in Archivo and the wordmark from `public/df-wordmark.svg` under it, rendered by `next/og` with the TTFs vendored in `src/lib/og/fonts/`. The dynamic pages (`event/[id]`, `group/[scope]/[id]`) read the kicker from a `heading.ts` beside the page so the card title and the image never disagree. Chat apps cache a card the first time a link is shared, so after changing a banner run the link through Facebook's sharing debugger.
+
 ---
 
 ## Common pitfalls - known issues to avoid

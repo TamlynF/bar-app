@@ -2,6 +2,7 @@ import React from "react";
 import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { eventHeading } from "./heading";
 import EventBookingForm from "./_components/event-booking-form";
 import {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -27,16 +28,14 @@ export const viewport: Viewport = {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: event } = await supabase
-    .from("events")
-    .select("title")
-    .eq("id", id)
-    .maybeSingle();
+  const { title, when } = await eventHeading(id);
+  const description = when ? `${when}. Book your spot at Don Fenticas.` : "Book your spot at Don Fenticas.";
 
   return {
-    title: event?.title ? `${event.title} | Don Fenticas` : "Book Event | Don Fenticas",
-    description: "Book your spot at Don Fenticas.",
+    title: `${title} | Don Fenticas`,
+    description,
+    openGraph: { title: `${title} at Don Fenticas`, description },
+    twitter: { card: "summary_large_image" },
   };
 }
 

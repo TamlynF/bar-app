@@ -1,4 +1,5 @@
 import React from 'react'
+import { bookingGroupHeading } from './heading'
 import type { Viewport } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -129,10 +130,15 @@ export async function generateMetadata ({
 }) {
   const { scope, id } = await params
   if (!isScope(scope)) return { title: 'Book' }
-  const header = await loadHeader(scope, id)
+  const heading = await bookingGroupHeading(scope, id)
   return {
-    title: `${header.title} | Don Fenticas`,
-    description: `Book your spot at Don Fenticas.`
+    title: `${heading} | Don Fenticas`,
+    description: `Book your spot at Don Fenticas.`,
+    openGraph: {
+      title: `${heading} at Don Fenticas`,
+      description: 'Pick a date and book your table.'
+    },
+    twitter: { card: 'summary_large_image' }
   }
 }
 
