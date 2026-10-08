@@ -17,6 +17,7 @@ import { DealsStrip } from "@/components/home/deals-strip";
 import { MerchGrid } from "@/components/home/merch-grid";
 import { GalleryStrip } from "@/components/home/gallery-strip";
 import { InstagramStrip } from "@/components/home/instagram-strip";
+import { InstallAppCard } from "@/components/home/install-app-card";
 import { INSTAGRAM_PROFILE_URL, loadInstagramFeed } from "@/lib/instagram-feed";
 import { instagramUrl } from "@/lib/company-info";
 import { loadGalleryGroups } from "@/lib/gallery-data";
@@ -124,6 +125,7 @@ async function HomeContent() {
         <Reveal index={1}>
           <DealsStrip specials={specials} />
         </Reveal>
+        <InstallAppCard />
         <Reveal index={2}>
           <GalleryStrip groups={galleryGroups} />
         </Reveal>

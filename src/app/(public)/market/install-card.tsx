@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Compass, Download, EllipsisVertical, Share, SquarePlus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -97,19 +97,51 @@ function StepNumber({ n }: { n: number }) {
   );
 }
 
-function OpenAndNotify({ n }: { n: number }) {
+/* The words around the steps, so the market's alert prompt and the home
+   page's "get the app" card share one set of install instructions. */
+export type InstallCopy = {
+  heading: string;
+  iosIntro: string;
+  androidPromptIntro: string;
+  androidMenuIntro: string;
+  lastStep: ReactNode;
+  dialogTitle: string;
+  dialogDescription: string;
+};
+
+export const MARKET_INSTALL_COPY: InstallCopy = {
+  heading: "Alerts with your phone locked",
+  iosIntro: "On iPhone that needs Market Night on your Home Screen. Three taps:",
+  androidPromptIntro: "Install Market Night and price drops reach your lock screen even with the browser closed.",
+  androidMenuIntro: "Add Market Night to your Home Screen and price drops reach your lock screen even with the browser closed.",
+  lastStep: (
+    <>
+      Open <span className="font-bold text-white">Market Night</span> from the new icon and tap{" "}
+      <span className="font-bold text-white">Notify me</span>.
+    </>
+  ),
+  dialogTitle: "Get alerts on your lock screen",
+  dialogDescription: "How to add Market Night to your phone so price drops reach your lock screen.",
+};
+
+function LastStep({ n, children }: { n: number; children: ReactNode }) {
   return (
     <li className="flex items-start gap-2">
       <StepNumber n={n} />
-      <span>
-        Open <span className="font-bold text-white">Market Night</span> from the new icon and tap{" "}
-        <span className="font-bold text-white">Notify me</span>.
-      </span>
+      <span>{children}</span>
     </li>
   );
 }
 
-export function InstallCard({ target, onClose }: { target: InstallTarget; onClose: () => void }) {
+export function InstallCard({
+  target,
+  onClose,
+  copy = MARKET_INSTALL_COPY,
+}: {
+  target: InstallTarget;
+  onClose: () => void;
+  copy?: InstallCopy;
+}) {
   const { platform, installEvent, install } = target;
   if (platform === null) return null;
 
@@ -127,15 +159,9 @@ export function InstallCard({ target, onClose }: { target: InstallTarget; onClos
         <Download className="h-5 w-5" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-black text-xs tracking-widest text-[#FDCC4B] uppercase">
-          Alerts with your phone locked
-        </p>
+        <p className="font-black text-xs tracking-widest text-[#FDCC4B] uppercase">{copy.heading}</p>
         <p className="mt-1 text-[12px] leading-relaxed text-stone-400">
-          {ios
-            ? "On iPhone that needs Market Night on your Home Screen. Three taps:"
-            : installEvent
-              ? "Install Market Night and price drops reach your lock screen even with the browser closed."
-              : "Add Market Night to your Home Screen and price drops reach your lock screen even with the browser closed."}
+          {ios ? copy.iosIntro : installEvent ? copy.androidPromptIntro : copy.androidMenuIntro}
         </p>
 
         {platform === "ios-safari" && (
@@ -157,7 +183,7 @@ export function InstallCard({ target, onClose }: { target: InstallTarget; onClos
                 <span className="font-bold text-white">Add</span>.
               </span>
             </li>
-            <OpenAndNotify n={3} />
+            <LastStep n={3}>{copy.lastStep}</LastStep>
           </ol>
         )}
 
@@ -183,7 +209,7 @@ export function InstallCard({ target, onClose }: { target: InstallTarget; onClos
                 <span className="font-bold text-white">Add</span>.
               </span>
             </li>
-            <OpenAndNotify n={3} />
+            <LastStep n={3}>{copy.lastStep}</LastStep>
           </ol>
         )}
 
@@ -205,7 +231,7 @@ export function InstallCard({ target, onClose }: { target: InstallTarget; onClos
                 <span className="font-bold text-white">Install</span>.
               </span>
             </li>
-            <OpenAndNotify n={3} />
+            <LastStep n={3}>{copy.lastStep}</LastStep>
           </ol>
         )}
 
@@ -244,10 +270,12 @@ export function InstallDialog({
   target,
   open,
   onOpenChange,
+  copy = MARKET_INSTALL_COPY,
 }: {
   target: InstallTarget;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  copy?: InstallCopy;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -255,11 +283,9 @@ export function InstallDialog({
         showCloseButton={false}
         className="rounded-3xl border-[#FDCC4B]/20 bg-canvas-2 p-0 text-ink"
       >
-        <DialogTitle className="sr-only">Get alerts on your lock screen</DialogTitle>
-        <DialogDescription className="sr-only">
-          How to add Market Night to your phone so price drops reach your lock screen.
-        </DialogDescription>
-        <InstallCard target={target} onClose={() => onOpenChange(false)} />
+        <DialogTitle className="sr-only">{copy.dialogTitle}</DialogTitle>
+        <DialogDescription className="sr-only">{copy.dialogDescription}</DialogDescription>
+        <InstallCard target={target} onClose={() => onOpenChange(false)} copy={copy} />
       </DialogContent>
     </Dialog>
   );
