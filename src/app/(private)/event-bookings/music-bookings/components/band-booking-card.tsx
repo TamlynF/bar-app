@@ -10,12 +10,13 @@ import {
   sendFeeUpdateEmail,
   toggleBandFavorite,
   bandEmailSlotsAction,
+  bandOfferChannelsAction,
   addBandNote,
   updateBandNote,
   deleteBandNote,
   sendInvoiceRequestAction,
 } from "../actions";
-import type { BandStatus } from "../actions";
+import type { BandOfferChannels, BandStatus } from "../actions";
 import {
   ChevronDown,
   ArrowRight,
@@ -90,6 +91,19 @@ import { bandEmailHtml } from "@/lib/band-email-html";
 import type { TemplateSlots } from "@/lib/email/render";
 import { EmailHtmlFrame } from "@/components/admin/correspondence-panel";
 import { BandEmailDialog, type BandEmailDialogConfig, type BandEmailDialogResult } from "./band-email-dialog";
+import { bandOfferMessageText } from "@/lib/band-offer-message";
+import { CHANNEL_LABELS, type MessageChannel } from "@/lib/meta/channels";
+
+/* The channel the offer dialog opens on: the one this thread last used, else
+   the act's preference, as long as Meta still lets us write there. */
+function offerChannel(chat: BandOfferChannels, emailAvailable: boolean): MessageChannel {
+  const open = (c: MessageChannel | null): c is MessageChannel =>
+    c === "email" ? emailAvailable : !!c && chat.channels.some((t) => t.channel === c && t.allowance.mode !== "closed");
+  if (open(chat.lastUsed)) return chat.lastUsed;
+  if (open(chat.preferred)) return chat.preferred;
+  if (emailAvailable) return "email";
+  return chat.channels[0]?.channel ?? "email";
+}
 
 const DEFAULT_START_TIME = "22:00";
 const DEFAULT_END_TIME = "23:30";
@@ -802,7 +816,15 @@ function EmailPreview({
   );
 }
 
-type EmailConfirmation = { ok: boolean; note: string; html: string; files: File[] };
+type EmailConfirmation = {
+  ok: boolean;
+  note: string;
+  html: string;
+  files: File[];
+  channel?: MessageChannel;
+  message?: string;
+  alsoEmail?: boolean;
+};
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -1465,7 +1487,10 @@ export function BandBookingCard({
   ): Promise<EmailConfirmation> {
     /* Fetched rather than composed here, so the preview shows the copy that
        will actually be sent - including anything changed on the settings page. */
-    const slots = await bandEmailSlotsAction(d.kind, request.booker_name, request.group_name);
+    const [slots, chat] = await Promise.all([
+      bandEmailSlotsAction(d.kind, request.booker_name, request.group_name),
+      d.kind === "offered" ? bandOfferChannelsAction(request.id) : null,
+    ]);
     if (!slots) {
       return {
         ok: await confirm({
@@ -1494,6 +1519,24 @@ export function BandBookingCard({
         slots,
         groupName: request.group_name,
         actionsUrl: d.kind === "offered" ? offerPageUrl : undefined,
+        chat:
+          chat && chat.channels.length > 0
+            ? {
+                channels: chat.channels,
+                initial: offerChannel(chat, !!to.trim()),
+                text: bandOfferMessageText({
+                  name: request.booker_name,
+                  groupName: actName || request.group_name,
+                  venueName: chat.venueName,
+                  date: slot.date,
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                  paymentAmount: d.paymentAmount ?? null,
+                  previousPaymentAmount: d.previousPaymentAmount,
+                  offerUrl: offerPageUrl,
+                }),
+              }
+            : undefined,
         build: (note) =>
           buildBandEmail({
             slots,
@@ -1510,7 +1553,15 @@ export function BandBookingCard({
     );
     confirmOpen.current = false;
     setEmailDialog(null);
-    return { ok: result.ok, note: result.text, html: result.html, files: result.files };
+    return {
+      ok: result.ok,
+      note: result.text,
+      html: result.html,
+      files: result.files,
+      channel: result.channel,
+      message: result.message,
+      alsoEmail: result.alsoEmail,
+    };
   }
 
   function handleAction(newStatus: BandStatus) {
@@ -1525,13 +1576,17 @@ export function BandBookingCard({
         const c = await findClashes();
         if (c.length) return;
       }
-      const { ok, note, html, files } = await confirmEmail(newStatus);
+      const { ok, note, html, files, channel, message, alsoEmail } = await confirmEmail(newStatus);
       if (!ok) return;
-      applyStatus(newStatus, note, { html, files });
+      applyStatus(newStatus, note, { html, files, channel, message, alsoEmail });
     }, () => setError("Failed to update. Please try again."));
   }
 
-  function applyStatus(newStatus: BandStatus, note: string, extras?: { html: string; files: File[] }) {
+  function applyStatus(
+    newStatus: BandStatus,
+    note: string,
+    extras?: { html: string; files: File[]; channel?: MessageChannel; message?: string; alsoEmail?: boolean }
+  ) {
     setPendingStage(newStatus);
     startTransition(async () => {
       await attempt(async () => {
@@ -1545,11 +1600,17 @@ export function BandBookingCard({
             selected_end_time: selectedEndTime || null,
           });
         }
+        const onChat = extras?.channel && extras.channel !== "email";
         let emailExtras: FormData | undefined;
-        if (extras && (extras.html || extras.files.length > 0)) {
+        if (extras && (extras.html || extras.files.length > 0 || onChat)) {
           emailExtras = new FormData();
           emailExtras.set("html", extras.html);
           for (const f of extras.files) emailExtras.append("files", f);
+          if (onChat) {
+            emailExtras.set("channel", extras.channel ?? "");
+            emailExtras.set("message", extras.message ?? "");
+            emailExtras.set("alsoEmail", extras.alsoEmail ? "1" : "0");
+          }
         }
         const result = await updateBandStatus(request.id, newStatus, note || undefined, emailExtras, previousFee);
         if (result?.clashes?.length) {
@@ -1561,7 +1622,12 @@ export function BandBookingCard({
         else if (status === "declined") setDeclineReason("");
         const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
         const label = STATUS_TOAST[newStatus];
-        if (emails) {
+        if (result?.messagedOn) {
+          const where = CHANNEL_LABELS[result.messagedOn];
+          if (result.messageError) toast.error(`${label}, but the ${where} message didn't send: ${result.messageError}`);
+          else if (result.emailError) toast.error(`${label} - band messaged on ${where}, but the email didn't send: ${result.emailError}`);
+          else toast.success(extras?.alsoEmail ? `${label} - band messaged on ${where} and emailed` : `${label} - band messaged on ${where}`);
+        } else if (emails) {
           if (result?.emailError) {
             toast.error(`${label}, but the email didn't send: ${result.emailError}`);
           } else {

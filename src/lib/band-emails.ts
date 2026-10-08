@@ -1,7 +1,7 @@
 import { toHHMM } from "@/lib/event-clash";
 import { toParagraphs, type MergeValues, type TemplateSlots } from "@/lib/email/render";
 
-function formatTime12(t?: string | null): string {
+export function formatTime12(t?: string | null): string {
   const hhmm = toHHMM(t);
   if (!hhmm) return "";
   const [hh, mm] = hhmm.split(":");
@@ -11,7 +11,7 @@ function formatTime12(t?: string | null): string {
   return `${h12}:${mm} ${ampm}`;
 }
 
-function formatDateLong(d?: string | null): string {
+export function formatDateLong(d?: string | null): string {
   if (!d) return "";
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {
     weekday: "long",

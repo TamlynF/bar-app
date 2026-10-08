@@ -87,7 +87,7 @@ function ChannelBadge({ channel }: { channel: MessageChannel }) {
 
 /* Email, plus each chat channel the customer has written from. A closed
    channel stays listed so staff can see why a reply there is not possible. */
-function ChannelPicker({
+export function ChannelPicker({
   value,
   emailAvailable,
   channels,

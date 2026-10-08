@@ -6,7 +6,11 @@ import { revalidatePath } from "next/cache";
 import { type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { type ClashEvent } from "@/lib/event-clash";
 import { cleanReplyFragment, htmlToPlainText } from "@/lib/email/correspondence";
-import { type OutboundAttachment } from "@/lib/email/correspondence-data";
+import { loadThreadChannels, type OutboundAttachment } from "@/lib/email/correspondence-data";
+import { CHANNEL_LABELS, isMetaChannel, type MessageChannel } from "@/lib/meta/channels";
+import { sendMetaMessage, venueName } from "@/lib/meta/outbound";
+import { bandOfferQuickReplies } from "@/lib/band-offer-message";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   bandOfferPageUrl,
   bandSlotClashes,
@@ -285,15 +289,32 @@ function reopenedNote(oldReason: string | null | undefined, to: BandStatus): str
     .join(" ");
 }
 
+/* How the offer goes out: the email as standard, or - when the act chats
+   with us on Instagram or Messenger - a message on that channel carrying
+   quick replies, with the email as an optional extra. */
+function offerDelivery(form?: FormData): { channel: MessageChannel; message: string; alsoEmail: boolean } {
+  const channel = form?.get("channel");
+  if (!isMetaChannel(channel)) return { channel: "email", message: "", alsoEmail: true };
+  return { channel, message: String(form?.get("message") ?? ""), alsoEmail: form?.get("alsoEmail") === "1" };
+}
+
+export type BandStatusResult = {
+  emailError: string | null;
+  messageError?: string | null;
+  messagedOn?: MessageChannel;
+  clashes?: ClashEvent[];
+};
+
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
   emailNote?: string,
   emailExtras?: FormData,
   previousPaymentAmount?: number | null
-): Promise<{ emailError: string | null; clashes?: ClashEvent[] }> {
+): Promise<BandStatusResult> {
   const supabase = await createClient();
   const empId = await currentEmployeeId();
+  const delivery = status === "offered" ? offerDelivery(emailExtras) : null;
 
   const { data: before } = await supabase
     .from("band_booking_requests")
@@ -325,7 +346,7 @@ export async function updateBandStatus(
     })
     .eq("id", id)
     .select(
-      "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount, event_id"
+      "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount, event_id, contact_id, music_acts_id"
     )
     .single();
 
@@ -333,6 +354,22 @@ export async function updateBandStatus(
     throw new Error("Failed to update status.");
   }
   await syncBandEvent(supabase, { id, status, record, actorId: empId });
+
+  let messageError: string | null = null;
+  if (delivery && delivery.channel !== "email") {
+    const target = (await loadThreadChannels(supabase, { bandRequestId: id })).find((c) => c.channel === delivery.channel);
+    const sent = target
+      ? await sendMetaMessage(createAdminClient(), {
+          target,
+          text: delivery.message,
+          quickReplies: bandOfferQuickReplies(id),
+          kind: "offered",
+          links: { bandRequestId: id, musicActId: record.music_acts_id, contactId: record.contact_id },
+          sentBy: empId,
+        })
+      : { error: `They haven't messaged on ${CHANNEL_LABELS[delivery.channel]} yet.` };
+    messageError = sent.error;
+  }
 
   const stageNote = reopening
     ? reopenedNote(before?.decline_reason, status)
@@ -347,7 +384,7 @@ export async function updateBandStatus(
   }
 
   let emailError: string | null = null;
-  if (status === "offered" || status === "booked" || status === "declined") {
+  if ((status === "offered" && delivery?.alsoEmail) || status === "booked" || status === "declined") {
     emailError = await sendBandEmail(supabase, status, {
       requestId: id,
       sentBy: empId,
@@ -371,7 +408,43 @@ export async function updateBandStatus(
   revalidatePath("/event-setups/events");
   revalidatePath("/");
 
-  return { emailError };
+  return {
+    emailError,
+    ...(delivery && delivery.channel !== "email" ? { messageError, messagedOn: delivery.channel } : {}),
+  };
+}
+
+export type BandOfferChannels = {
+  channels: Awaited<ReturnType<typeof loadThreadChannels>>;
+  lastUsed: MessageChannel | null;
+  preferred: MessageChannel | null;
+  venueName: string;
+};
+
+/* What the offer dialog needs before it can offer a chat channel: the act's
+   chat channels, the channel this thread last used, and their stated
+   preference from the application form. */
+export async function bandOfferChannelsAction(id: string): Promise<BandOfferChannels> {
+  const supabase = await createClient();
+  const [channels, last, request, venue] = await Promise.all([
+    loadThreadChannels(supabase, { bandRequestId: id }),
+    supabase
+      .from("email_messages")
+      .select("channel")
+      .eq("band_booking_request_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("band_booking_requests").select("preferred_channel").eq("id", id).maybeSingle(),
+    venueName(supabase),
+  ]);
+  const asChannel = (v: unknown): MessageChannel | null => (v === "email" || isMetaChannel(v) ? v : null);
+  return {
+    channels,
+    lastUsed: last.data ? (asChannel(last.data.channel) ?? "email") : null,
+    preferred: asChannel(request.data?.preferred_channel),
+    venueName: venue,
+  };
 }
 
 

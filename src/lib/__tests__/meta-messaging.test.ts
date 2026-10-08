@@ -67,6 +67,15 @@ describe("parseMetaWebhook", () => {
     expect(parseMetaWebhook(null)).toEqual([]);
   });
 
+  it("carries a tapped quick reply's payload", () => {
+    const [m] = parseMetaWebhook({
+      object: "instagram",
+      entry: [{ messaging: [event({ text: "Yes, I accept", quick_reply: { payload: "band_offer:x:accept" } })] }],
+    });
+    expect(m.quickReplyPayload).toBe("band_offer:x:accept");
+    expect(parseMetaWebhook({ object: "page", entry: [{ messaging: [event()] }] })[0].quickReplyPayload).toBeNull();
+  });
+
   it("marks the Page's own outbound copies as echoes", () => {
     const [m] = parseMetaWebhook({ object: "page", entry: [{ messaging: [event({ is_echo: true })] }] });
     expect(m.isEcho).toBe(true);

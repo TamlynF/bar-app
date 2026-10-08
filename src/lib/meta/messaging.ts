@@ -51,6 +51,7 @@ export type InboundMetaMessage = {
   messageId: string;
   text: string;
   attachments: { type: string; url: string | null }[];
+  quickReplyPayload: string | null;
   sentAt: string;
   isEcho: boolean;
 };
@@ -72,6 +73,7 @@ type MetaMessagingEvent = {
     mid?: string;
     text?: string;
     is_echo?: boolean;
+    quick_reply?: { payload?: string };
     attachments?: { type?: string; payload?: { url?: string } }[];
   };
 };
@@ -99,6 +101,7 @@ export function parseMetaWebhook(body: unknown): InboundMetaMessage[] {
           type: a.type ?? "file",
           url: a.payload?.url ?? null,
         })),
+        quickReplyPayload: message.quick_reply?.payload ?? null,
         sentAt: new Date(event.timestamp ?? entry.time ?? Date.now()).toISOString(),
         isEcho: message.is_echo === true,
       });
@@ -109,12 +112,17 @@ export function parseMetaWebhook(body: unknown): InboundMetaMessage[] {
 
 export type MetaSendResult = { ok: true; messageId: string } | { ok: false; error: string };
 
+export type MetaQuickReply = { title: string; payload: string };
+
 /* A plain-text reply to someone who has messaged the Page or the Instagram
    account. Both products share the Send API; the Page token covers both once
-   the Instagram account is linked to the Page. */
+   the Instagram account is linked to the Page. Quick replies are tappable
+   chips under the message - both products allow up to 13, titles of 20
+   characters - that come back through the webhook as a message carrying the
+   chip's payload. */
 export async function sendMetaText(
   env: MetaEnv,
-  p: { recipientId: string; text: string; humanAgent?: boolean }
+  p: { recipientId: string; text: string; humanAgent?: boolean; quickReplies?: MetaQuickReply[] }
 ): Promise<MetaSendResult> {
   const res = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/messages`, {
     method: "POST",
@@ -126,7 +134,12 @@ export async function sendMetaText(
       recipient: { id: p.recipientId },
       messaging_type: p.humanAgent ? "MESSAGE_TAG" : "RESPONSE",
       ...(p.humanAgent ? { tag: "HUMAN_AGENT" } : {}),
-      message: { text: p.text },
+      message: {
+        text: p.text,
+        ...(p.quickReplies?.length
+          ? { quick_replies: p.quickReplies.map((q) => ({ content_type: "text", title: q.title, payload: q.payload })) }
+          : {}),
+      },
     }),
   });
   const json = (await res.json().catch(() => ({}))) as {
