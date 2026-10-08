@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
@@ -88,11 +89,19 @@ import type { TemplateSlots } from "@/lib/email/render";
 import { EmailHtmlFrame } from "@/components/admin/correspondence-panel";
 import { BandEmailDialog, type BandEmailDialogConfig, type BandEmailDialogResult } from "./band-email-dialog";
 
+const DEFAULT_START_TIME = "22:00";
+const DEFAULT_END_TIME = "23:30";
+
 const MAX_VIDEOS = 10;
 
 
 
 const DECLINE_PREVIEW_LEN = 28;
+
+/* shadcn's date-and-time picker pattern: the Input with its native picker
+   icon hidden, sized to sit inside the slot row's bordered box. */
+const TIME_INPUT =
+  "h-auto w-auto appearance-none border-0 bg-transparent p-0 text-[13px] font-semibold text-[#20231A] shadow-none tabular-nums focus-visible:ring-0 md:text-[13px] [&::-webkit-calendar-picker-indicator]:hidden";
 
 interface SocialLinks {
   instagram?: string;
@@ -1160,6 +1169,10 @@ export function BandBookingCard({
   const applyDate = (d: string) => {
     setSelectedDate(d);
     setClashes([]);
+    if (d && !selectedStartTime && !selectedEndTime) {
+      setSelectedStartTime(DEFAULT_START_TIME);
+      setSelectedEndTime(DEFAULT_END_TIME);
+    }
   };
   const applyTimes = (start: string, end: string) => {
     setSelectedStartTime(start);
@@ -1172,7 +1185,7 @@ export function BandBookingCard({
     const times =
       selectedStartTime && selectedEndTime
         ? `The performance times stay ${selectedStartTime} - ${selectedEndTime}.`
-        : "Set the performance times next.";
+        : `The performance times will be set to ${DEFAULT_START_TIME} - ${DEFAULT_END_TIME}, which you can change.`;
     const current = selectedDate
       ? `This replaces ${format(new Date(selectedDate + "T00:00:00"), "EEE d MMM")} as the selected date. `
       : "";
@@ -2313,27 +2326,29 @@ export function BandBookingCard({
                                 : "border-[#D8D5C8]"
                           )}
                         >
-                          <input
+                          <Input
                             ref={startTimeRef}
                             type="time"
+                            step={300}
                             aria-label="Selected start time"
                             value={selectedStartTime}
                             onChange={(e) => {
                               setSelectedStartTime(e.target.value);
                               setClashes([]);
                             }}
-                            className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
+                            className={TIME_INPUT}
                           />
                           <span className="text-xs text-[#5E6654]/50">-</span>
-                          <input
+                          <Input
                             type="time"
+                            step={300}
                             aria-label="Selected end time"
                             value={selectedEndTime}
                             onChange={(e) => {
                               setSelectedEndTime(e.target.value);
                               setClashes([]);
                             }}
-                            className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
+                            className={TIME_INPUT}
                           />
                           {(selectedStartTime || selectedEndTime) && (
                             <button
