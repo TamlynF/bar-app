@@ -719,7 +719,7 @@ function StageStepper({
                 className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 text-[13px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 disabled:pointer-events-none disabled:opacity-50 sm:h-9 lg:flex-initial"
               >
                 <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {primary.next === "booked" ? "Pick a slot to book" : "Fix the slot"}
+                {primary.next === "booked" ? "Pick a slot to book" : "Pick a slot to offer"}
               </button>
             ) : (
               <button
@@ -1103,13 +1103,14 @@ export function BandBookingCard({
   const showEventBadge = !!eventHref || !isWorkingStage;
   const needsDate = isWorkingStage && !selectedDate;
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
+  const slotGoal = status === "offered" ? "book this act" : "send an offer";
   const slotWarning =
     needsDate && needsTime
-      ? "Set a date and time to book this act."
+      ? `Set a date and time to ${slotGoal}.`
       : needsDate
-        ? "Set a date to book this act."
+        ? `Set a date to ${slotGoal}.`
         : needsTime
-          ? "Set a start and end time to book this act."
+          ? `Set a start and end time to ${slotGoal}.`
           : undefined;
   const showSlotWarning = bookAttempted && !!slotWarning;
 
@@ -1502,6 +1503,10 @@ export function BandBookingCard({
     setClashes([]);
     void attempt(async () => {
       if (newStatus === "booked" || newStatus === "offered") {
+        if (slotWarning) {
+          revealSlot();
+          return;
+        }
         const c = await findClashes();
         if (c.length) return;
       }
@@ -2237,7 +2242,7 @@ export function BandBookingCard({
               }}
               onSelect={handleAction}
               pendingStage={pendingStage}
-              blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
+              blockers={{ booked: slotWarning ?? clashWarning, offered: slotWarning ?? clashWarning }}
               onRevealSlot={revealSlot}
               declineReason={declineReason}
               onDeclineReasonChange={setDeclineReason}
