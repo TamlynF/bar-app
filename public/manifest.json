@@ -4,8 +4,8 @@
   "description": "Book your quiz night",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#26300D",
-  "theme_color": "#26300D",
+  "background_color": "#14180a",
+  "theme_color": "#14180a",
   "icons": [
     {
       "src": "/icon-192.png",
