@@ -213,6 +213,14 @@ body {
   overflow-x: clip;
 }
 
+/* The public site is a dark page: saying so lets the browser frame it in
+   dark chrome (iOS Chrome tints its toolbars only for pages it believes
+   are dark) and draws scrollbars and native form controls to match. The
+   admin is cream, so it keeps the default light scheme. */
+html:not(:has([data-admin-shell])) {
+  color-scheme: dark;
+}
+
 /* Admin pages: paint the document itself cream, not just the shell div.
    iOS home-screen apps colour the status bar from the page background, so
    the public olive-black above would otherwise show as a dark band over

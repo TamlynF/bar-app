@@ -86,7 +86,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#14180a", // After Dark: deepened from #26300D
+  /* One entry per colour scheme: iOS Chrome only reads the entry that
+     matches the phone's mode, and tints its toolbar from it. */
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#14180a" },
+    { media: "(prefers-color-scheme: dark)", color: "#14180a" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

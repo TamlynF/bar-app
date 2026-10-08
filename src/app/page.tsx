@@ -16,6 +16,9 @@ import { ComingUpMonths } from "@/components/home/coming-up-months";
 import { DealsStrip } from "@/components/home/deals-strip";
 import { MerchGrid } from "@/components/home/merch-grid";
 import { GalleryStrip } from "@/components/home/gallery-strip";
+import { InstagramStrip } from "@/components/home/instagram-strip";
+import { INSTAGRAM_PROFILE_URL, loadInstagramFeed } from "@/lib/instagram-feed";
+import { instagramUrl } from "@/lib/company-info";
 import { loadGalleryGroups } from "@/lib/gallery-data";
 import { HomeFindUs } from "@/components/home/home-find-us";
 import type { SpecialRow } from "@/components/specials-section";
@@ -43,7 +46,7 @@ async function HomeContent() {
   const today = new Date();
   const todayStr = format(today, "yyyy-MM-dd");
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, galleryGroups, info, quizUrl] =
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawMerchandise }, galleryGroups, info, quizUrl, instagramPosts] =
     await Promise.all([
       supabase
         .from("events")
@@ -68,6 +71,7 @@ async function HomeContent() {
       loadGalleryGroups(supabase),
       getCompanyInfo(),
       quizBookingHref(supabase, today),
+      loadInstagramFeed(),
     ]);
 
   const karaokeUrl =
@@ -124,9 +128,12 @@ async function HomeContent() {
           <GalleryStrip groups={galleryGroups} />
         </Reveal>
         <Reveal index={3}>
-          <MerchGrid items={merchandise} />
+          <InstagramStrip posts={instagramPosts} profileUrl={instagramUrl(info?.instagram) ?? INSTAGRAM_PROFILE_URL} />
         </Reveal>
         <Reveal index={4}>
+          <MerchGrid items={merchandise} />
+        </Reveal>
+        <Reveal index={5}>
           <HomeFindUs info={info} hasMap={hasMap} />
         </Reveal>
       </div>
