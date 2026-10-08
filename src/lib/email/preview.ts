@@ -111,7 +111,7 @@ function bandSampleCard(key: string, slots: RenderedSlots): string {
     return bandCard(slots.cardTitle || "Proposed Slot", "Saturday, 12 September 2026, 8:00 PM – 10:30 PM", "Fee: £250", brand);
   }
   if (key === "band.fee_updated") {
-    return bandCard(slots.cardTitle || "Updated Fee", "Saturday, 12 September 2026, 8:00 PM – 10:30 PM", "Fee: £300", brand);
+    return bandCard(slots.cardTitle || "Updated Fee", "Saturday, 12 September 2026, 8:00 PM – 10:30 PM", "New fee: £300 (was £250)", brand);
   }
   if (key === "band.rescheduled") {
     return bandCard(slots.cardTitle || "New Performance Slot", "Saturday, 12 September 2026", "8:00 PM – 10:30 PM", brand);

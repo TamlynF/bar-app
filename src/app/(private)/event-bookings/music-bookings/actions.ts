@@ -322,7 +322,8 @@ export async function updateBandStatus(
   id: string,
   status: BandStatus,
   emailNote?: string,
-  emailExtras?: FormData
+  emailExtras?: FormData,
+  previousPaymentAmount?: number | null
 ): Promise<{ emailError: string | null; clashes?: ClashEvent[] }> {
   const supabase = await createClient();
   const empId = await currentEmployeeId();
@@ -451,6 +452,7 @@ export async function updateBandStatus(
       startTime: record.selected_start_time,
       endTime: record.selected_end_time,
       paymentAmount: record.payment_amount,
+      previousPaymentAmount,
       notes: emailNote,
       ...(await emailExtrasFrom(emailExtras)),
     });
@@ -493,6 +495,7 @@ async function sendBandEmail(
     startTime: string | null;
     endTime: string | null;
     paymentAmount?: number | null;
+    previousPaymentAmount?: number | null;
     notes?: string | null;
     notesHtml?: string;
     attachments?: OutboundAttachment[];
@@ -512,6 +515,7 @@ async function sendBandEmail(
     startTime: p.startTime,
     endTime: p.endTime,
     paymentAmount: p.paymentAmount,
+    previousPaymentAmount: p.previousPaymentAmount,
     notes: p.notes,
   });
 
@@ -540,6 +544,7 @@ async function sendBandEmail(
 /* Staff changed the fee on an offered or booked act and chose to tell them. */
 export async function sendFeeUpdateEmail(
   id: string,
+  previousPaymentAmount: number | null,
   emailNote?: string,
   emailExtras?: FormData
 ): Promise<{ emailError: string | null }> {
@@ -562,6 +567,7 @@ export async function sendFeeUpdateEmail(
     startTime: record.selected_start_time,
     endTime: record.selected_end_time,
     paymentAmount: record.payment_amount,
+    previousPaymentAmount,
     notes: emailNote,
     ...(await emailExtrasFrom(emailExtras)),
   });

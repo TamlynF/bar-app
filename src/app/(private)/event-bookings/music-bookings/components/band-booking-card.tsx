@@ -114,6 +114,7 @@ type BandDialogConfig = {
   destructive?: boolean;
   kind: BandEmailKind;
   paymentAmount?: number | null;
+  previousPaymentAmount?: number | null;
 };
 
 interface SocialLinks {
@@ -1165,6 +1166,9 @@ export function BandBookingCard({
     paymentAmount !== "" &&
     Number.isFinite(Number(paymentAmount)) &&
     paymentAmount !== (request.payment_amount != null ? String(request.payment_amount) : "");
+  /* The saved fee, only while the sheet holds a different one - the emails
+     say "updated from" it. */
+  const previousFee = feeChanged ? request.payment_amount : null;
   const detailsChanged =
     actName !== (request.group_name ?? "") ||
     reqType !== (request.type ?? "") ||
@@ -1411,6 +1415,7 @@ export function BandBookingCard({
         slotLabel: "Proposed Slot",
         kind: "offered",
         paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
+        previousPaymentAmount: previousFee,
       },
       booked: {
         title: "Book & email band?",
@@ -1481,6 +1486,7 @@ export function BandBookingCard({
             startTime: slot.startTime,
             endTime: slot.endTime,
             paymentAmount: d.paymentAmount,
+            previousPaymentAmount: d.previousPaymentAmount,
             notes: note,
           }),
         resolve,
@@ -1525,7 +1531,7 @@ export function BandBookingCard({
           emailExtras.set("html", extras.html);
           for (const f of extras.files) emailExtras.append("files", f);
         }
-        const result = await updateBandStatus(request.id, newStatus, note || undefined, emailExtras);
+        const result = await updateBandStatus(request.id, newStatus, note || undefined, emailExtras, previousFee);
         if (result?.clashes?.length) {
           setClashes(result.clashes);
           toast.error("This slot now clashes with another event - pick another time.");
@@ -1564,6 +1570,7 @@ export function BandBookingCard({
             placeholder: "Why the fee has changed...",
             kind: "fee_updated",
             paymentAmount: Number(paymentAmount),
+            previousPaymentAmount: previousFee,
           },
           { date: selectedDate || null, startTime: selectedStartTime || null, endTime: selectedEndTime || null },
           email || request.email,
@@ -1587,7 +1594,7 @@ export function BandBookingCard({
             emailExtras.set("html", html);
             for (const f of files) emailExtras.append("files", f);
           }
-          const result = await sendFeeUpdateEmail(request.id, note || undefined, emailExtras);
+          const result = await sendFeeUpdateEmail(request.id, previousFee, note || undefined, emailExtras);
           if (result?.emailError) {
             toast.error(`Fee updated, but the email didn't send: ${result.emailError}`);
           } else {

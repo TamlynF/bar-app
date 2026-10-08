@@ -72,6 +72,8 @@ export function buildBandEmail(p: {
   startTime: string | null;
   endTime: string | null;
   paymentAmount?: number | null;
+  /** The fee saved before this send, when it changed - the card then says so. */
+  previousPaymentAmount?: number | null;
   notes?: string | null;
 }): BandEmail {
   const dateLabel = formatDateLong(p.date);
@@ -96,9 +98,16 @@ export function buildBandEmail(p: {
         ? [dateLabel, timeLabel].filter(Boolean).join(", ")
         : "to be arranged"
       : undefined,
-    feeLabel: (offered || p.kind === "invoice") && p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
+    feeLabel: offered || p.kind === "invoice" ? feeLabel(p.kind, p.paymentAmount, p.previousPaymentAmount) : "",
     noteLabel: p.notes?.trim() || "",
   };
+}
+
+function feeLabel(kind: BandEmailKind, amount?: number | null, previous?: number | null): string {
+  if (amount == null) return "";
+  const changed = previous != null && previous !== amount;
+  if (kind === "fee_updated") return changed ? `New fee: £${amount} (was £${previous})` : `Fee: £${amount}`;
+  return changed ? `Fee: £${amount} (updated from £${previous})` : `Fee: £${amount}`;
 }
 
 /* The heading each email's slot card carries. */

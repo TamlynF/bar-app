@@ -21,6 +21,7 @@ const base = {
 const build = (kind: BandEmailKind, over: Record<string, unknown> = {}) => {
   const p = { ...base, ...over } as typeof base & {
     paymentAmount?: number | null;
+    previousPaymentAmount?: number | null;
     notes?: string | null;
   };
   const scenario = findScenario(bandScenarioKey(kind))!;
@@ -35,6 +36,7 @@ const build = (kind: BandEmailKind, over: Record<string, unknown> = {}) => {
     startTime: p.startTime,
     endTime: p.endTime,
     paymentAmount: p.paymentAmount,
+    previousPaymentAmount: p.previousPaymentAmount,
     notes: p.notes,
   });
 };
@@ -84,6 +86,17 @@ describe("offer email", () => {
   it("shows a fee only when one is given", () => {
     expect(build("offered", { paymentAmount: 100 }).feeLabel).toBe("Fee: £100");
     expect(build("offered", { paymentAmount: null }).feeLabel).toBe("");
+  });
+
+  it("says when the fee changed since it was last saved", () => {
+    expect(build("offered", { paymentAmount: 900, previousPaymentAmount: 800 }).feeLabel).toBe(
+      "Fee: £900 (updated from £800)"
+    );
+    expect(build("offered", { paymentAmount: 900, previousPaymentAmount: 900 }).feeLabel).toBe("Fee: £900");
+    expect(build("offered", { paymentAmount: 900, previousPaymentAmount: null }).feeLabel).toBe("Fee: £900");
+    expect(build("fee_updated", { paymentAmount: 300, previousPaymentAmount: 250 }).feeLabel).toBe(
+      "New fee: £300 (was £250)"
+    );
   });
 
   it("trims the note and drops it when blank", () => {
