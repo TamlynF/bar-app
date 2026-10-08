@@ -6,6 +6,7 @@ import PrivateLayoutClient from "./private-layout-client";
 
 export const viewport: Viewport = {
     themeColor: "#F4F1E8",
+    colorScheme: "light",
 };
 
 /* The admin gets its own manifest so it installs as a separate home-screen
