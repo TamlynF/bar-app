@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isMetaChannel, replyAllowance, type MessageChannel, type MetaChannel } from "@/lib/meta/channels";
+import { bookingLinkFor } from "@/lib/meta/preferred-channel";
 import type { RenderedSlots } from "./design";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -318,9 +319,10 @@ export async function loadThreadChannels(
 ): Promise<ThreadChannel[]> {
   const contactId = await threadContactId(supabase, filter);
   if (!contactId) return [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const { data, error } = await supabase
     .from("contact_channels")
-    .select("channel, external_id, handle, last_inbound_at")
+    .select("id, channel, external_id, handle, last_inbound_at")
     .eq("contact_id", contactId)
     .order("last_inbound_at", { ascending: false });
   if (error) {
@@ -335,7 +337,23 @@ export async function loadThreadChannels(
       handle: (r.handle as string | null) ?? null,
       lastInboundAt: (r.last_inbound_at as string | null) ?? null,
       allowance: replyAllowance(r.channel as MetaChannel, r.last_inbound_at as string | null, now),
+      bookingLink: siteUrl ? bookingLinkFor(siteUrl, r.channel as MetaChannel, r.id as string) : null,
     }));
+}
+
+/* The act's own choice from the booking form, on a band request thread. */
+export async function threadPreferredChannel(
+  supabase: SupabaseClient,
+  filter: CorrespondenceFilter
+): Promise<MessageChannel | null> {
+  if (!("bandRequestId" in filter)) return null;
+  const { data } = await supabase
+    .from("band_booking_requests")
+    .select("preferred_channel")
+    .eq("id", filter.bandRequestId)
+    .maybeSingle();
+  const value = data?.preferred_channel;
+  return value === "email" || isMetaChannel(value) ? (value as MessageChannel) : null;
 }
 
 /* Emails only: the latest inbound email is what a staff reply answers - its

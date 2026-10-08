@@ -73,6 +73,8 @@ export type ThreadChannel = {
   handle: string | null;
   lastInboundAt: string | null;
   allowance: ReplyAllowance;
+  /* The tagged booking link to send on this channel, when the site URL is set. */
+  bookingLink: string | null;
 };
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";

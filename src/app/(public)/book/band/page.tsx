@@ -6,6 +6,27 @@ import { describeBandNights } from "@/lib/band-availability";
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
 import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { parseArrival, type BookingArrival } from "@/lib/meta/preferred-channel";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/* ?via=instagram&c=<contact_channels.id> on a link staff sent from a chat:
+   the form then knows the channel and the handle. A bare ?via= still records
+   where the link was opened from. */
+async function readArrival(params: { via?: string; c?: string }): Promise<BookingArrival | null> {
+  const via = parseArrival(params.via);
+  if (params.c && UUID_RE.test(params.c)) {
+    const { data } = await createAdminClient()
+      .from("contact_channels")
+      .select("id, channel, handle")
+      .eq("id", params.c)
+      .maybeSingle();
+    const channel = parseArrival(data?.channel);
+    if (data && channel) return { channel, handle: (data.handle as string | null) ?? null, channelId: data.id as string };
+  }
+  return via ? { channel: via, handle: null, channelId: null } : null;
+}
 
 export const metadata = {
   title: "Book the Stage",
@@ -16,8 +37,13 @@ export const viewport: Viewport = {
   themeColor: "#26300D",
 };
 
-export default async function BandBookingPage() {
+export default async function BandBookingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ via?: string; c?: string }>;
+}) {
   const supabase = await createClient();
+  const arrival = await readArrival(await searchParams);
 
 
   const { data: subtypeRows } = await supabase
@@ -81,6 +107,7 @@ export default async function BandBookingPage() {
                 availableDates={availableDates}
                 bandNights={describeBandNights(rules)}
                 maxVideoBytes={maxVideoBytes}
+                arrival={arrival}
               />
             </div>
           </div>

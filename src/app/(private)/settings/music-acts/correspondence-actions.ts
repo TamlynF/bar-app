@@ -24,8 +24,9 @@ import {
   loadThreadChannels,
   sendCorrespondenceEmail,
   threadContactId,
+  threadPreferredChannel,
 } from "@/lib/email/correspondence-data";
-import { CHANNEL_LABELS, isMetaChannel, replyAllowance } from "@/lib/meta/channels";
+import { CHANNEL_LABELS, isMetaChannel, replyAllowance, type MessageChannel } from "@/lib/meta/channels";
 import { readMetaEnv, sendMetaText } from "@/lib/meta/messaging";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -47,6 +48,8 @@ export type CorrespondenceThread = {
   bookingNoun?: string;
   /* Messenger / Instagram identities the customer has written from. */
   channels: ThreadChannel[];
+  /* What the act asked for on the booking form, on a band request thread. */
+  preferredChannel: MessageChannel | null;
 };
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -170,13 +173,14 @@ async function linkOptions(
 
 export async function getCorrespondence(filter: CorrespondenceFilter): Promise<CorrespondenceThread> {
   const supabase = await createClient();
-  const [messages, recipient, links, channels] = await Promise.all([
+  const [messages, recipient, links, channels, preferredChannel] = await Promise.all([
     loadCorrespondence(supabase, filter),
     recipientFor(supabase, filter),
     linkOptions(supabase, filter),
     loadThreadChannels(supabase, filter),
+    threadPreferredChannel(supabase, filter),
   ]);
-  return { messages, recipient, repliesEnabled: !!EMAIL_REPLY_DOMAIN, channels, ...links };
+  return { messages, recipient, repliesEnabled: !!EMAIL_REPLY_DOMAIN, channels, preferredChannel, ...links };
 }
 
 /* Moves an email onto another of the act's band bookings or the customer's

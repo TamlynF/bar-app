@@ -13,6 +13,10 @@ import { sendCorrespondenceEmail, resendTemplateAttachments } from "@/lib/email/
 import { isValidPhone, PHONE_ERROR } from "@/lib/phone";
 import { parseMoney } from "@/lib/money-input";
 import { NOTES_MAX_LENGTH } from "@/lib/notes-limit";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { claimContactChannel } from "@/lib/meta/inbound";
+import { instagramHandle, type MessageChannel } from "@/lib/meta/channels";
+import { isReplyChannel, parseArrival, type ArrivalChannel } from "@/lib/meta/preferred-channel";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -44,6 +48,23 @@ export interface BandBookingData {
   video_descriptions?: string[];
   preferred_dates: string[];
   notes?: string;
+  preferred_channel?: MessageChannel;
+  source_channel?: ArrivalChannel | null;
+  source_channel_id?: string | null;
+}
+
+type SourceRow = { id: string; channel: string; contact_id: number | null };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function sourceChannelRow(id: string | null | undefined): Promise<SourceRow | null> {
+  if (!id || !UUID_RE.test(id)) return null;
+  const { data } = await createAdminClient()
+    .from("contact_channels")
+    .select("id, channel, contact_id")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as SourceRow | null) ?? null;
 }
 
 export async function createBandBooking(input: BandBookingData) {
@@ -58,6 +79,16 @@ export async function createBandBooking(input: BandBookingData) {
   const data: BandBookingData = { ...input, payment_amount: paymentAmount ?? undefined, notes: notes || undefined };
 
   if (data.phone_no?.trim() && !isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
+
+  const preferredChannel: MessageChannel = isReplyChannel(data.preferred_channel) ? data.preferred_channel : "email";
+  const sourceRow = await sourceChannelRow(data.source_channel_id);
+  const sourceChannel = parseArrival(data.source_channel) ?? (sourceRow ? parseArrival(sourceRow.channel) : null);
+  if (preferredChannel === "instagram" && !instagramHandle(data.social_links.instagram)) {
+    throw new Error("Add your Instagram handle to be contacted on Instagram, or pick another option.");
+  }
+  if (preferredChannel === "messenger" && sourceRow?.channel !== "messenger") {
+    throw new Error("Messenger is only available when you opened this form from your Messenger chat with us.");
+  }
   const videoUrls = data.video_urls.map((u) => u.trim()).filter(Boolean);
   if (videoUrls.length === 0) {
     throw new Error("Please add at least one performance video.");
@@ -122,6 +153,9 @@ export async function createBandBooking(input: BandBookingData) {
         status: "new",
         payment_status: "no_payment",
         music_acts_id: musicActId,
+        preferred_channel: preferredChannel,
+        source_channel: sourceChannel,
+        source_channel_id: sourceRow?.id ?? null,
       },
     ])
     .select("id")
@@ -133,6 +167,14 @@ export async function createBandBooking(input: BandBookingData) {
   }
 
   await Promise.allSettled([
+    sourceRow && contactId
+      ? claimContactChannel(createAdminClient(), sourceRow.id, {
+          contactId,
+          bandRequestId: record.id,
+          musicActId,
+          instagramHandle: instagramHandle(data.social_links.instagram),
+        })
+      : Promise.resolve(),
     sendBookerEmail(supabase, record.id, data.booker_name, data.email),
     sendAdminEmail(supabase, data, record.id),
   ]);

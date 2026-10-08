@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import {
   AlertCircle,
   ChevronDown,
+  Copy,
   ImageOff,
   Link2,
   Loader2,
@@ -565,7 +566,26 @@ export function CorrespondencePanel({
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [channel, setChannel] = useState<MessageChannel>("email");
+  const [channelChoice, setChannelChoice] = useState<MessageChannel | null>(null);
+  const bookingLinkRef = useRef<HTMLSpanElement>(null);
+
+  /* The clipboard can be refused (an embedded browser, a denied permission),
+     so the link is also shown and gets selected for a manual copy. */
+  function copyBookingLink(link: string) {
+    navigator.clipboard.writeText(link).then(
+      () => toast.success("Booking link copied - paste it into your message"),
+      () => {
+        const span = bookingLinkRef.current;
+        if (span) {
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          window.getSelection()?.removeAllRanges();
+          window.getSelection()?.addRange(range);
+        }
+        toast.error("Couldn't copy automatically - the link below is selected, press Ctrl+C");
+      }
+    );
+  }
   const [isSending, startSending] = useTransition();
   const [relinkingId, setRelinkingId] = useState<string | null>(null);
   const markedFor = useRef<string | null>(null);
@@ -655,9 +675,19 @@ export function CorrespondencePanel({
   const hasInbound = messages.some((m) => m.direction === "inbound");
   const who = counterpartName?.trim();
   const chatChannels = thread?.channels ?? [];
-  /* Email unless the customer has no address and has written on a chat channel. */
-  const replyChannel: MessageChannel =
-    channel === "email" && !thread?.recipient && chatChannels[0] ? chatChannels[0].channel : channel;
+  /* Staff's pick for this thread, else the act's preferred channel while Meta
+     still allows it, else email, else the chat channel they wrote on. */
+  const preferredOpen =
+    thread?.preferredChannel === "email"
+      ? !!thread.recipient
+      : chatChannels.some((c) => c.channel === thread?.preferredChannel && c.allowance.mode !== "closed");
+  const autoChannel: MessageChannel =
+    thread?.preferredChannel && preferredOpen
+      ? thread.preferredChannel
+      : thread?.recipient || !chatChannels[0]
+        ? "email"
+        : chatChannels[0].channel;
+  const replyChannel: MessageChannel = channelChoice ?? autoChannel;
   const chat = chatChannels.find((c) => c.channel === replyChannel) ?? null;
   const chatClosed = chat?.allowance.mode === "closed" ? chat.allowance.reason : null;
 
@@ -727,12 +757,33 @@ export function CorrespondencePanel({
       {editable && thread && (
         <div className="space-y-2 border-t border-admin-line p-3 sm:p-4">
           {chatChannels.length > 0 && (
-            <ChannelPicker
-              value={replyChannel}
-              emailAvailable={!!thread.recipient}
-              channels={chatChannels}
-              onChange={setChannel}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <ChannelPicker
+                value={replyChannel}
+                emailAvailable={!!thread.recipient}
+                channels={chatChannels}
+                onChange={setChannelChoice}
+              />
+              {chat?.bookingLink && (
+                <button
+                  type="button"
+                  onClick={() => copyBookingLink(chat.bookingLink ?? "")}
+                  className="flex h-9 items-center gap-1.5 rounded-lg border border-admin-line bg-white px-3 text-[12px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface max-sm:h-11"
+                >
+                  <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  Copy booking link
+                </button>
+              )}
+            </div>
+          )}
+          {chat?.bookingLink && (
+            <p className="text-[11px] leading-snug break-all text-admin-muted">
+              Booking link for {CHANNEL_LABELS[chat.channel]}, which fills in their handle and sets {CHANNEL_LABELS[chat.channel]} as
+              their preferred channel:{" "}
+              <span ref={bookingLinkRef} className="font-mono text-admin-ink select-all">
+                {chat.bookingLink}
+              </span>
+            </p>
           )}
           {chat ? (
             <EmailComposer

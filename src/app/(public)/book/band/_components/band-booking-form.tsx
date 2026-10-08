@@ -25,6 +25,13 @@ import { SpotifyArtistField } from "./spotify-artist-field";
 import { SocialLinksField, type SocialLinks } from "./social-links-field";
 import { VideoLinksField, type VideoLinkEntry } from "./video-links-field";
 import { socialUrl, type SocialPlatform } from "@/lib/social-links";
+import { SiInstagram, SiMessenger } from "react-icons/si";
+import type { MessageChannel } from "@/lib/meta/channels";
+import {
+  defaultPreferredChannel,
+  preferredChannelOptions,
+  type BookingArrival,
+} from "@/lib/meta/preferred-channel";
 import type { SpotifyArtist } from "@/lib/spotify-artists";
 import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
 import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
@@ -71,6 +78,7 @@ interface BandBookingFormProps {
   availableDates: string[];
   bandNights: string;
   maxVideoBytes: number;
+  arrival?: BookingArrival | null;
 }
 
 const calendarThemeVars = {
@@ -174,6 +182,7 @@ export default function BandBookingForm({
   availableDates,
   bandNights,
   maxVideoBytes,
+  arrival = null,
 }: BandBookingFormProps) {
   const maxVideoMb = megabytes(maxVideoBytes);
   const [isPending, startTransition] = useTransition();
@@ -194,7 +203,16 @@ export default function BandBookingForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>({});
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(
+    arrival?.channel === "instagram" && arrival.handle ? { instagram: arrival.handle } : {}
+  );
+  const [preferredChoice, setPreferredChoice] = useState<MessageChannel | null>(null);
+  const preferredOptions = preferredChannelOptions({ email, instagram: socialLinks.instagram, arrival });
+  const chosenOption = preferredOptions.find((o) => o.channel === preferredChoice);
+  const preferredChannel: MessageChannel = chosenOption?.available
+    ? chosenOption.channel
+    : defaultPreferredChannel(preferredOptions, arrival);
+  const preferredDetail = preferredOptions.find((o) => o.channel === preferredChannel)?.detail ?? null;
   const [spotifyArtist, setSpotifyArtist] = useState<SpotifyArtist | null>(null);
   const [spotifyMatchedFor, setSpotifyMatchedFor] = useState("");
   const [spotifyAutoPicked, setSpotifyAutoPicked] = useState(false);
@@ -380,6 +398,9 @@ export default function BandBookingForm({
           video_descriptions: videoDescriptions,
           preferred_dates: sortedDates.map((d) => format(d, "yyyy-MM-dd")),
           notes: notes || undefined,
+          preferred_channel: preferredChannel,
+          source_channel: arrival?.channel ?? null,
+          source_channel_id: arrival?.channelId ?? null,
         });
         setSubmitted(true);
       } catch (err) {
@@ -865,6 +886,30 @@ export default function BandBookingForm({
                   className={`${shadcnFieldClass} max-h-60 min-h-28 resize-none overflow-y-auto leading-relaxed [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]`}
                 />
               </IconField>
+            </div>
+
+            <div className="sm:pt-2">
+              <label className={labelClass}>How should we get in touch?</label>
+              <IconField icon={preferredChannel === "instagram" ? SiInstagram : preferredChannel === "messenger" ? SiMessenger : Mail}>
+                <Select value={preferredChannel} onValueChange={(v) => setPreferredChoice(v as MessageChannel)}>
+                  <SelectTrigger aria-label="How should we get in touch?" className={`${iconInputClass} [&>svg]:h-5 [&>svg]:w-5 [&>svg]:text-ink-2`}>
+                    <SelectValue>{preferredOptions.find((o) => o.channel === preferredChannel)?.label}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preferredOptions.map((o) => (
+                      <SelectItem key={o.channel} value={o.channel} disabled={!o.available}>
+                        {o.label}
+                        {o.detail ? ` · ${o.detail}` : o.why ? ` · ${o.why}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </IconField>
+              <p className="mt-2 text-xs leading-relaxed text-ink-2">
+                {preferredDetail
+                  ? `We'll reply to ${preferredDetail}.`
+                  : "Pick where you'd like our replies to go."}
+              </p>
             </div>
           </>
         )}

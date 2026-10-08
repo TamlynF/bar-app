@@ -83,6 +83,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
 import { toHHMM, type ClashEvent } from "@/lib/event-clash";
+import { describePreferredChannel, isReplyChannel } from "@/lib/meta/preferred-channel";
 import { type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
 import { bandEmailHtml } from "@/lib/band-email-html";
@@ -157,6 +158,8 @@ export interface BandRequest {
   band_notes_list?: BandNote[] | null;
   status: string;
   decline_reason: string | null;
+  preferred_channel?: string | null;
+  source_channel?: string | null;
   created_at: string;
   payment_amount: number | null;
   paid_amount: number | null;
@@ -2744,6 +2747,13 @@ export function BandBookingCard({
               <div className="min-w-0 space-y-4 sm:space-y-5">
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
+                <SheetRow
+                  label="Prefers"
+                  value={describePreferredChannel(
+                    isReplyChannel(request.preferred_channel) ? request.preferred_channel : "email",
+                    { email, instagram: socialLinks.instagram }
+                  )}
+                />
                 {showContactDetails && (
                   <>
                     <EditRow

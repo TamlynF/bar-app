@@ -12,12 +12,12 @@ type Identity = {
   name: string | null;
 };
 
-type ChannelRow = { contact_id: number; handle: string | null; display_name: string | null };
+type ChannelRow = { id: string; contact_id: number | null; handle: string | null; display_name: string | null };
 
 async function knownChannel(admin: SupabaseClient, channel: MetaChannel, externalId: string): Promise<ChannelRow | null> {
   const { data } = await admin
     .from("contact_channels")
-    .select("contact_id, handle, display_name")
+    .select("id, contact_id, handle, display_name")
     .eq("channel", channel)
     .eq("external_id", externalId)
     .maybeSingle();
@@ -39,7 +39,9 @@ async function requestByInstagram(admin: SupabaseClient, username: string): Prom
   const row = (data ?? []).find(
     (r) => instagramHandle((r.social_links as { instagram?: string } | null)?.instagram) === username
   );
-  return row ? { id: row.id as string, contact_id: row.contact_id as number | null, music_acts_id: row.music_acts_id as string | null } : null;
+  return row
+    ? { id: row.id as string, contact_id: row.contact_id as number | null, music_acts_id: row.music_acts_id as string | null }
+    : null;
 }
 
 /* A Messenger sender only gives a name, so it is matched to a contact when
@@ -63,7 +65,7 @@ async function latestRequestForContact(admin: SupabaseClient, contactId: number)
 
 async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessage): Promise<Identity> {
   const known = await knownChannel(admin, m.channel, m.senderId);
-  if (known) {
+  if (known?.contact_id) {
     const request = await latestRequestForContact(admin, known.contact_id);
     return {
       contactId: known.contact_id,
@@ -74,13 +76,22 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
     };
   }
 
-  const profile = await fetchMetaProfile(env, m.channel, m.senderId);
+  const profile =
+    known?.handle || known?.display_name
+      ? { name: known.display_name, username: known.handle }
+      : await fetchMetaProfile(env, m.channel, m.senderId);
   const handle = m.channel === "instagram" ? instagramHandle(profile.username) : null;
 
   if (handle) {
     const request = await requestByInstagram(admin, handle);
     if (request) {
-      return { contactId: request.contact_id, bandRequestId: request.id, musicActId: request.music_acts_id, handle, name: profile.name };
+      return {
+        contactId: request.contact_id,
+        bandRequestId: request.id,
+        musicActId: request.music_acts_id,
+        handle,
+        name: profile.name,
+      };
     }
   }
 
@@ -89,21 +100,73 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
   return { contactId, bandRequestId: request?.id ?? null, musicActId: request?.music_acts_id ?? null, handle, name: profile.name };
 }
 
-async function rememberChannel(admin: SupabaseClient, m: InboundMetaMessage, who: Identity) {
-  if (!who.contactId) return;
-  const { error } = await admin.from("contact_channels").upsert(
-    {
-      contact_id: who.contactId,
-      channel: m.channel,
-      external_id: m.senderId,
-      handle: who.handle,
-      display_name: who.name,
-      last_inbound_at: m.sentAt,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "channel,external_id" }
-  );
+/* Every sender is remembered, matched or not: an unmatched row is what the
+   booking link later points at, so the application can claim it. */
+async function rememberChannel(admin: SupabaseClient, m: InboundMetaMessage, who: Identity): Promise<string | null> {
+  const { data, error } = await admin
+    .from("contact_channels")
+    .upsert(
+      {
+        contact_id: who.contactId,
+        channel: m.channel,
+        external_id: m.senderId,
+        handle: who.handle,
+        display_name: who.name,
+        last_inbound_at: m.sentAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "channel,external_id" }
+    )
+    .select("id")
+    .maybeSingle();
   if (error) console.error("[meta inbound] contact channel upsert failed:", error.code, error.message);
+  return (data?.id as string | undefined) ?? null;
+}
+
+/* Messages that arrived before the sender was matched are pulled onto the
+   contact and application now that they are. */
+export async function relinkSenderMessages(
+  admin: SupabaseClient,
+  channel: MetaChannel,
+  senderId: string,
+  links: { contactId: number; bandRequestId: string | null; musicActId: string | null }
+): Promise<void> {
+  const { error } = await admin
+    .from("email_messages")
+    .update({
+      contact_id: links.contactId,
+      band_booking_request_id: links.bandRequestId,
+      music_act_id: links.musicActId,
+    })
+    .eq("channel", channel)
+    .eq("sender_id", senderId)
+    .is("contact_id", null);
+  if (error) console.error("[meta inbound] relink failed:", error.code, error.message);
+}
+
+/* Called when an application is submitted from a tagged booking link: the
+   sender row becomes the contact's, and their earlier messages follow. */
+export async function claimContactChannel(
+  admin: SupabaseClient,
+  channelRowId: string,
+  links: { contactId: number; bandRequestId: string; musicActId: string | null; instagramHandle?: string | null }
+): Promise<void> {
+  const { data: row } = await admin
+    .from("contact_channels")
+    .select("id, channel, external_id, contact_id, handle")
+    .eq("id", channelRowId)
+    .maybeSingle();
+  if (!row || (row.contact_id && row.contact_id !== links.contactId)) return;
+  const { error } = await admin
+    .from("contact_channels")
+    .update({
+      contact_id: links.contactId,
+      handle: (row.handle as string | null) ?? (row.channel === "instagram" ? (links.instagramHandle ?? null) : null),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", channelRowId);
+  if (error) console.error("[meta inbound] claim failed:", error.code, error.message);
+  await relinkSenderMessages(admin, row.channel as MetaChannel, row.external_id as string, links);
 }
 
 function bodyText(m: InboundMetaMessage): string {
@@ -121,6 +184,13 @@ export async function storeInboundMetaMessage(env: MetaEnv, m: InboundMetaMessag
   const admin = createAdminClient();
   const who = await identify(admin, env, m);
   await rememberChannel(admin, m, who);
+  if (who.contactId) {
+    await relinkSenderMessages(admin, m.channel, m.senderId, {
+      contactId: who.contactId,
+      bandRequestId: who.bandRequestId,
+      musicActId: who.musicActId,
+    });
+  }
 
   const { error } = await admin.from("email_messages").insert({
     band_booking_request_id: who.bandRequestId,
@@ -130,6 +200,7 @@ export async function storeInboundMetaMessage(env: MetaEnv, m: InboundMetaMessag
     kind: "message",
     channel: m.channel,
     external_id: m.messageId,
+    sender_id: m.senderId,
     sender_name: who.name,
     from_address: channelAddress(m.channel, m.senderId, who.handle),
     to_addresses: [],
