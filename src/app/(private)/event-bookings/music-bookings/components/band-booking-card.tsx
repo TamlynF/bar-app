@@ -136,7 +136,7 @@ export interface BandRequest {
   band_notes: string | null;
   band_notes_list?: BandNote[] | null;
   status: string;
-  admin_notes: string | null;
+  decline_reason: string | null;
   created_at: string;
   payment_amount: number | null;
   paid_amount: number | null;
@@ -972,7 +972,7 @@ export function BandBookingCard({
     confirmOpen.current = false;
     return ok;
   }
-  const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
+  const [declineReason, setDeclineReason] = useState(request.decline_reason || "");
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
@@ -1072,9 +1072,9 @@ export function BandBookingCard({
   const showSlotWarning = bookAttempted && !!slotWarning;
 
   const isDeclined = status === "declined";
-  const declineReason = adminNotes.trim();
-  const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
-  const declineHead = declineReason.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
+  const reasonText = declineReason.trim();
+  const declineIsLong = reasonText.length > DECLINE_PREVIEW_LEN;
+  const declineHead = reasonText.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
 
   const clashCheckReady = !(status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime);
   const visibleClashes = clashCheckReady ? clashes : [];
@@ -1136,7 +1136,7 @@ export function BandBookingCard({
     JSON.stringify(normalizeSocials(socialLinks)) !== JSON.stringify(normalizeSocials(request.social_links)) ||
     spotifyUrl !== (request.spotify_url ?? "") ||
     videosChanged ||
-    adminNotes !== (request.admin_notes ?? "");
+    declineReason !== (request.decline_reason ?? "");
   const hasChanges = detailsChanged || dateTimeChanged;
 
   const detailFields = () => ({
@@ -1157,7 +1157,7 @@ export function BandBookingCard({
     bank_account_no: bankAccountNo || null,
     bank_sort_code: bankSortCode || null,
     bank_payment_ref: bankPaymentRef || null,
-    admin_notes: adminNotes || null,
+    decline_reason: declineReason || null,
   });
 
   const applyDate = (d: string) => {
@@ -1254,7 +1254,7 @@ export function BandBookingCard({
     setSelectedDate(request.selected_date || "");
     setSelectedStartTime(toHHMM(request.selected_start_time));
     setSelectedEndTime(toHHMM(request.selected_end_time));
-    setAdminNotes(request.admin_notes || "");
+    setDeclineReason(request.decline_reason || "");
     Object.values(videoUploadHandles.current).forEach((h) => h.abort());
     videoUploadHandles.current = {};
     sheetVideos.forEach((v) => v.previewUrl && URL.revokeObjectURL(v.previewUrl));
@@ -1404,7 +1404,7 @@ export function BandBookingCard({
     };
 
     const d = dialogs[newStatus];
-    if (!d) return { ok: true, note: adminNotes, html: "", files: [] };
+    if (!d) return { ok: true, note: "", html: "", files: [] };
 
     /* Fetched rather than composed here, so the preview shows the copy that
        will actually be sent - including anything changed on the settings page. */
@@ -1417,7 +1417,7 @@ export function BandBookingCard({
           confirmLabel: d.confirmLabel,
           variant: d.destructive ? "destructive" : undefined,
         }),
-        note: adminNotes,
+        note: declineReason,
         html: "",
         files: [],
       };
@@ -1473,11 +1473,10 @@ export function BandBookingCard({
     startTransition(async () => {
       await attempt(async () => {
         const isDecline = newStatus === "declined";
-        const persistedNote = isDecline ? note : adminNotes;
         if (hasChanges) {
           await updateBandBookingFields(request.id, {
             ...detailFields(),
-            admin_notes: persistedNote || null,
+            decline_reason: isDecline ? note.trim() || null : declineReason || null,
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
             selected_end_time: selectedEndTime || null,
@@ -1495,7 +1494,8 @@ export function BandBookingCard({
           toast.error("This slot now clashes with another event - pick another time.");
           return;
         }
-        if (isDecline) setAdminNotes(note);
+        if (isDecline) setDeclineReason(note.trim());
+        else if (status === "declined") setDeclineReason("");
         const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
         const label = STATUS_TOAST[newStatus];
         if (emails) {
@@ -1557,7 +1557,6 @@ export function BandBookingCard({
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
             selected_end_time: selectedEndTime || null,
-            admin_notes: adminNotes || null,
           });
           if (result?.emailError) {
             toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
@@ -2100,7 +2099,7 @@ export function BandBookingCard({
                         ) : null
                       }
                     />
-                    {(isDeclined || !!declineReason) && (
+                    {(isDeclined || !!reasonText) && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                         <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
                           Decline Reason
@@ -2108,23 +2107,23 @@ export function BandBookingCard({
                         {declineReasonOpen ? (
                           <textarea
                             aria-label="Decline reason"
-                            value={adminNotes}
+                            value={declineReason}
                             rows={3}
                             autoFocus
                             placeholder="Why was this declined?"
-                            onChange={(e) => setAdminNotes(e.target.value)}
+                            onChange={(e) => setDeclineReason(e.target.value)}
                             className="min-w-0 flex-1 resize-none rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-[13px] text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                           />
                         ) : (
                           <button
                             type="button"
                             onClick={() => setDeclineReasonOpen(true)}
-                            title={declineReason || "Add a reason"}
+                            title={reasonText || "Add a reason"}
                             className="min-w-0 text-right text-[13px] font-semibold text-[#20231A] transition-colors hover:text-[#34451F]"
                           >
-                            {declineReason ? (
+                            {reasonText ? (
                               <span className="italic">
-                                &quot;{declineIsLong ? declineHead : declineReason}
+                                &quot;{declineIsLong ? declineHead : reasonText}
                                 {declineIsLong && <span className="font-black text-[#34451F] not-italic">…</span>}
                                 &quot;
                               </span>
@@ -2148,8 +2147,8 @@ export function BandBookingCard({
               pendingStage={pendingStage}
               blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
               onRevealSlot={revealSlot}
-              declineReason={adminNotes}
-              onDeclineReasonChange={setAdminNotes}
+              declineReason={declineReason}
+              onDeclineReasonChange={setDeclineReason}
             />
           </div>
 
@@ -2768,8 +2767,8 @@ export function BandBookingCard({
                   <div className="p-4 sm:p-5">
                     <textarea
                       aria-label="Decline reason for applicant"
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
+                      value={declineReason}
+                      onChange={(e) => setDeclineReason(e.target.value)}
                       rows={4}
                       placeholder="The reason given to the band when this was declined..."
                       className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"

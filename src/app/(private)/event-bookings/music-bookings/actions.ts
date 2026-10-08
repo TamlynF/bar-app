@@ -110,7 +110,7 @@ export async function updateBandBookingFields(
     selected_date?: string | null;
     selected_start_time?: string | null;
     selected_end_time?: string | null;
-    admin_notes?: string | null;
+    decline_reason?: string | null;
     payment_amount?: number | null;
     paid_amount?: number | null;
     payment_status?: string | null;
@@ -263,7 +263,6 @@ export async function rescheduleConfirmedBooking(
     selected_date: string | null;
     selected_start_time: string | null;
     selected_end_time: string | null;
-    admin_notes?: string | null;
   }
 ) {
   const supabase = await createClient();
@@ -303,6 +302,23 @@ export async function rescheduleConfirmedBooking(
   return { emailError };
 }
 
+function declinedNote(reason?: string): string {
+  const text = reason?.trim();
+  return text
+    ? `Application declined. Reason given to the act: "${text}"`
+    : "Application declined. No reason was given to the act.";
+}
+
+function reopenedNote(oldReason: string | null | undefined, to: BandStatus): string {
+  const text = oldReason?.trim();
+  return [
+    `Application reopened from declined and moved back to ${to}.`,
+    text ? `The decline reason was: "${text}"` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
@@ -314,9 +330,10 @@ export async function updateBandStatus(
 
   const { data: before } = await supabase
     .from("band_booking_requests")
-    .select("status, selected_date, selected_start_time, selected_end_time, event_id")
+    .select("status, selected_date, selected_start_time, selected_end_time, event_id, decline_reason")
     .eq("id", id)
     .single();
+  const reopening = before?.status === "declined" && status !== "declined";
 
   if (status === "booked" && before && before.status !== "booked" && before.selected_date) {
     const clashes = await getClashingEvents(
@@ -332,7 +349,8 @@ export async function updateBandStatus(
     .from("band_booking_requests")
     .update({
       status,
-      ...(status === "declined" ? { admin_notes: emailNote || null } : {}),
+      ...(status === "declined" ? { decline_reason: emailNote?.trim() || null } : {}),
+      ...(reopening ? { decline_reason: null } : {}),
       updated_by: empId,
       updated_at: new Date().toISOString(),
     })
@@ -344,6 +362,18 @@ export async function updateBandStatus(
 
   if (error || !record) {
     throw new Error("Failed to update status.");
+  }
+
+  const stageNote = reopening
+    ? reopenedNote(before?.decline_reason, status)
+    : status === "declined"
+      ? declinedNote(emailNote)
+      : null;
+  if (stageNote) {
+    const { error: noteError } = await supabase
+      .from("band_booking_notes")
+      .insert({ request_id: id, body: stageNote, created_by: empId, updated_by: empId });
+    if (noteError) console.error("[band request] stage note not saved:", noteError);
   }
 
   const plan = planBandEventSync({

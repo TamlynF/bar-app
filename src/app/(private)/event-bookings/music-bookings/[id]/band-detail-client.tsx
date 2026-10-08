@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 export default function BandDetailClient({ request }: { request: BandRequest }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
+  const [adminNotes, setAdminNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
 

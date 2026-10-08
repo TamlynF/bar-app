@@ -302,13 +302,13 @@ export default async function BandBookingDetailPage({
           </div>
         )}
 
-        {(request.status === "booked" || request.status === "declined") && request.admin_notes && (
+        {request.status === "declined" && request.decline_reason && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
-              Admin Notes
+              Decline reason given to the act
             </p>
             <p className="rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] px-4 py-3 text-sm text-[#20231A]">
-              {request.admin_notes}
+              {request.decline_reason}
             </p>
           </div>
         )}
