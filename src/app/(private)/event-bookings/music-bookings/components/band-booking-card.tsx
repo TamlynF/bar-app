@@ -56,6 +56,9 @@ import {
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { ActPhotos } from "@/components/admin/act-photos";
+import { actCoverStateAction, setRequestCoverAction } from "@/app/(private)/_actions/act-images";
+import { formatFollowers, shouldAskActCoverUpdate, type ActImage } from "@/lib/act-images";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -169,7 +172,10 @@ export interface BandRequest {
   phone_no: string | null;
   social_links: SocialLinks | null;
   spotify_url: string | null;
+  spotify_followers?: number | null;
   music_acts_id: string | null;
+  cover_image_id: string | null;
+  act_images?: ActImage[];
   video_urls: string[] | null;
   video_descriptions: string[] | null;
   preferred_dates: string[] | null;
@@ -1098,6 +1104,14 @@ export function BandBookingCard({
   const [showContactDetails, setShowContactDetails] = useState(false);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [sheetVideos, setSheetVideos] = useState<SheetVideo[]>(() => seedSheetVideos(request));
+  const [actImages, setActImages] = useState<ActImage[]>(request.act_images ?? []);
+  const [coverId, setCoverId] = useState<string | null>(request.cover_image_id ?? null);
+  const [photosSeenFor, setPhotosSeenFor] = useState(request);
+  if (photosSeenFor !== request) {
+    setPhotosSeenFor(request);
+    setActImages(request.act_images ?? []);
+    setCoverId(request.cover_image_id ?? null);
+  }
   const videoInputRef = useRef<HTMLInputElement>(null);
   const videoUploadHandles = useRef<Record<string, ResumableHandle>>({});
 
@@ -1352,6 +1366,38 @@ export function BandBookingCard({
     setSheetVideos(seedSheetVideos(request));
     setClashes([]);
     setError(null);
+  }
+
+  /* The poster saves straight away. Giving the booking a poster the act does
+     not have yet fills the act in too; replacing a poster the act already
+     has asks first. */
+  async function handleCoverChange(nextId: string | null) {
+    const previous = coverId;
+    setCoverId(nextId);
+    let updateAct = false;
+    if (nextId && request.music_acts_id) {
+      const act = await actCoverStateAction(request.music_acts_id);
+      if (act && shouldAskActCoverUpdate(act.actCoverId, nextId)) {
+        updateAct = await confirm({
+          title: "Update the act's poster too?",
+          description: `${act.actName} already has a different poster on its act record. Use this one there as well, or keep it for this booking only?`,
+          confirmLabel: "Update both",
+          cancelLabel: "This booking only",
+        });
+      }
+    }
+    const result = await setRequestCoverAction({
+      requestId: request.id,
+      actId: request.music_acts_id,
+      coverId: nextId,
+      updateAct,
+    });
+    if (!result.ok) {
+      setCoverId(previous);
+      toast.error(result.error);
+      return;
+    }
+    toast.success(nextId ? (result.value.actUpdated ? "Poster set for the booking and the act" : "Poster set") : "Poster removed");
   }
 
   function handleToggleFavorite() {
@@ -2360,6 +2406,7 @@ export function BandBookingCard({
             )}
             {bodyReady ? (
             <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
+              <div className="min-w-0 space-y-4 sm:space-y-5">
               <Section
                 className="min-w-0"
                 title="Event Details"
@@ -2573,7 +2620,31 @@ export function BandBookingCard({
                 </div>
               </Section>
 
-              <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
+              {request.music_acts_id && (
+                <Section
+                  className="min-w-0"
+                  title="Photos"
+                  defaultOpen={actImages.length > 0 || !!coverId}
+                  hint={
+                    <>
+                      <p className="font-semibold">The poster sits at the right end.</p>
+                      <p className="text-admin-muted">
+                        It goes on What&apos;s On and the event poster. Tap a photo to see it full size or make it the poster.
+                      </p>
+                    </>
+                  }
+                >
+                  <ActPhotos
+                    actId={request.music_acts_id}
+                    requestId={request.id}
+                    images={actImages}
+                    coverId={coverId}
+                    editable={editable}
+                    onImagesChange={setActImages}
+                    onCoverChange={(id) => void handleCoverChange(id)}
+                  />
+                </Section>
+              )}
 
               {(showSocials || sheetVideos.length > 0) && (
                 <Section
@@ -2640,7 +2711,11 @@ export function BandBookingCard({
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Open Spotify"
+                            title={
+                              formatFollowers(request.spotify_followers)
+                                ? `Open Spotify - ${request.spotify_followers?.toLocaleString("en-GB")} followers when they applied`
+                                : "Open Spotify"
+                            }
                             className={cn(pillClass, "border-transparent bg-[#1DB954] text-white hover:opacity-90")}
                           >
                             <SiSpotify className="h-3 w-3 shrink-0" />
@@ -2728,6 +2803,11 @@ export function BandBookingCard({
                         </Popover>
                       )}
                     </div>
+                  )}
+                  {showSocials && formatFollowers(request.spotify_followers) && (
+                    <p className="px-4 pb-2 text-[11px] text-admin-muted sm:px-5">
+                      {request.spotify_followers?.toLocaleString("en-GB")} Spotify followers when they applied
+                    </p>
                   )}
 
                   {(sheetVideos.length > 0 || editable) && (
@@ -2828,8 +2908,10 @@ export function BandBookingCard({
                   )}
                 </Section>
               )}
+              </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
+              {notesCards}
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
                 <SheetRow
@@ -3024,6 +3106,10 @@ export function BandBookingCard({
                   editable={editable}
                   counterpartName={request.group_name || request.booker_name}
                   onCountChange={setEmailCount}
+                  onActImageAdded={(image, asPoster) => {
+                    setActImages((prev) => [image, ...prev]);
+                    if (asPoster) setCoverId(image.id);
+                  }}
                 />
               </Section>
             </div>

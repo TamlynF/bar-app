@@ -27,7 +27,6 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
-import { createClient } from "@/lib/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,13 +39,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
-import { PosterSizeWarning } from "@/components/admin/poster-size-warning";
 import { CorrespondencePanel, MessageCountPill } from "@/components/admin/correspondence-panel";
 import { InternalNotesPanel, type InternalNote } from "@/components/admin/internal-notes-panel";
 import type { RecordSheetNavigate } from "@/components/admin/record-sheet";
 import { VideoFacade } from "@/components/video-facade";
-import { readImageFileDimensions } from "@/lib/image-file-dimensions";
-import { posterSizeWarning } from "@/lib/poster-image-quality";
+import { ActPhotos } from "@/components/admin/act-photos";
+import { bookingsForActAction } from "@/app/(private)/_actions/act-images";
+import { bookingsToAskAboutCover, type ActImage } from "@/lib/act-images";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
@@ -66,10 +65,11 @@ export type ActCounts = { bookings: number; completed: number; upcoming: number 
 export type MusicActWithContact = MusicActRow & {
   contact?: { id: number; full_name: string | null; email: string | null; phone_no: string | null } | null;
   notes?: InternalNote[];
+  cover_image?: { url: string | null } | { url: string | null }[] | null;
+  images?: ActImage[];
 };
 export type EmployeeOption = { id: number; full_name: string };
 
-const supabase = createClient();
 const MAX_VIDEOS = 10;
 
 export const SOCIAL_META: {
@@ -110,8 +110,7 @@ type FormState = {
   introduction: string;
   spotify_url: string;
   web_url: string;
-  cover_image_url: string;
-  image_urls: string[];
+  cover_image_id: string | null;
   social_links: SocialLinks;
   bank_account_name: string;
   bank_account_no: string;
@@ -132,8 +131,7 @@ function formFromAct(a: MusicActWithContact | null): FormState {
     introduction: a?.introduction ?? "",
     spotify_url: a?.spotify_url ?? "",
     web_url: a?.web_url ?? "",
-    cover_image_url: a?.cover_image_url ?? "",
-    image_urls: a?.image_urls ?? [],
+    cover_image_id: a?.cover_image_id ?? null,
     social_links: a?.social_links ?? {},
     bank_account_name: a?.bank_account_name ?? "",
     bank_account_no: a?.bank_account_no ?? "",
@@ -186,18 +184,20 @@ const SUBTLE_PILL = "rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold
 
 function Section({
   title,
+  defaultOpen = true,
   headerRight,
   className,
   hint,
   children,
 }: {
   title: string;
+  defaultOpen?: boolean;
   headerRight?: React.ReactNode;
   className?: string;
   hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={cn("overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm", className)}>
       <div
@@ -421,8 +421,8 @@ export function MusicActSheet({
   const [form, setForm] = useState<FormState>(() => formFromAct(null));
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [coverWarning, setCoverWarning] = useState<string | null>(null);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
+  const [actImages, setActImages] = useState<ActImage[]>([]);
 
   /* The sheet stays mounted between acts, so stepping to another act - or
      opening a fresh one - reloads the form here rather than remounting and
@@ -433,11 +433,12 @@ export function MusicActSheet({
     setShown({ key: incomingKey, act: incoming });
     setForm(formFromAct(incoming));
     setVideos(videosFromAct(incoming));
+    setActImages(incoming?.images ?? []);
     setError(null);
-    setCoverWarning(null);
     setSysInfoOpen(false);
   } else if (incoming && incoming.id === shown.key && incoming !== shown.act) {
     setShown({ key: shown.key, act: incoming });
+    setActImages(incoming.images ?? []);
   }
   const act = shown.act;
   const isNew = shown.key === "new";
@@ -448,8 +449,6 @@ export function MusicActSheet({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const videoHandles = useRef<Record<string, ResumableHandle>>({});
 
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const [uploadingImages, setUploadingImages] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [favPending, startFavTransition] = useTransition();
 
@@ -462,7 +461,7 @@ export function MusicActSheet({
     : comparableForm(form) !== comparableForm(formFromAct(act)) ||
       comparableVideos(videos) !== comparableVideos(videosFromAct(act)) ||
       videos.some((v) => !v.url);
-  const saveBlocked = isPending || uploadingCover || uploadingImages || uploadingAnyVideo;
+  const saveBlocked = isPending || uploadingAnyVideo;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -491,7 +490,6 @@ export function MusicActSheet({
     releaseUploads();
     setForm(formFromAct(act));
     setVideos(videosFromAct(act));
-    setCoverWarning(null);
     setError(null);
   }
 
@@ -528,6 +526,35 @@ export function MusicActSheet({
       return;
     }
     setError(null);
+    void saveAct();
+  }
+
+  /* A changed poster asks which open, not-yet-played bookings should pick it
+     up as well before anything is written. */
+  async function saveAct() {
+    let coverBookingIds: string[] = [];
+    if (act && form.cover_image_id !== (act.cover_image_id ?? null)) {
+      const bookings = bookingsToAskAboutCover(await bookingsForActAction(act.id), form.cover_image_id, format(new Date(), "yyyy-MM-dd"));
+      if (bookings.length > 0) {
+        const ok = await confirm({
+          title: form.cover_image_id ? "Update upcoming bookings too?" : "Clear it from upcoming bookings too?",
+          description: `${bookings.length} upcoming booking${bookings.length === 1 ? " uses" : "s use"} a different poster. Give ${bookings.length === 1 ? "it" : "them"} this one as well, or leave ${bookings.length === 1 ? "it" : "them"} as ${bookings.length === 1 ? "it is" : "they are"}?`,
+          confirmLabel: "Update bookings",
+          cancelLabel: "Act only",
+          content: (
+            <ul className="space-y-1 text-[12px] text-admin-ink">
+              {bookings.map((b) => (
+                <li key={b.id} className="flex justify-between gap-3">
+                  <span className="font-semibold">{b.group_name}</span>
+                  <span className="text-admin-muted">{b.selected_date ? format(new Date(b.selected_date + "T00:00:00"), "EEE d MMM yyyy") : "No date yet"}</span>
+                </li>
+              ))}
+            </ul>
+          ),
+        });
+        if (ok) coverBookingIds = bookings.map((b) => b.id);
+      }
+    }
     const uploaded = videos.filter((v) => v.url);
     const input: MusicActInput = {
       id: act?.id,
@@ -537,8 +564,8 @@ export function MusicActSheet({
       introduction: form.introduction,
       spotify_url: form.spotify_url,
       web_url: form.web_url,
-      cover_image_url: form.cover_image_url,
-      image_urls: form.image_urls,
+      cover_image_id: form.cover_image_id,
+      cover_booking_ids: coverBookingIds,
       social_links: form.social_links,
       video_urls: uploaded.map((v) => v.url as string),
       video_descriptions: uploaded.map((v) => v.description.trim()),
@@ -604,49 +631,6 @@ export function MusicActSheet({
     return () => window.clearTimeout(timer);
   }, [focusNotes, bodyReady]);
 
-  async function uploadToGallery(file: File): Promise<string> {
-    const ext = file.name.split(".").pop();
-    const path = `music-acts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { data, error: uploadError } = await supabase.storage
-      .from("gallery")
-      .upload(path, file, { cacheControl: "3600", upsert: false });
-    if (uploadError) throw new Error(uploadError.message);
-    return supabase.storage.from("gallery").getPublicUrl(data.path).data.publicUrl;
-  }
-
-  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    const input = e.target;
-    if (!file) return;
-    setUploadingCover(true);
-    setError(null);
-    await attempt(
-      async () => {
-        setCoverWarning(posterSizeWarning(await readImageFileDimensions(file)));
-        set("cover_image_url", await uploadToGallery(file));
-      },
-      (err) => setError(`Cover upload failed: ${err instanceof Error ? err.message : "unknown error"}`)
-    );
-    setUploadingCover(false);
-    input.value = "";
-  }
-
-  async function handleImagesUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    const input = e.target;
-    if (!files.length) return;
-    setUploadingImages(true);
-    setError(null);
-    await attempt(
-      async () => {
-        const urls = await Promise.all(files.map(uploadToGallery));
-        setForm((f) => ({ ...f, image_urls: [...f.image_urls, ...urls] }));
-      },
-      (err) => setError(`Image upload failed: ${err instanceof Error ? err.message : "unknown error"}`)
-    );
-    setUploadingImages(false);
-    input.value = "";
-  }
 
   const patchVideo = (id: string, patch: Partial<VideoItem>) =>
     setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
@@ -775,7 +759,7 @@ export function MusicActSheet({
                     type="button"
                     onClick={handleSave}
                     disabled={saveBlocked}
-                    title={uploadingAnyVideo || uploadingCover || uploadingImages ? "Wait for uploads to finish." : isNew ? "Create act" : "Save changes"}
+                    title={uploadingAnyVideo ? "Wait for uploads to finish." : isNew ? "Create act" : "Save changes"}
                     className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3.5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 sm:h-9"
                   >
                     {isPending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Save className="h-4 w-4 shrink-0" />}
@@ -904,6 +888,7 @@ export function MusicActSheet({
           )}
           {bodyReady ? (
             <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
+              <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section
                   className="min-w-0"
                   title="Act details"
@@ -915,67 +900,6 @@ export function MusicActSheet({
                     ) : undefined
                   }
                 >
-                  <div className="border-b border-[#D8D5C8] p-3 sm:px-5">
-                    {form.cover_image_url ? (
-                      <div className="relative overflow-hidden rounded-xl">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={form.cover_image_url}
-                          alt={`${title} cover`}
-                          className="h-44 w-full rounded-xl object-cover sm:h-56"
-                        />
-                        <div className="absolute top-2 right-2 flex gap-1.5">
-                          <label
-                            title="Replace cover"
-                            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-black/60 px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-black/80"
-                          >
-                            {uploadingCover ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                            Replace
-                            <input
-                              type="file"
-                              accept="image/*"
-                              aria-label="Replace cover image"
-                              className="hidden"
-                              onChange={handleCoverUpload}
-                              disabled={uploadingCover}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              set("cover_image_url", "");
-                              setCoverWarning(null);
-                            }}
-                            aria-label="Remove cover"
-                            title="Remove cover"
-                            className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/60 text-white transition-colors hover:bg-black/80"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <PosterSizeWarning message={coverWarning} />
-                      </div>
-                    ) : (
-                      <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-admin-line py-6 transition-colors hover:border-admin-primary hover:bg-admin-surface">
-                        {uploadingCover ? (
-                          <Loader2 className="mb-1.5 h-6 w-6 animate-spin text-admin-muted" />
-                        ) : (
-                          <Upload className="mb-1.5 h-6 w-6 text-admin-muted opacity-50" />
-                        )}
-                        <span className="text-[12px] font-semibold text-admin-muted">
-                          {uploadingCover ? "Uploading…" : "Add a cover image"}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          aria-label="Upload cover image"
-                          className="hidden"
-                          onChange={handleCoverUpload}
-                          disabled={uploadingCover}
-                        />
-                      </label>
-                    )}
-                  </div>
                   <TextRow
                     label="Group name"
                     required
@@ -1010,7 +934,24 @@ export function MusicActSheet({
                   </div>
                 </Section>
 
-                <div className="min-w-0 space-y-4 sm:space-y-5">{notesCards}</div>
+                <Section
+                  className="min-w-0"
+                  title="Photos"
+                  defaultOpen={actImages.length > 0 || !!form.cover_image_id}
+                >
+                  {act ? (
+                    <ActPhotos
+                      actId={act.id}
+                      images={actImages}
+                      coverId={form.cover_image_id}
+                      editable
+                      onImagesChange={setActImages}
+                      onCoverChange={(id) => set("cover_image_id", id)}
+                    />
+                  ) : (
+                    <p className="px-4 py-3 text-[12px] text-admin-muted sm:px-5">Create the act first, then add its photos and poster here.</p>
+                  )}
+                </Section>
 
                 <Section
                   className="min-w-0"
@@ -1083,46 +1024,6 @@ export function MusicActSheet({
                     placeholder="https://…"
                     trailing={form.web_url.trim() ? <LinkOut href={form.web_url.trim()} label="Open website" /> : undefined}
                   />
-
-                  <div className="space-y-3 border-b border-[#D8D5C8] px-4 py-3 last:border-0 sm:px-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={ROW_LABEL}>Photos</span>
-                      <label className="flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#34451F] px-2.5 text-[12px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8]">
-                        {uploadingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                        Add photos
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          aria-label="Upload photos"
-                          className="hidden"
-                          onChange={handleImagesUpload}
-                          disabled={uploadingImages}
-                        />
-                      </label>
-                    </div>
-                    {form.image_urls.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                        {form.image_urls.map((url) => (
-                          <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-admin-line">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="" className="h-full w-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => set("image_urls", form.image_urls.filter((u) => u !== url))}
-                              aria-label="Remove photo"
-                              title="Remove photo"
-                              className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white transition-colors hover:bg-black/80"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[12px] text-admin-muted">No photos yet.</p>
-                    )}
-                  </div>
 
                   <div className="space-y-3 px-4 py-3 sm:px-5">
                     <div className="flex items-center justify-between gap-3">
@@ -1204,8 +1105,10 @@ export function MusicActSheet({
                     )}
                   </div>
                 </Section>
+              </div>
 
               <div className="min-w-0 space-y-4 sm:space-y-5">
+                {notesCards}
                 <Section title="Contact">
                   <TextRow
                     label="Name"

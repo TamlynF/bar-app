@@ -29,6 +29,7 @@ export type InboxThread = {
   lastChannel: MessageChannel;
   unread: number;
   total: number;
+  avatarUrl: string | null;
 };
 
 type Row = {
@@ -97,6 +98,42 @@ async function namesFor(
   return out;
 }
 
+/* The profile picture Meta gave us for a chat sender, shown on the thread
+   it was filed under: by contact where the sender is known, else by the
+   Meta id for an unclaimed chat. */
+async function attachAvatars(supabase: SupabaseClient, rows: Row[], threads: { key: string; owner: ThreadOwner; avatarUrl: string | null }[]): Promise<void> {
+  const contactIds = [...new Set(rows.map((r) => r.contact_id).filter((id): id is number => id != null))];
+  const senderIds = [...new Set(rows.map((r) => r.sender_id).filter((id): id is string => !!id))];
+  if (contactIds.length === 0 && senderIds.length === 0) return;
+  const { data } = await supabase
+    .from("contact_channels")
+    .select("contact_id, channel, external_id, profile_pic_url")
+    .not("profile_pic_url", "is", null)
+    .or([
+      contactIds.length ? `contact_id.in.(${contactIds.join(",")})` : null,
+      senderIds.length ? `external_id.in.(${senderIds.map((s) => `"${s}"`).join(",")})` : null,
+    ].filter(Boolean).join(","));
+  const byContact = new Map<number, string>();
+  const bySender = new Map<string, string>();
+  for (const c of (data ?? []) as { contact_id: number | null; channel: string; external_id: string; profile_pic_url: string }[]) {
+    if (c.contact_id != null && !byContact.has(c.contact_id)) byContact.set(c.contact_id, c.profile_pic_url);
+    bySender.set(`${c.channel}:${c.external_id}`, c.profile_pic_url);
+  }
+  const contactOfThread = new Map<string, number>();
+  for (const r of rows) {
+    const where = ownerOf(r);
+    if (where && r.contact_id != null && !contactOfThread.has(where.key)) contactOfThread.set(where.key, r.contact_id);
+  }
+  for (const t of threads) {
+    const o = t.owner;
+    if (o.channel && o.senderId) t.avatarUrl = bySender.get(`${o.channel}:${o.senderId}`) ?? null;
+    else {
+      const contactId = o.contactId ?? contactOfThread.get(t.key);
+      t.avatarUrl = contactId != null ? (byContact.get(contactId) ?? null) : null;
+    }
+  }
+}
+
 /* Every conversation across email, Messenger and Instagram, newest first:
    one row per record the messages hang off, or per chat sender when nothing
    has claimed them yet. */
@@ -143,11 +180,13 @@ export async function loadInboxThreads(supabase: SupabaseClient): Promise<InboxT
       lastChannel: channel,
       unread: r.direction === "inbound" && !r.read_at ? 1 : 0,
       total: 1,
+      avatarUrl: null,
       senderNames: r.direction === "inbound" && r.sender_name ? [r.sender_name] : [],
     });
   }
 
   const list = [...threads.values()];
+  await attachAvatars(supabase, rows, list);
   const idsOf = (source: InboxSource, pick: (o: ThreadOwner) => string | number | undefined) =>
     list.filter((t) => t.source === source).map((t) => pick(t.owner)).filter((v): v is string | number => v != null);
 

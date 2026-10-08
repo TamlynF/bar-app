@@ -1,6 +1,7 @@
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 import { resolveEventImage } from "@/lib/event-image";
+import { coverUrlFromJoin } from "@/lib/act-images";
 
 
 export type TypeJoin = { name: string; color: string | null };
@@ -12,8 +13,11 @@ export type SubtypeJoin = {
   default_image_url?: string | null;
 };
 
+type CoverJoin = { url: string | null } | { url: string | null }[] | null;
+
 export type ActCoverJoin = {
-  music_acts: { cover_image_url: string | null } | { cover_image_url: string | null }[] | null;
+  cover_image?: CoverJoin;
+  music_acts: { cover_image: CoverJoin } | { cover_image: CoverJoin }[] | null;
 };
 
 export type EventTypeJoin = {
@@ -47,16 +51,22 @@ export type EventRow = {
 };
 
 export const PUBLIC_EVENT_SELECT =
-  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline, default_image_url), band_booking_requests!band_booking_requests_event_id_fkey(music_acts(cover_image_url))" as const;
+  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline, default_image_url), band_booking_requests!band_booking_requests_event_id_fkey(cover_image:music_act_images!band_booking_requests_cover_image_id_fkey(url), music_acts(cover_image:music_act_images!music_acts_cover_image_id_fkey(url)))" as const;
 
 export const BOOKED_BAND_FILTER = "band_booking_requests.status";
 
+/* The booking's own poster wins over the act's: a one-off poster for this
+   night should not be overridden by the act's usual picture. */
 export function actCoverFromRow(event: EventRow): string | null {
-  for (const request of event.band_booking_requests ?? []) {
-    const act = Array.isArray(request.music_acts)
-      ? request.music_acts[0]
-      : request.music_acts;
-    if (act?.cover_image_url) return act.cover_image_url;
+  const requests = event.band_booking_requests ?? [];
+  for (const request of requests) {
+    const own = coverUrlFromJoin(request.cover_image);
+    if (own) return own;
+  }
+  for (const request of requests) {
+    const act = Array.isArray(request.music_acts) ? request.music_acts[0] : request.music_acts;
+    const url = coverUrlFromJoin(act?.cover_image);
+    if (url) return url;
   }
   return null;
 }

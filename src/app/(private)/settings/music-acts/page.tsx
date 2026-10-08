@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import MusicActsClient, { type ActCounts, type MusicActWithContact } from "./music-acts-client";
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
+import { loadActImagesForActs } from "@/lib/act-images-server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function MusicActsPage() {
       supabase
         .from("music_acts")
         .select(
-          "*, contact:contacts(id, full_name, email, phone_no), notes:music_act_notes(id, body, created_at, author:employees!music_act_notes_created_by_fkey(full_name))"
+          "*, cover_image:music_act_images!music_acts_cover_image_id_fkey(url), contact:contacts(id, full_name, email, phone_no), notes:music_act_notes(id, body, created_at, author:employees!music_act_notes_created_by_fkey(full_name))"
         )
         .order("is_favorite", { ascending: false })
         .order("group_name", { ascending: true })
@@ -44,6 +45,9 @@ export default async function MusicActsPage() {
     ]);
 
   if (error) console.error("Error fetching music acts:", error);
+
+  const imagesByAct = await loadActImagesForActs(supabase, (acts ?? []).map((a) => a.id as string));
+  const actsWithImages = ((acts as MusicActWithContact[]) || []).map((a) => ({ ...a, images: imagesByAct[a.id] ?? [] }));
 
   const today = new Date().toISOString().split("T")[0];
   const counts: Record<string, ActCounts> = {};
@@ -70,7 +74,7 @@ export default async function MusicActsPage() {
 
   return (
     <MusicActsClient
-      initialActs={(acts as MusicActWithContact[]) || []}
+      initialActs={actsWithImages}
       counts={counts}
       unreadEmails={unreadEmails}
       typeOptions={typeOptions}

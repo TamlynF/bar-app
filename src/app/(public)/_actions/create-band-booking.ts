@@ -17,6 +17,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claimContactChannel } from "@/lib/meta/inbound";
 import { instagramHandle, type MessageChannel } from "@/lib/meta/channels";
 import { isReplyChannel, parseArrival, type ArrivalChannel } from "@/lib/meta/preferred-channel";
+import { actHasImageFromSource, captureActImage, insertActImage, setActCover } from "@/lib/act-images-server";
+import { ACT_IMAGES_BUCKET } from "@/lib/act-images";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -51,7 +53,12 @@ export interface BandBookingData {
   preferred_channel?: MessageChannel;
   source_channel?: ArrivalChannel | null;
   source_channel_id?: string | null;
+  poster?: BandPosterChoice | null;
 }
+
+/* Either the poster the act already has with us (kept) or one uploaded on
+   the form (its public URL and bucket path). */
+export type BandPosterChoice = { keepImageId: string } | { url: string; path: string };
 
 type SourceRow = { id: string; channel: string; contact_id: number | null };
 
@@ -166,6 +173,13 @@ export async function createBandBooking(input: BandBookingData) {
     throw new Error("Failed to submit your application. Please try again.");
   }
 
+  if (musicActId) {
+    await Promise.allSettled([
+      filePoster(supabase, musicActId, record.id, data.poster ?? null),
+      spotifyArtist?.imageUrl ? fileSpotifyPicture(supabase, musicActId, record.id, spotifyArtist.imageUrl) : Promise.resolve(),
+    ]);
+  }
+
   await Promise.allSettled([
     sourceRow && contactId
       ? claimContactChannel(createAdminClient(), sourceRow.id, {
@@ -180,6 +194,47 @@ export async function createBandBooking(input: BandBookingData) {
   ]);
 
   return { success: true, id: record.id };
+}
+
+function isOwnBucketUrl(url: string): boolean {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  return !!base && url.startsWith(`${base}/storage/v1/object/public/${ACT_IMAGES_BUCKET}/`);
+}
+
+/* A kept poster just points the request at the act's row; an uploaded one
+   becomes a new row, the request's poster, and the act's too if it had none. */
+async function filePoster(
+  supabase: ServerClient,
+  actId: string,
+  requestId: string,
+  poster: BandPosterChoice | null
+): Promise<void> {
+  if (!poster) return;
+  const { data: act } = await supabase.from("music_acts").select("cover_image_id").eq("id", actId).maybeSingle();
+  const actCover = (act?.cover_image_id as string | null) ?? null;
+
+  if ("keepImageId" in poster) {
+    if (poster.keepImageId !== actCover) return;
+    await supabase.from("band_booking_requests").update({ cover_image_id: actCover }).eq("id", requestId);
+    return;
+  }
+
+  if (!isOwnBucketUrl(poster.url)) return;
+  const image = await insertActImage(supabase, {
+    actId,
+    requestId,
+    url: poster.url,
+    storagePath: poster.path,
+    source: "upload",
+  });
+  if (!image) return;
+  await supabase.from("band_booking_requests").update({ cover_image_id: image.id }).eq("id", requestId);
+  if (!actCover) await setActCover(supabase, actId, image.id);
+}
+
+async function fileSpotifyPicture(supabase: ServerClient, actId: string, requestId: string, imageUrl: string): Promise<void> {
+  if (await actHasImageFromSource(supabase, actId, "spotify")) return;
+  await captureActImage(supabase, { actId, requestId, source: "spotify", sourceUrl: imageUrl });
 }
 
 async function sendBookerEmail(supabase: ServerClient, requestId: string, name: string, email: string) {

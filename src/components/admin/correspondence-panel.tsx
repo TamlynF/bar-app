@@ -13,6 +13,8 @@ import {
   MoreHorizontal,
   Paperclip,
   RefreshCw,
+  Star,
+  ImagePlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SiInstagram, SiMessenger } from "react-icons/si";
@@ -31,6 +33,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EmailComposer } from "@/components/admin/email-composer";
 import { cleanEmailHtml, emailFrameDocument } from "@/lib/email/email-html";
+import { isImageContentType, type ActImage } from "@/lib/act-images";
+import { attachmentToActImageAction } from "@/app/(private)/_actions/act-images";
 import {
   CORRESPONDENCE_SOURCE_LABELS,
   splitQuotedReply,
@@ -401,6 +405,7 @@ function MessageBubble({
   linkedId,
   onRelink,
   relinking,
+  onUseImage,
 }: {
   message: CorrespondenceMessage;
   counterpartName?: string;
@@ -410,7 +415,16 @@ function MessageBubble({
   linkedId: string | null;
   onRelink?: (targetId: string | null) => void;
   relinking: boolean;
+  onUseImage?: (attachmentPath: string, asPoster: boolean) => Promise<void>;
 }) {
+  const [usingImage, setUsingImage] = useState<string | null>(null);
+
+  async function applyImage(path: string, asPoster: boolean) {
+    if (!onUseImage) return;
+    setUsingImage(path);
+    await onUseImage(path, asPoster);
+    setUsingImage(null);
+  }
   const [open, setOpen] = useState(false);
   const outbound = message.direction === "outbound";
   const name = senderName(message, counterpartName);
@@ -492,15 +506,20 @@ function MessageBubble({
           {message.attachments.length > 0 && (
             <ul className="mt-2.5 flex flex-wrap gap-1.5">
               {message.attachments.map((a) => (
-                <li key={a.path}>
+                <li key={a.path} className="flex max-w-full items-center gap-1">
                   {a.url ? (
                     <a
                       href={a.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-admin-line bg-white px-2 py-1 text-[12px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface"
+                      className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-admin-line bg-white px-2 py-1 text-[12px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface"
                     >
-                      <Paperclip className="h-3.5 w-3.5 shrink-0 text-admin-muted" aria-hidden="true" />
+                      {isImageContentType(a.contentType) ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={a.url} alt="" className="size-6 shrink-0 rounded object-cover" />
+                      ) : (
+                        <Paperclip className="h-3.5 w-3.5 shrink-0 text-admin-muted" aria-hidden="true" />
+                      )}
                       <span className="truncate">{a.name}</span>
                       <span className="shrink-0 font-normal text-admin-muted">{formatBytes(a.size)}</span>
                     </a>
@@ -508,6 +527,30 @@ function MessageBubble({
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-admin-line px-2 py-1 text-[12px] text-admin-muted">
                       <Paperclip className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       {a.name}
+                    </span>
+                  )}
+                  {onUseImage && a.url && isImageContentType(a.contentType) && (
+                    <span className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        disabled={usingImage === a.path}
+                        onClick={() => void applyImage(a.path, true)}
+                        aria-label={`Use ${a.name} as the poster`}
+                        title="Use as poster"
+                        className="flex size-8 items-center justify-center rounded-lg border border-[#34451F] text-[#34451F] transition-colors hover:bg-[#E5EBD8] disabled:opacity-50 max-sm:size-11"
+                      >
+                        {usingImage === a.path ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Star className="h-3.5 w-3.5" aria-hidden="true" />}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={usingImage === a.path}
+                        onClick={() => void applyImage(a.path, false)}
+                        aria-label={`Add ${a.name} to the act's photos`}
+                        title="Add to photos"
+                        className="flex size-8 items-center justify-center rounded-lg border border-admin-line text-admin-muted transition-colors hover:bg-admin-surface disabled:opacity-50 max-sm:size-11"
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
                     </span>
                   )}
                 </li>
@@ -562,11 +605,13 @@ export function CorrespondencePanel({
   onCountChange,
   editable = true,
   showBookingLinks = true,
+  onActImageAdded,
 }: ThreadOwner & {
   counterpartName?: string;
   onCountChange?: (count: number) => void;
   editable?: boolean;
   showBookingLinks?: boolean;
+  onActImageAdded?: (image: ActImage, asPoster: boolean) => void;
 }) {
   const [thread, setThread] = useState<CorrespondenceThread | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -758,6 +803,25 @@ export function CorrespondencePanel({
                 linkedId={musicActId ? m.bandRequestId : m.privateHireRequestId}
                 onRelink={editable && relinkScope ? (id) => relink(m.id, id) : undefined}
                 relinking={relinkingId === m.id}
+                onUseImage={
+                  editable && (bandRequestId || musicActId)
+                    ? async (path, asPoster) => {
+                        const result = await attachmentToActImageAction({
+                          messageId: m.id,
+                          path,
+                          actId: musicActId ?? null,
+                          requestId: bandRequestId ?? m.bandRequestId ?? null,
+                          setAsPoster: asPoster,
+                        });
+                        if (!result.ok) {
+                          toast.error(result.error);
+                          return;
+                        }
+                        toast.success(asPoster ? "Poster set from the message" : "Added to the act's photos");
+                        onActImageAdded?.(result.value.image, asPoster);
+                      }
+                    : undefined
+                }
               />
             ))}
           </ol>

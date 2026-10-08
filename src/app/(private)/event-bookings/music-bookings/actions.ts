@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { resolveSpotifyArtistLink } from "@/lib/spotify-artists";
+import { actHasImageFromSource, captureActImage } from "@/lib/act-images-server";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { type BandStatus as BandStatusType } from "@/lib/band-event-sync";
@@ -155,6 +157,7 @@ export async function updateBandBookingFields(
       }
     }
     if (actId) await syncMusicActFields(supabase, actId, shared, empId);
+    if (actId && fields.spotify_url) await refreshSpotifyPicture(supabase, id, actId, fields.spotify_url);
   }
 
   revalidatePath("/event-bookings/music-bookings");
@@ -162,6 +165,24 @@ export async function updateBandBookingFields(
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
   revalidatePath("/");
+}
+
+/* A changed Spotify link refreshes the follower snapshot and keeps the
+   artist picture as one of the act's photos (once per act). */
+async function refreshSpotifyPicture(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  requestId: string,
+  actId: string,
+  spotifyUrl: string
+): Promise<void> {
+  const resolved = await resolveSpotifyArtistLink(spotifyUrl);
+  if (!("artist" in resolved)) return;
+  await supabase
+    .from("band_booking_requests")
+    .update({ spotify_image_url: resolved.artist.imageUrl, spotify_followers: resolved.artist.followers })
+    .eq("id", requestId);
+  if (!resolved.artist.imageUrl || (await actHasImageFromSource(supabase, actId, "spotify"))) return;
+  await captureActImage(supabase, { actId, requestId, source: "spotify", sourceUrl: resolved.artist.imageUrl });
 }
 
 const NOTE_REVALIDATE = ["/event-bookings/music-bookings"] as const;

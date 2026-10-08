@@ -138,14 +138,23 @@ export default function InboxClient({ threads, initialKey }: { threads: InboxThr
                       )}
                     >
                       <span className="relative shrink-0">
-                        <span
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-bold",
-                            unread > 0 ? "bg-admin-primary text-white" : "bg-admin-surface text-admin-muted"
-                          )}
-                        >
-                          {initials(t.name)}
-                        </span>
+                        {t.avatarUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={t.avatarUrl}
+                            alt=""
+                            className={cn("h-10 w-10 rounded-full object-cover", unread > 0 && "ring-2 ring-admin-primary")}
+                          />
+                        ) : (
+                          <span
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-bold",
+                              unread > 0 ? "bg-admin-primary text-white" : "bg-admin-surface text-admin-muted"
+                            )}
+                          >
+                            {initials(t.name)}
+                          </span>
+                        )}
                         <span
                           title={CHANNEL_LABELS[t.lastChannel]}
                           className={cn(

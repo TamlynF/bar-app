@@ -194,25 +194,30 @@ async function postMetaMessage(
   return { ok: true, messageId: json.message_id };
 }
 
-export type MetaProfile = { name: string | null; username: string | null };
+export type MetaProfile = { name: string | null; username: string | null; profilePicUrl: string | null };
 
 /* Who a Page-scoped or Instagram-scoped id belongs to. Messenger gives a
    first and last name; Instagram gives the username as well. Either call can
    be refused for people outside the app's roles while it is in development,
    so a failure is just an empty profile. */
 export async function fetchMetaProfile(env: MetaEnv, channel: MetaChannel, id: string): Promise<MetaProfile> {
-  const fields = channel === "instagram" ? "name,username" : "first_name,last_name";
+  const fields = channel === "instagram" ? "name,username,profile_pic" : "first_name,last_name,profile_pic";
   const res = await fetch(
     `https://graph.facebook.com/${META_GRAPH_VERSION}/${encodeURIComponent(id)}?fields=${fields}`,
     { headers: { authorization: `Bearer ${env.pageAccessToken}` } }
   );
-  if (!res.ok) return { name: null, username: null };
+  if (!res.ok) return { name: null, username: null, profilePicUrl: null };
   const json = (await res.json().catch(() => ({}))) as {
     name?: string;
     username?: string;
     first_name?: string;
     last_name?: string;
+    profile_pic?: string;
   };
   const name = json.name ?? [json.first_name, json.last_name].filter(Boolean).join(" ");
-  return { name: name?.trim() || null, username: json.username?.trim() || null };
+  return {
+    name: name?.trim() || null,
+    username: json.username?.trim() || null,
+    profilePicUrl: json.profile_pic?.trim() || null,
+  };
 }

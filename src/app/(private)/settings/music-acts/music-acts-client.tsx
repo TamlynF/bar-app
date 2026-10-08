@@ -1,5 +1,7 @@
 "use client";
 
+import { coverUrlFromJoin } from "@/lib/act-images";
+
 import { useMemo, useState, useTransition } from "react";
 import {
   Plus,
@@ -217,9 +219,9 @@ export default function MusicActsClient({
                   }
                 >
                   <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
-                    {act.cover_image_url ? (
+                    {coverUrlFromJoin(act.cover_image) ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={act.cover_image_url} alt="" className="h-full w-full object-cover" />
+                      <img src={coverUrlFromJoin(act.cover_image) ?? undefined} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center">
                         <Music2 className="h-4 w-4 text-admin-muted opacity-40" />

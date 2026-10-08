@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { upsertContactByEmail, type SocialLinks } from "@/lib/music-acts";
 import { sanitizeBankAccounts, type BankAccount } from "@/lib/bank-accounts";
+import { setRequestCovers } from "@/lib/act-images-server";
 
 export interface MusicActInput {
   id?: string;
@@ -14,8 +15,8 @@ export interface MusicActInput {
   introduction?: string | null;
   spotify_url?: string | null;
   web_url?: string | null;
-  cover_image_url?: string | null;
-  image_urls?: string[];
+  cover_image_id?: string | null;
+  cover_booking_ids?: string[];
   social_links?: SocialLinks;
   video_urls?: string[];
   video_descriptions?: string[];
@@ -71,8 +72,7 @@ export async function saveMusicActAction(
     introduction: input.introduction?.trim() || null,
     spotify_url: input.spotify_url?.trim() || null,
     web_url: input.web_url?.trim() || null,
-    cover_image_url: input.cover_image_url?.trim() || null,
-    image_urls: (input.image_urls ?? []).filter(Boolean),
+    cover_image_id: input.cover_image_id ?? null,
     social_links: input.social_links ?? {},
     video_urls: (input.video_urls ?? []).filter(Boolean),
     video_descriptions: input.video_descriptions ?? [],
@@ -92,7 +92,11 @@ export async function saveMusicActAction(
         .update({ ...payload, updated_at: new Date().toISOString(), updated_by: empId })
         .eq("id", input.id);
       if (error) throw error;
+      const coverError = await setRequestCovers(supabase, input.cover_booking_ids ?? [], input.cover_image_id ?? null, empId);
+      if (coverError) throw new Error(coverError);
       revalidatePath("/settings/music-acts");
+      revalidatePath("/event-bookings/music-bookings");
+      revalidatePath("/event-setups/events");
       revalidatePublicEventPages();
       return { success: true, id: input.id };
     }

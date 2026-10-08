@@ -110,7 +110,7 @@ describe("serializeEvent image fallback", () => {
   } satisfies Partial<EventRow>;
 
   const withActCover = {
-    band_booking_requests: [{ music_acts: { cover_image_url: ACT_IMG } }],
+    band_booking_requests: [{ music_acts: { cover_image: { url: ACT_IMG } } }],
   } satisfies Partial<EventRow>;
 
   it("uses the event's own image when set", () => {
@@ -144,17 +144,28 @@ describe("serializeEvent image fallback", () => {
       makeEvent({
         band_booking_requests: [
           { music_acts: null },
-          { music_acts: { cover_image_url: ACT_IMG } },
+          { music_acts: { cover_image: { url: ACT_IMG } } },
         ],
       })
     );
     expect(s.imageUrl).toBe(ACT_IMG);
   });
 
+  it("prefers the booking's own poster over the act's", () => {
+    const s = serializeEvent(
+      makeEvent({
+        band_booking_requests: [
+          { cover_image: { url: "https://cdn.test/request.png" }, music_acts: { cover_image: { url: ACT_IMG } } },
+        ],
+      })
+    );
+    expect(s.imageUrl).toBe("https://cdn.test/request.png");
+  });
+
   it("handles the act embed arriving as an array", () => {
     const s = serializeEvent(
       makeEvent({
-        band_booking_requests: [{ music_acts: [{ cover_image_url: ACT_IMG }] }],
+        band_booking_requests: [{ music_acts: [{ cover_image: [{ url: ACT_IMG }] }] }],
       })
     );
     expect(s.imageUrl).toBe(ACT_IMG);

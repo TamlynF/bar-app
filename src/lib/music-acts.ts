@@ -15,8 +15,7 @@ export interface MusicActRow {
   genre: string | null;
   introduction: string | null;
   spotify_url: string | null;
-  cover_image_url: string | null;
-  image_urls: string[];
+  cover_image_id: string | null;
   social_links: SocialLinks | null;
   video_urls: string[];
   video_descriptions: string[];

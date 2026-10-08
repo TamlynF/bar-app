@@ -1,5 +1,6 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
+import { loadActImagesForActs } from "@/lib/act-images-server";
 import type { BandRequest } from "./components/band-booking-card";
 import BandBookingListClient from "./components/band-booking-list-client";
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
@@ -44,9 +45,15 @@ export default async function MusicBookingsPage({
     unreadByRequest.set(id, (unreadByRequest.get(id) ?? 0) + 1);
   }
 
+  const imagesByAct = await loadActImagesForActs(
+    supabase,
+    ((requests ?? []) as unknown as { music_acts_id: string | null }[]).map((r) => r.music_acts_id).filter((id): id is string => !!id)
+  );
+
   const items = ((requests ?? []) as unknown as BandRequest[]).map((r) => ({
     ...r,
     unread_emails: unreadByRequest.get(r.id) ?? 0,
+    act_images: r.music_acts_id ? (imagesByAct[r.music_acts_id] ?? []) : [],
   }));
   const maxVideoBytes = await maxVideoBytesPromise;
 

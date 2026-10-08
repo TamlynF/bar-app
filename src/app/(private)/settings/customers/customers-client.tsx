@@ -51,6 +51,7 @@ import {
 
 export type ContactRecord = {
   id: number;
+  avatar_url?: string | null;
   full_name: string;
   email: string;
   country_code: string | null;
@@ -649,9 +650,14 @@ export default function CustomersClient({
               const counts = activityFor(contact);
               return (
                 <ListRow key={contact.id} onClick={() => sheet.openView(contact)}>
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-line bg-admin-surface text-[11px] font-semibold text-admin-primary">
-                    {initialsOf(contact.full_name)}
-                  </span>
+                  {contact.avatar_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={contact.avatar_url} alt="" className="h-9 w-9 shrink-0 rounded-full border border-admin-line object-cover" />
+                  ) : (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-line bg-admin-surface text-[11px] font-semibold text-admin-primary">
+                      {initialsOf(contact.full_name)}
+                    </span>
+                  )}
 
                   {/* Fixed tracks so the email, the two dates and the counts each
                       hold one column all the way down the list. */}

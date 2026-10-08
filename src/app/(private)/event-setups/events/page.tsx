@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getVenueMaxCapacity } from "@/lib/update-fully-booked";
 import { loadEmailVersions } from "@/lib/email/booking-email-choice";
+import { coverUrlFromJoin } from "@/lib/act-images";
 import EventsClient, { type LinkedRequest } from "./event-setups-client";
 
 export default async function EventsPage({
@@ -21,7 +22,7 @@ export default async function EventsPage({
     supabase.from("bookings").select("id, event_id, status, group_size, group_name"),
     supabase
       .from("band_booking_requests")
-      .select("event_id, music_acts(cover_image_url)")
+      .select("event_id, cover_image:music_act_images!band_booking_requests_cover_image_id_fkey(url), music_acts(cover_image:music_act_images!music_acts_cover_image_id_fkey(url))")
       .eq("status", "booked")
       .not("event_id", "is", null)
       .order("created_at", { ascending: true }),
@@ -39,8 +40,9 @@ export default async function EventsPage({
   const actCoverByEvent: Record<number, string> = {};
   for (const row of actCovers ?? []) {
     const act = Array.isArray(row.music_acts) ? row.music_acts[0] : row.music_acts;
-    if (row.event_id != null && act?.cover_image_url && !actCoverByEvent[row.event_id]) {
-      actCoverByEvent[row.event_id] = act.cover_image_url;
+    const url = coverUrlFromJoin(row.cover_image) ?? coverUrlFromJoin(act?.cover_image);
+    if (row.event_id != null && url && !actCoverByEvent[row.event_id]) {
+      actCoverByEvent[row.event_id] = url;
     }
   }
 

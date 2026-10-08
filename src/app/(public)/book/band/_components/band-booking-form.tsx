@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useTransition, useRef } from "react";
-import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
+import { createBandBooking, type BandPosterChoice } from "@/app/(public)/_actions/create-band-booking";
+import { findActPoster } from "@/app/(public)/_actions/find-act-poster";
+import { actImageFileProblem, uploadActImage } from "@/lib/act-image-upload";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import { megabytes } from "@/lib/video-upload-limit";
 import { randomId } from "@/lib/random-id";
 import { showFirstFrame } from "@/lib/video-preview";
 import { X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
-  ChevronRight, ChevronLeft, Info, CalendarDays, Share2,
+  ChevronRight, ChevronLeft, Info, CalendarDays, Share2, Image as ImageIcon,
   Mic, Guitar, Music, User, Mail, Phone, PoundSterling, MessageSquareQuote,
 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
@@ -36,6 +38,7 @@ import type { SpotifyArtist } from "@/lib/spotify-artists";
 import { stepBackButtonClass, stepButtonRowClass, stepPrimaryButtonClass } from "@/app/(public)/book/_components/step-button-styles";
 import { scrollFormToRest, useFormScrollRest } from "@/app/(public)/book/_components/use-form-scroll-rest";
 import { cleanPhoneInput, isValidPhone, PHONE_ERROR } from "@/lib/phone";
+import { attempt } from "@/lib/attempt";
 
 interface VideoFile {
   id: string;
@@ -50,6 +53,15 @@ interface VideoFile {
 
 const MAX_VIDEOS = 10;
 const MAX_DATES = 8;
+
+type PosterState =
+  | { kind: "existing"; imageId: string; url: string }
+  | { kind: "upload"; url: string; path: string; previewUrl: string };
+
+function posterChoice(poster: PosterState | null): BandPosterChoice | null {
+  if (!poster) return null;
+  return poster.kind === "existing" ? { keepImageId: poster.imageId } : { url: poster.url, path: poster.path };
+}
 
 const titleCase = (s: string) =>
   s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bDj\b/g, "DJ");
@@ -214,6 +226,10 @@ export default function BandBookingForm({
     : defaultPreferredChannel(preferredOptions, arrival);
   const preferredDetail = preferredOptions.find((o) => o.channel === preferredChannel)?.detail ?? null;
   const [spotifyArtist, setSpotifyArtist] = useState<SpotifyArtist | null>(null);
+  const [poster, setPoster] = useState<PosterState | null>(null);
+  const [posterUploading, setPosterUploading] = useState(false);
+  const [posterError, setPosterError] = useState<string | null>(null);
+  const [posterLookedUpFor, setPosterLookedUpFor] = useState("");
   const [spotifyMatchedFor, setSpotifyMatchedFor] = useState("");
   const [spotifyAutoPicked, setSpotifyAutoPicked] = useState(false);
   const [spotifyQuery, setSpotifyQuery] = useState("");
@@ -274,6 +290,7 @@ export default function BandBookingForm({
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (step === 2 && !spotifyArtist) setSpotifyQuery(groupName);
+    if (step === 2) void lookUpExistingPoster();
     if (step === 3) {
       if (totalVideos === 0) {
         setVideoError(NO_VIDEO_ERROR);
@@ -287,6 +304,48 @@ export default function BandBookingForm({
     }
     setStep((s) => s + 1);
     scrollFormToRest();
+  }
+
+  /* Playing here again under the same name and email brings back the poster
+     we already hold; a changed name or email starts the look-up afresh. */
+  async function lookUpExistingPoster() {
+    const key = `${email.trim().toLowerCase()}|${groupName.trim().toLowerCase()}`;
+    if (key === posterLookedUpFor) return;
+    setPosterLookedUpFor(key);
+    if (poster?.kind === "existing") setPoster(null);
+    const found = await findActPoster(email, groupName).catch(() => null);
+    if (found) setPoster((current) => (current?.kind === "upload" ? current : { kind: "existing", ...found }));
+  }
+
+  async function handlePosterSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const problem = actImageFileProblem(file);
+    if (problem) {
+      setPosterError(problem);
+      return;
+    }
+    setPosterError(null);
+    setPosterUploading(true);
+    const previewUrl = URL.createObjectURL(file);
+    await attempt(
+      async () => {
+        const uploaded = await uploadActImage(file, "applications");
+        setPoster({ kind: "upload", ...uploaded, previewUrl });
+      },
+      (err) => {
+        URL.revokeObjectURL(previewUrl);
+        setPosterError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      }
+    );
+    setPosterUploading(false);
+  }
+
+  function removePoster() {
+    if (poster?.kind === "upload") URL.revokeObjectURL(poster.previewUrl);
+    setPoster(null);
+    setPosterError(null);
   }
 
   function handleBack() {
@@ -401,6 +460,7 @@ export default function BandBookingForm({
           preferred_channel: preferredChannel,
           source_channel: arrival?.channel ?? null,
           source_channel_id: arrival?.channelId ?? null,
+          poster: posterChoice(poster),
         });
         setSubmitted(true);
       } catch (err) {
@@ -574,6 +634,71 @@ export default function BandBookingForm({
 
         {step === 3 && (
           <div className="space-y-3 sm:space-y-4">
+            <MediaSection
+              icon={<ImageIcon className="h-4 w-4 text-gold" aria-hidden="true" />}
+              title="Poster"
+              hint={
+                poster?.kind === "existing"
+                  ? "Playing here again? This is the poster we already have for you - keep it or replace it."
+                  : "The picture we use on What's On and on your event poster. Square or landscape works best."
+              }
+              invalid={!!posterError}
+            >
+              {poster ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={poster.kind === "upload" ? poster.previewUrl : poster.url}
+                      alt="Your poster"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <label className="flex h-11 w-fit cursor-pointer items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-btn font-semibold text-white transition-colors hover:border-gold/40 hover:text-gold">
+                      {posterUploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
+                      Replace
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        aria-label="Replace poster"
+                        className="hidden"
+                        onChange={handlePosterSelect}
+                        disabled={posterUploading}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={removePoster}
+                      className="flex h-11 w-fit items-center gap-2 rounded-xl px-4 text-btn font-semibold text-stone-400 transition-colors hover:text-white"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-white/15 bg-black/20 px-4 py-5 text-center transition-colors hover:border-gold/40">
+                  {posterUploading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-gold" aria-hidden="true" />
+                  ) : (
+                    <Upload className="h-6 w-6 text-stone-500" aria-hidden="true" />
+                  )}
+                  <span className="text-btn font-semibold text-white">{posterUploading ? "Uploading…" : "Add a poster"}</span>
+                  <span className="text-meta text-stone-500">JPEG, PNG or WebP, up to 10 MB</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    aria-label="Upload a poster"
+                    className="hidden"
+                    onChange={handlePosterSelect}
+                    disabled={posterUploading}
+                  />
+                </label>
+              )}
+              {posterError && <FieldError message={posterError} />}
+            </MediaSection>
+
             <MediaSection
               icon={<Video className="h-4 w-4 text-gold" aria-hidden="true" />}
               title="Videos"

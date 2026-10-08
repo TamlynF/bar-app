@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { channelAddress, instagramHandle, type MetaChannel } from "@/lib/meta/channels";
 import { fetchMetaProfile, type InboundMetaMessage, type MetaEnv } from "@/lib/meta/messaging";
-import { escapeLike } from "@/lib/email/correspondence-data";
+import { escapeLike, EMAIL_ATTACHMENTS_BUCKET } from "@/lib/email/correspondence-data";
+import type { EmailAttachment } from "@/lib/email/correspondence";
+import { actHasImageFromSource, insertActImage, storeActImageBytes } from "@/lib/act-images-server";
 
 type Identity = {
   contactId: number | null;
@@ -11,14 +13,21 @@ type Identity = {
   privateHireRequestId: string | null;
   handle: string | null;
   name: string | null;
+  profilePicUrl: string | null;
 };
 
-type ChannelRow = { id: string; contact_id: number | null; handle: string | null; display_name: string | null };
+type ChannelRow = {
+  id: string;
+  contact_id: number | null;
+  handle: string | null;
+  display_name: string | null;
+  profile_pic_url: string | null;
+};
 
 async function knownChannel(admin: SupabaseClient, channel: MetaChannel, externalId: string): Promise<ChannelRow | null> {
   const { data } = await admin
     .from("contact_channels")
-    .select("id, contact_id, handle, display_name")
+    .select("id, contact_id, handle, display_name, profile_pic_url")
     .eq("channel", channel)
     .eq("external_id", externalId)
     .maybeSingle();
@@ -101,14 +110,16 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
       privateHireRequestId: hireId,
       handle: known.handle,
       name: known.display_name,
+      profilePicUrl: known.profile_pic_url,
     };
   }
 
   const profile =
     known?.handle || known?.display_name
-      ? { name: known.display_name, username: known.handle }
+      ? { name: known.display_name, username: known.handle, profilePicUrl: null }
       : await fetchMetaProfile(env, m.channel, m.senderId);
   const handle = m.channel === "instagram" ? instagramHandle(profile.username) : null;
+  const picture = await keepProfilePicture(m, known?.profile_pic_url ?? null, profile.profilePicUrl);
 
   if (handle) {
     const request = await requestByInstagram(admin, handle);
@@ -120,6 +131,7 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
         privateHireRequestId: request.contact_id ? await latestHireForContact(admin, request.contact_id) : null,
         handle,
         name: profile.name,
+        ...picture,
       };
     }
     const hire = await hireByInstagram(admin, handle);
@@ -131,6 +143,7 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
         privateHireRequestId: hire.id,
         handle,
         name: profile.name,
+        ...picture,
       };
     }
   }
@@ -146,7 +159,72 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
     privateHireRequestId: hireId,
     handle,
     name: profile.name,
+    ...picture,
   };
+}
+
+/* Meta's picture link expires within days, so a copy is kept in the
+   act-images bucket the first time a sender is seen. An existing copy is
+   reused. */
+async function keepProfilePicture(
+  m: InboundMetaMessage,
+  existing: string | null,
+  freshUrl: string | null
+): Promise<Pick<Identity, "profilePicUrl">> {
+  if (existing) return { profilePicUrl: existing };
+  if (!freshUrl) return { profilePicUrl: null };
+  const bytes = await fetchBytes(freshUrl);
+  if (!bytes) return { profilePicUrl: null };
+  const stored = await storeActImageBytes(`channels/${m.channel}-${m.senderId}`, bytes.body, bytes.contentType, m.channel);
+  return { profilePicUrl: stored?.url ?? null };
+}
+
+async function fetchBytes(url: string): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+    return { body: await res.arrayBuffer(), contentType: (res.headers.get("content-type") ?? "").split(";")[0].trim() };
+  } catch {
+    return null;
+  }
+}
+
+/* The sender's profile picture becomes one of the act's photos once, the
+   first time it is captured for that act. */
+async function fileProfilePictureUnderAct(admin: SupabaseClient, who: Identity, channel: MetaChannel): Promise<void> {
+  if (!who.musicActId || !who.profilePicUrl) return;
+  if (await actHasImageFromSource(admin, who.musicActId, channel, who.profilePicUrl)) return;
+  await insertActImage(admin, {
+    actId: who.musicActId,
+    requestId: who.bandRequestId,
+    url: who.profilePicUrl,
+    source: channel,
+  });
+}
+
+const META_IMAGE_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+
+/* Pictures sent in a chat are copied into the private attachments bucket
+   before Meta's link dies, so they show as attachments like an email's. */
+async function keepChatImages(admin: SupabaseClient, m: InboundMetaMessage): Promise<EmailAttachment[]> {
+  const stored: EmailAttachment[] = [];
+  for (const [i, a] of m.attachments.entries()) {
+    if (a.type !== "image" || !a.url) continue;
+    const bytes = await fetchBytes(a.url);
+    const ext = bytes ? META_IMAGE_TYPES[bytes.contentType] : undefined;
+    if (!bytes || !ext) continue;
+    const name = `${m.channel}-image-${i + 1}.${ext}`;
+    const path = `inbound-meta/${m.messageId.replace(/[^A-Za-z0-9_-]/g, "_")}/${name}`;
+    const { error } = await admin.storage
+      .from(EMAIL_ATTACHMENTS_BUCKET)
+      .upload(path, Buffer.from(bytes.body), { contentType: bytes.contentType, upsert: true });
+    if (error) {
+      console.error("[meta inbound] image copy failed:", error.message);
+      continue;
+    }
+    stored.push({ name, path, size: bytes.body.byteLength, contentType: bytes.contentType });
+  }
+  return stored;
 }
 
 /* Every sender is remembered, matched or not: an unmatched row is what the
@@ -161,6 +239,7 @@ async function rememberChannel(admin: SupabaseClient, m: InboundMetaMessage, who
         external_id: m.senderId,
         handle: who.handle,
         display_name: who.name,
+        ...(who.profilePicUrl ? { profile_pic_url: who.profilePicUrl } : {}),
         last_inbound_at: m.sentAt,
         updated_at: new Date().toISOString(),
       },
@@ -240,6 +319,8 @@ export async function storeInboundMetaMessage(env: MetaEnv, m: InboundMetaMessag
   const admin = createAdminClient();
   const who = await identify(admin, env, m);
   await rememberChannel(admin, m, who);
+  await fileProfilePictureUnderAct(admin, who, m.channel);
+  const attachments = await keepChatImages(admin, m);
   if (who.contactId) {
     await relinkSenderMessages(admin, m.channel, m.senderId, {
       contactId: who.contactId,
@@ -264,6 +345,7 @@ export async function storeInboundMetaMessage(env: MetaEnv, m: InboundMetaMessag
     to_addresses: [],
     subject: "",
     text_body: bodyText(m),
+    attachments,
     created_at: m.sentAt,
   });
   if (error && error.code !== "23505") {
