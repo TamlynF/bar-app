@@ -14,7 +14,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SiInstagram, SiMessenger } from "react-icons/si";
 import { cn } from "@/lib/utils";
+import { CHANNEL_LABELS, type MessageChannel, type MetaChannel } from "@/lib/meta/channels";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -32,6 +34,7 @@ import {
   CORRESPONDENCE_SOURCE_LABELS,
   splitQuotedReply,
   type CorrespondenceMessage,
+  type ThreadChannel,
 } from "@/lib/email/correspondence";
 import {
   getCorrespondence,
@@ -65,6 +68,72 @@ const KIND_LABELS: Record<string, string> = {
   page_response: "From their request page",
 };
 
+const CHANNEL_ICONS: Record<MetaChannel, React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>> = {
+  messenger: SiMessenger,
+  instagram: SiInstagram,
+};
+
+function ChannelBadge({ channel }: { channel: MessageChannel }) {
+  if (channel === "email") return null;
+  const Icon = CHANNEL_ICONS[channel];
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-black/5 px-1.5 py-px text-[11px] font-semibold text-admin-muted">
+      <Icon className="h-3 w-3" aria-hidden />
+      {CHANNEL_LABELS[channel]}
+    </span>
+  );
+}
+
+/* Email, plus each chat channel the customer has written from. A closed
+   channel stays listed so staff can see why a reply there is not possible. */
+function ChannelPicker({
+  value,
+  emailAvailable,
+  channels,
+  onChange,
+}: {
+  value: MessageChannel;
+  emailAvailable: boolean;
+  channels: ThreadChannel[];
+  onChange: (next: MessageChannel) => void;
+}) {
+  const options: { key: MessageChannel; label: string; disabled: boolean; title?: string }[] = [
+    { key: "email", label: "Email", disabled: !emailAvailable, title: emailAvailable ? undefined : "No email address on file" },
+    ...channels.map((c) => ({
+      key: c.channel,
+      label: CHANNEL_LABELS[c.channel],
+      disabled: false,
+      title: c.allowance.mode === "closed" ? c.allowance.reason : undefined,
+    })),
+  ];
+  return (
+    <div role="radiogroup" aria-label="Reply on" className="inline-flex rounded-xl border border-admin-line bg-white p-0.5">
+      {options.map((o) => {
+        const Icon = o.key === "email" ? Mail : CHANNEL_ICONS[o.key];
+        const active = o.key === value;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={o.disabled}
+            title={o.title}
+            onClick={() => onChange(o.key)}
+            className={cn(
+              "flex h-9 items-center gap-1.5 rounded-lg px-3 text-[12px] font-semibold transition-colors disabled:opacity-40 max-sm:h-11",
+              active ? "bg-admin-primary-soft text-admin-primary" : "text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const LONG_BODY_CHARS = 420;
 const LONG_BODY_LINES = 8;
 const COLLAPSED_FRAME_PX = 200;
@@ -72,6 +141,7 @@ const COLLAPSED_FRAME_PX = 200;
 function senderName(m: CorrespondenceMessage, counterpartName?: string): string {
   if (m.direction === "outbound") return m.sentByName ?? "Don Fenticas";
   if (counterpartName?.trim()) return counterpartName.trim();
+  if (m.senderName?.trim()) return m.senderName.trim();
   const named = m.fromAddress.match(/^\s*"?([^"<]+?)"?\s*</);
   return named ? named[1] : m.fromAddress;
 }
@@ -376,6 +446,7 @@ function MessageBubble({
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2">
                 <span className="truncate text-[13px] font-bold text-admin-ink">{name}</span>
+                <ChannelBadge channel={message.channel} />
                 {kindLabel && (
                   <span className="shrink-0 rounded-md bg-black/5 px-1.5 py-px text-[11px] font-semibold text-admin-muted max-sm:hidden">
                     {kindLabel}
@@ -393,7 +464,7 @@ function MessageBubble({
               </span>
               {open ? (
                 <span className="mt-0.5 block truncate text-[11px] text-admin-muted" title={message.subject}>
-                  {message.subject}
+                  {message.subject || `${CHANNEL_LABELS[message.channel]} message`}
                   {showSource && ` · ${CORRESPONDENCE_SOURCE_LABELS[message.source]}`}
                 </span>
               ) : (
@@ -494,6 +565,7 @@ export function CorrespondencePanel({
   const [loadFailed, setLoadFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [channel, setChannel] = useState<MessageChannel>("email");
   const [isSending, startSending] = useTransition();
   const [relinkingId, setRelinkingId] = useState<string | null>(null);
   const markedFor = useRef<string | null>(null);
@@ -537,6 +609,7 @@ export function CorrespondencePanel({
     setSendError(null);
     const form = new FormData();
     form.set("html", html);
+    form.set("channel", replyChannel);
     for (const f of files) form.append("files", f);
     return new Promise((resolve) => {
       startSending(async () => {
@@ -550,7 +623,7 @@ export function CorrespondencePanel({
           return;
         }
         if (res.thread) setThread(res.thread);
-        toast.success("Email sent");
+        toast.success(replyChannel === "email" ? "Email sent" : `${CHANNEL_LABELS[replyChannel]} message sent`);
         resolve(true);
       });
     });
@@ -581,6 +654,12 @@ export function CorrespondencePanel({
 
   const hasInbound = messages.some((m) => m.direction === "inbound");
   const who = counterpartName?.trim();
+  const chatChannels = thread?.channels ?? [];
+  /* Email unless the customer has no address and has written on a chat channel. */
+  const replyChannel: MessageChannel =
+    channel === "email" && !thread?.recipient && chatChannels[0] ? chatChannels[0].channel : channel;
+  const chat = chatChannels.find((c) => c.channel === replyChannel) ?? null;
+  const chatClosed = chat?.allowance.mode === "closed" ? chat.allowance.reason : null;
 
   return (
     <div>
@@ -594,6 +673,12 @@ export function CorrespondencePanel({
             ) : thread ? (
               "No email address on file"
             ) : null}
+            {chatChannels.map((c) => (
+              <span key={c.channel} className="ml-2 inline-flex items-center gap-1 text-admin-muted">
+                <ChannelBadge channel={c.channel} />
+                {c.handle && <span className="font-semibold text-admin-ink">@{c.handle}</span>}
+              </span>
+            ))}
           </p>
           <button
             type="button"
@@ -618,10 +703,10 @@ export function CorrespondencePanel({
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 rounded-2xl border border-dashed border-admin-line bg-white px-4 py-6 text-center">
             <Mail className="h-5 w-5 text-admin-muted" aria-hidden="true" />
-            <p className="text-[13px] text-admin-muted">No emails yet. Emails you send and the replies to them appear here.</p>
+            <p className="text-[13px] text-admin-muted">No messages yet. Emails and chat messages, and the replies to them, appear here.</p>
           </div>
         ) : (
-          <ol className="space-y-2.5" aria-label="Email correspondence">
+          <ol className="space-y-2.5" aria-label="Correspondence">
             {messages.map((m) => (
               <MessageBubble
                 key={m.id}
@@ -641,32 +726,71 @@ export function CorrespondencePanel({
 
       {editable && thread && (
         <div className="space-y-2 border-t border-admin-line p-3 sm:p-4">
-          <EmailComposer
-            id={`reply-${filterKey}`}
-            disabled={!thread.recipient}
-            sending={isSending}
-            placeholder={thread.recipient ? (hasInbound ? "Write a reply…" : "Write an email…") : "Add an email address first"}
-            label={
-              thread.recipient ? (
+          {chatChannels.length > 0 && (
+            <ChannelPicker
+              value={replyChannel}
+              emailAvailable={!!thread.recipient}
+              channels={chatChannels}
+              onChange={setChannel}
+            />
+          )}
+          {chat ? (
+            <EmailComposer
+              id={`reply-${filterKey}`}
+              plain
+              disabled={!!chatClosed}
+              sending={isSending}
+              placeholder={chatClosed ?? `Write a message on ${CHANNEL_LABELS[chat.channel]}…`}
+              label={
                 <>
-                  {hasInbound ? "Reply to" : "New email to"}{" "}
-                  {who && <span className="font-bold text-admin-ink">{who}</span>}
-                  {who ? " · " : ""}
-                  {thread.recipient}
+                  Reply on {CHANNEL_LABELS[chat.channel]} to{" "}
+                  <span className="font-bold text-admin-ink">{who || (chat.handle ? `@${chat.handle}` : "them")}</span>
+                  {who && chat.handle ? ` · @${chat.handle}` : ""}
                 </>
-              ) : (
-                "No email address on file"
-              )
-            }
-            onSend={send}
-          />
+              }
+              onSend={send}
+            />
+          ) : (
+            <EmailComposer
+              id={`reply-${filterKey}`}
+              disabled={!thread.recipient}
+              sending={isSending}
+              placeholder={thread.recipient ? (hasInbound ? "Write a reply…" : "Write an email…") : "Add an email address first"}
+              label={
+                thread.recipient ? (
+                  <>
+                    {hasInbound ? "Reply to" : "New email to"}{" "}
+                    {who && <span className="font-bold text-admin-ink">{who}</span>}
+                    {who ? " · " : ""}
+                    {thread.recipient}
+                  </>
+                ) : (
+                  "No email address on file"
+                )
+              }
+              onSend={send}
+            />
+          )}
+          {chat && !chatClosed && (
+            <p className="text-[11px] leading-snug text-admin-muted">
+              {chat.allowance.mode === "human_agent"
+                ? "Sent with Meta's human agent tag, allowed up to 7 days after their last message. Text only."
+                : "Text only. Meta allows replies for 24 hours after their last message."}
+            </p>
+          )}
+          {chatClosed && (
+            <p className="flex items-center gap-1.5 text-[12px] font-semibold text-admin-warning">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              {chatClosed}
+            </p>
+          )}
           {sendError && (
             <p className="flex items-center gap-1.5 text-[12px] font-semibold text-admin-error">
               <AlertCircle className="h-3.5 w-3.5 shrink-0" />
               {sendError}
             </p>
           )}
-          {!thread.repliesEnabled && (
+          {!thread.repliesEnabled && !chat && (
             <p className="text-[11px] leading-snug text-admin-muted">
               Replies won&apos;t show here until the reply domain is set up.
             </p>

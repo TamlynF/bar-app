@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { storeInboundMetaMessage } from "@/lib/meta/inbound";
 import { parseMetaWebhook, readMetaEnv, verifyMetaSignature, webhookChallenge } from "@/lib/meta/messaging";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export async function GET(req: NextRequest) {
 }
 
 /* Every Messenger and Instagram event for the subscribed Page lands here.
-   Meta retries on anything but a 200, so bad signatures are the only refusal. */
+   Meta retries on anything but a 200, so bad signatures are the only refusal;
+   a message that cannot be stored is logged rather than bounced back. */
 export async function POST(req: NextRequest) {
   const env = readMetaEnv();
   if (!env) return NextResponse.json({ error: "Meta messaging not configured" }, { status: 503 });
@@ -41,9 +43,16 @@ export async function POST(req: NextRequest) {
 
   for (const message of parseMetaWebhook(body)) {
     if (message.isEcho) continue;
-    console.log(
-      `[meta ${message.channel}] from ${message.senderId}: ${message.text || `(${message.attachments.length} attachment(s))`}`
-    );
+    try {
+      const outcome = await storeInboundMetaMessage(env, message);
+      console.log(
+        `[meta ${message.channel}] from ${message.senderId}: ${message.text || `(${message.attachments.length} attachment(s))`} -> ${
+          outcome.stored ? `stored, contact ${outcome.contactId ?? "unmatched"}, request ${outcome.bandRequestId ?? "none"}` : "not stored"
+        }`
+      );
+    } catch (e) {
+      console.error(`[meta ${message.channel}] store threw:`, e);
+    }
   }
   return NextResponse.json({ ok: true });
 }

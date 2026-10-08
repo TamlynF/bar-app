@@ -14,14 +14,20 @@ import {
   replySubject,
   type CorrespondenceFilter,
   type CorrespondenceMessage,
+  type ThreadChannel,
 } from "@/lib/email/correspondence";
 import {
   escapeLike,
   latestInbound,
   latestSubject,
   loadCorrespondence,
+  loadThreadChannels,
   sendCorrespondenceEmail,
+  threadContactId,
 } from "@/lib/email/correspondence-data";
+import { CHANNEL_LABELS, isMetaChannel, replyAllowance } from "@/lib/meta/channels";
+import { readMetaEnv, sendMetaText } from "@/lib/meta/messaging";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type { CorrespondenceFilter };
 
@@ -39,6 +45,8 @@ export type CorrespondenceThread = {
      hires - so each email can say which one it belongs to and be moved. */
   bookings?: CorrespondenceBooking[];
   bookingNoun?: string;
+  /* Messenger / Instagram identities the customer has written from. */
+  channels: ThreadChannel[];
 };
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -162,12 +170,13 @@ async function linkOptions(
 
 export async function getCorrespondence(filter: CorrespondenceFilter): Promise<CorrespondenceThread> {
   const supabase = await createClient();
-  const [messages, recipient, links] = await Promise.all([
+  const [messages, recipient, links, channels] = await Promise.all([
     loadCorrespondence(supabase, filter),
     recipientFor(supabase, filter),
     linkOptions(supabase, filter),
+    loadThreadChannels(supabase, filter),
   ]);
-  return { messages, recipient, repliesEnabled: !!EMAIL_REPLY_DOMAIN, ...links };
+  return { messages, recipient, repliesEnabled: !!EMAIL_REPLY_DOMAIN, channels, ...links };
 }
 
 /* Moves an email onto another of the act's band bookings or the customer's
@@ -222,12 +231,73 @@ export async function markCorrespondenceRead(filter: CorrespondenceFilter): Prom
   revalidateCorrespondence();
 }
 
+/* A reply on Messenger or Instagram: plain text through the Page, inside
+   Meta's window, filed on the same thread as the emails. */
+async function sendMetaReply(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filter: CorrespondenceFilter,
+  channel: "messenger" | "instagram",
+  text: string,
+  fileCount: number
+): Promise<{ error: string | null }> {
+  if (fileCount > 0) return { error: `Attachments can't be sent on ${CHANNEL_LABELS[channel]} - send them by email.` };
+  if (!text) return { error: "Write a message first." };
+  const env = readMetaEnv();
+  if (!env) return { error: "Messenger and Instagram aren't set up on this site." };
+
+  const target = (await loadThreadChannels(supabase, filter)).find((c) => c.channel === channel);
+  if (!target) return { error: `They haven't messaged on ${CHANNEL_LABELS[channel]} yet.` };
+  const allowance = replyAllowance(channel, target.lastInboundAt);
+  if (allowance.mode === "closed") return { error: allowance.reason };
+
+  const sent = await sendMetaText(env, {
+    recipientId: target.externalId,
+    text,
+    humanAgent: allowance.mode === "human_agent",
+  });
+  if (!sent.ok) return { error: sent.error };
+
+  const [sentBy, contactId] = await Promise.all([getCurrentEmployeeId(supabase), threadContactId(supabase, filter)]);
+  const admin = createAdminClient();
+  let musicActId = "musicActId" in filter ? filter.musicActId : null;
+  if (!musicActId && "bandRequestId" in filter) {
+    const { data } = await admin.from("band_booking_requests").select("music_acts_id").eq("id", filter.bandRequestId).maybeSingle();
+    musicActId = (data?.music_acts_id as string | null) ?? null;
+  }
+  const { error } = await admin.from("email_messages").insert({
+    band_booking_request_id: "bandRequestId" in filter ? filter.bandRequestId : null,
+    music_act_id: musicActId,
+    private_hire_request_id: "privateHireRequestId" in filter ? filter.privateHireRequestId : null,
+    enquiry_id: "enquiryId" in filter ? filter.enquiryId : null,
+    contact_id: contactId,
+    direction: "outbound",
+    kind: "message",
+    channel,
+    external_id: sent.messageId,
+    from_address: `${channel}:page`,
+    to_addresses: [target.handle ? `@${target.handle}` : target.externalId],
+    subject: "",
+    text_body: text,
+    sent_by: sentBy,
+  });
+  if (error) console.error(`[correspondence ${channel}] log failed:`, error.code, error.message);
+  return { error: null };
+}
+
 export async function sendCorrespondenceReply(
   filter: CorrespondenceFilter,
   form: FormData
 ): Promise<{ error: string | null; thread?: CorrespondenceThread }> {
   const rawHtml = String(form.get("html") ?? "").trim();
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const channel = form.get("channel");
+  if (isMetaChannel(channel)) {
+    const supabase = await createClient();
+    const { error } = await sendMetaReply(supabase, filter, channel, htmlToPlainText(rawHtml).trim(), files.length);
+    if (error) return { error };
+    revalidateCorrespondence();
+    return { error: null, thread: await getCorrespondence(filter) };
+  }
   if (!htmlToPlainText(rawHtml).trim() && files.length === 0) return { error: "Write a message first." };
   if (files.length > MAX_REPLY_FILES) return { error: `Attach up to ${MAX_REPLY_FILES} files.` };
   if (files.reduce((sum, f) => sum + f.size, 0) > MAX_REPLY_BYTES) {

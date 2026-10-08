@@ -1,5 +1,6 @@
 import { escapeHtml } from "./escape";
 import { unwrapListParagraphs } from "./design";
+import type { MessageChannel, MetaChannel, ReplyAllowance } from "@/lib/meta/channels";
 
 export type CorrespondenceKind = "band" | "act" | "hire" | "enq" | "cust";
 
@@ -48,6 +49,8 @@ export type CorrespondenceMessage = {
   id: string;
   direction: "outbound" | "inbound";
   kind: string | null;
+  channel: MessageChannel;
+  senderName: string | null;
   fromAddress: string;
   toAddresses: string[];
   subject: string;
@@ -60,6 +63,16 @@ export type CorrespondenceMessage = {
   privateHireRequestId: string | null;
   source: CorrespondenceSource;
   createdAt: string;
+};
+
+/* A chat channel the other party has used, with whether Meta will take a
+   reply right now. */
+export type ThreadChannel = {
+  channel: MetaChannel;
+  externalId: string;
+  handle: string | null;
+  lastInboundAt: string | null;
+  allowance: ReplyAllowance;
 };
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";

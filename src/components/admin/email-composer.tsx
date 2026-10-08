@@ -28,6 +28,7 @@ export function EmailComposer({
   onSend,
   onChange,
   minHeightClass = "min-h-24",
+  plain = false,
 }: {
   id: string;
   label: React.ReactNode;
@@ -37,6 +38,8 @@ export function EmailComposer({
   onSend?: (html: string, files: File[]) => Promise<boolean>;
   onChange?: (draft: { html: string; text: string; files: File[] }) => void;
   minHeightClass?: string;
+  /* Chat channels take text only: no formatting bar, no attachments. */
+  plain?: boolean;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -64,7 +67,7 @@ export function EmailComposer({
         id,
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": "Email message",
+        "aria-label": plain ? "Message" : "Email message",
         class: cn(
           minHeightClass,
           "px-3 py-2 text-[13px] leading-relaxed text-admin-ink outline-none [&_a]:text-admin-primary [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-0 [&_ul]:list-disc [&_ul]:pl-5"
@@ -152,6 +155,7 @@ export function EmailComposer({
         {label}
       </label>
 
+      {!plain && (
       <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Formatting">
         <button
           type="button"
@@ -258,6 +262,7 @@ export function EmailComposer({
           }}
         />
       </div>
+      )}
 
       <div
         className={cn(
@@ -304,7 +309,7 @@ export function EmailComposer({
             className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:h-10"
           >
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Send reply
+            {plain ? "Send message" : "Send reply"}
           </button>
         </div>
       )}

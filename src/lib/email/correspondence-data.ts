@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isMetaChannel, replyAllowance, type MessageChannel, type MetaChannel } from "@/lib/meta/channels";
 import type { RenderedSlots } from "./design";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,6 +16,7 @@ import {
   safeAttachmentName,
   correspondenceColumn,
   type CorrespondenceFilter,
+  type ThreadChannel,
   type CorrespondenceMessage,
   type CorrespondenceSource,
   type CorrespondenceTarget,
@@ -216,6 +218,8 @@ type MessageRow = {
   id: string;
   direction: "outbound" | "inbound";
   kind: string | null;
+  channel: MessageChannel | null;
+  sender_name: string | null;
   from_address: string;
   to_addresses: string[] | null;
   subject: string;
@@ -246,7 +250,7 @@ export async function loadCorrespondence(
   let query = supabase
     .from("email_messages")
     .select(
-      "id, direction, kind, from_address, to_addresses, subject, text_body, html_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
+      "id, direction, kind, channel, sender_name, from_address, to_addresses, subject, text_body, html_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
     )
     .order("created_at", { ascending: true });
   query = query.eq(...correspondenceColumn(filter));
@@ -273,6 +277,8 @@ export async function loadCorrespondence(
       id: r.id,
       direction: r.direction,
       kind: r.kind,
+      channel: r.channel ?? "email",
+      senderName: r.sender_name,
       fromAddress: r.from_address,
       toAddresses: r.to_addresses ?? [],
       subject: r.subject,
@@ -289,8 +295,51 @@ export async function loadCorrespondence(
   });
 }
 
-/* The latest inbound message is what a staff reply answers: its subject and
-   Message-ID keep the band's mail app threading the conversation. */
+/* The customer a thread belongs to, from whichever record the thread is on. */
+export async function threadContactId(supabase: SupabaseClient, filter: CorrespondenceFilter): Promise<number | null> {
+  if ("contactId" in filter) return filter.contactId;
+  const [table, id] =
+    "bandRequestId" in filter
+      ? ["band_booking_requests", filter.bandRequestId]
+      : "privateHireRequestId" in filter
+        ? ["private_hire_requests", filter.privateHireRequestId]
+        : "enquiryId" in filter
+          ? ["enquiries", filter.enquiryId]
+          : ["music_acts", filter.musicActId];
+  return contactIdFromRow(supabase, table, id);
+}
+
+/* The chat channels the thread's customer has written on, each with Meta's
+   reply window worked out as of now. */
+export async function loadThreadChannels(
+  supabase: SupabaseClient,
+  filter: CorrespondenceFilter,
+  now: number = Date.now()
+): Promise<ThreadChannel[]> {
+  const contactId = await threadContactId(supabase, filter);
+  if (!contactId) return [];
+  const { data, error } = await supabase
+    .from("contact_channels")
+    .select("channel, external_id, handle, last_inbound_at")
+    .eq("contact_id", contactId)
+    .order("last_inbound_at", { ascending: false });
+  if (error) {
+    console.error("[correspondence] channels load failed:", error.code, error.message);
+    return [];
+  }
+  return (data ?? [])
+    .filter((r) => isMetaChannel(r.channel))
+    .map((r) => ({
+      channel: r.channel as MetaChannel,
+      externalId: r.external_id as string,
+      handle: (r.handle as string | null) ?? null,
+      lastInboundAt: (r.last_inbound_at as string | null) ?? null,
+      allowance: replyAllowance(r.channel as MetaChannel, r.last_inbound_at as string | null, now),
+    }));
+}
+
+/* Emails only: the latest inbound email is what a staff reply answers - its
+   subject and Message-ID keep the band's mail app threading the conversation. */
 export async function latestInbound(
   supabase: SupabaseClient,
   filter: CorrespondenceFilter
@@ -299,6 +348,7 @@ export async function latestInbound(
     .from("email_messages")
     .select("subject, message_id, from_address")
     .eq("direction", "inbound")
+    .eq("channel", "email")
     .order("created_at", { ascending: false })
     .limit(1);
   query = query.eq(...correspondenceColumn(filter));
@@ -318,6 +368,7 @@ export async function latestSubject(
   let query = supabase
     .from("email_messages")
     .select("subject")
+    .eq("channel", "email")
     .order("created_at", { ascending: false })
     .limit(1);
   query = query.eq(...correspondenceColumn(filter));
