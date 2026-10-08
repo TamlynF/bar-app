@@ -140,6 +140,9 @@ TWILIO_WHATSAPP_FROM                     # Market Night WhatsApp alerts - the ap
 TWILIO_WHATSAPP_TEMPLATE_SID             # Approved content template (HX…) for alerts outside a 24h window; unset = free text (sandbox / reply window only)
 TWILIO_WHATSAPP_SANDBOX_JOIN             # Optional "join <words>" line shown on the sign-up card while testing against the Twilio sandbox
 MARKET_EMAIL_ALERTS                      # 'on' lights up the Email option on /market (sends through the existing Resend key); unset = "Coming soon"
+META_APP_SECRET                          # Meta app (developers.facebook.com, app 1733095932151404) - signs the X-Hub-Signature-256 header on /api/meta/webhook
+META_WEBHOOK_VERIFY_TOKEN                # Any string you choose; typed into the Messenger and Instagram webhook settings so Meta's GET handshake can be answered
+META_PAGE_ACCESS_TOKEN                   # Page access token generated under the Messenger use case; sends replies through the Graph Send API. All three set = Meta messaging on
 ```
 
 ---
