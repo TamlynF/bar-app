@@ -101,7 +101,7 @@ export async function syncBandEvent(
       }),
       is_bookable: et?.is_bookable ?? false,
       booking_config: et?.booking_config ?? {},
-      booking_card_title: et?.booking_card_title ?? null,
+      booking_card_title: null,
       booking_card_tagline: et?.booking_card_tagline ?? null,
       booking_card_icon: et?.booking_card_icon ?? null,
       booking_card_badge: et?.booking_card_badge ?? null,

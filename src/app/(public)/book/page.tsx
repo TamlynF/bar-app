@@ -1,13 +1,15 @@
 import React from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArrowRight, Calendar, ChevronRight } from "lucide-react";
+import { ArrowRight, Calendar, ChevronDown, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { PageHeader } from "@/components/editorial/page-header";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cardIcon } from "@/lib/booking-card-icons";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
+import { bookingGroupFor, groupBookingCards, type BookingGroupKey } from "@/lib/booking-hub-groups";
 
 export const metadata = {
   title: "Book",
@@ -38,6 +40,7 @@ type RawBookableEvent = {
   is_fully_booked: boolean | null;
   event_types_id: number;
   event_subtypes_id: number | null;
+  creation_method?: string | null;
   booking_card_title: string | null;
   booking_card_tagline: string | null;
   booking_card_icon: string | null;
@@ -62,6 +65,7 @@ type BookingCard = {
   isFullyBooked: boolean;
   paymentAmount: number | null;
   isRequest: boolean; // standing enquiry → shown under Requests & Enquiries
+  group: BookingGroupKey; // Pub Games / Live Music / Featured Nights / More
 };
 
 const first = <T,>(v: T | T[] | null): T | null =>
@@ -89,6 +93,7 @@ const REQUEST_CARDS: BookingCard[] = [
     isFullyBooked: false,
     paymentAmount: null,
     isRequest: true,
+    group: "more",
   },
   {
     key: "request-private",
@@ -106,6 +111,7 @@ const REQUEST_CARDS: BookingCard[] = [
     isFullyBooked: false,
     paymentAmount: null,
     isRequest: true,
+    group: "more",
   },
 ];
 
@@ -127,12 +133,13 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
     const colorHex = swatchHexFromColor(colorKey) ?? GOLD;
     const taglineFallback = subtype?.tagline || ev.tagline || "";
     const label = subtype?.name || type?.name || null;
+    const group = bookingGroupFor(type?.name, subtype?.behavior);
 
     if (mode === "per_event") {
       cards.push({
         key: `e-${ev.id}`,
         href: `/book/event/${ev.id}`,
-        title: source?.booking_card_title || ev.title || "Event",
+        title: (ev.creation_method === "band_request" ? ev.title : source?.booking_card_title || ev.title) || "Event",
         tagline: source?.booking_card_tagline || taglineFallback,
         icon: source?.booking_card_icon ?? null,
         note: source?.booking_card_badge || null,
@@ -145,6 +152,7 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
         isFullyBooked: !!ev.is_fully_booked,
         paymentAmount: ev.payment_amount ?? null,
         isRequest: false,
+        group,
       });
       continue;
     }
@@ -179,32 +187,13 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
       isFullyBooked: !!ev.is_fully_booked,
       paymentAmount: ev.payment_amount ?? null,
       isRequest: false,
+      group,
     };
     groups.set(groupKey, card);
     cards.push(card);
   }
 
   return cards.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-}
-
-type MonthGroup = { key: string; label: string; cards: BookingCard[] };
-
-function groupByMonth(cards: BookingCard[]): MonthGroup[] {
-  const months: MonthGroup[] = [];
-  for (const card of cards) {
-    const key = (card.date ?? "").slice(0, 7);
-    let month = months.find((m) => m.key === key);
-    if (!month) {
-      month = {
-        key,
-        label: card.date ? format(new Date(card.date + "T00:00:00"), "MMMM yyyy") : "Coming up",
-        cards: [],
-      };
-      months.push(month);
-    }
-    month.cards.push(card);
-  }
-  return months;
 }
 
 function sentenceCase(text: string | null) {
@@ -325,7 +314,7 @@ export default async function BookingHubPage() {
   const { data: bookableEvents } = await supabase
     .from("events")
     .select(
-      "id, date, title, tagline, payment_amount, is_fully_booked, event_types_id, event_subtypes_id, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge, event_types!inner(id, name, color, booking_grouping, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge), event_subtypes(id, name, color, tagline, behavior, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge)"
+      "id, date, title, tagline, payment_amount, is_fully_booked, event_types_id, event_subtypes_id, creation_method, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge, event_types!inner(id, name, color, booking_grouping, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge), event_subtypes(id, name, color, tagline, behavior, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge)"
     )
     .eq("is_active", true)
     .eq("is_bookable", true)
@@ -333,7 +322,7 @@ export default async function BookingHubPage() {
     .order("date", { ascending: true })
     .limit(50);
 
-  const months = groupByMonth(buildBookingCards((bookableEvents ?? []) as RawBookableEvent[]));
+  const eventGroups = groupBookingCards(buildBookingCards((bookableEvents ?? []) as RawBookableEvent[]));
   const requestCards = REQUEST_CARDS;
 
   return (
@@ -343,33 +332,52 @@ export default async function BookingHubPage() {
       <div className="mx-auto max-w-5xl py-8 sm:py-12">
         <PageHeader
           eyebrow="Bookings"
-          title="Book Your Experience"
-          subtitle="Tickets for what's on - or get in touch about playing our stage and private hire."
+          title="Bookings & Requests"
+          subtitle="Tickets, stage slots and private hire."
         />
 
-        <div>
+        {requestCards.length > 0 && (
+          <div>
+            <SectionHeading eyebrow="Get in touch" title="Requests & Enquiries" />
+            <ul className={LIST + " lg:grid lg:grid-cols-2 lg:divide-x lg:divide-y-0"}>
+              {requestCards.map((card) => (
+                <RequestRow key={card.key} card={card} />
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className={requestCards.length > 0 ? "mt-12 sm:mt-16" : undefined}>
           <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
-          {months.length > 0 ? (
+          {eventGroups.length > 0 ? (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-              {months.map((month) => (
-                <section key={month.key} aria-labelledby={`month-${month.key}`}>
-                  <h3
-                    id={`month-${month.key}`}
-                    className="mb-2.5 flex items-baseline justify-between gap-3 px-1"
-                  >
-                    <span className="font-black text-btn tracking-tight text-gold uppercase">
-                      {month.label}
-                    </span>
-                    <span className="text-meta text-ink-2">
-                      {month.cards.length} {month.cards.length === 1 ? "event" : "events"}
-                    </span>
-                  </h3>
-                  <ul className={LIST}>
-                    {month.cards.map((card) => (
-                      <TicketRow key={card.key} card={card} />
-                    ))}
-                  </ul>
-                </section>
+              {eventGroups.map((group) => (
+                <Collapsible key={group.key} defaultOpen asChild>
+                  <section aria-label={group.label}>
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="group/fold mb-2.5 flex min-h-11 w-full items-center justify-between gap-3 px-1 text-left transition-colors hover:text-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                      >
+                        <span className="font-black text-btn tracking-tight text-gold uppercase">{group.label}</span>
+                        <span className="flex items-center gap-2 text-meta text-ink-2 transition-colors group-hover/fold:text-gold">
+                          {group.cards.length} {group.cards.length === 1 ? "event" : "events"}
+                          <ChevronDown
+                            className="h-4.5 w-4.5 transition-transform duration-200 group-data-[state=open]/fold:rotate-180"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+                      <ul className={LIST}>
+                        {group.cards.map((card) => (
+                          <TicketRow key={card.key} card={card} />
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </section>
+                </Collapsible>
               ))}
             </div>
           ) : (
@@ -388,17 +396,6 @@ export default async function BookingHubPage() {
             </div>
           )}
         </div>
-
-        {requestCards.length > 0 && (
-          <div className="mt-12 sm:mt-16">
-            <SectionHeading eyebrow="Get in touch" title="Requests & Enquiries" />
-            <ul className={LIST + " lg:grid lg:grid-cols-2 lg:divide-x lg:divide-y-0"}>
-              {requestCards.map((card) => (
-                <RequestRow key={card.key} card={card} />
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </main>
   );
