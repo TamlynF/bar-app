@@ -362,20 +362,40 @@ const STAGE_ACTION_LABEL: Partial<Record<BandStatus, string>> = {
   booked: "Mark as booked",
 };
 
-function stageHint(status: string, blocker?: string): string {
+/* What the stepper says under the stages: who the application is from, the
+   slot and fee as they stand on the sheet, and what happens next - the same
+   shape as the private hire sheet's hint. */
+type StageSummary = { actName: string; slot: string; fee: string };
+
+function slotSummary(date: string, start: string, end: string): string {
+  if (!date) return "";
+  const day = format(new Date(date + "T00:00:00"), "EEE d MMM");
+  const times = [toHHMM(start), toHHMM(end)].filter(Boolean).join("–");
+  return times ? `${day}, ${times}` : day;
+}
+
+function stageHint(status: string, s: StageSummary, blocker?: string): string {
+  const fee = s.fee ? ` for ${s.fee}` : "";
   switch (status) {
     case "new":
-      return "New application. Review it, then send an offer or decline.";
+      return s.slot
+        ? `New application from ${s.actName}. The selected slot is ${s.slot}${fee} - send the offer, or decline.`
+        : `New application from ${s.actName}. Pick a date and time, then send an offer, or decline.`;
     case "reviewing":
-      return "Under review. Send an offer when you're ready, or decline.";
+      return s.slot
+        ? `Under review. The selected slot is ${s.slot}${fee} - send the offer when you're ready, or decline.`
+        : "Under review. Pick a date and time, then send the offer, or decline.";
     case "offered":
-      return blocker
-        ? `Offer sent. ${blocker}`
-        : "Offer sent. Mark it as booked once the band confirms.";
+      if (blocker) return `Waiting for ${s.actName} to accept the offer. ${blocker}`;
+      return s.slot
+        ? `Waiting for ${s.actName} to accept the offer of ${s.slot}${fee}. Mark it as booked once they confirm by email or phone.`
+        : `Waiting for ${s.actName} to accept the offer. Set the date and time, then mark it as booked once they confirm.`;
     case "booked":
-      return "Booked and on the schedule.";
+      return s.slot
+        ? `Confirmed and on the schedule for ${s.slot}${fee}.`
+        : "Confirmed. Set the date and time to put it on the schedule.";
     case "declined":
-      return "Declined. Reopen it to move it back into review.";
+      return "Declined. Reopen it to review it again.";
     default:
       return "";
   }
@@ -554,6 +574,7 @@ function StepConnector({ done }: { done: boolean }) {
 
 function StageStepper({
   status,
+  summary,
   onSelect,
   pendingStage,
   blockers,
@@ -562,6 +583,7 @@ function StageStepper({
   onDeclineReasonChange,
 }: {
   status: string;
+  summary: StageSummary;
   onSelect: (next: BandStatus) => void;
   pendingStage: BandStatus | null;
   blockers: Partial<Record<BandStatus, string | undefined>>;
@@ -578,7 +600,7 @@ function StageStepper({
 
   const primary = transitions.find((t) => t.primary) ?? (isDeclined ? transitions[0] : undefined);
   const primaryBlocker = primary ? blockers[primary.next] : undefined;
-  const hint = stageHint(status, isDeclined ? undefined : primaryBlocker);
+  const hint = stageHint(status, summary, isDeclined ? undefined : primaryBlocker);
 
   const stepAction = (s: BandStatus) => {
     if (!reachable(s)) return { title: `Not available from ${currentLabel}`, onClick: undefined };
@@ -2201,6 +2223,11 @@ export function BandBookingCard({
             </div>
             <StageStepper
               status={status}
+              summary={{
+                actName: actName || request.group_name || bookerName || request.booker_name,
+                slot: slotSummary(selectedDate, selectedStartTime, selectedEndTime),
+                fee: amountNum > 0 ? `£${amountNum}` : "",
+              }}
               onSelect={handleAction}
               pendingStage={pendingStage}
               blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
