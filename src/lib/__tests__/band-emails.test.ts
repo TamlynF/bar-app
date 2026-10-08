@@ -6,6 +6,7 @@ import {
   buildBandEmail,
   type BandEmailKind,
 } from "@/lib/band-emails";
+import { bandOfferActionsHtml } from "@/lib/band-email-html";
 import { findScenario } from "@/lib/email/scenarios";
 import { renderSlots } from "@/lib/email/render";
 
@@ -151,6 +152,16 @@ describe("fee update email", () => {
     expect(build("fee_updated", { date: null, startTime: null, endTime: null, paymentAmount: 300 }).slotLabel).toBe(
       "to be arranged"
     );
+  });
+});
+
+describe("offer page buttons", () => {
+  it("puts accept, discuss and withdraw links under the offer card", () => {
+    const html = bandOfferActionsHtml("https://example.test/band-offer/abc");
+    expect(html).toContain("https://example.test/band-offer/abc?respond=accept");
+    expect(html).toContain("https://example.test/band-offer/abc?respond=discuss");
+    expect(html).toContain("https://example.test/band-offer/abc?respond=withdraw");
+    expect(html).toContain("Just reply to this email");
   });
 });
 

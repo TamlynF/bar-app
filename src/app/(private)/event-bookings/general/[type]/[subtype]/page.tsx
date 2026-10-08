@@ -8,6 +8,7 @@ import BookingsSection, { type EventSummary } from "./components/bookings-sectio
 import BandBookingListClient from "../../../music-bookings/components/band-booking-list-client";
 import { type BandRequest } from "../../../music-bookings/components/band-booking-card";
 import { getVideoUploadLimitBytes } from "@/lib/video-upload-limit-data";
+import { siteUrl } from "@/lib/site-url";
 import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
 import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
 import { squareDashboardConfig } from "@/lib/square";
@@ -57,7 +58,12 @@ export default async function GeneralEventBookingsPage({
     const requests = bandRequests as unknown as BandRequest[];
     return (
       <RequestsShell title="Band applications" subtitle="Review and respond to artist bookings">
-        <BandBookingListClient initialRequests={requests} initialStatuses={initialStatuses} maxVideoBytes={maxVideoBytes} />
+        <BandBookingListClient
+          initialRequests={requests}
+          initialStatuses={initialStatuses}
+          maxVideoBytes={maxVideoBytes}
+          siteUrl={siteUrl()}
+        />
       </RequestsShell>
     );
   }

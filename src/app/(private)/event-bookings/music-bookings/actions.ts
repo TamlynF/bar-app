@@ -3,22 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
-import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
-import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
-import { heldPrivateHireSlots } from "@/lib/private-hire-flow";
-import { heldSlotsOnDate } from "@/lib/private-hire-details";
-import { eventSlotIsComplete } from "@/lib/event-active";
-import {
-  bandMergeValues,
-  bandScenarioKey,
-  buildBandEmail,
-  type BandEmailKind,
-} from "@/lib/band-emails";
-import { renderTemplate } from "@/lib/email/resolve";
-import { bandEmailHtml, plainNoteHtml } from "@/lib/band-email-html";
+import { type BandStatus as BandStatusType } from "@/lib/band-event-sync";
+import { type ClashEvent } from "@/lib/event-clash";
 import { cleanReplyFragment, htmlToPlainText } from "@/lib/email/correspondence";
-import { sendCorrespondenceEmail, type OutboundAttachment } from "@/lib/email/correspondence-data";
+import { type OutboundAttachment } from "@/lib/email/correspondence-data";
+import {
+  bandOfferPageUrl,
+  bandSlotClashes,
+  eventTitleFor,
+  sendBandEmail as sendBandEmailWith,
+  syncBandEvent,
+  updateLinkedEvent,
+} from "@/lib/band-flow";
+import { bandMergeValues, bandScenarioKey, type BandEmailKind } from "@/lib/band-emails";
+import { renderTemplate } from "@/lib/email/resolve";
 import { INVOICE_REQUEST_SELECT, sendInvoiceRequest, type InvoiceRequestRow } from "@/lib/band-invoice-requests";
 import {
   upsertContactByEmail,
@@ -63,22 +61,6 @@ async function currentEmployeeId(): Promise<number | null> {
   if (!user?.email) return null;
   const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
   return emp?.id ?? null;
-}
-
-function eventTitleFor(record: { group_name: string | null; booker_name: string }): string {
-  return record.group_name || record.booker_name;
-}
-
-async function updateLinkedEvent(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  eventId: number,
-  fields: Record<string, unknown>,
-  empId: number | null
-) {
-  await supabase
-    .from("events")
-    .update({ ...fields, updated_by: empId, updated_at: new Date().toISOString() })
-    .eq("id", eventId);
 }
 
 export async function getBandBookingById(id: string) {
@@ -240,20 +222,7 @@ export async function getClashingEvents(
   excludeEventId?: number | null
 ): Promise<ClashEvent[]> {
   if (!date) return [];
-  const supabase = await createClient();
-
-  let query = supabase
-    .from("events")
-    .select("id, title, start_time, end_time")
-    .eq("date", date)
-    .eq("is_active", true);
-  if (excludeEventId != null) query = query.neq("id", excludeEventId);
-
-  const [{ data }, held] = await Promise.all([query, heldPrivateHireSlots(supabase, { from: date, to: date })]);
-  return findEventClashes({ start: startTime, end: endTime }, [
-    ...((data ?? []) as ClashEventInput[]),
-    ...heldSlotsOnDate(held, date),
-  ]);
+  return bandSlotClashes(await createClient(), date, startTime, endTime, excludeEventId);
 }
 
 export async function rescheduleConfirmedBooking(
@@ -269,17 +238,14 @@ export async function rescheduleConfirmedBooking(
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
-    .update({ ...fields, status: "offered", updated_by: empId, updated_at: new Date().toISOString() })
+    .update({ ...fields, status: "offered", act_accepted_at: null, updated_by: empId, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select("booker_name, email, group_name, selected_date, selected_start_time, selected_end_time, event_id")
+    .select("booker_name, email, type, group_name, selected_date, selected_start_time, selected_end_time, event_id")
     .single();
 
   if (error || !record) throw new Error("Failed to update booking.");
 
-  const plan = planBandEventSync({ status: "offered", selectedDate: record.selected_date, eventId: record.event_id });
-  if (plan.action === "deactivate") {
-    await updateLinkedEvent(supabase, plan.eventId, { is_active: false }, empId);
-  }
+  await syncBandEvent(supabase, { id, status: "offered", record, actorId: empId });
 
   const emailError = await sendBandEmail(supabase, "rescheduled", {
     requestId: id,
@@ -290,6 +256,7 @@ export async function rescheduleConfirmedBooking(
     date: record.selected_date,
     startTime: record.selected_start_time,
     endTime: record.selected_end_time,
+    actionsUrl: bandOfferPageUrl(id),
   });
 
   revalidatePath("/event-bookings/music-bookings");
@@ -351,6 +318,8 @@ export async function updateBandStatus(
       status,
       ...(status === "declined" ? { decline_reason: emailNote?.trim() || null } : {}),
       ...(reopening ? { decline_reason: null } : {}),
+      ...(status === "booked" ? {} : { act_accepted_at: null }),
+      ...(reopening ? { act_withdrawn_at: null } : {}),
       updated_by: empId,
       updated_at: new Date().toISOString(),
     })
@@ -363,6 +332,7 @@ export async function updateBandStatus(
   if (error || !record) {
     throw new Error("Failed to update status.");
   }
+  await syncBandEvent(supabase, { id, status, record, actorId: empId });
 
   const stageNote = reopening
     ? reopenedNote(before?.decline_reason, status)
@@ -374,70 +344,6 @@ export async function updateBandStatus(
       .from("band_booking_notes")
       .insert({ request_id: id, body: stageNote, created_by: empId, updated_by: empId });
     if (noteError) console.error("[band request] stage note not saved:", noteError);
-  }
-
-  const plan = planBandEventSync({
-    status,
-    selectedDate: record.selected_date,
-    eventId: record.event_id,
-  });
-
-  if (plan.action === "insert" || plan.action === "update") {
-    const bandSubType = record.type?.toLowerCase() || "other";
-
-    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "music", bandSubType, "music_act");
-
-    const { data: et } = await supabase
-      .from("event_types")
-      .select("is_bookable, booking_config, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge")
-      .eq("id", eventTypeId)
-      .single();
-
-    const eventFields = {
-      title: eventTitleFor(record),
-      date: record.selected_date,
-      start_time: record.selected_start_time,
-      end_time: record.selected_end_time,
-      event_types_id: eventTypeId,
-      event_subtypes_id: eventSubtypeId,
-      payment_amount: 0,
-      is_active: eventSlotIsComplete({
-        date: record.selected_date,
-        startTime: record.selected_start_time,
-        endTime: record.selected_end_time,
-      }),
-      is_bookable: et?.is_bookable ?? false,
-      booking_config: et?.booking_config ?? {},
-      booking_card_title: et?.booking_card_title ?? null,
-      booking_card_tagline: et?.booking_card_tagline ?? null,
-      booking_card_icon: et?.booking_card_icon ?? null,
-      booking_card_badge: et?.booking_card_badge ?? null,
-    };
-
-    if (plan.action === "update") {
-      await updateLinkedEvent(supabase, plan.eventId, eventFields, empId);
-    } else {
-      const { data: newEvent } = await supabase
-        .from("events")
-        .insert({
-          ...eventFields,
-          creation_method: "band_request",
-          creation_source_id: id,
-          created_by: empId,
-          updated_by: empId,
-        })
-        .select("id")
-        .single();
-
-      if (newEvent) {
-        await supabase
-          .from("band_booking_requests")
-          .update({ event_id: newEvent.id, updated_at: new Date().toISOString() })
-          .eq("id", id);
-      }
-    }
-  } else if (plan.action === "deactivate") {
-    await updateLinkedEvent(supabase, plan.eventId, { is_active: false }, empId);
   }
 
   let emailError: string | null = null;
@@ -455,6 +361,7 @@ export async function updateBandStatus(
       previousPaymentAmount,
       notes: emailNote,
       ...(await emailExtrasFrom(emailExtras)),
+      ...(status === "offered" ? { actionsUrl: bandOfferPageUrl(id) } : {}),
     });
   }
 
@@ -479,66 +386,14 @@ export async function bandEmailSlotsAction(
   return renderTemplate(supabase, bandScenarioKey(kind), bandMergeValues({ name, groupName }));
 }
 
-/* One sender for all four band emails. Only the placement of the slot card and
-   the note differs between them - the offer shows both above its closing
-   paragraph, an outcome shows the date above and the note below. */
+type SendBandEmailParams = Parameters<typeof sendBandEmailWith>[3];
+
 async function sendBandEmail(
   supabase: Awaited<ReturnType<typeof createClient>>,
   kind: BandEmailKind,
-  p: {
-    requestId: string;
-    sentBy: number | null;
-    name: string;
-    email: string;
-    groupName: string | null;
-    date: string | null;
-    startTime: string | null;
-    endTime: string | null;
-    paymentAmount?: number | null;
-    previousPaymentAmount?: number | null;
-    notes?: string | null;
-    notesHtml?: string;
-    attachments?: OutboundAttachment[];
-  }
+  p: SendBandEmailParams
 ): Promise<string | null> {
-  const slots = await renderTemplate(
-    supabase,
-    bandScenarioKey(kind),
-    bandMergeValues({ name: p.name, groupName: p.groupName })
-  );
-  if (!slots) return null;
-
-  const e = buildBandEmail({
-    slots,
-    kind,
-    date: p.date,
-    startTime: p.startTime,
-    endTime: p.endTime,
-    paymentAmount: p.paymentAmount,
-    previousPaymentAmount: p.previousPaymentAmount,
-    notes: p.notes,
-  });
-
-  const html = bandEmailHtml({
-    kind,
-    slots,
-    email: e,
-    groupName: p.groupName,
-    noteHtml: p.notesHtml ?? plainNoteHtml(e.noteLabel ?? ""),
-  });
-
-  const { error } = await sendCorrespondenceEmail({
-    resend,
-    links: { bandRequestId: p.requestId },
-    to: p.email,
-    subject: e.subject,
-    html,
-    kind,
-    sentBy: p.sentBy,
-    attachments: p.attachments,
-    templateSlots: slots,
-  });
-  return error;
+  return sendBandEmailWith(supabase, resend, kind, p);
 }
 
 /* Staff changed the fee on an offered or booked act and chose to tell them. */

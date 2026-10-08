@@ -12,6 +12,7 @@ import type { BandEmail, BandEmailKind } from "@/lib/band-emails";
 import type { TemplateSlots } from "@/lib/email/render";
 
 export type BandEmailDialogConfig = {
+  actionsUrl?: string;
   title: string;
   description: string;
   confirmLabel: string;
@@ -47,6 +48,7 @@ function BandEmailDialogBody({
     email,
     groupName: config.groupName,
     noteHtml: draft.text.trim() ? cleanReplyFragment(draft.html) : "",
+    actionsUrl: config.actionsUrl,
   });
 
   return (

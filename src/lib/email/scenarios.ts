@@ -395,10 +395,31 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     }),
   },
   {
+    key: "admin.band.act_response",
+    label: "Band - act replied from their offer page",
+    group: "Band bookings",
+    description: "Sent to the venue when an act accepts, asks to discuss, or withdraws from the buttons in their offer email.",
+    recipient: "admin",
+    slots: ALERT_SLOTS,
+    mergeFields: [
+      { token: "bookerName", label: "Contact name", sample: "Sam Rivers" },
+      { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
+      { token: "actResponse", label: "What the act did", sample: "accepted the offer" },
+      { token: "eventDate", label: "Offered slot", sample: "Sat, 14 Nov 2026, 10:00 PM - 11:30 PM" },
+    ],
+    defaults: slots({
+      subject: "Band: {{groupName}} {{actResponse}}",
+      greeting: "Band Offer Update",
+      intro: "{{groupName}} has {{actResponse}} for {{eventDate}}.",
+      ctaLabel: "View Request",
+    }),
+  },
+  {
     key: "band.offered",
     label: "Slot offered to an act",
     group: "Band bookings",
-    description: "Staff move a band request to Offered. The proposed slot card is generated.",
+    description:
+      "Staff move a band request to Offered. The proposed slot card is generated, with Accept / Discuss / Withdraw buttons that open the act's offer page.",
     recipient: "customer",
     slots: [...BAND_SLOTS, "cardTitle", "noteTitle"],
     mergeFields: [
@@ -905,6 +926,7 @@ const WIRED_SCENARIOS = new Set([
   "admin.private_hire.extra_payment",
   "private_hire.deposit_refunded",
   "admin.private_hire.refund_failed",
+  "admin.band.act_response",
   "band.offered",
   "band.booked",
   "band.declined",
@@ -926,6 +948,7 @@ const PLAIN_SCENARIOS = new Set([
   "enquiry.reply",
   "band.application.customer",
   "band.application.admin",
+  "admin.band.act_response",
   "private_hire.enquiry.customer",
   "private_hire.enquiry.admin",
   "private_hire.confirmed",

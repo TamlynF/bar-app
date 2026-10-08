@@ -54,10 +54,12 @@ export default function BandBookingListClient({
   initialRequests,
   initialStatuses = [],
   maxVideoBytes,
+  siteUrl,
 }: {
   initialRequests: BandRequest[];
   initialStatuses?: string[];
   maxVideoBytes: number;
+  siteUrl: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
@@ -435,6 +437,7 @@ export default function BandBookingListClient({
                         wide={spreadColumns}
                         lifecycle={lifecycles.get(req.id) ?? null}
                         maxVideoBytes={maxVideoBytes}
+                        offerPageUrl={`${siteUrl}/band-offer/${req.id}`}
                         onSheetOpenChange={pinWhileOpen}
                       />
                     ))

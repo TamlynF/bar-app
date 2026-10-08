@@ -164,6 +164,8 @@ export interface BandRequest {
   selected_date: string | null;
   selected_start_time: string | null;
   selected_end_time: string | null;
+  act_accepted_at?: string | null;
+  act_withdrawn_at?: string | null;
   bank_account_no: string | null;
   bank_account_name: string | null;
   bank_sort_code: string | null;
@@ -366,7 +368,7 @@ const STAGE_ACTION_LABEL: Partial<Record<BandStatus, string>> = {
 /* What the stepper says under the stages: who the application is from, the
    slot and fee as they stand on the sheet, and what happens next - the same
    shape as the private hire sheet's hint. */
-type StageSummary = { actName: string; slot: string; fee: string };
+type StageSummary = { actName: string; slot: string; fee: string; actAccepted: boolean; actWithdrew: boolean };
 
 function slotSummary(date: string, start: string, end: string): string {
   if (!date) return "";
@@ -387,6 +389,11 @@ function stageHint(status: string, s: StageSummary, blocker?: string): string {
         ? `Under review. The selected slot is ${s.slot}${fee} - send the offer when you're ready, or decline.`
         : "Under review. Pick a date and time, then send the offer, or decline.";
     case "offered":
+      if (s.actAccepted) {
+        return blocker
+          ? `${s.actName} accepted the offer of ${s.slot}${fee} on their offer page. ${blocker}`
+          : `${s.actName} accepted the offer of ${s.slot}${fee} on their offer page - mark it as booked to confirm.`;
+      }
       if (blocker) return `Waiting for ${s.actName} to accept the offer. ${blocker}`;
       return s.slot
         ? `Waiting for ${s.actName} to accept the offer of ${s.slot}${fee}. Mark it as booked once they confirm by email or phone.`
@@ -396,7 +403,9 @@ function stageHint(status: string, s: StageSummary, blocker?: string): string {
         ? `Confirmed and on the schedule for ${s.slot}${fee}.`
         : "Confirmed. Set the date and time to put it on the schedule.";
     case "declined":
-      return "Declined. Reopen it to review it again.";
+      return s.actWithdrew
+        ? `${s.actName} withdrew their application from their offer page. Reopen it to review it again.`
+        : "Declined. Reopen it to review it again.";
     default:
       return "";
   }
@@ -979,12 +988,14 @@ export function BandBookingCard({
   wide = false,
   lifecycle = null,
   maxVideoBytes,
+  offerPageUrl,
   onSheetOpenChange,
 }: {
   request: BandRequest;
   wide?: boolean;
   lifecycle?: BandLifecycleStage | null;
   maxVideoBytes: number;
+  offerPageUrl: string;
   onSheetOpenChange?: (request: BandRequest, open: boolean) => void;
 }) {
   const maxVideoMb = megabytes(maxVideoBytes);
@@ -1479,6 +1490,7 @@ export function BandBookingCard({
         kind: d.kind,
         slots,
         groupName: request.group_name,
+        actionsUrl: d.kind === "offered" ? offerPageUrl : undefined,
         build: (note) =>
           buildBandEmail({
             slots,
@@ -2239,6 +2251,8 @@ export function BandBookingCard({
                 actName: actName || request.group_name || bookerName || request.booker_name,
                 slot: slotSummary(selectedDate, selectedStartTime, selectedEndTime),
                 fee: amountNum > 0 ? `£${amountNum}` : "",
+                actAccepted: !!request.act_accepted_at,
+                actWithdrew: !!request.act_withdrawn_at,
               }}
               onSelect={handleAction}
               pendingStage={pendingStage}
