@@ -45,30 +45,48 @@ function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] || name;
 }
 
-/* The chat version of the offer email: the slot, the fee (saying when it
-   changed), and the offer page link for anyone whose app hides the quick
-   replies. Staff can edit it before sending; edits are not kept. */
-export function bandOfferMessageText(p: BandOfferMessageInput): string {
-  const who = p.groupName || "you";
+function slotLine(p: BandOfferMessageInput): string {
   const date = formatDateLong(p.date);
   const time = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
-  const slot = date ? [date, time].filter(Boolean).join(", ") : "date and time to be arranged";
-  const feeChanged =
-    p.previousPaymentAmount != null && p.paymentAmount != null && p.previousPaymentAmount !== p.paymentAmount;
-  const fee =
-    p.paymentAmount == null
-      ? null
-      : feeChanged
-        ? `Fee: £${p.paymentAmount} (updated from £${p.previousPaymentAmount})`
-        : `Fee: £${p.paymentAmount}`;
+  return date ? [date, time].filter(Boolean).join(", ") : "date and time to be arranged";
+}
 
+function feeLine(p: BandOfferMessageInput): string | null {
+  if (p.paymentAmount == null) return null;
+  const changed = p.previousPaymentAmount != null && p.previousPaymentAmount !== p.paymentAmount;
+  return changed ? `Fee: £${p.paymentAmount} (updated from £${p.previousPaymentAmount})` : `Fee: £${p.paymentAmount}`;
+}
+
+/* The chat version of the offer email: the slot and the fee (saying when it
+   changed). The offer page link travels separately as a button card, so the
+   text never has to carry a raw URL. Staff can edit the text before sending;
+   edits are not kept. */
+export function bandOfferMessageText(p: BandOfferMessageInput): string {
+  const who = p.groupName || "you";
   return [
     `Hi ${firstName(p.name)}!`,
     `Great news - we'd love to have ${who} play at ${p.venueName}. Here's what we're offering:`,
-    [`When: ${slot}`, fee].filter(Boolean).join("\n"),
-    `Tap a reply below, or use your offer page to accept, discuss or withdraw:\n${p.offerUrl}`,
+    [`When: ${slotLine(p)}`, feeLine(p)].filter(Boolean).join("\n"),
+    "Tap a reply below, or open your offer page to accept, discuss or withdraw.",
     "Once you confirm, we'll lock it in and it goes on our events calendar.",
   ].join("\n\n");
+}
+
+export type OfferCard = { title: string; subtitle: string; buttonTitle: string; url: string };
+
+const CARD_TEXT_MAX = 80;
+
+const clip = (s: string) => (s.length > CARD_TEXT_MAX ? `${s.slice(0, CARD_TEXT_MAX - 1).trimEnd()}…` : s);
+
+/* The card under the text: Meta draws it with a real button, which is the
+   one way to put a link in a DM without pasting the address. */
+export function bandOfferCard(p: BandOfferMessageInput): OfferCard {
+  return {
+    title: clip(`Your offer from ${p.venueName}`),
+    subtitle: clip([slotLine(p), feeLine(p)].filter(Boolean).join(" · ")),
+    buttonTitle: "View band offer",
+    url: p.offerUrl,
+  };
 }
 
 /* What the chat says back after a quick reply is tapped; the outcome is the
@@ -84,5 +102,5 @@ export function bandOfferAckText(response: ActResponseKey, outcome: string, venu
 }
 
 export function quickReplyHint(channel: MetaChannel): string {
-  return `Quick replies show in the ${CHANNEL_LABELS[channel]} app until they type something else; the link works everywhere.`;
+  return `Quick replies show in the ${CHANNEL_LABELS[channel]} app until they type something else; the card's button opens the offer page.`;
 }

@@ -90,8 +90,13 @@ import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-e
 import { bandEmailHtml } from "@/lib/band-email-html";
 import type { TemplateSlots } from "@/lib/email/render";
 import { EmailHtmlFrame } from "@/components/admin/correspondence-panel";
-import { BandEmailDialog, type BandEmailDialogConfig, type BandEmailDialogResult } from "./band-email-dialog";
-import { bandOfferMessageText } from "@/lib/band-offer-message";
+import {
+  BandEmailDialog,
+  type BandChatOption,
+  type BandEmailDialogConfig,
+  type BandEmailDialogResult,
+} from "./band-email-dialog";
+import { bandOfferCard, bandOfferMessageText } from "@/lib/band-offer-message";
 import { CHANNEL_LABELS, type MessageChannel } from "@/lib/meta/channels";
 
 /* The channel the offer dialog opens on: the one this thread last used, else
@@ -1505,6 +1510,26 @@ export function BandBookingCard({
       };
     }
 
+    const offerChatOption = (c: BandOfferChannels, to: string): BandChatOption => {
+      const input = {
+        name: request.booker_name,
+        groupName: actName || request.group_name,
+        venueName: c.venueName,
+        date: slot.date,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        paymentAmount: d.paymentAmount ?? null,
+        previousPaymentAmount: d.previousPaymentAmount,
+        offerUrl: offerPageUrl,
+      };
+      return {
+        channels: c.channels,
+        initial: offerChannel(c, !!to.trim()),
+        text: bandOfferMessageText(input),
+        card: bandOfferCard(input),
+      };
+    };
+
     confirmOpen.current = true;
     const result = await new Promise<BandEmailDialogResult>((resolve) =>
       setEmailDialog({
@@ -1519,24 +1544,7 @@ export function BandBookingCard({
         slots,
         groupName: request.group_name,
         actionsUrl: d.kind === "offered" ? offerPageUrl : undefined,
-        chat:
-          chat && chat.channels.length > 0
-            ? {
-                channels: chat.channels,
-                initial: offerChannel(chat, !!to.trim()),
-                text: bandOfferMessageText({
-                  name: request.booker_name,
-                  groupName: actName || request.group_name,
-                  venueName: chat.venueName,
-                  date: slot.date,
-                  startTime: slot.startTime,
-                  endTime: slot.endTime,
-                  paymentAmount: d.paymentAmount ?? null,
-                  previousPaymentAmount: d.previousPaymentAmount,
-                  offerUrl: offerPageUrl,
-                }),
-              }
-            : undefined,
+        chat: chat && chat.channels.length > 0 ? offerChatOption(chat, to) : undefined,
         build: (note) =>
           buildBandEmail({
             slots,

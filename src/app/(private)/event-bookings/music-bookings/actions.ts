@@ -9,7 +9,7 @@ import { cleanReplyFragment, htmlToPlainText } from "@/lib/email/correspondence"
 import { loadThreadChannels, type OutboundAttachment } from "@/lib/email/correspondence-data";
 import { CHANNEL_LABELS, isMetaChannel, type MessageChannel } from "@/lib/meta/channels";
 import { sendMetaMessage, venueName } from "@/lib/meta/outbound";
-import { bandOfferQuickReplies } from "@/lib/band-offer-message";
+import { bandOfferCard, bandOfferQuickReplies } from "@/lib/band-offer-message";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   bandOfferPageUrl,
@@ -358,10 +358,22 @@ export async function updateBandStatus(
   let messageError: string | null = null;
   if (delivery && delivery.channel !== "email") {
     const target = (await loadThreadChannels(supabase, { bandRequestId: id })).find((c) => c.channel === delivery.channel);
+    const card = bandOfferCard({
+      name: record.booker_name,
+      groupName: record.group_name,
+      venueName: await venueName(supabase),
+      date: record.selected_date,
+      startTime: record.selected_start_time,
+      endTime: record.selected_end_time,
+      paymentAmount: record.payment_amount,
+      previousPaymentAmount,
+      offerUrl: bandOfferPageUrl(id),
+    });
     const sent = target
       ? await sendMetaMessage(createAdminClient(), {
           target,
           text: delivery.message,
+          card: { title: card.title, subtitle: card.subtitle, buttons: [{ title: card.buttonTitle, url: card.url }] },
           quickReplies: bandOfferQuickReplies(id),
           kind: "offered",
           links: { bandRequestId: id, musicActId: record.music_acts_id, contactId: record.contact_id },

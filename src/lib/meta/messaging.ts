@@ -124,6 +124,53 @@ export async function sendMetaText(
   env: MetaEnv,
   p: { recipientId: string; text: string; humanAgent?: boolean; quickReplies?: MetaQuickReply[] }
 ): Promise<MetaSendResult> {
+  return postMetaMessage(env, p.recipientId, { text: p.text, ...quickReplyField(p.quickReplies) }, p.humanAgent);
+}
+
+export type MetaCard = { title: string; subtitle?: string; buttons: { title: string; url: string }[] };
+
+/* A generic-template card: a title, a line under it and up to three link
+   buttons, drawn by both products as a bordered tile. The one way to put a
+   link in a DM as a button rather than a pasted address. */
+export async function sendMetaCard(
+  env: MetaEnv,
+  p: { recipientId: string; card: MetaCard; humanAgent?: boolean; quickReplies?: MetaQuickReply[] }
+): Promise<MetaSendResult> {
+  return postMetaMessage(
+    env,
+    p.recipientId,
+    {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "generic",
+          elements: [
+            {
+              title: p.card.title,
+              ...(p.card.subtitle ? { subtitle: p.card.subtitle } : {}),
+              buttons: p.card.buttons.slice(0, 3).map((b) => ({ type: "web_url", url: b.url, title: b.title })),
+            },
+          ],
+        },
+      },
+      ...quickReplyField(p.quickReplies),
+    },
+    p.humanAgent
+  );
+}
+
+function quickReplyField(quickReplies?: MetaQuickReply[]) {
+  return quickReplies?.length
+    ? { quick_replies: quickReplies.map((q) => ({ content_type: "text", title: q.title, payload: q.payload })) }
+    : {};
+}
+
+async function postMetaMessage(
+  env: MetaEnv,
+  recipientId: string,
+  message: Record<string, unknown>,
+  humanAgent?: boolean
+): Promise<MetaSendResult> {
   const res = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/messages`, {
     method: "POST",
     headers: {
@@ -131,15 +178,10 @@ export async function sendMetaText(
       authorization: `Bearer ${env.pageAccessToken}`,
     },
     body: JSON.stringify({
-      recipient: { id: p.recipientId },
-      messaging_type: p.humanAgent ? "MESSAGE_TAG" : "RESPONSE",
-      ...(p.humanAgent ? { tag: "HUMAN_AGENT" } : {}),
-      message: {
-        text: p.text,
-        ...(p.quickReplies?.length
-          ? { quick_replies: p.quickReplies.map((q) => ({ content_type: "text", title: q.title, payload: q.payload })) }
-          : {}),
-      },
+      recipient: { id: recipientId },
+      messaging_type: humanAgent ? "MESSAGE_TAG" : "RESPONSE",
+      ...(humanAgent ? { tag: "HUMAN_AGENT" } : {}),
+      message,
     }),
   });
   const json = (await res.json().catch(() => ({}))) as {

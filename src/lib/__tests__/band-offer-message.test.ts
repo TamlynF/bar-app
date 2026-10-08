@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BAND_OFFER_REPLIES,
   bandOfferAckText,
+  bandOfferCard,
   bandOfferMessageText,
   bandOfferPayload,
   bandOfferQuickReplies,
@@ -46,14 +47,28 @@ describe("bandOfferMessageText", () => {
     offerUrl: `https://example.test/band-offer/${ID}`,
   };
 
-  it("greets by first name and states the slot, the fee and the offer link", () => {
+  it("greets by first name and states the slot and the fee, leaving the link to the card", () => {
     const text = bandOfferMessageText(base);
     expect(text).toContain("Hi Ginger!");
     expect(text).toContain("have Dandy play at Don Fenticas");
     expect(text).toContain("When: Saturday, 31 October 2026, 10:00 PM – 11:30 PM");
     expect(text).toContain("Fee: £120");
     expect(text).not.toContain("updated from");
-    expect(text).toContain(base.offerUrl);
+    expect(text).not.toContain("http");
+    const card = bandOfferCard(base);
+    expect(card).toEqual({
+      title: "Your offer from Don Fenticas",
+      subtitle: "Saturday, 31 October 2026, 10:00 PM – 11:30 PM · Fee: £120",
+      buttonTitle: "View band offer",
+      url: base.offerUrl,
+    });
+  });
+
+  it("keeps the card's lines inside Meta's 80 characters", () => {
+    const card = bandOfferCard({ ...base, venueName: "A".repeat(90), previousPaymentAmount: 90 });
+    expect(card.title.length).toBeLessThanOrEqual(80);
+    expect(card.subtitle.length).toBeLessThanOrEqual(80);
+    expect(card.subtitle).toContain("updated from £90");
   });
 
   it("says when the fee changed and copes with no fee or no slot", () => {

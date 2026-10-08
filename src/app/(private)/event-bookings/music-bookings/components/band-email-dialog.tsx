@@ -10,7 +10,8 @@ import { bandEmailHtml } from "@/lib/band-email-html";
 import { cleanReplyFragment } from "@/lib/email/correspondence";
 import type { ThreadChannel } from "@/lib/email/correspondence";
 import { CHANNEL_LABELS, type MessageChannel, type MetaChannel } from "@/lib/meta/channels";
-import { BAND_OFFER_REPLIES, quickReplyHint } from "@/lib/band-offer-message";
+import { BAND_OFFER_REPLIES, quickReplyHint, type OfferCard } from "@/lib/band-offer-message";
+import { ChatComposer } from "@/components/admin/chat-composer";
 import type { BandEmail, BandEmailKind } from "@/lib/band-emails";
 import type { TemplateSlots } from "@/lib/email/render";
 
@@ -20,6 +21,7 @@ export type BandChatOption = {
   channels: ThreadChannel[];
   initial: MessageChannel;
   text: string;
+  card: OfferCard;
 };
 
 export type BandEmailDialogConfig = {
@@ -52,7 +54,17 @@ type Draft = { html: string; text: string; files: File[] };
 const EMPTY_DRAFT: Draft = { html: "", text: "", files: [] };
 const CANCELLED: BandEmailDialogResult = { ok: false, ...EMPTY_DRAFT, channel: "email", message: "", alsoEmail: false };
 
-function ChatPreview({ channel, handle, text }: { channel: MetaChannel; handle: string | null; text: string }) {
+function ChatPreview({
+  channel,
+  handle,
+  text,
+  card,
+}: {
+  channel: MetaChannel;
+  handle: string | null;
+  text: string;
+  card: OfferCard;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm">
       <dl className="space-y-1 border-b border-admin-line px-4 py-3 text-[12px]">
@@ -64,8 +76,15 @@ function ChatPreview({ channel, handle, text }: { channel: MetaChannel; handle: 
         </div>
       </dl>
       <div className="space-y-2 bg-[#E9E6DC] p-3 sm:p-5">
-        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-admin-primary px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words text-white">
+        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-[#E8E8E8] px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words text-admin-ink">
           {text.trim() || "Your message"}
+        </div>
+        <div className="ml-auto w-[85%] max-w-72 overflow-hidden rounded-2xl rounded-br-md border border-admin-line bg-white text-[13px] shadow-sm">
+          <div className="px-4 py-3">
+            <p className="font-bold text-admin-ink">{card.title}</p>
+            <p className="mt-0.5 text-[12px] text-admin-muted">{card.subtitle}</p>
+          </div>
+          <div className="border-t border-admin-line px-4 py-2.5 text-center font-semibold text-admin-info">{card.buttonTitle}</div>
         </div>
         <div className="flex flex-wrap justify-end gap-1.5">
           {BAND_OFFER_REPLIES.map((r) => (
@@ -147,21 +166,13 @@ function BandEmailDialogBody({
           )}
           {channel !== "email" && (
             <>
-              <div className="space-y-1.5">
-                <label htmlFor="band-offer-message" className="block text-[13px] font-semibold text-admin-ink">
-                  Message to the band
-                </label>
-                <textarea
-                  id="band-offer-message"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  rows={12}
-                  className="w-full resize-y rounded-xl border border-admin-line bg-white px-3 py-2.5 text-[13px] leading-relaxed text-admin-ink shadow-sm focus-visible:ring-2 focus-visible:ring-[#D7A928] focus-visible:outline-none"
-                />
-                <p className="text-[12px] leading-snug text-admin-muted">
-                  Written for you from the slot and fee - edit anything before sending. Changes aren&apos;t saved.
-                </p>
-              </div>
+              <ChatComposer
+                id="band-offer-message"
+                label="Message to the band"
+                value={message}
+                onChange={setMessage}
+                hint="Written for you from the slot and fee - edit anything before sending. Changes aren't saved. Select a word, then bold, italic or underline it; DMs have no real formatting, so these use lookalike letters."
+              />
               {chatClosed && (
                 <p className="flex items-start gap-1.5 text-[12px] font-semibold text-admin-error">
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -204,7 +215,7 @@ function BandEmailDialogBody({
           {chat && (
             <div>
               <p className="mb-2 text-[12px] font-semibold text-admin-muted">Preview - what the band sees on {CHANNEL_LABELS[chat.channel]}</p>
-              <ChatPreview channel={chat.channel} handle={chat.handle} text={message} />
+              <ChatPreview channel={chat.channel} handle={chat.handle} text={message} card={config.chat!.card} />
             </div>
           )}
           {sendsEmail && (
