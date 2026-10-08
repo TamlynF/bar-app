@@ -11,6 +11,7 @@ import type { BarStatus } from "@/lib/opening-hours";
 import { useMarketState } from "@/hooks/use-market-live";
 import { MobileBottomBar } from "@/components/mobile-bottom-bar";
 import { MarketTicker } from "@/components/market-ticker";
+import { useHideOnScroll } from "@/hooks/use-hide-on-scroll";
 
 export function PublicNavBar({
   currentPath,
@@ -40,6 +41,7 @@ export function PublicNavBar({
   }, []);
 
   const solid = scrolled;
+  const hiddenOnPhone = useHideOnScroll();
 
   const primaryLinks = [
     { href: "/whats-on", label: "What's On" },
@@ -58,10 +60,11 @@ export function PublicNavBar({
       />
       <nav
         className={cn(
-          "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-350 standalone:top-[env(safe-area-inset-top)]",
+          "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter,translate,opacity] duration-350 standalone:top-[env(safe-area-inset-top)]",
           solid
-            ? "border-[#FDCC4B]/10 bg-canvas/88 backdrop-blur-xl"
-            : "border-transparent bg-transparent"
+            ? "border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl"
+            : "border-transparent bg-transparent",
+          hiddenOnPhone && "max-sm:pointer-events-none max-sm:-translate-y-full max-sm:opacity-0"
         )}
       >
         <div className="mx-auto flex h-12 w-full max-w-400 items-center justify-between gap-3 px-4 sm:h-16 sm:gap-6 sm:px-6 lg:px-10">
