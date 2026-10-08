@@ -8,6 +8,7 @@ type Identity = {
   contactId: number | null;
   bandRequestId: string | null;
   musicActId: string | null;
+  privateHireRequestId: string | null;
   handle: string | null;
   name: string | null;
 };
@@ -52,6 +53,29 @@ async function contactByName(admin: SupabaseClient, name: string): Promise<numbe
   return data?.length === 1 ? (data[0].id as number) : null;
 }
 
+/* The newest enquiry whose customer asked for Instagram replies at this handle. */
+async function hireByInstagram(admin: SupabaseClient, username: string): Promise<{ id: string; contact_id: number | null } | null> {
+  const { data } = await admin
+    .from("private_hire_requests")
+    .select("id, contact_id")
+    .ilike("instagram_handle", escapeLike(username))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as { id: string; contact_id: number | null } | null) ?? null;
+}
+
+async function latestHireForContact(admin: SupabaseClient, contactId: number): Promise<string | null> {
+  const { data } = await admin
+    .from("private_hire_requests")
+    .select("id")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
 async function latestRequestForContact(admin: SupabaseClient, contactId: number): Promise<RequestRow | null> {
   const { data } = await admin
     .from("band_booking_requests")
@@ -66,11 +90,15 @@ async function latestRequestForContact(admin: SupabaseClient, contactId: number)
 async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessage): Promise<Identity> {
   const known = await knownChannel(admin, m.channel, m.senderId);
   if (known?.contact_id) {
-    const request = await latestRequestForContact(admin, known.contact_id);
+    const [request, hireId] = await Promise.all([
+      latestRequestForContact(admin, known.contact_id),
+      latestHireForContact(admin, known.contact_id),
+    ]);
     return {
       contactId: known.contact_id,
       bandRequestId: request?.id ?? null,
       musicActId: request?.music_acts_id ?? null,
+      privateHireRequestId: hireId,
       handle: known.handle,
       name: known.display_name,
     };
@@ -89,6 +117,18 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
         contactId: request.contact_id,
         bandRequestId: request.id,
         musicActId: request.music_acts_id,
+        privateHireRequestId: request.contact_id ? await latestHireForContact(admin, request.contact_id) : null,
+        handle,
+        name: profile.name,
+      };
+    }
+    const hire = await hireByInstagram(admin, handle);
+    if (hire) {
+      return {
+        contactId: hire.contact_id,
+        bandRequestId: null,
+        musicActId: null,
+        privateHireRequestId: hire.id,
         handle,
         name: profile.name,
       };
@@ -96,8 +136,17 @@ async function identify(admin: SupabaseClient, env: MetaEnv, m: InboundMetaMessa
   }
 
   const contactId = profile.name ? await contactByName(admin, profile.name) : null;
-  const request = contactId ? await latestRequestForContact(admin, contactId) : null;
-  return { contactId, bandRequestId: request?.id ?? null, musicActId: request?.music_acts_id ?? null, handle, name: profile.name };
+  const [request, hireId] = contactId
+    ? await Promise.all([latestRequestForContact(admin, contactId), latestHireForContact(admin, contactId)])
+    : [null, null];
+  return {
+    contactId,
+    bandRequestId: request?.id ?? null,
+    musicActId: request?.music_acts_id ?? null,
+    privateHireRequestId: hireId,
+    handle,
+    name: profile.name,
+  };
 }
 
 /* Every sender is remembered, matched or not: an unmatched row is what the
@@ -129,14 +178,15 @@ export async function relinkSenderMessages(
   admin: SupabaseClient,
   channel: MetaChannel,
   senderId: string,
-  links: { contactId: number; bandRequestId: string | null; musicActId: string | null }
+  links: { contactId: number; bandRequestId?: string | null; musicActId?: string | null; privateHireRequestId?: string | null }
 ): Promise<void> {
   const { error } = await admin
     .from("email_messages")
     .update({
       contact_id: links.contactId,
-      band_booking_request_id: links.bandRequestId,
-      music_act_id: links.musicActId,
+      band_booking_request_id: links.bandRequestId ?? null,
+      music_act_id: links.musicActId ?? null,
+      private_hire_request_id: links.privateHireRequestId ?? null,
     })
     .eq("channel", channel)
     .eq("sender_id", senderId)
@@ -149,7 +199,13 @@ export async function relinkSenderMessages(
 export async function claimContactChannel(
   admin: SupabaseClient,
   channelRowId: string,
-  links: { contactId: number; bandRequestId: string; musicActId: string | null; instagramHandle?: string | null }
+  links: {
+    contactId: number;
+    bandRequestId?: string | null;
+    musicActId?: string | null;
+    privateHireRequestId?: string | null;
+    instagramHandle?: string | null;
+  }
 ): Promise<void> {
   const { data: row } = await admin
     .from("contact_channels")
@@ -189,12 +245,14 @@ export async function storeInboundMetaMessage(env: MetaEnv, m: InboundMetaMessag
       contactId: who.contactId,
       bandRequestId: who.bandRequestId,
       musicActId: who.musicActId,
+      privateHireRequestId: who.privateHireRequestId,
     });
   }
 
   const { error } = await admin.from("email_messages").insert({
     band_booking_request_id: who.bandRequestId,
     music_act_id: who.musicActId,
+    private_hire_request_id: who.privateHireRequestId,
     contact_id: who.contactId,
     direction: "inbound",
     kind: "message",

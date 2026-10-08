@@ -65,6 +65,9 @@ describe("parseArrival and bookingLinkFor", () => {
     expect(bookingLinkFor("https://bar-app-tau.vercel.app/", "instagram", "row-1")).toBe(
       "https://bar-app-tau.vercel.app/book/band?via=instagram&c=row-1"
     );
+    expect(bookingLinkFor("https://bar-app-tau.vercel.app", "messenger", "row-2", "private")).toBe(
+      "https://bar-app-tau.vercel.app/book/private?via=messenger&c=row-2"
+    );
   });
 });
 

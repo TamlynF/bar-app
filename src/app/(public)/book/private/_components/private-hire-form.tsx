@@ -35,6 +35,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { NotesTextarea } from "@/app/(public)/book/_components/notes-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SiInstagram, SiMessenger } from "react-icons/si";
+import type { MessageChannel } from "@/lib/meta/channels";
+import { defaultPreferredChannel, preferredChannelOptions, type BookingArrival } from "@/lib/meta/preferred-channel";
 
 const inputBaseClass =
   "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-3 sm:py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
@@ -181,12 +184,14 @@ export default function PrivateHireForm({
   maxCapacity,
   openingHours,
   deposit,
+  arrival = null,
 }: {
   subtypes: PrivateHireSubtype[];
   minCapacity: number | null;
   maxCapacity: number | null;
   openingHours: OpeningHours | null;
   deposit: number | null;
+  arrival?: BookingArrival | null;
 }) {
   const depositLabel = deposit ? formatGBP(deposit) : null;
   const minGuests = minCapacity ?? DEFAULT_MIN_GUESTS;
@@ -214,6 +219,15 @@ export default function PrivateHireForm({
   const overnightNote = describeOvernight(selectedDate, preferredStartTime, preferredEndTime);
   const timeOrderError = describeTimeOrderError(preferredStartTime, preferredEndTime);
   const [additionalReqs, setAdditionalReqs] = useState("");
+  const [instagram, setInstagram] = useState(arrival?.channel === "instagram" ? (arrival.handle ?? "") : "");
+  const [preferredChoice, setPreferredChoice] = useState<MessageChannel | null>(null);
+  const preferredOptions = preferredChannelOptions({ email, instagram, arrival });
+  const chosenOption = preferredOptions.find((o) => o.channel === preferredChoice);
+  const preferredChannel: MessageChannel = chosenOption?.available
+    ? chosenOption.channel
+    : defaultPreferredChannel(preferredOptions, arrival);
+  const preferredDetail = preferredOptions.find((o) => o.channel === preferredChannel)?.detail ?? null;
+  const showInstagramField = preferredChoice === "instagram" || arrival?.channel === "instagram" || !!instagram;
 
   const openClash =
     preferredDate && preferredStartTime && preferredEndTime
@@ -359,6 +373,10 @@ export default function PrivateHireForm({
           preferred_end_time: preferredEndTime || undefined,
           event_subtypes_id: Number(eventSubtypeId),
           additional_requirements: additionalReqs || undefined,
+          preferred_channel: preferredChannel,
+          instagram_handle: instagram || undefined,
+          source_channel: arrival?.channel ?? null,
+          source_channel_id: arrival?.channelId ?? null,
         });
         setSubmitted(true);
       } catch (err) {
@@ -728,6 +746,60 @@ export default function PrivateHireForm({
                 className={`${inputClass(false)} py-3 placeholder:text-stone-700 focus-visible:border-[#fdcc4b] focus-visible:ring-1 focus-visible:ring-[#fdcc4b]`}
               />
             </div>
+
+            <div className="space-y-1">
+              <label htmlFor="ph-preferred" className={labelClass}>
+                How should we get in touch?
+              </label>
+              <div className="group relative">
+                <div className={iconContainerClass}>
+                  {preferredChannel === "instagram" ? (
+                    <SiInstagram className={iconClass} />
+                  ) : preferredChannel === "messenger" ? (
+                    <SiMessenger className={iconClass} />
+                  ) : (
+                    <Mail className={iconClass} />
+                  )}
+                </div>
+                <Select value={preferredChannel} onValueChange={(v) => setPreferredChoice(v as MessageChannel)}>
+                  <SelectTrigger id="ph-preferred" className={`${inputClass(false)} ${selectTriggerClass}`}>
+                    <SelectValue>{preferredOptions.find((o) => o.channel === preferredChannel)?.label}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preferredOptions.map((o) => (
+                      <SelectItem key={o.channel} value={o.channel} disabled={!o.available}>
+                        {o.label}
+                        {o.detail ? ` · ${o.detail}` : o.why ? ` · ${o.why}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="ml-1 text-xs leading-relaxed text-ink-2">
+                {preferredDetail ? `We'll reply to ${preferredDetail}.` : "Pick where you'd like our replies to go."}
+              </p>
+            </div>
+
+            {showInstagramField && (
+              <div className="space-y-1">
+                <label htmlFor="ph-instagram" className={labelClass}>
+                  Instagram handle
+                </label>
+                <div className="group relative">
+                  <div className={iconContainerClass}>
+                    <SiInstagram className={iconClass} />
+                  </div>
+                  <input
+                    id="ph-instagram"
+                    value={instagram}
+                    onChange={(e) => setInstagram(e.target.value)}
+                    placeholder="yourhandle"
+                    autoComplete="off"
+                    className={inputClass(false)}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

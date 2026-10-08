@@ -14,6 +14,22 @@ import { describeOpenSessionClash, openSessionClash, toMinutes } from "@/lib/ope
 import { requestPageUrl } from "@/lib/private-hire-flow";
 import { isValidPhone, PHONE_ERROR } from "@/lib/phone";
 import { privateHireSubtypeLabel } from "@/lib/private-hire-subtype";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { claimContactChannel } from "@/lib/meta/inbound";
+import { instagramHandle, type MessageChannel } from "@/lib/meta/channels";
+import { isReplyChannel, parseArrival, type ArrivalChannel } from "@/lib/meta/preferred-channel";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function sourceChannelRow(id: string | null | undefined) {
+  if (!id || !UUID_RE.test(id)) return null;
+  const { data } = await createAdminClient()
+    .from("contact_channels")
+    .select("id, channel, contact_id")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as { id: string; channel: string; contact_id: number | null } | null) ?? null;
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -36,6 +52,10 @@ export interface PrivateHireData {
   preferred_end_time?: string;
   event_subtypes_id: number;
   additional_requirements?: string;
+  preferred_channel?: MessageChannel;
+  instagram_handle?: string;
+  source_channel?: ArrivalChannel | null;
+  source_channel_id?: string | null;
 }
 
 export async function createPrivateHire(data: PrivateHireData) {
@@ -43,6 +63,16 @@ export async function createPrivateHire(data: PrivateHireData) {
   if (!isValidPhone(data.phone_no)) throw new Error(PHONE_ERROR);
   if ((data.additional_requirements?.trim().length ?? 0) > NOTES_MAX_LENGTH) {
     throw new Error(`Please keep your requests under ${NOTES_MAX_LENGTH} characters.`);
+  }
+  const preferredChannel: MessageChannel = isReplyChannel(data.preferred_channel) ? data.preferred_channel : "email";
+  const handle = instagramHandle(data.instagram_handle);
+  const sourceRow = await sourceChannelRow(data.source_channel_id);
+  const sourceChannel = parseArrival(data.source_channel) ?? (sourceRow ? parseArrival(sourceRow.channel) : null);
+  if (preferredChannel === "instagram" && !handle) {
+    throw new Error("Add your Instagram handle to be contacted on Instagram, or pick another option.");
+  }
+  if (preferredChannel === "messenger" && sourceRow?.channel !== "messenger") {
+    throw new Error("Messenger is only available when you opened this form from your Messenger chat with us.");
   }
   const start = toMinutes(data.preferred_start_time);
   const end = toMinutes(data.preferred_end_time);
@@ -86,6 +116,10 @@ export async function createPrivateHire(data: PrivateHireData) {
         event_subtypes_id: subtype.id,
         additional_requirements: data.additional_requirements || null,
         status: "new",
+        preferred_channel: preferredChannel,
+        instagram_handle: handle,
+        source_channel: sourceChannel,
+        source_channel_id: sourceRow?.id ?? null,
       },
     ])
     .select("id")
@@ -97,6 +131,13 @@ export async function createPrivateHire(data: PrivateHireData) {
   }
 
   await Promise.allSettled([
+    sourceRow && contactId
+      ? claimContactChannel(createAdminClient(), sourceRow.id, {
+          contactId,
+          privateHireRequestId: record.id,
+          instagramHandle: handle,
+        })
+      : Promise.resolve(),
     sendBookerEmail(supabase, record.id, data.full_name, data.email),
     sendAdminEmail(supabase, data, privateHireSubtypeLabel(subtype, "Private Hire"), record.id),
   ]);

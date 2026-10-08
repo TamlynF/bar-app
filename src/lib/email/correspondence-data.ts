@@ -320,6 +320,7 @@ export async function loadThreadChannels(
   const contactId = await threadContactId(supabase, filter);
   if (!contactId) return [];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const bookingForm = "privateHireRequestId" in filter ? "private" : "band";
   const { data, error } = await supabase
     .from("contact_channels")
     .select("id, channel, external_id, handle, last_inbound_at")
@@ -337,7 +338,7 @@ export async function loadThreadChannels(
       handle: (r.handle as string | null) ?? null,
       lastInboundAt: (r.last_inbound_at as string | null) ?? null,
       allowance: replyAllowance(r.channel as MetaChannel, r.last_inbound_at as string | null, now),
-      bookingLink: siteUrl ? bookingLinkFor(siteUrl, r.channel as MetaChannel, r.id as string) : null,
+      bookingLink: siteUrl ? bookingLinkFor(siteUrl, r.channel as MetaChannel, r.id as string, bookingForm) : null,
     }));
 }
 
@@ -346,12 +347,14 @@ export async function threadPreferredChannel(
   supabase: SupabaseClient,
   filter: CorrespondenceFilter
 ): Promise<MessageChannel | null> {
-  if (!("bandRequestId" in filter)) return null;
-  const { data } = await supabase
-    .from("band_booking_requests")
-    .select("preferred_channel")
-    .eq("id", filter.bandRequestId)
-    .maybeSingle();
+  const [table, id] =
+    "bandRequestId" in filter
+      ? ["band_booking_requests", filter.bandRequestId]
+      : "privateHireRequestId" in filter
+        ? ["private_hire_requests", filter.privateHireRequestId]
+        : [null, null];
+  if (!table || !id) return null;
+  const { data } = await supabase.from(table).select("preferred_channel").eq("id", id).maybeSingle();
   const value = data?.preferred_channel;
   return value === "email" || isMetaChannel(value) ? (value as MessageChannel) : null;
 }

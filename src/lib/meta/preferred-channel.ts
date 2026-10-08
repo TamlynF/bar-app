@@ -75,9 +75,11 @@ export function isReplyChannel(value: unknown): value is MessageChannel {
 /* The booking link staff send from a chat: the form reads the channel and
    the contact_channels row, so the handle is filled in and the preferred
    channel defaults to where they are already talking. */
-export function bookingLinkFor(siteUrl: string, channel: MetaChannel, channelRowId: string): string {
+export type BookingForm = "band" | "private";
+
+export function bookingLinkFor(siteUrl: string, channel: MetaChannel, channelRowId: string, form: BookingForm = "band"): string {
   const base = siteUrl.replace(/\/$/, "");
-  return `${base}/book/band?via=${channel}&c=${encodeURIComponent(channelRowId)}`;
+  return `${base}/book/${form}?via=${channel}&c=${encodeURIComponent(channelRowId)}`;
 }
 
 export function describePreferredChannel(

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PrivateHireForm from "./_components/private-hire-form";
 import { PublicNav } from "@/components/public-nav";
 import { getCompanyInfo } from "@/lib/company-info";
+import { readBookingArrival } from "@/lib/meta/booking-arrival";
 
 export const metadata = {
   title: "Private Hire",
@@ -13,7 +14,12 @@ export const viewport: Viewport = {
   themeColor: "#26300D",
 };
 
-export default async function PrivateHirePage() {
+export default async function PrivateHirePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ via?: string; c?: string }>;
+}) {
+  const arrival = await readBookingArrival(await searchParams);
   const supabase = await createClient();
 
   const companyInfo = await getCompanyInfo();
@@ -71,6 +77,7 @@ export default async function PrivateHirePage() {
                 maxCapacity={companyInfo?.max_capacity ?? null}
                 openingHours={companyInfo?.opening_hours ?? null}
                 deposit={companyInfo?.private_hire_deposit != null ? Number(companyInfo.private_hire_deposit) : null}
+                arrival={arrival}
               />
             </div>
           </div>

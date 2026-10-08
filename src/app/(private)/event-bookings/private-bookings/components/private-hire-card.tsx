@@ -57,6 +57,7 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/compon
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
+import { describePreferredChannel, isReplyChannel } from "@/lib/meta/preferred-channel";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { attempt } from "@/lib/attempt";
@@ -121,6 +122,8 @@ export interface PrivateHireRequest {
   additional_requirements: string | null;
   status: string;
   decline_reason: string | null;
+  preferred_channel?: string | null;
+  instagram_handle?: string | null;
   deposit_amount: number | null;
   paid_amount: number | null;
   deposit_due_date: string | null;
@@ -2788,6 +2791,13 @@ export function PrivateHireCard({
               <div className="min-w-0 space-y-4 sm:space-y-5">
                 <Section title="Contact">
                   <SheetRow label="Name" value={request.full_name} />
+                  <SheetRow
+                    label="Prefers"
+                    value={describePreferredChannel(
+                      isReplyChannel(request.preferred_channel) ? request.preferred_channel : "email",
+                      { email: request.email, instagram: request.instagram_handle }
+                    )}
+                  />
                   {contactDetailsOpen && (
                     <div
                       id={`contact-details-${request.id}`}
