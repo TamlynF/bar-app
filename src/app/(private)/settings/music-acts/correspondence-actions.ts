@@ -9,6 +9,7 @@ import {
   bareAddress,
   correspondenceBookingLabel,
   correspondenceColumn,
+  correspondenceMatch,
   htmlToPlainText,
   replyHtml,
   replySubject,
@@ -61,6 +62,7 @@ function revalidateCorrespondence() {
   revalidatePath("/settings/music-acts");
   revalidatePath("/event-bookings/private-bookings");
   revalidatePath("/requests/enquiries");
+  revalidatePath("/requests/inbox");
   revalidatePath("/settings/customers");
 }
 
@@ -80,6 +82,7 @@ async function recipientFor(
   const inbound = await latestInbound(supabase, filter);
   if (inbound?.fromAddress) return bareAddress(inbound.fromAddress);
 
+  if ("senderId" in filter) return null;
   if ("bandRequestId" in filter) return emailOf(supabase, "band_booking_requests", filter.bandRequestId);
   if ("privateHireRequestId" in filter) return emailOf(supabase, "private_hire_requests", filter.privateHireRequestId);
   if ("enquiryId" in filter) return emailOf(supabase, "enquiries", filter.enquiryId);
@@ -226,7 +229,7 @@ export async function markCorrespondenceRead(filter: CorrespondenceFilter): Prom
     .update({ read_at: new Date().toISOString() })
     .eq("direction", "inbound")
     .is("read_at", null);
-  query = query.eq(...correspondenceColumn(filter));
+  for (const [column, value] of correspondenceMatch(filter)) query = query.eq(column, value);
   const { error } = await query;
   if (error) {
     console.error("[correspondence] mark read failed:", error.code, error.message);
@@ -278,6 +281,7 @@ async function sendMetaReply(
     kind: "message",
     channel,
     external_id: sent.messageId,
+    sender_id: target.externalId,
     from_address: `${channel}:page`,
     to_addresses: [target.handle ? `@${target.handle}` : target.externalId],
     subject: "",
@@ -316,6 +320,7 @@ export async function sendCorrespondenceReply(
     getCurrentEmployeeId(supabase),
   ]);
   if (!recipient) return { error: "There's no email address on file." };
+  if ("senderId" in filter) return { error: "Reply on their chat channel - this sender has no email on file yet." };
 
   const { error } = await sendCorrespondenceEmail({
     resend,

@@ -26,7 +26,8 @@ import {
     Printer,
     Users,
     X,
-    type LucideIcon
+    type LucideIcon,
+    MessagesSquare,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
@@ -208,6 +209,7 @@ export default function PrivateLayoutClient({
     pendingBandCount = 0,
     pendingHireCount = 0,
     pendingEnquiriesCount = 0,
+    unreadMessagesCount = 0,
     marketLive = false,
 }: {
     children: React.ReactNode
@@ -219,6 +221,7 @@ export default function PrivateLayoutClient({
     marketLive?: boolean
     pendingHireCount?: number
     pendingEnquiriesCount?: number
+    unreadMessagesCount?: number
 }) {
     const pathname = usePathname()
     const router = useRouter()
@@ -302,6 +305,7 @@ export default function PrivateLayoutClient({
     const eventSubItems: SubItem[] = guestNav.map(toSub)
 
     const requestSubItems: SubItem[] = [
+        { label: "Inbox", href: "/requests/inbox", icon: MessagesSquare, colorHex: "#D97706", count: unreadMessagesCount },
         { label: "Band applications", href: "/event-bookings/music-bookings", icon: Guitar, colorHex: "#7C3AED", count: pendingBandCount },
         { label: "Private hire", href: "/event-bookings/private-bookings", icon: PartyPopper, colorHex: "#0EA5E9", count: pendingHireCount },
         { label: "Enquiries", href: "/requests/enquiries", icon: MessageSquare, colorHex: "#DC2626", count: pendingEnquiriesCount },
@@ -327,6 +331,7 @@ export default function PrivateLayoutClient({
         if (normalizedPath.startsWith("/requests")) {
             if (normalizedPath === "/requests") return { title: "Requests", subtitle: null, backHref: "/guests", description: "Band applications, private hire and enquiries waiting on a decision." }
             const requestsMap: Record<string, string> = {
+                "inbox": "Inbox",
                 "enquiries": "Enquiries",
             }
             const segment = normalizedPath.split("/")[2]

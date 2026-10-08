@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Guitar, PartyPopper, MessageSquare, ChevronRight } from "lucide-react"
+import { Guitar, PartyPopper, MessageSquare, MessagesSquare, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { getPendingRequestCounts } from "@/lib/request-counts"
 
@@ -8,6 +8,14 @@ export default async function RequestsHubPage() {
     const counts = await getPendingRequestCounts(supabase)
 
     const requestItems = [
+        {
+            title: "Inbox",
+            description: "Every message on email, Instagram and Messenger in one place",
+            href: "/requests/inbox",
+            icon: MessagesSquare,
+            color: "bg-amber-50 text-amber-700",
+            count: counts.unreadMessages,
+        },
         {
             title: "Band Applications",
             description: "Acts applying to play - review, confirm, book",

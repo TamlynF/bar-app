@@ -520,12 +520,15 @@ function MessageBubble({
   );
 }
 
-type ThreadOwner = {
+export type ThreadOwner = {
   bandRequestId?: string;
   privateHireRequestId?: string;
   enquiryId?: string;
   musicActId?: string;
   contactId?: number;
+  /* A chat sender with no record yet, shown from the inbox. */
+  channel?: MetaChannel;
+  senderId?: string;
 };
 
 function toFilter(o: ThreadOwner): CorrespondenceFilter | null {
@@ -534,6 +537,7 @@ function toFilter(o: ThreadOwner): CorrespondenceFilter | null {
   if (o.enquiryId) return { enquiryId: o.enquiryId };
   if (o.musicActId) return { musicActId: o.musicActId };
   if (o.contactId) return { contactId: o.contactId };
+  if (o.channel && o.senderId) return { channel: o.channel, senderId: o.senderId };
   return null;
 }
 
@@ -552,6 +556,8 @@ export function CorrespondencePanel({
   privateHireRequestId,
   enquiryId,
   contactId,
+  channel,
+  senderId,
   counterpartName,
   onCountChange,
   editable = true,
@@ -591,11 +597,15 @@ export function CorrespondencePanel({
   const markedFor = useRef<string | null>(null);
 
   const filterKey =
-    bandRequestId ?? privateHireRequestId ?? enquiryId ?? musicActId ?? (contactId ? `contact-${contactId}` : "");
+    bandRequestId ??
+    privateHireRequestId ??
+    enquiryId ??
+    musicActId ??
+    (contactId ? `contact-${contactId}` : senderId ? `${channel}-${senderId}` : "");
   const aggregated = !bandRequestId && !privateHireRequestId && !enquiryId;
 
   useEffect(() => {
-    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId });
+    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId, channel, senderId });
     if (!filter) return;
     let alive = true;
     getCorrespondence(filter)
@@ -615,7 +625,7 @@ export function CorrespondencePanel({
     return () => {
       alive = false;
     };
-  }, [bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId, filterKey, reloadKey]);
+  }, [bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId, channel, senderId, filterKey, reloadKey]);
 
   const messages = thread?.messages ?? [];
 
@@ -624,7 +634,7 @@ export function CorrespondencePanel({
   }, [thread, onCountChange]);
 
   function send(html: string, files: File[]): Promise<boolean> {
-    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId });
+    const filter = toFilter({ bandRequestId, privateHireRequestId, enquiryId, musicActId, contactId, channel, senderId });
     if (!filter) return Promise.resolve(false);
     setSendError(null);
     const form = new FormData();

@@ -5,13 +5,15 @@ export type PendingRequestCounts = {
   band: number;
   privateHire: number;
   enquiries: number;
+  /* Inbound messages on any channel nobody has opened yet. */
+  unreadMessages: number;
   total: number;
 };
 
 export async function getPendingRequestCounts(
   supabase: SupabaseClient
 ): Promise<PendingRequestCounts> {
-  const [{ count: band }, { count: privateHire }, { count: enquiries }] =
+  const [{ count: band }, { count: privateHire }, { count: enquiries }, { count: unreadMessages }] =
     await Promise.all([
       supabase
         .from("band_booking_requests")
@@ -25,12 +27,18 @@ export async function getPendingRequestCounts(
         .from("enquiries")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending"),
+      supabase
+        .from("email_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("direction", "inbound")
+        .is("read_at", null),
     ]);
 
   return {
     band: band ?? 0,
     privateHire: privateHire ?? 0,
     enquiries: enquiries ?? 0,
-    total: (band ?? 0) + (privateHire ?? 0) + (enquiries ?? 0),
+    unreadMessages: unreadMessages ?? 0,
+    total: (band ?? 0) + (privateHire ?? 0) + (enquiries ?? 0) + (unreadMessages ?? 0),
   };
 }

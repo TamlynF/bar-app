@@ -81,6 +81,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             pendingBandCount={pendingCounts.band}
             pendingHireCount={pendingCounts.privateHire}
             pendingEnquiriesCount={pendingCounts.enquiries}
+            unreadMessagesCount={pendingCounts.unreadMessages}
             marketLive={(liveMarkets ?? 0) > 0}
         >
             {children}

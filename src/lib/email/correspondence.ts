@@ -11,7 +11,10 @@ export type CorrespondenceFilter =
   | { musicActId: string }
   | { privateHireRequestId: string }
   | { enquiryId: string }
-  | { contactId: number };
+  | { contactId: number }
+  /* A Messenger or Instagram sender nothing has been matched to yet - the
+     inbox shows their chat by the id Meta gave them. */
+  | { channel: MetaChannel; senderId: string };
 
 export type CorrespondenceColumn =
   | "band_booking_request_id"
@@ -20,12 +23,25 @@ export type CorrespondenceColumn =
   | "enquiry_id"
   | "contact_id";
 
-export function correspondenceColumn(filter: CorrespondenceFilter): [CorrespondenceColumn, string | number] {
+export function correspondenceColumn(
+  filter: Exclude<CorrespondenceFilter, { senderId: string }>
+): [CorrespondenceColumn, string | number] {
   if ("bandRequestId" in filter) return ["band_booking_request_id", filter.bandRequestId];
   if ("privateHireRequestId" in filter) return ["private_hire_request_id", filter.privateHireRequestId];
   if ("enquiryId" in filter) return ["enquiry_id", filter.enquiryId];
   if ("contactId" in filter) return ["contact_id", filter.contactId];
   return ["music_act_id", filter.musicActId];
+}
+
+/* Every column an email_messages query must match for this thread. */
+export function correspondenceMatch(filter: CorrespondenceFilter): [string, string | number][] {
+  if ("senderId" in filter) {
+    return [
+      ["channel", filter.channel],
+      ["sender_id", filter.senderId],
+    ];
+  }
+  return [correspondenceColumn(filter)];
 }
 
 export type CorrespondenceSource = "band" | "hire" | "enquiry" | "act" | "customer";

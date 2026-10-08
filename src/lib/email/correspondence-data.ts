@@ -15,7 +15,7 @@ import {
   htmlToPlainText,
   parseCorrespondenceAddress,
   safeAttachmentName,
-  correspondenceColumn,
+  correspondenceMatch,
   type CorrespondenceFilter,
   type ThreadChannel,
   type CorrespondenceMessage,
@@ -254,7 +254,7 @@ export async function loadCorrespondence(
       "id, direction, kind, channel, sender_name, from_address, to_addresses, subject, text_body, html_body, attachments, read_at, band_booking_request_id, private_hire_request_id, enquiry_id, music_act_id, created_at, sender:employees!email_messages_sent_by_fkey(full_name)"
     )
     .order("created_at", { ascending: true });
-  query = query.eq(...correspondenceColumn(filter));
+  for (const [column, value] of correspondenceMatch(filter)) query = query.eq(column, value);
 
   const { data, error } = await query;
   if (error) {
@@ -299,6 +299,15 @@ export async function loadCorrespondence(
 /* The customer a thread belongs to, from whichever record the thread is on. */
 export async function threadContactId(supabase: SupabaseClient, filter: CorrespondenceFilter): Promise<number | null> {
   if ("contactId" in filter) return filter.contactId;
+  if ("senderId" in filter) {
+    const { data } = await supabase
+      .from("contact_channels")
+      .select("contact_id")
+      .eq("channel", filter.channel)
+      .eq("external_id", filter.senderId)
+      .maybeSingle();
+    return (data?.contact_id as number | null | undefined) ?? null;
+  }
   const [table, id] =
     "bandRequestId" in filter
       ? ["band_booking_requests", filter.bandRequestId]
@@ -318,14 +327,17 @@ export async function loadThreadChannels(
   now: number = Date.now()
 ): Promise<ThreadChannel[]> {
   const contactId = await threadContactId(supabase, filter);
-  if (!contactId) return [];
+  if (!contactId && !("senderId" in filter)) return [];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const bookingForm = "privateHireRequestId" in filter ? "private" : "band";
-  const { data, error } = await supabase
+  let query = supabase
     .from("contact_channels")
     .select("id, channel, external_id, handle, last_inbound_at")
-    .eq("contact_id", contactId)
     .order("last_inbound_at", { ascending: false });
+  query = contactId
+    ? query.eq("contact_id", contactId)
+    : query.eq("channel", (filter as { channel: MetaChannel }).channel).eq("external_id", (filter as { senderId: string }).senderId);
+  const { data, error } = await query;
   if (error) {
     console.error("[correspondence] channels load failed:", error.code, error.message);
     return [];
@@ -372,7 +384,7 @@ export async function latestInbound(
     .eq("channel", "email")
     .order("created_at", { ascending: false })
     .limit(1);
-  query = query.eq(...correspondenceColumn(filter));
+  for (const [column, value] of correspondenceMatch(filter)) query = query.eq(column, value);
   const { data } = await query.maybeSingle();
   if (!data) return null;
   return {
@@ -392,7 +404,7 @@ export async function latestSubject(
     .eq("channel", "email")
     .order("created_at", { ascending: false })
     .limit(1);
-  query = query.eq(...correspondenceColumn(filter));
+  for (const [column, value] of correspondenceMatch(filter)) query = query.eq(column, value);
   const { data } = await query.maybeSingle();
   return (data?.subject as string | undefined) ?? null;
 }
