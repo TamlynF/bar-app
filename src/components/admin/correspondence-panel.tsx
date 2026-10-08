@@ -50,6 +50,7 @@ const KIND_LABELS: Record<string, string> = {
   booked: "Booking confirmed",
   declined: "Declined",
   rescheduled: "Rescheduled",
+  fee_updated: "Fee updated",
   invoice: "Invoice request",
   enquiry: "Enquiry received",
   confirmed: "Booking confirmed",

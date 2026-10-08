@@ -21,7 +21,11 @@ function formatDateLong(d?: string | null): string {
   });
 }
 
-export type BandEmailKind = "offered" | "booked" | "declined" | "rescheduled" | "invoice";
+export type BandEmailKind = "offered" | "booked" | "declined" | "rescheduled" | "invoice" | "fee_updated";
+
+/* The offer and the fee update both lead with one slot card that carries the
+   fee, and put the staff note straight under it. */
+export const offerLikeBandEmail = (kind: BandEmailKind) => kind === "offered" || kind === "fee_updated";
 
 export const bandScenarioKey = (kind: BandEmailKind) => `band.${kind}`;
 
@@ -76,7 +80,7 @@ export function buildBandEmail(p: {
     .join(" – ");
 
   const declined = p.kind === "declined";
-  const offered = p.kind === "offered";
+  const offered = offerLikeBandEmail(p.kind);
 
   return {
     subject: p.slots.subject,
@@ -100,6 +104,7 @@ export function buildBandEmail(p: {
 /* The heading each email's slot card carries. */
 export function bandSlotCardLabel(kind: BandEmailKind): string {
   if (kind === "offered") return "Proposed Slot";
+  if (kind === "fee_updated") return "Updated Fee";
   if (kind === "rescheduled") return "New Performance Slot";
   if (kind === "invoice") return "Your Performance";
   return "Performance Date";

@@ -486,6 +486,27 @@ export const EMAIL_SCENARIOS: EmailScenario[] = [
     }),
   },
   {
+    key: "band.fee_updated",
+    label: "Act fee updated",
+    group: "Band bookings",
+    description: "Staff change the fee on an offered or booked act and choose to tell them. The slot card shows the new fee.",
+    recipient: "customer",
+    slots: [...BAND_SLOTS, "cardTitle", "noteTitle"],
+    mergeFields: [
+      CUSTOMER_NAME,
+      { token: "groupName", label: "Act / group name", sample: "The Wandering Hearts" },
+    ],
+    defaults: slots({
+      cardTitle: "Updated Fee",
+      noteTitle: "Note from our team",
+      subject: "Updated fee for your performance - Don Fenticas",
+      heading: "Fee Updated",
+      greeting: "Hi {{customerName}},",
+      intro: "We've updated the fee for {{groupName}}'s performance at Don Fenticas. Here are the details:",
+      outro: "Reply to this email if you have any questions about the change.",
+    }),
+  },
+  {
     key: "band.invoice",
     label: "Invoice request after a gig",
     group: "Band bookings",
@@ -888,6 +909,7 @@ const WIRED_SCENARIOS = new Set([
   "band.booked",
   "band.declined",
   "band.rescheduled",
+  "band.fee_updated",
   "band.invoice",
 ]);
 

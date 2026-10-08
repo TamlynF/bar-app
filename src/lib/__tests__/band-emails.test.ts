@@ -126,9 +126,25 @@ describe("outcome emails", () => {
   });
 });
 
+describe("fee update email", () => {
+  it("leads with the slot and the new fee, like the offer", () => {
+    const e = build("fee_updated", { paymentAmount: 300 });
+    expect(e.subject).toBe("Updated fee for your performance - Don Fenticas");
+    expect(e.slotLabel).toBe("Saturday, 12 September 2026, 8:00 PM – 10:30 PM");
+    expect(e.feeLabel).toBe("Fee: £300");
+  });
+
+  it("still sends when no slot has been set yet", () => {
+    expect(build("fee_updated", { date: null, startTime: null, endTime: null, paymentAmount: 300 }).slotLabel).toBe(
+      "to be arranged"
+    );
+  });
+});
+
 describe("bandSlotCardLabel", () => {
   it("labels each card for what it is", () => {
     expect(bandSlotCardLabel("offered")).toBe("Proposed Slot");
+    expect(bandSlotCardLabel("fee_updated")).toBe("Updated Fee");
     expect(bandSlotCardLabel("rescheduled")).toBe("New Performance Slot");
     expect(bandSlotCardLabel("booked")).toBe("Performance Date");
   });

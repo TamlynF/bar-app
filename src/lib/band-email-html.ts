@@ -1,4 +1,4 @@
-import { bandSlotCardLabel, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
+import { bandSlotCardLabel, offerLikeBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
 import { escapeHtml } from "@/lib/email/escape";
 import { bandCard, bandLayout, bandNote } from "@/lib/email/layout";
 import type { RenderedSlots } from "@/lib/email/design";
@@ -20,8 +20,9 @@ export function bandEmailHtml(p: {
   const e = p.email;
   const brand = p.slots.design?.brand;
   const cardTitle = p.slots.cardTitle || bandSlotCardLabel(p.kind);
+  const offerLike = offerLikeBandEmail(p.kind);
   const card =
-    p.kind === "offered"
+    offerLike
       ? bandCard(cardTitle, escapeHtml(e.slotLabel ?? ""), escapeHtml(e.feeLabel ?? ""), brand)
       : e.dateLabel
         ? bandCard(
@@ -35,8 +36,8 @@ export function bandEmailHtml(p: {
   return bandLayout({
     slots: p.slots,
     groupName: p.groupName ? escapeHtml(p.groupName) : null,
-    middleHtml: p.kind === "offered" ? card + note : card,
-    tailHtml: p.kind === "offered" ? "" : note,
+    middleHtml: offerLike ? card + note : card,
+    tailHtml: offerLike ? "" : note,
     cardHtml: card,
     noteHtml: note,
   });

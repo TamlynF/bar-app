@@ -7,6 +7,7 @@ import {
   updateBandBookingFields,
   getClashingEvents,
   rescheduleConfirmedBooking,
+  sendFeeUpdateEmail,
   toggleBandFavorite,
   bandEmailSlotsAction,
   addBandNote,
@@ -102,6 +103,18 @@ const DECLINE_PREVIEW_LEN = 28;
    icon hidden, sized to sit inside the slot row's bordered box. */
 const TIME_INPUT =
   "h-auto w-auto appearance-none border-0 bg-transparent p-0 text-[13px] font-semibold text-[#20231A] shadow-none tabular-nums focus-visible:ring-0 md:text-[13px] [&::-webkit-calendar-picker-indicator]:hidden";
+
+type BandDialogConfig = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  label: string;
+  placeholder: string;
+  slotLabel?: string;
+  destructive?: boolean;
+  kind: BandEmailKind;
+  paymentAmount?: number | null;
+};
 
 interface SocialLinks {
   instagram?: string;
@@ -1126,6 +1139,10 @@ export function BandBookingCard({
     JSON.stringify(uploadedSheetVideos.map((v) => v.description.trim())) !==
       JSON.stringify(savedVideoDescriptions);
 
+  const feeChanged =
+    paymentAmount !== "" &&
+    Number.isFinite(Number(paymentAmount)) &&
+    paymentAmount !== (request.payment_amount != null ? String(request.payment_amount) : "");
   const detailsChanged =
     actName !== (request.group_name ?? "") ||
     reqType !== (request.type ?? "") ||
@@ -1362,22 +1379,7 @@ export function BandBookingCard({
     };
     const to = email || request.email;
 
-    const dialogs: Partial<
-      Record<
-        BandStatus,
-        {
-          title: string;
-          description: string;
-          confirmLabel: string;
-          label: string;
-          placeholder: string;
-          slotLabel?: string;
-          destructive?: boolean;
-          kind: BandEmailKind;
-          paymentAmount?: number | null;
-        }
-      >
-    > = {
+    const dialogs: Partial<Record<BandStatus, BandDialogConfig>> = {
       offered: {
         title: "Send offer & email band?",
         description: "The band gets this straight away and replies to accept.",
@@ -1410,7 +1412,15 @@ export function BandBookingCard({
 
     const d = dialogs[newStatus];
     if (!d) return { ok: true, note: "", html: "", files: [] };
+    return runEmailDialog(d, slot, to, declineReason);
+  }
 
+  async function runEmailDialog(
+    d: BandDialogConfig,
+    slot: { date: string | null; startTime: string | null; endTime: string | null },
+    to: string,
+    fallbackNote: string
+  ): Promise<EmailConfirmation> {
     /* Fetched rather than composed here, so the preview shows the copy that
        will actually be sent - including anything changed on the settings page. */
     const slots = await bandEmailSlotsAction(d.kind, request.booker_name, request.group_name);
@@ -1422,7 +1432,7 @@ export function BandBookingCard({
           confirmLabel: d.confirmLabel,
           variant: d.destructive ? "destructive" : undefined,
         }),
-        note: declineReason,
+        note: fallbackNote,
         html: "",
         files: [],
       };
@@ -1522,6 +1532,49 @@ export function BandBookingCard({
     setError(null);
     setClashes([]);
     void attempt(async () => {
+      if (feeChanged && (status === "offered" || status === "booked") && !(status === "booked" && dateTimeChanged)) {
+        const { ok, note, html, files } = await runEmailDialog(
+          {
+            title: "Update fee & email band?",
+            description: `This saves your changes and emails the band the new fee of £${paymentAmount}.`,
+            confirmLabel: "Update & Email",
+            label: "Message to the band (optional)",
+            placeholder: "Why the fee has changed...",
+            kind: "fee_updated",
+            paymentAmount: Number(paymentAmount),
+          },
+          { date: selectedDate || null, startTime: selectedStartTime || null, endTime: selectedEndTime || null },
+          email || request.email,
+          ""
+        );
+        if (!ok) return;
+        runSave(async () => {
+          await updateBandBookingFields(request.id, {
+            ...detailFields(),
+            ...(status === "booked"
+              ? {}
+              : {
+                  selected_date: selectedDate || null,
+                  selected_start_time: selectedStartTime || null,
+                  selected_end_time: selectedEndTime || null,
+                }),
+          });
+          let emailExtras: FormData | undefined;
+          if (html || files.length > 0) {
+            emailExtras = new FormData();
+            emailExtras.set("html", html);
+            for (const f of files) emailExtras.append("files", f);
+          }
+          const result = await sendFeeUpdateEmail(request.id, note || undefined, emailExtras);
+          if (result?.emailError) {
+            toast.error(`Fee updated, but the email didn't send: ${result.emailError}`);
+          } else {
+            toast.success("Fee updated - band emailed");
+          }
+        });
+        return;
+      }
+
       if (status === "booked" && dateTimeChanged) {
         const c = await findClashes();
         if (c.length) return;

@@ -537,6 +537,38 @@ async function sendBandEmail(
   return error;
 }
 
+/* Staff changed the fee on an offered or booked act and chose to tell them. */
+export async function sendFeeUpdateEmail(
+  id: string,
+  emailNote?: string,
+  emailExtras?: FormData
+): Promise<{ emailError: string | null }> {
+  const supabase = await createClient();
+  const empId = await currentEmployeeId();
+  const { data: record, error } = await supabase
+    .from("band_booking_requests")
+    .select("booker_name, email, group_name, selected_date, selected_start_time, selected_end_time, payment_amount")
+    .eq("id", id)
+    .single();
+  if (error || !record) throw new Error("This booking could not be found.");
+
+  const emailError = await sendBandEmail(supabase, "fee_updated", {
+    requestId: id,
+    sentBy: empId,
+    name: record.booker_name,
+    email: record.email,
+    groupName: record.group_name,
+    date: record.selected_date,
+    startTime: record.selected_start_time,
+    endTime: record.selected_end_time,
+    paymentAmount: record.payment_amount,
+    notes: emailNote,
+    ...(await emailExtrasFrom(emailExtras)),
+  });
+  revalidatePath("/event-bookings/music-bookings");
+  return { emailError };
+}
+
 /* Staff sending the after-gig invoice request by hand - the Monday job sends
    the same email on its own, and skips a booking that already has one. */
 export async function sendInvoiceRequestAction(id: string): Promise<{ error: string | null }> {
