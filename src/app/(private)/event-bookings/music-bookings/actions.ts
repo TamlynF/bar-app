@@ -102,7 +102,6 @@ export async function updateBandBookingFields(
     email?: string;
     phone_no?: string | null;
     notes?: string | null;
-    band_notes?: string | null;
     video_urls?: string[] | null;
     video_descriptions?: string[] | null;
     social_links?: Record<string, string> | null;

@@ -80,15 +80,13 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
-import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
+import { toHHMM, type ClashEvent } from "@/lib/event-clash";
 import { type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildBandEmail, type BandEmail, type BandEmailKind } from "@/lib/band-emails";
 import { bandEmailHtml } from "@/lib/band-email-html";
 import type { TemplateSlots } from "@/lib/email/render";
 import { EmailHtmlFrame } from "@/components/admin/correspondence-panel";
 import { BandEmailDialog, type BandEmailDialogConfig, type BandEmailDialogResult } from "./band-email-dialog";
-
-const DEFAULT_START_TIME = "22:00"; // 10pm
 
 const MAX_VIDEOS = 10;
 
@@ -133,7 +131,6 @@ export interface BandRequest {
   video_descriptions: string[] | null;
   preferred_dates: string[] | null;
   notes: string | null;
-  band_notes: string | null;
   band_notes_list?: BandNote[] | null;
   status: string;
   decline_reason: string | null;
@@ -1163,10 +1160,11 @@ export function BandBookingCard({
   const applyDate = (d: string) => {
     setSelectedDate(d);
     setClashes([]);
-    if (d && !selectedStartTime) {
-      setSelectedStartTime(DEFAULT_START_TIME);
-      setSelectedEndTime(addHoursToTime(DEFAULT_START_TIME, 2));
-    }
+  };
+  const applyTimes = (start: string, end: string) => {
+    setSelectedStartTime(start);
+    setSelectedEndTime(end);
+    setClashes([]);
   };
   function confirmPreferredDate(d: string) {
     void attempt(async () => {
@@ -1174,7 +1172,7 @@ export function BandBookingCard({
     const times =
       selectedStartTime && selectedEndTime
         ? `The performance times stay ${selectedStartTime} - ${selectedEndTime}.`
-        : `The performance times will be set to ${DEFAULT_START_TIME} - ${addHoursToTime(DEFAULT_START_TIME, 2)}, which you can change.`;
+        : "Set the performance times next.";
     const current = selectedDate
       ? `This replaces ${format(new Date(selectedDate + "T00:00:00"), "EEE d MMM")} as the selected date. `
       : "";
@@ -1195,15 +1193,9 @@ export function BandBookingCard({
       });
       if (!ok) return;
       applyDate("");
-      applyStart("");
+      applyTimes("", "");
     }, () => {});
   }
-  const applyStart = (v: string) => {
-    setSelectedStartTime(v);
-    setSelectedEndTime(v ? addHoursToTime(v, 2) : "");
-    setClashes([]);
-  };
-
   useEffect(() => {
     if (status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime) return;
     let cancelled = false;
@@ -2263,10 +2255,10 @@ export function BandBookingCard({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                     <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                      Date &amp; Time
+                      Selected Date &amp; Time
                     </span>
                     {editable ? (
-                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+                      <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
                         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                           <PopoverTrigger asChild>
                             <button
@@ -2324,15 +2316,18 @@ export function BandBookingCard({
                           <input
                             ref={startTimeRef}
                             type="time"
-                            aria-label="Performance start time"
+                            aria-label="Selected start time"
                             value={selectedStartTime}
-                            onChange={(e) => applyStart(e.target.value)}
+                            onChange={(e) => {
+                              setSelectedStartTime(e.target.value);
+                              setClashes([]);
+                            }}
                             className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
                           />
                           <span className="text-xs text-[#5E6654]/50">-</span>
                           <input
                             type="time"
-                            aria-label="Performance end time"
+                            aria-label="Selected end time"
                             value={selectedEndTime}
                             onChange={(e) => {
                               setSelectedEndTime(e.target.value);
@@ -2343,8 +2338,8 @@ export function BandBookingCard({
                           {(selectedStartTime || selectedEndTime) && (
                             <button
                               type="button"
-                              onClick={() => applyStart("")}
-                              aria-label="Clear performance times"
+                              onClick={() => applyTimes("", "")}
+                              aria-label="Clear selected times"
                               title="Clear times"
                               className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                             >
