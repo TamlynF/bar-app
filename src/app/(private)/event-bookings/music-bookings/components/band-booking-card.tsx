@@ -56,7 +56,14 @@ import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-i
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { SheetDragHandle } from "@/components/admin/sheet-drag-handle";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -86,7 +93,6 @@ const DEFAULT_START_TIME = "22:00"; // 10pm
 const MAX_VIDEOS = 10;
 
 
-const PREFERRED_DATES_VISIBLE = 4;
 
 const DECLINE_PREVIEW_LEN = 28;
 
@@ -354,6 +360,85 @@ function stageHint(status: string, blocker?: string): string {
     default:
       return "";
   }
+}
+
+function PreferredDatesRow({
+  dates,
+  selectedDate,
+  interactive,
+  onPick,
+  onClear,
+}: {
+  dates: string[];
+  selectedDate: string;
+  interactive: boolean;
+  onPick: (date: string) => void;
+  onClear: () => void;
+}) {
+  const selectedIsPreferred = !!selectedDate && dates.includes(selectedDate);
+  const orderedDates = selectedIsPreferred ? [selectedDate, ...dates.filter((d) => d !== selectedDate)] : dates;
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Preferred Dates</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Preferred dates, ${dates.length} offered`}
+            className={cn(
+              "flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border bg-white px-3 text-[13px] font-semibold transition-colors hover:bg-admin-surface",
+              selectedIsPreferred ? "border-[#34451F] text-[#20231A]" : "border-[#D8D5C8] text-[#5E6654]"
+            )}
+          >
+            <span className="truncate">
+              {selectedIsPreferred ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "None selected"}
+            </span>
+            <span className="shrink-0 text-[11px] font-semibold text-[#5E6654]">
+              {dates.length} {dates.length === 1 ? "date" : "dates"}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64 rounded-2xl border-2 border-[#D8D5C8] bg-white p-1.5 text-[#20231A]">
+          <DropdownMenuLabel className="text-[11px] font-semibold text-[#5E6654]">
+            {interactive ? "Pick a date to use for the slot" : "Dates the act offered"}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {orderedDates.map((d) => {
+            const isSelected = selectedDate === d;
+            return (
+              <DropdownMenuItem
+                key={d}
+                disabled={!interactive}
+                onSelect={() => (isSelected ? onClear() : onPick(d))}
+                className="flex min-h-9 cursor-pointer items-center justify-between gap-2 rounded-lg text-[13px] font-semibold focus:bg-admin-primary-soft focus:text-admin-primary"
+              >
+                <span>{format(new Date(d + "T00:00:00"), "EEE, d MMM yyyy")}</span>
+                {isSelected && (
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-primary">
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    Selected
+                  </span>
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+          {interactive && selectedIsPreferred && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={onClear}
+                className="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg text-[12px] font-semibold text-[#5E6654] focus:bg-admin-surface"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+                Unselect this date
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
 
 function StepNode({
@@ -928,7 +1013,6 @@ export function BandBookingCard({
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [showContactDetails, setShowContactDetails] = useState(false);
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
-  const [showAllDates, setShowAllDates] = useState(false);
   const [sheetVideos, setSheetVideos] = useState<SheetVideo[]>(() => seedSheetVideos(request));
   const videoInputRef = useRef<HTMLInputElement>(null);
   const videoUploadHandles = useRef<Record<string, ResumableHandle>>({});
@@ -1084,6 +1168,36 @@ export function BandBookingCard({
       setSelectedEndTime(addHoursToTime(DEFAULT_START_TIME, 2));
     }
   };
+  function confirmPreferredDate(d: string) {
+    void attempt(async () => {
+    const pretty = format(new Date(d + "T00:00:00"), "EEEE d MMMM yyyy");
+    const times =
+      selectedStartTime && selectedEndTime
+        ? `The performance times stay ${selectedStartTime} - ${selectedEndTime}.`
+        : `The performance times will be set to ${DEFAULT_START_TIME} - ${addHoursToTime(DEFAULT_START_TIME, 2)}, which you can change.`;
+    const current = selectedDate
+      ? `This replaces ${format(new Date(selectedDate + "T00:00:00"), "EEE d MMM")} as the selected date. `
+      : "";
+    const ok = await confirm({
+      title: "Use this date?",
+      description: `${current}The slot becomes ${pretty}. ${times} Press Save to keep the change.`,
+      confirmLabel: "Use this date",
+    });
+    if (ok) applyDate(d);
+    }, () => {});
+  }
+  function confirmClearPreferredDate() {
+    void attempt(async () => {
+      const ok = await confirm({
+        title: "Unselect this date?",
+        description: `${format(new Date(selectedDate + "T00:00:00"), "EEEE d MMMM yyyy")} and the performance times will be cleared from the slot. Press Save to keep the change.`,
+        confirmLabel: "Unselect",
+      });
+      if (!ok) return;
+      applyDate("");
+      applyStart("");
+    }, () => {});
+  }
   const applyStart = (v: string) => {
     setSelectedStartTime(v);
     setSelectedEndTime(v ? addHoursToTime(v, 2) : "");
@@ -2130,77 +2244,15 @@ export function BandBookingCard({
                   )}
                 </div>
 
-                {dates.length > 0 && (() => {
-                  const orderedDates =
-                    selectedDate && dates.includes(selectedDate)
-                      ? [selectedDate, ...dates.filter((d) => d !== selectedDate)]
-                      : dates;
-                  const canExpand = orderedDates.length > PREFERRED_DATES_VISIBLE;
-                  const shownDates = showAllDates
-                    ? orderedDates
-                    : orderedDates.slice(0, PREFERRED_DATES_VISIBLE);
-                  const pills = shownDates.map((d) => {
-                    const isSelected = !!selectedDate && selectedDate === d;
-                    const locked = status === "booked" && !!selectedDate;
-                    const interactive = editable && !locked;
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        disabled={!interactive}
-                        onClick={() => applyDate(isSelected ? "" : d)}
-                        className={cn(
-                          "shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold whitespace-nowrap transition-all",
-                          locked
-                            ? isSelected
-                              ? "border-[#34451F]/30 bg-[#34451F]/10 text-[#34451F]/80"
-                              : "border-[#D8D5C8] bg-[#D8D5C8]/40 text-[#5E6654]/60"
-                            : isSelected
-                              ? "border-[#34451F] bg-[#34451F] text-white"
-                              : "border-[#34451F]/25 bg-[#34451F]/10 text-[#34451F]",
-                          interactive ? "hover:brightness-95" : "cursor-not-allowed"
-                        )}
-                      >
-                        {format(new Date(d + "T00:00:00"), "EEE, d MMM")}
-                      </button>
-                    );
-                  });
-                  const toggleClass =
-                    "flex shrink-0 items-center gap-1 rounded-lg border border-[#34451F]/15 bg-[#34451F]/8 px-2 py-1 font-black text-[10px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#34451F]/15 hover:text-[#20231A]";
-                  return (
-                    <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                      {canExpand && showAllDates ? (
-                        <>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                              Preferred Dates
-                            </span>
-                            <button type="button" onClick={() => setShowAllDates(false)} className={toggleClass}>
-                              Show less
-                              <ChevronDown className="h-3.5 w-3.5 rotate-180" />
-                            </button>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-1.5">{pills}</div>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <span className="shrink-0 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
-                            Preferred Dates
-                          </span>
-                          <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
-                            {pills}
-                          </div>
-                          {canExpand && (
-                            <button type="button" onClick={() => setShowAllDates(true)} className={toggleClass}>
-                              Show all
-                              <ChevronDown className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                {dates.length > 0 && (
+                  <PreferredDatesRow
+                    dates={dates}
+                    selectedDate={selectedDate}
+                    interactive={editable && !(status === "booked" && !!selectedDate)}
+                    onPick={confirmPreferredDate}
+                    onClear={confirmClearPreferredDate}
+                  />
+                )}
 
                 <div
                   ref={slotRowRef}
