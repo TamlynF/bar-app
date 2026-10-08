@@ -47,18 +47,20 @@ describe("bandOfferMessageText", () => {
     offerUrl: `https://example.test/band-offer/${ID}`,
   };
 
-  it("greets by first name and states the slot and the fee, leaving the link to the card", () => {
+  it("greets by first name and lays the slot and fee out under capital labels between dotted rules", () => {
     const text = bandOfferMessageText(base);
     expect(text).toContain("Hi Ginger!");
     expect(text).toContain("have Dandy play at Don Fenticas");
-    expect(text).toContain("When: Saturday, 31 October 2026, 10:00 PM – 11:30 PM");
-    expect(text).toContain("Fee: £120");
+    expect(text).toContain(
+      "- - - - - - - - - - - - - - -\nWHEN\nSaturday, 31 October 2026\n10:00 PM – 11:30 PM\n\nFEE\n£120.00\n- - - - - - - - - - - - - - -\n\nClick on the link below"
+    );
     expect(text).not.toContain("updated from");
     expect(text).not.toContain("http");
+    expect(text).not.toContain("Once you confirm");
     const card = bandOfferCard(base);
     expect(card).toEqual({
       title: "Your offer from Don Fenticas",
-      subtitle: "Saturday, 31 October 2026, 10:00 PM – 11:30 PM · Fee: £120",
+      subtitle: "Saturday, 31 October 2026, 10:00 PM – 11:30 PM · Fee: £120.00",
       buttonTitle: "View band offer",
       url: base.offerUrl,
     });
@@ -68,15 +70,15 @@ describe("bandOfferMessageText", () => {
     const card = bandOfferCard({ ...base, venueName: "A".repeat(90), previousPaymentAmount: 90 });
     expect(card.title.length).toBeLessThanOrEqual(80);
     expect(card.subtitle.length).toBeLessThanOrEqual(80);
-    expect(card.subtitle).toContain("updated from £90");
+    expect(card.subtitle.endsWith("…")).toBe(true);
   });
 
   it("says when the fee changed and copes with no fee or no slot", () => {
-    expect(bandOfferMessageText({ ...base, previousPaymentAmount: 100 })).toContain("Fee: £120 (updated from £100)");
-    expect(bandOfferMessageText({ ...base, previousPaymentAmount: 120 })).toContain("Fee: £120\n");
+    expect(bandOfferMessageText({ ...base, previousPaymentAmount: 100 })).toContain("FEE\n£120.00 (updated from £100.00)");
+    expect(bandOfferMessageText({ ...base, previousPaymentAmount: 120 })).toContain("FEE\n£120.00\n");
     const bare = bandOfferMessageText({ ...base, paymentAmount: null, date: null, startTime: null, endTime: null, groupName: null });
-    expect(bare).not.toContain("Fee:");
-    expect(bare).toContain("When: date and time to be arranged");
+    expect(bare).not.toContain("FEE");
+    expect(bare).toContain("WHEN\nDate and time to be arranged\n- - -");
     expect(bare).toContain("have you play");
   });
 });

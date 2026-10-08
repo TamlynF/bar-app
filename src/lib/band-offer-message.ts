@@ -51,26 +51,45 @@ function slotLine(p: BandOfferMessageInput): string {
   return date ? [date, time].filter(Boolean).join(", ") : "date and time to be arranged";
 }
 
-function feeLine(p: BandOfferMessageInput): string | null {
+const gbp = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
+
+function feeText(p: BandOfferMessageInput): string | null {
   if (p.paymentAmount == null) return null;
   const changed = p.previousPaymentAmount != null && p.previousPaymentAmount !== p.paymentAmount;
-  return changed ? `Fee: £${p.paymentAmount} (updated from £${p.previousPaymentAmount})` : `Fee: £${p.paymentAmount}`;
+  return changed ? `${gbp.format(p.paymentAmount)} (updated from ${gbp.format(p.previousPaymentAmount!)})` : gbp.format(p.paymentAmount);
 }
 
-/* The chat version of the offer email: the slot and the fee (saying when it
-   changed). The offer page link travels separately as a button card, so the
-   text never has to carry a raw URL. Staff can edit the text before sending;
-   edits are not kept. */
+function feeLine(p: BandOfferMessageInput): string | null {
+  const fee = feeText(p);
+  return fee ? `Fee: ${fee}` : null;
+}
+
+export const CHAT_DOTTED_LINE = "- - - - - - - - - - - - - - -";
+
+/* The chat version of the offer email, as the band reads it on a phone:
+   labels in capitals on their own lines so the date, the time and the fee
+   start exactly under each other (a DM's proportional font can't line text
+   up after labels of different widths), inside dotted rules. The offer page
+   link follows as a button card, so the text never carries a raw URL. Staff
+   can edit the text before sending; edits are not kept. */
 export function bandOfferMessageText(p: BandOfferMessageInput): string {
   const who = p.groupName || "you";
+  const date = formatDateLong(p.date);
+  const time = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
+  const when = date ? [date, time].filter(Boolean) : ["Date and time to be arranged"];
+  const fee = feeText(p);
+  const block = [CHAT_DOTTED_LINE, "WHEN", ...when, ...(fee ? ["", "FEE", fee] : []), CHAT_DOTTED_LINE].join("\n");
   return [
     `Hi ${firstName(p.name)}!`,
     `Great news - we'd love to have ${who} play at ${p.venueName}. Here's what we're offering:`,
-    [`When: ${slotLine(p)}`, feeLine(p)].filter(Boolean).join("\n"),
-    "Tap a reply below, or open your offer page to accept, discuss or withdraw.",
-    "Once you confirm, we'll lock it in and it goes on our events calendar.",
+    block,
+    "Click on the link below to accept, discuss or withdraw your application.",
   ].join("\n\n");
 }
+
+/* Sent after the card, and the quick replies hang off it - Instagram only
+   shows them under a text message, never under a card. */
+export const bandOfferOutroText = () => "Once you confirm, we'll lock it in and it goes on our events calendar.";
 
 export type OfferCard = { title: string; subtitle: string; buttonTitle: string; url: string };
 

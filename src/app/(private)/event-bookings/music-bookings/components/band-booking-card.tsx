@@ -96,7 +96,7 @@ import {
   type BandEmailDialogConfig,
   type BandEmailDialogResult,
 } from "./band-email-dialog";
-import { bandOfferCard, bandOfferMessageText } from "@/lib/band-offer-message";
+import { bandOfferCard, bandOfferMessageText, bandOfferOutroText } from "@/lib/band-offer-message";
 import { CHANNEL_LABELS, type MessageChannel } from "@/lib/meta/channels";
 
 /* The channel the offer dialog opens on: the one this thread last used, else
@@ -828,6 +828,7 @@ type EmailConfirmation = {
   files: File[];
   channel?: MessageChannel;
   message?: string;
+  outro?: string;
   alsoEmail?: boolean;
 };
 
@@ -1527,6 +1528,7 @@ export function BandBookingCard({
         initial: offerChannel(c, !!to.trim()),
         text: bandOfferMessageText(input),
         card: bandOfferCard(input),
+        outro: bandOfferOutroText(),
       };
     };
 
@@ -1568,6 +1570,7 @@ export function BandBookingCard({
       files: result.files,
       channel: result.channel,
       message: result.message,
+      outro: result.outro,
       alsoEmail: result.alsoEmail,
     };
   }
@@ -1584,16 +1587,23 @@ export function BandBookingCard({
         const c = await findClashes();
         if (c.length) return;
       }
-      const { ok, note, html, files, channel, message, alsoEmail } = await confirmEmail(newStatus);
+      const { ok, note, html, files, channel, message, outro, alsoEmail } = await confirmEmail(newStatus);
       if (!ok) return;
-      applyStatus(newStatus, note, { html, files, channel, message, alsoEmail });
+      applyStatus(newStatus, note, { html, files, channel, message, outro, alsoEmail });
     }, () => setError("Failed to update. Please try again."));
   }
 
   function applyStatus(
     newStatus: BandStatus,
     note: string,
-    extras?: { html: string; files: File[]; channel?: MessageChannel; message?: string; alsoEmail?: boolean }
+    extras?: {
+      html: string;
+      files: File[];
+      channel?: MessageChannel;
+      message?: string;
+      outro?: string;
+      alsoEmail?: boolean;
+    }
   ) {
     setPendingStage(newStatus);
     startTransition(async () => {
@@ -1617,6 +1627,7 @@ export function BandBookingCard({
           if (onChat) {
             emailExtras.set("channel", extras.channel ?? "");
             emailExtras.set("message", extras.message ?? "");
+            emailExtras.set("outro", extras.outro ?? "");
             emailExtras.set("alsoEmail", extras.alsoEmail ? "1" : "0");
           }
         }

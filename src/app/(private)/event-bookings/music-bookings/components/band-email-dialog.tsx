@@ -22,6 +22,7 @@ export type BandChatOption = {
   initial: MessageChannel;
   text: string;
   card: OfferCard;
+  outro: string;
 };
 
 export type BandEmailDialogConfig = {
@@ -47,57 +48,73 @@ export type BandEmailDialogResult = {
   files: File[];
   channel: MessageChannel;
   message: string;
+  outro: string;
   alsoEmail: boolean;
 };
 
 type Draft = { html: string; text: string; files: File[] };
 const EMPTY_DRAFT: Draft = { html: "", text: "", files: [] };
-const CANCELLED: BandEmailDialogResult = { ok: false, ...EMPTY_DRAFT, channel: "email", message: "", alsoEmail: false };
+const CANCELLED: BandEmailDialogResult = {
+  ok: false,
+  ...EMPTY_DRAFT,
+  channel: "email",
+  message: "",
+  outro: "",
+  alsoEmail: false,
+};
+
+/* A phone's width, so the text wraps where it will on the band's screen. */
+const PHONE = "w-[375px] max-w-full";
+const BUBBLE = "max-w-[80%] rounded-2xl rounded-bl-md bg-[#EFEFEF] px-3.5 py-2.5 text-[14px] leading-snug whitespace-pre-wrap break-words text-[#0A0A0A]";
 
 function ChatPreview({
   channel,
   handle,
   text,
   card,
+  outro,
 }: {
   channel: MetaChannel;
   handle: string | null;
   text: string;
   card: OfferCard;
+  outro: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-admin-line bg-white shadow-sm">
-      <dl className="space-y-1 border-b border-admin-line px-4 py-3 text-[12px]">
-        <div className="flex gap-2">
-          <dt className="w-16 shrink-0 text-admin-muted">To</dt>
-          <dd className="min-w-0 truncate font-semibold text-admin-ink">
-            {handle ? `@${handle}` : "their account"} on {CHANNEL_LABELS[channel]}
-          </dd>
+    <div className={cn(PHONE, "overflow-hidden rounded-[28px] border-4 border-[#1C1C1E] bg-white shadow-md")}>
+      <div className="flex items-center gap-2 border-b border-[#EFEFEF] px-4 py-3">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EFEFEF] text-[11px] font-bold text-[#0A0A0A]">
+          DF
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-[#0A0A0A]">Don Fenticas</p>
+          <p className="truncate text-[11px] text-[#737373]">
+            to {handle ? `@${handle}` : "their account"} on {CHANNEL_LABELS[channel]}
+          </p>
         </div>
-      </dl>
-      <div className="space-y-2 bg-[#E9E6DC] p-3 sm:p-5">
-        <div className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-[#E8E8E8] px-4 py-3 text-[13px] leading-relaxed whitespace-pre-wrap break-words text-admin-ink">
-          {text.trim() || "Your message"}
-        </div>
-        <div className="ml-auto w-[85%] max-w-72 overflow-hidden rounded-2xl rounded-br-md border border-admin-line bg-white text-[13px] shadow-sm">
-          <div className="px-4 py-3">
-            <p className="font-bold text-admin-ink">{card.title}</p>
-            <p className="mt-0.5 text-[12px] text-admin-muted">{card.subtitle}</p>
+      </div>
+      <div className="space-y-2 px-3 py-4">
+        <div className={BUBBLE}>{text.trim() || "Your message"}</div>
+        <div className="w-[80%] overflow-hidden rounded-2xl rounded-bl-md border border-[#DBDBDB] bg-white text-[14px]">
+          <div className="px-3.5 py-2.5">
+            <p className="font-semibold text-[#0A0A0A]">{card.title}</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#737373]">{card.subtitle}</p>
           </div>
-          <div className="border-t border-admin-line px-4 py-2.5 text-center font-semibold text-admin-info">{card.buttonTitle}</div>
+          <div className="border-t border-[#DBDBDB] px-3.5 py-2.5 text-center font-semibold text-[#0095F6]">{card.buttonTitle}</div>
         </div>
-        <div className="flex flex-wrap justify-end gap-1.5">
+        {outro.trim() && <div className={BUBBLE}>{outro}</div>}
+        <div className="flex flex-wrap justify-end gap-1.5 pt-1">
           {BAND_OFFER_REPLIES.map((r) => (
             <span
               key={r.response}
-              className="rounded-full border border-admin-primary bg-white px-3 py-1 text-[12px] font-semibold text-admin-primary"
+              className="rounded-full border border-[#0095F6] bg-white px-3 py-1 text-[12px] font-semibold text-[#0095F6]"
             >
               {r.title}
             </span>
           ))}
         </div>
-        <p className="text-right text-[11px] text-admin-muted">{quickReplyHint(channel)}</p>
       </div>
+      <p className="border-t border-[#EFEFEF] px-4 py-2 text-[11px] leading-snug text-[#737373]">{quickReplyHint(channel)}</p>
     </div>
   );
 }
@@ -113,6 +130,7 @@ function BandEmailDialogBody({
   const handleChange = useCallback((d: Draft) => setDraft(d), []);
   const [channel, setChannel] = useState<MessageChannel>(config.chat?.initial ?? "email");
   const [message, setMessage] = useState(config.chat?.text ?? "");
+  const [outro, setOutro] = useState(config.chat?.outro ?? "");
   const [alsoEmail, setAlsoEmail] = useState(false);
 
   const chat = channel !== "email" ? (config.chat?.channels.find((c) => c.channel === channel) ?? null) : null;
@@ -166,13 +184,20 @@ function BandEmailDialogBody({
           )}
           {channel !== "email" && (
             <>
-              <ChatComposer
-                id="band-offer-message"
-                label="Message to the band"
-                value={message}
-                onChange={setMessage}
-                hint="Written for you from the slot and fee - edit anything before sending. Changes aren't saved. Select a word, then bold, italic or underline it; DMs have no real formatting, so these use lookalike letters."
-              />
+              <div className={cn(PHONE, "space-y-3")}>
+                <ChatComposer
+                  id="band-offer-message"
+                  label="Message to the band"
+                  value={message}
+                  onChange={setMessage}
+                  rows={18}
+                  hint="Written for you from the slot and fee - edit anything before sending. Changes aren't saved. Select a word, then bold, italic or underline it; DMs have no real formatting, so these use lookalike letters."
+                />
+                <p className="rounded-xl border border-dashed border-admin-line bg-admin-surface/60 px-3 py-2 text-[12px] text-admin-muted">
+                  The &ldquo;{config.chat!.card.buttonTitle}&rdquo; card goes here, between the two messages.
+                </p>
+                <ChatComposer id="band-offer-outro" label="After the link" value={outro} onChange={setOutro} rows={3} />
+              </div>
               {chatClosed && (
                 <p className="flex items-start gap-1.5 text-[12px] font-semibold text-admin-error">
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -215,7 +240,7 @@ function BandEmailDialogBody({
           {chat && (
             <div>
               <p className="mb-2 text-[12px] font-semibold text-admin-muted">Preview - what the band sees on {CHANNEL_LABELS[chat.channel]}</p>
-              <ChatPreview channel={chat.channel} handle={chat.handle} text={message} card={config.chat!.card} />
+              <ChatPreview channel={chat.channel} handle={chat.handle} text={message} card={config.chat!.card} outro={outro} />
             </div>
           )}
           {sendsEmail && (
@@ -276,6 +301,7 @@ function BandEmailDialogBody({
               ...(sendsEmail ? draft : EMPTY_DRAFT),
               channel,
               message: channel === "email" ? "" : message.trim(),
+              outro: channel === "email" ? "" : outro.trim(),
               alsoEmail: channel !== "email" && alsoEmail,
             })
           }

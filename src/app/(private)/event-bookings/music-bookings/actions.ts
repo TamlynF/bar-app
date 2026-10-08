@@ -292,10 +292,15 @@ function reopenedNote(oldReason: string | null | undefined, to: BandStatus): str
 /* How the offer goes out: the email as standard, or - when the act chats
    with us on Instagram or Messenger - a message on that channel carrying
    quick replies, with the email as an optional extra. */
-function offerDelivery(form?: FormData): { channel: MessageChannel; message: string; alsoEmail: boolean } {
+function offerDelivery(form?: FormData): { channel: MessageChannel; message: string; outro: string; alsoEmail: boolean } {
   const channel = form?.get("channel");
-  if (!isMetaChannel(channel)) return { channel: "email", message: "", alsoEmail: true };
-  return { channel, message: String(form?.get("message") ?? ""), alsoEmail: form?.get("alsoEmail") === "1" };
+  if (!isMetaChannel(channel)) return { channel: "email", message: "", outro: "", alsoEmail: true };
+  return {
+    channel,
+    message: String(form?.get("message") ?? ""),
+    outro: String(form?.get("outro") ?? ""),
+    alsoEmail: form?.get("alsoEmail") === "1",
+  };
 }
 
 export type BandStatusResult = {
@@ -374,6 +379,7 @@ export async function updateBandStatus(
           target,
           text: delivery.message,
           card: { title: card.title, subtitle: card.subtitle, buttons: [{ title: card.buttonTitle, url: card.url }] },
+          afterCard: delivery.outro,
           quickReplies: bandOfferQuickReplies(id),
           kind: "offered",
           links: { bandRequestId: id, musicActId: record.music_acts_id, contactId: record.contact_id },

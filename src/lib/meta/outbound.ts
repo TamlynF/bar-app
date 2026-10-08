@@ -21,14 +21,16 @@ export function cardAsText(card: MetaCard): string {
 
 /* One message to a Messenger or Instagram account, inside Meta's reply
    window, logged on the same correspondence thread as the emails. With a
-   card, the text goes first and the card follows carrying the quick replies,
-   so the chips sit under the last thing they see. */
+   card the text goes first, then the card, then any closing text; the quick
+   replies hang off the last text message, because Instagram only draws them
+   under text. */
 export async function sendMetaMessage(
   admin: Db,
   p: {
     target: MetaTarget;
     text: string;
     card?: MetaCard;
+    afterCard?: string;
     quickReplies?: MetaQuickReply[];
     kind: string;
     links: MetaMessageLinks;
@@ -44,6 +46,7 @@ export async function sendMetaMessage(
   if (allowance.mode === "closed") return { error: allowance.reason };
   const humanAgent = allowance.mode === "human_agent";
 
+  const afterCard = p.card ? (p.afterCard?.trim() ?? "") : "";
   const sent = await sendMetaText(env, {
     recipientId: p.target.externalId,
     text,
@@ -58,9 +61,18 @@ export async function sendMetaMessage(
       recipientId: p.target.externalId,
       card: p.card,
       humanAgent,
-      quickReplies: p.quickReplies,
+      quickReplies: afterCard ? undefined : p.quickReplies,
     });
     if (!card.ok) cardError = card.error;
+    else if (afterCard) {
+      const closing = await sendMetaText(env, {
+        recipientId: p.target.externalId,
+        text: afterCard,
+        humanAgent,
+        quickReplies: p.quickReplies,
+      });
+      if (!closing.ok) cardError = closing.error;
+    }
   }
 
   const { error } = await admin.from("email_messages").insert({
@@ -76,7 +88,7 @@ export async function sendMetaMessage(
     from_address: `${channel}:page`,
     to_addresses: [p.target.handle ? `@${p.target.handle}` : p.target.externalId],
     subject: "",
-    text_body: p.card && !cardError ? `${text}\n\n${cardAsText(p.card)}` : text,
+    text_body: p.card && !cardError ? [text, cardAsText(p.card), afterCard].filter(Boolean).join("\n\n") : text,
     sent_by: p.sentBy,
   });
   if (error) console.error(`[${CHANNEL_LABELS[channel]} send] log failed:`, error.code, error.message);
